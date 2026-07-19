@@ -1,0 +1,23 @@
+<div class="control-center-layout">
+  <app-sidebar
+    [open]="sidebarOpen()"
+    (navigationSelected)="closeSidebar()"
+  />
+
+  @if (sidebarOpen()) {
+    <button
+      class="sidebar-backdrop"
+      type="button"
+      aria-label="Cerrar menú de navegación"
+      (click)="closeSidebar()"
+    ></button>
+  }
+
+  <div class="main-area">
+    <app-header (menuToggle)="toggleSidebar()" />
+
+    <main class="content" id="main-content">
+      <router-outlet />
+    </main>
+  </div>
+</div>
