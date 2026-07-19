@@ -34,3 +34,8 @@ npm start
 Open `http://localhost:4200`. The initial screen calls `GET /api/health` and
 shows whether the frontend can reach the backend and whether the backend can
 query MySQL.
+
+## Database initialization
+
+The complete MySQL schema, initial Macegocia network and installation instructions are in
+[`database/README.md`](database/README.md).
