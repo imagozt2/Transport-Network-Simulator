@@ -3,8 +3,8 @@
     <div class="brand-icon" aria-hidden="true">RMM</div>
 
     <div>
-      <p class="brand-title">Centro de Control</p>
-      <p class="brand-subtitle">Red de Metro de Macegocia</p>
+      <h1>Centro de Control</h1>
+      <p>Red de Metro de Macegocia</p>
     </div>
   </div>
 
@@ -14,24 +14,16 @@
         <h2>{{ section.title }}</h2>
 
         @for (item of section.items; track item.route) {
-          @if (item.available) {
-            <a
-              class="nav-link"
-              [routerLink]="item.route"
-              routerLinkActive="active"
-              [routerLinkActiveOptions]="{ exact: true }"
-              (click)="navigationSelected.emit()"
-            >
-              <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>
-              <span class="nav-label">{{ item.label }}</span>
-            </a>
-          } @else {
-            <span class="nav-link disabled" aria-disabled="true">
-              <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>
-              <span class="nav-label">{{ item.label }}</span>
-              <span class="soon-label">Próximamente</span>
-            </span>
-          }
+          <a
+            class="nav-link"
+            [routerLink]="item.route"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+            (click)="navigationSelected.emit()"
+          >
+            <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>
+            <span class="nav-label">{{ item.label }}</span>
+          </a>
         }
       </section>
     }

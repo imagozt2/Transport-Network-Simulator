@@ -1,16 +1,12 @@
 .header {
-  position: sticky;
-  top: 0;
   z-index: 20;
-  min-height: 80px;
-  padding: 12px 24px;
+  height: 80px;
+  padding: 0 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
   border-bottom: 1px solid #e5e7eb;
-  background: rgb(255 255 255 / 96%);
-  backdrop-filter: blur(10px);
+  background-color: white;
 }
 
 .header-title {
@@ -23,7 +19,6 @@
   margin: 0;
   color: #111827;
   font-size: 22px;
-  line-height: 1.2;
 }
 
 .header p {
@@ -60,7 +55,7 @@
   color: #166534;
   background: #dcfce7;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
   white-space: nowrap;
 }
 
