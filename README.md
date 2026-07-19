@@ -31,9 +31,12 @@ Set-Location frontend
 npm start
 ```
 
-Open `http://localhost:4200`. The initial screen calls `GET /api/health` and
-shows whether the frontend can reach the backend and whether the backend can
-query MySQL.
+Open `http://localhost:4200`. The initial screen is the **Panel General**, which
+uses `GET /api/dashboard/summary` to show the current operational state stored
+in MySQL.
+
+The panel behaviour and the endpoint response contract are documented in
+[`docs/panel-general.md`](docs/panel-general.md).
 
 ## Database initialization
 
