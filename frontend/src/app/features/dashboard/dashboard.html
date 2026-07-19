@@ -1,0 +1,67 @@
+<section class="dashboard-page">
+  <div class="page-header">
+    <div><h1>Panel General</h1><p>Estado operativo actual de la Red de Metro de Macegocia.</p></div>
+    <button class="refresh-button" type="button" [disabled]="loading" (click)="loadSummary()">{{ loading ? 'Actualizando…' : 'Actualizar' }}</button>
+  </div>
+
+  @if (loading) {
+    <div class="state-card" role="status">Cargando información del centro de control…</div>
+  } @else if (errorMessage) {
+    <div class="state-card error-card" role="alert"><span>{{ errorMessage }}</span><button type="button" (click)="loadSummary()">Reintentar</button></div>
+  } @else if (summary; as data) {
+    <section class="summary-grid" aria-label="Resumen de la red">
+      <article class="summary-card"><span>Estaciones activas</span><strong>{{ data.network.activeStations }}</strong><small>Servicio operativo</small></article>
+      <article class="summary-card"><span>Líneas activas</span><strong>{{ data.network.activeLines }}</strong><small>Red principal</small></article>
+      <article class="summary-card"><span>Trenes activos</span><strong>{{ data.fleet.activeTrains }}</strong><small>Flota registrada</small></article>
+      <article class="summary-card"><span>Máquinas activas</span><strong>{{ data.devices.activeDevices }}</strong><small>Compra y validación</small></article>
+      <article class="summary-card"><span>Cocheras activas</span><strong>{{ data.depots.activeDepots }}</strong><small>Infraestructura ferroviaria</small></article>
+      <article class="summary-card"><span>Ocupación cocheras</span><strong>{{ data.depots.occupationPercentage }}%</strong><small>{{ data.depots.assignedTrains }} / {{ data.depots.totalCapacity }} plazas</small></article>
+    </section>
+
+    <section class="content-grid">
+      <article class="panel-card">
+        <div class="panel-header"><h2>Estado de trenes</h2><span>{{ data.fleet.activeTrains }} trenes</span></div>
+        <div class="status-list">
+          @for (item of trainStatuses; track item.status) {
+            <div class="status-row"><span class="status-dot status-{{ item.tone }}"></span><span>{{ item.label }}</span><strong>{{ trainCount(item.status) }}</strong></div>
+          }
+        </div>
+      </article>
+
+      <article class="panel-card">
+        <div class="panel-header"><h2>Estado de máquinas</h2><span>{{ data.devices.activeDevices }} dispositivos</span></div>
+        <div class="status-list">
+          @for (item of deviceStatuses; track item.status) {
+            <div class="status-row"><span class="status-dot status-{{ item.tone }}"></span><span>{{ item.label }}</span><strong>{{ deviceStatusCount(item.status) }}</strong></div>
+          }
+        </div>
+        <div class="device-type-grid">
+          @for (item of deviceTypes; track item.type) { <div><span>{{ item.label }}</span><strong>{{ deviceTypeCount(item.type) }}</strong></div> }
+        </div>
+      </article>
+
+      <article class="panel-card">
+        <div class="panel-header"><h2>Cocheras</h2><span>{{ data.depots.freeSlots }} plazas libres</span></div>
+        <div class="depot-occupation">
+          <div class="occupation-info"><span>Ocupación total</span><strong>{{ data.depots.occupationPercentage }}%</strong></div>
+          <div class="progress-bar" role="progressbar" aria-label="Ocupación de cocheras" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="data.depots.occupationPercentage"><div class="progress-fill" [style.width.%]="data.depots.occupationPercentage"></div></div>
+          <small>{{ data.depots.assignedTrains }} trenes asignados de {{ data.depots.totalCapacity }} plazas disponibles.</small>
+        </div>
+        <div class="depot-list">
+          @for (depot of data.depots.items; track depot.id) {
+            <div class="depot-row"><div><strong>{{ depot.code }}</strong><span>{{ depot.name }}</span></div><small>{{ depot.assignedTrains }}/{{ depot.capacity }}</small></div>
+          } @empty { <p class="empty-message">No hay cocheras activas.</p> }
+        </div>
+      </article>
+
+      <article class="panel-card">
+        <div class="panel-header"><h2>Líneas de la red</h2><span>{{ data.network.activeLines }} activas</span></div>
+        <div class="line-list">
+          @for (line of data.lines; track line.id) {
+            <div class="line-row"><span class="line-badge" [style.background-color]="lineColor(line.color)">{{ line.code }}</span><div><strong>{{ line.name }}</strong><small>{{ line.color }}</small></div><span class="service-pill">Activa</span></div>
+          } @empty { <p class="empty-message">No hay líneas activas.</p> }
+        </div>
+      </article>
+    </section>
+  }
+</section>

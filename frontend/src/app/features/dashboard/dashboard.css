@@ -1,0 +1,46 @@
+:host { display: block; }
+.dashboard-page { display: flex; flex-direction: column; gap: 24px; }
+.page-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.page-header h1 { margin: 0; color: #1f2937; font-size: 28px; }
+.page-header p { margin: 6px 0 0; color: #6b7280; }
+.refresh-button, .error-card button { border: 0; border-radius: 10px; padding: 10px 16px; color: #fff; background: #1f2937; font-weight: 700; cursor: pointer; }
+.refresh-button:hover:not(:disabled), .error-card button:hover { background: #111827; }
+.refresh-button:disabled { cursor: wait; opacity: .65; }
+.state-card, .summary-card, .panel-card { background: #fff; box-shadow: 0 10px 24px rgba(15, 23, 42, .08); }
+.state-card { padding: 20px; border-radius: 14px; }
+.error-card { display: flex; justify-content: space-between; align-items: center; gap: 16px; color: #991b1b; background: #fee2e2; }
+.summary-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; }
+.summary-card { display: flex; flex-direction: column; gap: 8px; padding: 20px; border-radius: 16px; }
+.summary-card span { color: #6b7280; font-size: 13px; font-weight: 600; }
+.summary-card strong { color: #111827; font-size: 32px; }
+.summary-card small { color: #6b7280; }
+.content-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.panel-card { padding: 22px; border-radius: 18px; }
+.panel-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px; }
+.panel-header h2 { margin: 0; color: #111827; font-size: 20px; }
+.panel-header span { color: #6b7280; font-size: 13px; font-weight: 600; }
+.status-list { display: flex; flex-direction: column; gap: 12px; }
+.status-row { display: grid; grid-template-columns: 16px 1fr auto; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f3f4f6; }
+.status-row:last-child { border-bottom: 0; }
+.status-dot { width: 10px; height: 10px; border-radius: 50%; }
+.status-ok { background: #16a34a; } .status-neutral { background: #6b7280; } .status-warning { background: #f59e0b; } .status-danger { background: #dc2626; }
+.device-type-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 20px; }
+.device-type-grid div { display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 12px; background: #f9fafb; }
+.device-type-grid span { color: #6b7280; font-size: 12px; } .device-type-grid strong { color: #111827; font-size: 22px; }
+.depot-occupation { display: flex; flex-direction: column; gap: 12px; }
+.occupation-info { display: flex; justify-content: space-between; align-items: center; }
+.occupation-info span, .depot-occupation small { color: #6b7280; } .occupation-info strong { font-size: 24px; }
+.progress-bar { height: 12px; overflow: hidden; border-radius: 999px; background: #e5e7eb; }
+.progress-fill { height: 100%; border-radius: inherit; background: #2563eb; transition: width .25s ease; }
+.depot-list, .line-list { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+.depot-list { max-height: 340px; overflow: auto; }
+.depot-row, .line-row { align-items: center; padding: 12px; border-radius: 12px; background: #f9fafb; }
+.depot-row { display: flex; justify-content: space-between; gap: 12px; }
+.depot-row div, .line-row div { display: flex; flex-direction: column; gap: 4px; }
+.depot-row span, .depot-row small, .line-row small { color: #6b7280; }
+.line-row { display: grid; grid-template-columns: 52px 1fr auto; gap: 12px; }
+.line-badge { padding: 8px 0; border-radius: 999px; color: #fff; text-align: center; font-weight: 800; }
+.service-pill { padding: 6px 10px; border-radius: 999px; color: #166534; background: #dcfce7; font-size: 12px; font-weight: 700; }
+.empty-message { margin: 0; padding: 12px; color: #6b7280; text-align: center; }
+@media (max-width: 1200px) { .summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .content-grid { grid-template-columns: 1fr; } }
+@media (max-width: 700px) { .page-header { align-items: stretch; flex-direction: column; } .summary-grid, .device-type-grid { grid-template-columns: 1fr; } .error-card { align-items: stretch; flex-direction: column; } .line-row { grid-template-columns: 48px 1fr; } .service-pill { display: none; } }
