@@ -10,13 +10,13 @@
           <svg class="network-svg" [attr.viewBox]="'0 0 ' + mapViewBox.width + ' ' + mapViewBox.height" [attr.width]="mapViewBox.width" [attr.height]="mapViewBox.height" aria-label="Mapa de la red de metro de Macegocia" role="img">
             <g class="metro-lines">
               @for (line of mapLines; track line.code) {
-                <polyline class="metro-line" [class.dimmed-line]="isMapLineDimmed(line.code)" [class.highlighted-line]="isMapLineHighlighted(line.code)" [attr.points]="getLinePoints(line)" [attr.stroke]="line.color"><title>{{ line.code }}</title></polyline>
+                <polyline class="metro-line" [class.dimmed-line]="isMapLineDimmed(line.code)" [class.highlighted-line]="isMapLineHighlighted(line.code)" [attr.points]="getLinePoints(line)" [attr.stroke]="line.color" tabindex="0" role="button" [attr.aria-label]="'Mostrar recorrido de ' + line.code" [attr.aria-pressed]="isLineExpanded(line.code)" (click)="toggleExpandedLine(line.code)" (keydown)="toggleLineFromKeyboard($event, line.code)"><title>{{ line.code }}</title></polyline>
               }
             </g>
 
             <g class="stations">
               @for (station of mapStations; track station.stationCode) {
-                <g class="station-node" [class.dimmed-station]="shouldDimStation(station.stationCode)" [class.highlighted-station]="shouldHighlightStation(station.stationCode)" [class.selected-station]="isSelectedStation(station.stationCode)" (click)="selectStation(station)" tabindex="0" role="button" [attr.aria-label]="getStationName(station.stationCode)">
+                <g class="station-node" [class.dimmed-station]="shouldDimStation(station.stationCode)" [class.highlighted-station]="shouldHighlightStation(station.stationCode)">
                   @if (isTransferStation(station.stationCode)) { <circle class="station-transfer-ring" [attr.cx]="station.x" [attr.cy]="station.y" r="11" /> }
                   <circle class="station-circle" [class.transfer-station]="isTransferStation(station.stationCode)" [attr.cx]="station.x" [attr.cy]="station.y" r="6" />
                   @if (station.showLabel !== false) {
@@ -57,7 +57,7 @@
                 <div class="line-accordion-body">
                   <div class="mini-thermometer">
                     @for (station of line.stations; track station.id; let first = $first; let last = $last) {
-                      <div class="mini-station-row" [class.current-station]="isSelectedStation(station.code)">
+                      <div class="mini-station-row">
                         <div class="mini-track">
                           @if (!first) { <span class="mini-track-line top" [style.background-color]="getMapLineColor(line.code)"></span> }
                           <span class="mini-station-dot" [class.transfer-dot]="isTransferStation(station.code)" [style.border-color]="getMapLineColor(line.code)"></span>

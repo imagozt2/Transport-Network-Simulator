@@ -41,6 +41,34 @@ describe('NetworkMap', () => {
     expect(compiled.querySelectorAll('.line-accordion')).toHaveLength(2);
     expect(compiled.textContent).toContain('Línea 1');
     expect(compiled.querySelectorAll('.station-transfer-ring')).toHaveLength(1);
+    expect(compiled.querySelector('.station-node[role="button"]')).toBeNull();
+    expect(compiled.querySelector('.station-node[tabindex]')).toBeNull();
+  });
+
+  it('should highlight and expand a line from the map or the side panel', async () => {
+    await TestBed.configureTestingModule({
+      imports: [NetworkMap],
+      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }]
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(NetworkMap);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const firstAccordion = compiled.querySelector<HTMLButtonElement>('.line-accordion-header');
+
+    firstAccordion?.click();
+    fixture.detectChanges();
+
+    expect(compiled.querySelectorAll('.metro-line.highlighted-line')).toHaveLength(1);
+    expect(compiled.querySelectorAll('.metro-line.dimmed-line')).toHaveLength(5);
+    expect(compiled.querySelector('.line-accordion-body')?.textContent).toContain('Los Molinos');
+
+    const secondMapLine = compiled.querySelectorAll('.metro-line').item(1);
+    secondMapLine.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    fixture.detectChanges();
+
+    expect(secondMapLine.classList.contains('highlighted-line')).toBe(true);
+    expect(compiled.querySelectorAll('.line-accordion-body')).toHaveLength(1);
   });
 
   it('should show an error and retry action when the API fails', async () => {

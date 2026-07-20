@@ -12,7 +12,6 @@ export class NetworkMap implements OnInit {
   readonly mapLines = MAP_LINES;
 
   lines: NetworkMapLine[] = [];
-  selectedStationCode: string | null = null;
   expandedLineCode: string | null = null;
   loading = true;
   errorMessage = '';
@@ -28,12 +27,18 @@ export class NetworkMap implements OnInit {
     });
   }
 
-  selectStation(station: MapStationLayout): void { this.selectedStationCode = station.stationCode; }
   toggleExpandedLine(code: string): void { this.expandedLineCode = this.expandedLineCode === code ? null : code; }
+
+  toggleLineFromKeyboard(event: KeyboardEvent, code: string): void {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.toggleExpandedLine(code);
+    }
+  }
+
   isLineExpanded(code: string): boolean { return this.expandedLineCode === code; }
   isMapLineDimmed(code: string): boolean { return this.expandedLineCode !== null && this.expandedLineCode !== code; }
   isMapLineHighlighted(code: string): boolean { return this.expandedLineCode === code; }
-  isSelectedStation(code: string): boolean { return this.selectedStationCode === code; }
 
   getStation(code: string): NetworkMapStation | undefined {
     return this.lines.flatMap((line) => line.stations).find((station) => station.code === code);
