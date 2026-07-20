@@ -71,6 +71,48 @@ describe('NetworkMap', () => {
     expect(compiled.querySelectorAll('.line-accordion-body')).toHaveLength(1);
   });
 
+  it('should toggle a map line with Space and clear the highlight when activated again', async () => {
+    await TestBed.configureTestingModule({
+      imports: [NetworkMap],
+      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }]
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(NetworkMap);
+    fixture.detectChanges();
+    const mapLine = fixture.nativeElement.querySelector('.metro-line') as SVGElement;
+
+    mapLine.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+    fixture.detectChanges();
+
+    expect(mapLine.classList.contains('highlighted-line')).toBe(true);
+    expect(mapLine.getAttribute('aria-pressed')).toBe('true');
+
+    mapLine.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.highlighted-line')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.dimmed-line')).toBeNull();
+    expect(mapLine.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('should not create a selection when a station is clicked', async () => {
+    await TestBed.configureTestingModule({
+      imports: [NetworkMap],
+      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }]
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(NetworkMap);
+    fixture.detectChanges();
+    const station = fixture.nativeElement.querySelector('.station-node') as SVGGElement;
+
+    station.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(station.classList.contains('selected-station')).toBe(false);
+    expect(fixture.nativeElement.querySelector('.highlighted-line')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.line-accordion-body')).toBeNull();
+  });
+
   it('should show an error and retry action when the API fails', async () => {
     await TestBed.configureTestingModule({
       imports: [NetworkMap],
