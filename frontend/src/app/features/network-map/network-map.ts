@@ -13,6 +13,8 @@ export class NetworkMap implements OnInit {
 
   lines: NetworkMapLine[] = [];
   expandedLineCode: string | null = null;
+  hoveredLineCode: string | null = null;
+  private lastHoveredLineCode: string | null = null;
   loading = true;
   errorMessage = '';
 
@@ -29,16 +31,25 @@ export class NetworkMap implements OnInit {
 
   toggleExpandedLine(code: string): void { this.expandedLineCode = this.expandedLineCode === code ? null : code; }
 
-  toggleLineFromKeyboard(event: KeyboardEvent, code: string): void {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      this.toggleExpandedLine(code);
-    }
+  hoverLine(code: string): void {
+    this.hoveredLineCode = code;
+    this.lastHoveredLineCode = code;
+  }
+
+  clearHoveredLine(): void { this.hoveredLineCode = null; }
+
+  hoverStation(code: string): void {
+    this.hoveredLineCode = this.resolveStationLine(code)?.code ?? null;
+  }
+
+  selectStationLine(code: string): void {
+    const line = this.resolveStationLine(code);
+    if (line) { this.expandedLineCode = line.code; }
   }
 
   isLineExpanded(code: string): boolean { return this.expandedLineCode === code; }
   isMapLineDimmed(code: string): boolean { return this.expandedLineCode !== null && this.expandedLineCode !== code; }
-  isMapLineHighlighted(code: string): boolean { return this.expandedLineCode === code; }
+  isMapLineHighlighted(code: string): boolean { return this.activeLineCode === code; }
 
   getStation(code: string): NetworkMapStation | undefined {
     return this.lines.flatMap((line) => line.stations).find((station) => station.code === code);
@@ -48,9 +59,22 @@ export class NetworkMap implements OnInit {
   getStationLines(code: string): NetworkMapLine[] { return this.lines.filter((line) => line.stations.some((station) => station.code === code)); }
   getTransferLines(code: string, currentLineCode: string): NetworkMapLine[] { return this.getStationLines(code).filter((line) => line.code !== currentLineCode); }
   isTransferStation(code: string): boolean { return this.getStationLines(code).length > 1; }
-  isStationInExpandedLine(code: string): boolean { return this.expandedLineCode !== null && this.lines.find((line) => line.code === this.expandedLineCode)?.stations.some((station) => station.code === code) === true; }
-  shouldDimStation(code: string): boolean { return this.expandedLineCode !== null && !this.isStationInExpandedLine(code); }
-  shouldHighlightStation(code: string): boolean { return this.expandedLineCode !== null && this.isStationInExpandedLine(code); }
+  isStationInActiveLine(code: string): boolean { const active = this.activeLineCode; return active !== null && this.lines.find((line) => line.code === active)?.stations.some((station) => station.code === code) === true; }
+  shouldDimStation(code: string): boolean {
+    return this.expandedLineCode !== null
+      && this.lines.find((line) => line.code === this.expandedLineCode)?.stations.some((station) => station.code === code) !== true;
+  }
+  shouldHighlightStation(code: string): boolean { return this.activeLineCode !== null && this.isStationInActiveLine(code); }
+
+  private get activeLineCode(): string | null { return this.expandedLineCode ?? this.hoveredLineCode; }
+
+  private resolveStationLine(code: string): NetworkMapLine | undefined {
+    const stationLines = this.getStationLines(code);
+    return stationLines.find((line) => line.code === this.expandedLineCode)
+      ?? stationLines.find((line) => line.code === this.hoveredLineCode)
+      ?? stationLines.find((line) => line.code === this.lastHoveredLineCode)
+      ?? stationLines[0];
+  }
 
   getLinePoints(line: MapLineLayout): string {
     return line.path.map((point) => {

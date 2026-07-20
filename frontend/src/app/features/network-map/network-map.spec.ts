@@ -64,14 +64,14 @@ describe('NetworkMap', () => {
     expect(compiled.querySelector('.line-accordion-body')?.textContent).toContain('Los Molinos');
 
     const secondMapLine = compiled.querySelectorAll('.metro-line').item(1);
-    secondMapLine.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    secondMapLine.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     fixture.detectChanges();
 
     expect(secondMapLine.classList.contains('highlighted-line')).toBe(true);
     expect(compiled.querySelectorAll('.line-accordion-body')).toHaveLength(1);
   });
 
-  it('should toggle a map line with Space and clear the highlight when activated again', async () => {
+  it('should highlight a line and all its stations on hover without adding a focus frame', async () => {
     await TestBed.configureTestingModule({
       imports: [NetworkMap],
       providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }]
@@ -79,23 +79,27 @@ describe('NetworkMap', () => {
 
     const fixture = TestBed.createComponent(NetworkMap);
     fixture.detectChanges();
-    const mapLine = fixture.nativeElement.querySelector('.metro-line') as SVGElement;
+    const compiled = fixture.nativeElement as HTMLElement;
+    const mapLine = compiled.querySelector('.metro-line') as SVGElement;
 
-    mapLine.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+    mapLine.dispatchEvent(new MouseEvent('mouseenter'));
     fixture.detectChanges();
 
     expect(mapLine.classList.contains('highlighted-line')).toBe(true);
-    expect(mapLine.getAttribute('aria-pressed')).toBe('true');
+    expect(compiled.querySelectorAll('.station-node.highlighted-station')).toHaveLength(2);
+    expect(compiled.querySelector('.metro-line.dimmed-line')).toBeNull();
+    expect(compiled.querySelector('.station-node.dimmed-station')).toBeNull();
+    expect(mapLine.hasAttribute('tabindex')).toBe(false);
+    expect(mapLine.hasAttribute('role')).toBe(false);
 
-    mapLine.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    mapLine.dispatchEvent(new MouseEvent('mouseleave'));
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('.highlighted-line')).toBeNull();
-    expect(fixture.nativeElement.querySelector('.dimmed-line')).toBeNull();
-    expect(mapLine.getAttribute('aria-pressed')).toBe('false');
+    expect(compiled.querySelector('.highlighted-line')).toBeNull();
+    expect(compiled.querySelector('.highlighted-station')).toBeNull();
   });
 
-  it('should not create a selection when a station is clicked', async () => {
+  it('should treat line labels like their tracks and stations', async () => {
     await TestBed.configureTestingModule({
       imports: [NetworkMap],
       providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }]
@@ -103,14 +107,40 @@ describe('NetworkMap', () => {
 
     const fixture = TestBed.createComponent(NetworkMap);
     fixture.detectChanges();
-    const station = fixture.nativeElement.querySelector('.station-node') as SVGGElement;
+    const compiled = fixture.nativeElement as HTMLElement;
+    const lineLabel = compiled.querySelector('.line-end-label') as SVGGElement;
+
+    lineLabel.dispatchEvent(new MouseEvent('mouseenter'));
+    fixture.detectChanges();
+
+    expect(lineLabel.classList.contains('highlighted-line-label')).toBe(true);
+    expect(compiled.querySelectorAll('.station-node.highlighted-station')).toHaveLength(2);
+    expect(compiled.querySelector('.dimmed-line')).toBeNull();
+
+    lineLabel.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(compiled.querySelectorAll('.metro-line.dimmed-line')).toHaveLength(5);
+    expect(compiled.querySelector('.line-accordion-body')?.textContent).toContain('Los Molinos');
+  });
+
+  it('should select the station line without leaving the station pressed', async () => {
+    await TestBed.configureTestingModule({
+      imports: [NetworkMap],
+      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }]
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(NetworkMap);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const station = compiled.querySelectorAll('.station-node').item(44);
 
     station.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     fixture.detectChanges();
 
     expect(station.classList.contains('selected-station')).toBe(false);
-    expect(fixture.nativeElement.querySelector('.highlighted-line')).toBeNull();
-    expect(fixture.nativeElement.querySelector('.line-accordion-body')).toBeNull();
+    expect(compiled.querySelectorAll('.metro-line.highlighted-line')).toHaveLength(1);
+    expect(compiled.querySelector('.line-accordion-body')?.textContent).toContain('Los Molinos');
   });
 
   it('should show an error and retry action when the API fails', async () => {

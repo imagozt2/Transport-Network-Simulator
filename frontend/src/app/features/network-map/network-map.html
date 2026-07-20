@@ -10,13 +10,13 @@
           <svg class="network-svg" [attr.viewBox]="'0 0 ' + mapViewBox.width + ' ' + mapViewBox.height" [attr.width]="mapViewBox.width" [attr.height]="mapViewBox.height" aria-label="Mapa de la red de metro de Macegocia" role="img">
             <g class="metro-lines">
               @for (line of mapLines; track line.code) {
-                <polyline class="metro-line" [class.dimmed-line]="isMapLineDimmed(line.code)" [class.highlighted-line]="isMapLineHighlighted(line.code)" [attr.points]="getLinePoints(line)" [attr.stroke]="line.color" tabindex="0" role="button" [attr.aria-label]="'Mostrar recorrido de ' + line.code" [attr.aria-pressed]="isLineExpanded(line.code)" (click)="toggleExpandedLine(line.code)" (keydown)="toggleLineFromKeyboard($event, line.code)"><title>{{ line.code }}</title></polyline>
+                <polyline class="metro-line" [class.dimmed-line]="isMapLineDimmed(line.code)" [class.highlighted-line]="isMapLineHighlighted(line.code)" [attr.points]="getLinePoints(line)" [attr.stroke]="line.color" (mouseenter)="hoverLine(line.code)" (mouseleave)="clearHoveredLine()" (click)="toggleExpandedLine(line.code)"><title>{{ line.code }}</title></polyline>
               }
             </g>
 
             <g class="stations">
               @for (station of mapStations; track station.stationCode) {
-                <g class="station-node" [class.dimmed-station]="shouldDimStation(station.stationCode)" [class.highlighted-station]="shouldHighlightStation(station.stationCode)">
+                <g class="station-node" [class.dimmed-station]="shouldDimStation(station.stationCode)" [class.highlighted-station]="shouldHighlightStation(station.stationCode)" (mouseenter)="hoverStation(station.stationCode)" (mouseleave)="clearHoveredLine()" (click)="selectStationLine(station.stationCode)">
                   @if (isTransferStation(station.stationCode)) { <circle class="station-transfer-ring" [attr.cx]="station.x" [attr.cy]="station.y" r="11" /> }
                   <circle class="station-circle" [class.transfer-station]="isTransferStation(station.stationCode)" [attr.cx]="station.x" [attr.cy]="station.y" r="6" />
                   @if (station.showLabel !== false) {
@@ -31,7 +31,7 @@
 
             <g class="line-end-labels">
               @for (line of mapLines; track line.code) {
-                <g [class.dimmed-line-label]="isMapLineDimmed(line.code)" [class.highlighted-line-label]="isMapLineHighlighted(line.code)">
+                <g class="line-end-label" [class.dimmed-line-label]="isMapLineDimmed(line.code)" [class.highlighted-line-label]="isMapLineHighlighted(line.code)" (mouseenter)="hoverLine(line.code)" (mouseleave)="clearHoveredLine()" (click)="toggleExpandedLine(line.code)">
                   <rect class="line-end-label-box" [attr.x]="line.startLabel.x" [attr.y]="line.startLabel.y" [attr.width]="getLineLabelWidth(line, 'start')" [attr.height]="getLineLabelHeight(line, 'start')" [attr.rx]="getLineLabelRadius(line, 'start')" [attr.fill]="line.color" />
                   <text class="line-end-label-text" [attr.x]="getLineLabelTextX(line, 'start')" [attr.y]="getLineLabelTextY(line, 'start')" text-anchor="middle" [attr.fill]="getLineTextColor(line.color)">{{ line.code }}</text>
                   <rect class="line-end-label-box" [attr.x]="line.endLabel.x" [attr.y]="line.endLabel.y" [attr.width]="getLineLabelWidth(line, 'end')" [attr.height]="getLineLabelHeight(line, 'end')" [attr.rx]="getLineLabelRadius(line, 'end')" [attr.fill]="line.color" />

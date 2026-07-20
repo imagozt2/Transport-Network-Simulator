@@ -10,10 +10,10 @@
 .map-scroll { width: 100%; padding: 12px; overflow: auto; border: 1px solid #e5e7eb; border-radius: 18px; background: radial-gradient(circle at 1px 1px, #dbeafe 1px, transparent 0); background-size: 26px 26px; }
 .network-svg { display: block; min-width: 100%; background: rgba(255, 255, 255, .6); }
 .metro-line { fill: none; stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; cursor: pointer; transition: opacity .2s ease, stroke-width .2s ease, filter .2s ease; }
-.metro-line:hover, .metro-line:focus-visible { stroke-width: 10; filter: drop-shadow(0 3px 7px rgba(15, 23, 42, .22)); outline: none; }
+.metro-line:hover { stroke-width: 10; filter: drop-shadow(0 3px 7px rgba(15, 23, 42, .22)); }
 .metro-line.dimmed-line { opacity: .16; }
 .metro-line.highlighted-line { opacity: 1; stroke-width: 10; filter: drop-shadow(0 3px 7px rgba(15, 23, 42, .28)); }
-.station-node { cursor: default; transition: opacity .2s ease, filter .2s ease; }
+.station-node { cursor: pointer; transition: opacity .2s ease, filter .2s ease; }
 .station-node.dimmed-station { opacity: .22; }
 .station-node.highlighted-station { opacity: 1; }
 .station-transfer-ring { fill: white; stroke: #111827; stroke-width: 3; }
@@ -21,6 +21,7 @@
 .station-node:hover .station-circle, .station-node:hover .station-transfer-ring { filter: drop-shadow(0 4px 8px rgba(15, 23, 42, .35)); }
 .station-label { fill: #111827; font-size: 10px; font-weight: 800; pointer-events: none; }
 .line-end-labels { transition: opacity .2s ease; }
+.line-end-label { cursor: pointer; }
 .line-end-label-box { filter: drop-shadow(0 3px 6px rgba(15, 23, 42, .2)); }
 .line-end-label-text { font-size: 13px; font-weight: 900; pointer-events: none; }
 .dimmed-line-label { opacity: .18; }
