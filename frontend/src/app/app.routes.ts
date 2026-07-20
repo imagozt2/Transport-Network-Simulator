@@ -1,8 +1,8 @@
 import { Routes } from '@angular/router';
 
 import { Dashboard } from './features/dashboard/dashboard';
+import { NetworkMap } from './features/network-map/network-map';
 import { MainLayout } from './layout/main-layout/main-layout';
-import { PlaceholderPage } from './shared/placeholder-page/placeholder-page';
 
 export const routes: Routes = [
   {
@@ -20,11 +20,7 @@ export const routes: Routes = [
       },
       {
         path: 'network-map',
-        component: PlaceholderPage,
-        data: {
-          title: 'Mapa de red',
-          description: 'El mapa interactivo se incorporará en su fase de desarrollo.'
-        }
+        component: NetworkMap
       }
     ]
   },
