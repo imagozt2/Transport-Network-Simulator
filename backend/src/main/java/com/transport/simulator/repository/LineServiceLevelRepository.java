@@ -12,4 +12,10 @@ public interface LineServiceLevelRepository extends JpaRepository<LineServiceLev
             Long lineId,
             Long serviceCalendarId
     );
+
+    @EntityGraph(attributePaths = {"servicePeriod", "servicePeriod.serviceCalendar"})
+    List<LineServiceLevel> findAllByLineIdAndServicePeriodServiceCalendarCodeAndActiveTrueAndServicePeriodActiveTrueOrderByServicePeriodPeriodOrderAsc(
+            Long lineId,
+            String calendarCode
+    );
 }
