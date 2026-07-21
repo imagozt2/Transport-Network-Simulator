@@ -106,6 +106,44 @@ class TrainDutyPlanningServiceTests {
     }
 
     @Test
+    void shouldRegularizeTrainPhasesAfterAServicePeriodTransition() {
+        ZonedDateTime evaluatedAt = at(SERVICE_DATE, 8, 0, 0);
+        ResolvedLineServiceConfiguration configuration = configuration(
+                SERVICE_DATE,
+                LocalTime.of(6, 0),
+                LocalTime.of(10, 0),
+                "PEAK",
+                ServicePeriodType.PEAK
+        );
+        stubOperation(evaluatedAt, configuration);
+        stubLevels(List.of(
+                level("OFF_PEAK", ServicePeriodType.OFF_PEAK, LocalTime.of(6, 0), LocalTime.of(7, 0), 220),
+                level("PEAK", ServicePeriodType.PEAK, LocalTime.of(7, 0), LocalTime.of(10, 0), 110)
+        ));
+        stubTrains(List.of(
+                train(1L, "T-A-1", 201L, "DEP-A", 101L),
+                train(2L, "T-C-1", 202L, "DEP-C", 103L),
+                train(3L, "T-A-2", 201L, "DEP-A", 101L),
+                train(4L, "T-C-2", 202L, "DEP-C", 103L)
+        ));
+
+        var positions = planner(evaluatedAt).getCurrentPlan().lines().getFirst().positions();
+
+        assertThat(positions).hasSize(4);
+        assertThat(positions).extracting(
+                "direction",
+                "previousStationCode",
+                "nextStationCode",
+                "progressPercentage"
+        ).containsExactly(
+                org.assertj.core.groups.Tuple.tuple(ServiceDirection.OUTBOUND, "STB", "STC", 50),
+                org.assertj.core.groups.Tuple.tuple(ServiceDirection.INBOUND, "STB", "STA", 0),
+                org.assertj.core.groups.Tuple.tuple(ServiceDirection.INBOUND, "STC", "STB", 25),
+                org.assertj.core.groups.Tuple.tuple(ServiceDirection.OUTBOUND, "STA", "STB", 50)
+        );
+    }
+
+    @Test
     void shouldCalculateStationStopsSegmentsProgressAndDirectionChanges() {
         ZonedDateTime evaluatedAt = at(SERVICE_DATE, 6, 0, 30);
         ResolvedLineServiceConfiguration configuration = configuration(

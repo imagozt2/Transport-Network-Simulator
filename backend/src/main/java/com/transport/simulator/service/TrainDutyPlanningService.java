@@ -109,6 +109,7 @@ public class TrainDutyPlanningService {
                 lineState.lineCode(),
                 configuration.route(),
                 duties,
+                serviceStartsAt,
                 evaluatedAt,
                 roundTripSeconds
         );
@@ -175,6 +176,7 @@ public class TrainDutyPlanningService {
             String lineCode,
             List<RouteStopConfiguration> route,
             List<PlannedTrainDuty> duties,
+            ZonedDateTime serviceStartsAt,
             ZonedDateTime evaluatedAt,
             long roundTripSeconds
     ) {
@@ -182,17 +184,65 @@ public class TrainDutyPlanningService {
             throw new ServiceConfigurationException("Line " + lineCode + " requires at least two route stops");
         }
 
-        return duties.stream()
+        List<PlannedTrainDuty> activeDuties = duties.stream()
                 .filter(duty -> duty.isActiveAt(evaluatedAt))
-                .map(duty -> calculatePosition(
+                .sorted(Comparator.comparingInt(PlannedTrainDuty::dutyNumber))
+                .toList();
+        validateBalancedActiveFleet(lineCode, activeDuties);
+
+        Map<ServiceDirection, Integer> nextDirectionSlot = new HashMap<>();
+        return activeDuties.stream()
+                .map(duty -> {
+                    int directionSlot = nextDirectionSlot.merge(
+                            duty.initialDirection(),
+                            1,
+                            Integer::sum
+                    ) - 1;
+                    long phaseOffsetSeconds = calculateRegularPhaseOffset(
+                            duty.initialDirection(),
+                            directionSlot,
+                            activeDuties.size(),
+                            roundTripSeconds
+                    );
+                    return calculatePosition(
                         lineId,
                         lineCode,
                         route,
                         duty,
+                        serviceStartsAt,
                         evaluatedAt,
-                        roundTripSeconds
-                ))
+                        roundTripSeconds,
+                        phaseOffsetSeconds
+                    );
+                })
                 .toList();
+    }
+
+    private void validateBalancedActiveFleet(String lineCode, List<PlannedTrainDuty> activeDuties) {
+        long outbound = activeDuties.stream()
+                .filter(duty -> duty.initialDirection() == ServiceDirection.OUTBOUND)
+                .count();
+        long inbound = activeDuties.size() - outbound;
+        if (outbound != inbound) {
+            throw new ServiceConfigurationException(
+                    "Active fleet for line " + lineCode + " must be balanced between both terminals"
+            );
+        }
+    }
+
+    private long calculateRegularPhaseOffset(
+            ServiceDirection initialDirection,
+            int directionSlot,
+            int activeFleetSize,
+            long roundTripSeconds
+    ) {
+        if (activeFleetSize == 0) {
+            return 0;
+        }
+        long regularSpacingOffset = directionSlot * roundTripSeconds / activeFleetSize;
+        return initialDirection == ServiceDirection.OUTBOUND
+                ? regularSpacingOffset
+                : regularSpacingOffset + roundTripSeconds / 2L;
     }
 
     private SimulatedTrainPosition calculatePosition(
@@ -200,10 +250,12 @@ public class TrainDutyPlanningService {
             String lineCode,
             List<RouteStopConfiguration> route,
             PlannedTrainDuty duty,
+            ZonedDateTime serviceStartsAt,
             ZonedDateTime evaluatedAt,
-            long roundTripSeconds
+            long roundTripSeconds,
+            long phaseOffsetSeconds
     ) {
-        List<MovementSegment> cycle = buildMovementCycle(route, duty.initialDirection());
+        List<MovementSegment> cycle = buildMovementCycle(route, ServiceDirection.OUTBOUND);
         long calculatedCycleSeconds = cycle.stream().mapToLong(MovementSegment::durationSeconds).sum();
         if (calculatedCycleSeconds != roundTripSeconds) {
             throw new ServiceConfigurationException(
@@ -211,8 +263,11 @@ public class TrainDutyPlanningService {
             );
         }
 
-        long elapsedDutySeconds = Duration.between(duty.plannedStartAt(), evaluatedAt).toSeconds();
-        long cycleOffsetSeconds = Math.floorMod(elapsedDutySeconds, roundTripSeconds);
+        long elapsedServiceSeconds = Duration.between(serviceStartsAt, evaluatedAt).toSeconds();
+        long cycleOffsetSeconds = Math.floorMod(
+                elapsedServiceSeconds + phaseOffsetSeconds,
+                roundTripSeconds
+        );
         for (MovementSegment segment : cycle) {
             if (cycleOffsetSeconds < segment.durationSeconds()) {
                 return positionWithinSegment(lineId, lineCode, duty, segment, cycleOffsetSeconds, evaluatedAt);
