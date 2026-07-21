@@ -17,6 +17,7 @@ public record PlannedTrainDuty(
         String startingPeriodCode,
         int startingHeadwaySeconds,
         ZonedDateTime plannedStartAt,
+        ZonedDateTime requestedReleaseAt,
         ZonedDateTime plannedReleaseAt
 ) {
 
@@ -37,11 +38,13 @@ public record PlannedTrainDuty(
         Objects.requireNonNull(originStationCode, "originStationCode must not be null");
         Objects.requireNonNull(startingPeriodCode, "startingPeriodCode must not be null");
         Objects.requireNonNull(plannedStartAt, "plannedStartAt must not be null");
+        Objects.requireNonNull(requestedReleaseAt, "requestedReleaseAt must not be null");
         Objects.requireNonNull(plannedReleaseAt, "plannedReleaseAt must not be null");
         if (startingHeadwaySeconds <= 0) {
             throw new IllegalArgumentException("startingHeadwaySeconds must be positive");
         }
-        if (plannedReleaseAt.isBefore(plannedStartAt)) {
+        if (requestedReleaseAt.isBefore(plannedStartAt)
+                || plannedReleaseAt.isBefore(requestedReleaseAt)) {
             throw new IllegalArgumentException("A duty cannot end before it starts");
         }
     }

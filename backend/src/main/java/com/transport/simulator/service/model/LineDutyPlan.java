@@ -14,7 +14,8 @@ public record LineDutyPlan(
         long roundTripSeconds,
         List<ServicePeriodFleetPlan> periods,
         List<PlannedTrainDuty> duties,
-        List<SimulatedTrainPosition> positions
+        List<SimulatedTrainPosition> positions,
+        List<PlannedDepotMovement> depotMovements
 ) {
 
     public LineDutyPlan {
@@ -29,6 +30,7 @@ public record LineDutyPlan(
         periods = List.copyOf(periods);
         duties = List.copyOf(duties);
         positions = List.copyOf(positions);
+        depotMovements = List.copyOf(depotMovements);
     }
 
     public long activeDutyCountAt(ZonedDateTime instant) {

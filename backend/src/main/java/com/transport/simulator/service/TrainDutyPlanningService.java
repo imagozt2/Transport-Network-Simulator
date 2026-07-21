@@ -4,6 +4,7 @@ import com.transport.simulator.entity.LineServiceLevel;
 import com.transport.simulator.entity.ServicePeriod;
 import com.transport.simulator.entity.Train;
 import com.transport.simulator.enums.FleetRole;
+import com.transport.simulator.enums.DepotMovementType;
 import com.transport.simulator.enums.ServiceDirection;
 import com.transport.simulator.enums.TrainPositionState;
 import com.transport.simulator.repository.LineServiceLevelRepository;
@@ -11,6 +12,8 @@ import com.transport.simulator.repository.TrainRepository;
 import com.transport.simulator.service.model.LineDutyPlan;
 import com.transport.simulator.service.model.LineServiceOperationState;
 import com.transport.simulator.service.model.PlannedTrainDuty;
+import com.transport.simulator.service.model.PlannedDepotMovement;
+import com.transport.simulator.service.model.LineDepotConfiguration;
 import com.transport.simulator.service.model.ResolvedLineServiceConfiguration;
 import com.transport.simulator.service.model.RouteStopConfiguration;
 import com.transport.simulator.service.model.ServiceDutyPlan;
@@ -91,7 +94,9 @@ public class TrainDutyPlanningService {
         List<PlannedTrainDuty> duties = assignRegularServiceTrains(
                 lineState.lineId(),
                 lineState.lineCode(),
-                generateDuties(configuration.route(), periodPlans, serviceEndsAt)
+                configuration.depots(),
+                generateDuties(configuration.route(), periodPlans, serviceEndsAt),
+                roundTripSeconds
         );
         List<SimulatedTrainPosition> positions = calculatePositions(
                 lineState.lineId(),
@@ -100,6 +105,11 @@ public class TrainDutyPlanningService {
                 duties,
                 evaluatedAt,
                 roundTripSeconds
+        );
+        List<PlannedDepotMovement> depotMovements = buildDepotMovements(
+                lineState.lineId(),
+                lineState.lineCode(),
+                duties
         );
 
         return new LineDutyPlan(
@@ -111,7 +121,46 @@ public class TrainDutyPlanningService {
                 roundTripSeconds,
                 periodPlans,
                 duties,
-                positions
+                positions,
+                depotMovements
+        );
+    }
+
+    private List<PlannedDepotMovement> buildDepotMovements(
+            Long lineId,
+            String lineCode,
+            List<PlannedTrainDuty> duties
+    ) {
+        return duties.stream()
+                .flatMap(duty -> List.of(
+                        toDepotMovement(lineId, lineCode, duty, DepotMovementType.EXIT, duty.plannedStartAt()),
+                        toDepotMovement(lineId, lineCode, duty, DepotMovementType.ENTRY, duty.plannedReleaseAt())
+                ).stream())
+                .sorted(Comparator.comparing(PlannedDepotMovement::scheduledAt)
+                        .thenComparingInt(PlannedDepotMovement::dutyNumber)
+                        .thenComparing(PlannedDepotMovement::movementType))
+                .toList();
+    }
+
+    private PlannedDepotMovement toDepotMovement(
+            Long lineId,
+            String lineCode,
+            PlannedTrainDuty duty,
+            DepotMovementType movementType,
+            ZonedDateTime scheduledAt
+    ) {
+        return new PlannedDepotMovement(
+                duty.dutyNumber(),
+                duty.trainId(),
+                duty.trainCode(),
+                lineId,
+                lineCode,
+                duty.homeDepotId(),
+                duty.homeDepotCode(),
+                duty.originStationId(),
+                duty.originStationCode(),
+                movementType,
+                scheduledAt
         );
     }
 
@@ -391,20 +440,40 @@ public class TrainDutyPlanningService {
     private List<PlannedTrainDuty> assignRegularServiceTrains(
             Long lineId,
             String lineCode,
-            List<UnassignedDuty> duties
+            List<LineDepotConfiguration> depots,
+            List<UnassignedDuty> duties,
+            long roundTripSeconds
     ) {
+        List<Long> operationalDepotIds = depots.stream()
+                .filter(LineDepotConfiguration::dispatchEnabled)
+                .filter(LineDepotConfiguration::receptionEnabled)
+                .map(LineDepotConfiguration::depotId)
+                .toList();
+        if (operationalDepotIds.isEmpty()) {
+            throw new ServiceConfigurationException(
+                    "Line " + lineCode + " has no depot enabled for both dispatch and reception"
+            );
+        }
         List<Train> eligibleTrains = trainRepository
                 .findAllByAssignedLineIdAndFleetRoleAndModelSeriesAndActiveTrueAndModelActiveTrueAndHomeDepotActiveTrueOrderByDispatchOrderAscCodeAsc(
                         lineId,
                         FleetRole.REGULAR_SERVICE,
                         REGULAR_SERVICE_SERIES
-                );
+                ).stream()
+                .filter(train -> operationalDepotIds.contains(train.getHomeDepot().getId()))
+                .toList();
         Map<Long, ZonedDateTime> availableFrom = new HashMap<>();
 
         return duties.stream()
                 .sorted(Comparator.comparing(UnassignedDuty::plannedStartAt)
                         .thenComparingInt(UnassignedDuty::dutyNumber))
-                .map(duty -> assignTrain(lineCode, duty, eligibleTrains, availableFrom))
+                .map(duty -> assignTrain(
+                        lineCode,
+                        duty,
+                        eligibleTrains,
+                        availableFrom,
+                        roundTripSeconds
+                ))
                 .sorted(Comparator.comparingInt(PlannedTrainDuty::dutyNumber))
                 .toList();
     }
@@ -413,7 +482,8 @@ public class TrainDutyPlanningService {
             String lineCode,
             UnassignedDuty duty,
             List<Train> eligibleTrains,
-            Map<Long, ZonedDateTime> availableFrom
+            Map<Long, ZonedDateTime> availableFrom,
+            long roundTripSeconds
     ) {
         Train train = eligibleTrains.stream()
                 .filter(candidate -> candidate.getHomeDepot().getStation().getId().equals(duty.originStationId()))
@@ -427,7 +497,12 @@ public class TrainDutyPlanningService {
                                 + " at origin " + duty.originStationCode()
                                 + " and departure " + duty.plannedStartAt()
                 ));
-        availableFrom.put(train.getId(), duty.plannedReleaseAt());
+        ZonedDateTime depotEntryAt = nextReturnToHomeDepot(
+                duty.plannedStartAt(),
+                duty.plannedReleaseAt(),
+                roundTripSeconds
+        );
+        availableFrom.put(train.getId(), depotEntryAt);
 
         return new PlannedTrainDuty(
                 duty.dutyNumber(),
@@ -442,8 +517,23 @@ public class TrainDutyPlanningService {
                 duty.startingPeriodCode(),
                 duty.startingHeadwaySeconds(),
                 duty.plannedStartAt(),
-                duty.plannedReleaseAt()
+                duty.plannedReleaseAt(),
+                depotEntryAt
         );
+    }
+
+    private ZonedDateTime nextReturnToHomeDepot(
+            ZonedDateTime dutyStartsAt,
+            ZonedDateTime requestedReleaseAt,
+            long roundTripSeconds
+    ) {
+        long requestedDutySeconds = Duration.between(dutyStartsAt, requestedReleaseAt).toSeconds();
+        long completedCycles = Math.floorDiv(requestedDutySeconds, roundTripSeconds);
+        long entryOffsetSeconds = Math.multiplyExact(completedCycles, roundTripSeconds);
+        if (entryOffsetSeconds < requestedDutySeconds) {
+            entryOffsetSeconds = Math.addExact(entryOffsetSeconds, roundTripSeconds);
+        }
+        return dutyStartsAt.plusSeconds(entryOffsetSeconds);
     }
 
     private long calculateRoundTripSeconds(List<RouteStopConfiguration> route) {
