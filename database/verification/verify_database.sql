@@ -62,9 +62,9 @@ FROM trains
 LEFT JOIN depots ON depots.id = trains.current_depot_id
 WHERE trains.status = 'DEPOT' AND depots.id IS NULL;
 
-SELECT lines.code, stops.station_order
+SELECT transport_line.code, stops.station_order
 FROM line_stations stops
-JOIN transport_lines lines ON lines.id = stops.line_id
+JOIN transport_lines transport_line ON transport_line.id = stops.line_id
 JOIN (
     SELECT line_id, MAX(station_order) AS last_stop
     FROM line_stations
@@ -75,20 +75,22 @@ WHERE stops.active = TRUE
   AND stops.station_order < routes.last_stop
   AND stops.travel_seconds_to_next IS NULL;
 
-SELECT lines.code, calendars.code AS calendar_code, COUNT(levels.id) AS configured_periods
-FROM transport_lines lines
+SELECT transport_line.code, calendars.code AS calendar_code, COUNT(levels.id) AS configured_periods
+FROM transport_lines transport_line
 CROSS JOIN service_calendars calendars
 LEFT JOIN service_periods periods ON periods.service_calendar_id = calendars.id AND periods.active = TRUE
 LEFT JOIN line_service_levels levels
-    ON levels.line_id = lines.id AND levels.service_period_id = periods.id AND levels.active = TRUE
-WHERE lines.active = TRUE AND calendars.active = TRUE
-GROUP BY lines.id, lines.code, calendars.id, calendars.code
+    ON levels.line_id = transport_line.id
+    AND levels.service_period_id = periods.id
+    AND levels.active = TRUE
+WHERE transport_line.active = TRUE AND calendars.active = TRUE
+GROUP BY transport_line.id, transport_line.code, calendars.id, calendars.code
 HAVING configured_periods <> COUNT(periods.id);
 
-SELECT lines.code
-FROM transport_lines lines
-LEFT JOIN line_depots ON line_depots.line_id = lines.id
+SELECT transport_line.code
+FROM transport_lines transport_line
+LEFT JOIN line_depots ON line_depots.line_id = transport_line.id
     AND line_depots.active = TRUE AND line_depots.dispatch_enabled = TRUE
-WHERE lines.active = TRUE
-GROUP BY lines.id, lines.code
+WHERE transport_line.active = TRUE
+GROUP BY transport_line.id, transport_line.code
 HAVING COUNT(line_depots.id) = 0;

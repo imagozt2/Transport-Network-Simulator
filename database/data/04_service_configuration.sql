@@ -64,18 +64,21 @@ INSERT INTO seed_line_headway_adjustments VALUES
 ('L1',0),('L2',15),('L3',45),('L4',15),('L5',30),('L6',60);
 
 INSERT INTO line_service_levels (line_id, service_period_id, headway_seconds, active)
-SELECT lines.id, periods.id,
+SELECT transport_line.id, periods.id,
        seed_periods.base_headway_seconds + adjustments.adjustment_seconds, TRUE
 FROM seed_service_periods seed_periods
 JOIN service_calendars calendars ON calendars.code = seed_periods.calendar_code
 JOIN service_periods periods
     ON periods.service_calendar_id = calendars.id AND periods.code = seed_periods.code
 CROSS JOIN seed_line_headway_adjustments adjustments
-JOIN transport_lines lines ON lines.code = adjustments.line_code
+JOIN transport_lines transport_line ON transport_line.code = adjustments.line_code
+WHERE TRUE
 ON DUPLICATE KEY UPDATE
     headway_seconds = VALUES(headway_seconds), active = VALUES(active);
 
-UPDATE line_stations SET travel_seconds_to_next = NULL, dwell_seconds = 30;
+UPDATE line_stations
+SET travel_seconds_to_next = NULL, dwell_seconds = 30
+WHERE id > 0;
 
 UPDATE line_stations current_stop
 JOIN line_stations next_stop
@@ -91,7 +94,10 @@ JOIN station_connections connections
         AND connections.destination_station_id = current_stop.station_id
     )
 SET current_stop.travel_seconds_to_next = connections.estimated_minutes * 60
-WHERE current_stop.active = TRUE AND next_stop.active = TRUE AND connections.active = TRUE;
+WHERE current_stop.id > 0
+  AND current_stop.active = TRUE
+  AND next_stop.active = TRUE
+  AND connections.active = TRUE;
 
 DROP TEMPORARY TABLE IF EXISTS seed_station_line_counts;
 CREATE TEMPORARY TABLE seed_station_line_counts AS
@@ -102,7 +108,8 @@ GROUP BY station_id;
 
 UPDATE line_stations stops
 JOIN seed_station_line_counts counts ON counts.station_id = stops.station_id
-SET stops.dwell_seconds = CASE WHEN counts.line_count > 1 THEN 45 ELSE 30 END;
+SET stops.dwell_seconds = CASE WHEN counts.line_count > 1 THEN 45 ELSE 30 END
+WHERE stops.id > 0;
 
 UPDATE line_stations stops
 JOIN (
@@ -112,7 +119,8 @@ JOIN (
     GROUP BY line_id
 ) terminals ON terminals.line_id = stops.line_id
 SET stops.dwell_seconds = 90
-WHERE stops.station_order IN (terminals.first_stop, terminals.last_stop);
+WHERE stops.id > 0
+  AND stops.station_order IN (terminals.first_stop, terminals.last_stop);
 
 DROP TEMPORARY TABLE IF EXISTS seed_line_depots;
 CREATE TEMPORARY TABLE seed_line_depots (
@@ -133,10 +141,11 @@ INSERT INTO seed_line_depots VALUES
 INSERT INTO line_depots (
     line_id, depot_id, dispatch_priority, dispatch_enabled, reception_enabled, active
 )
-SELECT lines.id, depots.id, seed.dispatch_priority, TRUE, TRUE, TRUE
+SELECT transport_line.id, depots.id, seed.dispatch_priority, TRUE, TRUE, TRUE
 FROM seed_line_depots seed
-JOIN transport_lines lines ON lines.code = seed.line_code
+JOIN transport_lines transport_line ON transport_line.code = seed.line_code
 JOIN depots ON depots.code = seed.depot_code
+WHERE TRUE
 ON DUPLICATE KEY UPDATE
     dispatch_priority = VALUES(dispatch_priority),
     dispatch_enabled = VALUES(dispatch_enabled),
