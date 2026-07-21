@@ -76,26 +76,61 @@
                   </div>
                 </section>
 
+                <section class="train-circulation-panel">
+                  <div class="panel-header">
+                    <h2>Posición de los trenes</h2>
+                    <span>Actualización cada 5 s</span>
+                  </div>
+                  <div class="horizontal-thermometers">
+                    @for (direction of serviceDirections; track direction) {
+                      <section class="horizontal-route">
+                        <header>
+                          <span>Dirección <strong>{{ directionDestination(line, direction) }}</strong></span>
+                          <small>{{ lineTrainsInDirection(line, direction) }} trenes</small>
+                        </header>
+                        <div class="horizontal-track-area">
+                          <span class="horizontal-line-label start" [style.background-color]="getLineColor(line)" [style.color]="getLineTextColor(getLineColor(line))">{{ line.code }}</span>
+                          <span class="horizontal-line-label end" [style.background-color]="getLineColor(line)" [style.color]="getLineTextColor(getLineColor(line))">{{ line.code }}</span>
+                          <span class="horizontal-track" aria-hidden="true"></span>
+                          @for (station of line.stations; track station.id; let stationIndex = $index) {
+                            <span
+                              class="horizontal-station"
+                              [class.terminal]="$first || $last"
+                              [style.left.%]="stationPositionPercentage(stationIndex, line.stations.length)"
+                              [attr.title]="station.name"
+                              aria-hidden="true"
+                            ></span>
+                            <span
+                              class="horizontal-station-label"
+                              [style.left.%]="stationPositionPercentage(stationIndex, line.stations.length)"
+                              [attr.title]="station.name"
+                            >{{ station.name }}</span>
+                          }
+                          @for (train of trainsForDirection(line, direction); track trackTrain($index, train)) {
+                            <span
+                              class="horizontal-train-marker"
+                              [style.left.%]="getTrainPositionPercentage(line, train)"
+                              [attr.aria-label]="'Tren ' + train.code + ', dirección ' + directionDestination(line, direction)"
+                              tabindex="0"
+                              role="img"
+                            >
+                              <span class="train-marker-core" aria-hidden="true"></span>
+                              <span class="train-tooltip" aria-hidden="true">
+                                <strong>{{ train.code }}</strong>
+                                <small>{{ directionDestination(line, direction) }}</small>
+                              </span>
+                            </span>
+                          }
+                        </div>
+                      </section>
+                    }
+                  </div>
+                </section>
+
                 <section class="stations-panel">
                   <div class="panel-header"><h2>Estaciones</h2><span>{{ line.stations.length }} paradas</span></div>
                   <div class="mini-thermometer">
                     <div class="mini-thermometer-route">
-                      @for (train of line.trains; track trackTrain($index, train)) {
-                        <span
-                          class="train-marker"
-                          [class.inbound]="train.direction === 'INBOUND'"
-                          [style.top.px]="getTrainPosition(line, train)"
-                          [attr.aria-label]="'Tren ' + train.code + ', sentido ' + directionLabel(train.direction)"
-                          tabindex="0"
-                          role="img"
-                        >
-                          <span class="train-marker-core" aria-hidden="true"></span>
-                          <span class="train-tooltip" aria-hidden="true">
-                            <strong>{{ train.code }}</strong>
-                            <small>{{ directionLabel(train.direction) }}</small>
-                          </span>
-                        </span>
-                      }
                       @for (station of line.stations; track station.id; let first = $first; let last = $last) {
                         <div class="mini-station-row">
                           <span class="mini-track" aria-hidden="true">

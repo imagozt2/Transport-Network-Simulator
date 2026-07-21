@@ -11,7 +11,7 @@ import {
 import { LineOperationsService } from '../../core/services/line-operations.service';
 import { contrastingTextColor, lineColor } from '../../core/utils/line-visuals';
 
-@Component({ selector: 'app-lines', templateUrl: './lines.html', styleUrl: './lines.css' })
+@Component({ selector: 'app-lines', templateUrl: './lines.html', styleUrls: ['./lines.css', './lines-circulation.css'] })
 export class Lines implements OnInit, OnDestroy {
   private readonly lineOperationsService = inject(LineOperationsService);
   private readonly refreshIntervalMs = 5_000;
@@ -25,6 +25,7 @@ export class Lines implements OnInit, OnDestroy {
   refreshing = false;
   errorMessage = '';
   autoRefreshEnabled = true;
+  readonly serviceDirections: readonly ServiceDirection[] = ['OUTBOUND', 'INBOUND'];
 
   ngOnInit(): void {
     this.loadOperations(true);
@@ -110,23 +111,36 @@ export class Lines implements OnInit, OnDestroy {
     return contrastingTextColor(color);
   }
 
-  getTrainPosition(line: LineOperation, train: LineOperationTrain): number {
+  trainsForDirection(line: LineOperation, direction: ServiceDirection): LineOperationTrain[] {
+    return line.trains.filter((train) => train.direction === direction);
+  }
+
+  directionDestination(line: LineOperation, direction: ServiceDirection): string {
+    return direction === 'OUTBOUND' ? line.lastTerminal.name : line.firstTerminal.name;
+  }
+
+  getTrainPositionPercentage(line: LineOperation, train: LineOperationTrain): number {
     const currentStationIndex = train.currentStationId === null
       ? -1
       : line.stations.findIndex((station) => station.id === train.currentStationId);
 
     if (train.positionState === 'AT_STATION' && currentStationIndex >= 0) {
-      return currentStationIndex * 50 + 25;
+      return this.stationPositionPercentage(currentStationIndex, line.stations.length);
     }
 
     const previousStationIndex = line.stations.findIndex((station) => station.id === train.previousStationId);
     const nextStationIndex = line.stations.findIndex((station) => station.id === train.nextStationId);
     if (previousStationIndex < 0 || nextStationIndex < 0) {
-      return 25;
+      return 0;
     }
 
     const progress = Math.max(0, Math.min(train.progressPercentage, 100)) / 100;
-    return (previousStationIndex + (nextStationIndex - previousStationIndex) * progress) * 50 + 25;
+    const routePosition = previousStationIndex + (nextStationIndex - previousStationIndex) * progress;
+    return line.stations.length <= 1 ? 0 : routePosition * 100 / (line.stations.length - 1);
+  }
+
+  stationPositionPercentage(index: number, stationCount: number): number {
+    return stationCount <= 1 ? 0 : index * 100 / (stationCount - 1);
   }
 
   trackTrain(_: number, train: LineOperationTrain): number {

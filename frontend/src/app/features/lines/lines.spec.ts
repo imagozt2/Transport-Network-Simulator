@@ -50,12 +50,17 @@ describe('Lines', () => {
     expect(compiled.querySelectorAll('.line-card')).toHaveLength(2);
     expect(compiled.textContent).toContain('Trenes en servicio');
     expect(compiled.querySelector('.line-badge')?.getAttribute('style')).toContain('color: rgb(17, 24, 39)');
-    expect(compiled.querySelectorAll('.train-marker')).toHaveLength(2);
-    expect((compiled.querySelectorAll('.train-marker').item(0) as HTMLElement).style.top).toBe('50px');
-    expect((compiled.querySelectorAll('.train-marker').item(1) as HTMLElement).style.top).toBe('75px');
-    expect(compiled.querySelector('.train-marker.inbound')).not.toBeNull();
+    expect(compiled.querySelectorAll('.horizontal-route')).toHaveLength(2);
+    expect(compiled.querySelectorAll('.horizontal-station-label')).toHaveLength(4);
+    expect(compiled.querySelectorAll('.horizontal-line-label')).toHaveLength(4);
+    expect(compiled.querySelector('.horizontal-station-label')?.textContent).toContain('Aeropuerto');
+    expect(compiled.querySelector('.horizontal-station-label')?.textContent).not.toContain('...');
+    expect(compiled.querySelectorAll('.horizontal-train-marker')).toHaveLength(2);
+    expect((compiled.querySelectorAll('.horizontal-train-marker').item(0) as HTMLElement).style.left).toBe('50%');
+    expect((compiled.querySelectorAll('.horizontal-train-marker').item(1) as HTMLElement).style.left).toBe('100%');
+    expect(compiled.querySelector('.mini-thermometer .horizontal-train-marker')).toBeNull();
     expect(compiled.querySelector('.train-tooltip')?.textContent).toContain('T-9001');
-    expect(compiled.querySelector('.train-marker')?.getAttribute('aria-label')).toContain('T-9001');
+    expect(compiled.querySelector('.horizontal-train-marker')?.getAttribute('aria-label')).toContain('T-9001');
     fixture.destroy();
   });
 
@@ -72,7 +77,7 @@ describe('Lines', () => {
     expect(component.totalStations()).toBe(2);
     expect(component.trainsInDirection('OUTBOUND')).toBe(1);
     expect(component.transferLineCodes(2, 'L3')).toEqual(['L4']);
-    expect(component.getTrainPosition(firstLine, { ...firstLine.trains[0], progressPercentage: 140 })).toBe(75);
+    expect(component.getTrainPositionPercentage(firstLine, { ...firstLine.trains[0], progressPercentage: 140 })).toBe(100);
     fixture.destroy();
   });
 
