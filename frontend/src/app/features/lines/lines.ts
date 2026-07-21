@@ -2,6 +2,7 @@ import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 
 import {
   LineOperation,
+  LineOperationTrain,
   LineOperationsResponse,
   ServiceDirection,
   ServiceOperationPhase,
@@ -107,6 +108,29 @@ export class Lines implements OnInit, OnDestroy {
 
   getLineTextColor(color: string): string {
     return contrastingTextColor(color);
+  }
+
+  getTrainPosition(line: LineOperation, train: LineOperationTrain): number {
+    const currentStationIndex = train.currentStationId === null
+      ? -1
+      : line.stations.findIndex((station) => station.id === train.currentStationId);
+
+    if (train.positionState === 'AT_STATION' && currentStationIndex >= 0) {
+      return currentStationIndex * 50 + 25;
+    }
+
+    const previousStationIndex = line.stations.findIndex((station) => station.id === train.previousStationId);
+    const nextStationIndex = line.stations.findIndex((station) => station.id === train.nextStationId);
+    if (previousStationIndex < 0 || nextStationIndex < 0) {
+      return 25;
+    }
+
+    const progress = Math.max(0, Math.min(train.progressPercentage, 100)) / 100;
+    return (previousStationIndex + (nextStationIndex - previousStationIndex) * progress) * 50 + 25;
+  }
+
+  trackTrain(_: number, train: LineOperationTrain): number {
+    return train.id;
   }
 
   formatDuration(seconds: number | null): string {

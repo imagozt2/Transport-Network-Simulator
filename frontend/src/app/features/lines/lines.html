@@ -79,23 +79,34 @@
                 <section class="stations-panel">
                   <div class="panel-header"><h2>Estaciones</h2><span>{{ line.stations.length }} paradas</span></div>
                   <div class="mini-thermometer">
-                    @for (station of line.stations; track station.id; let first = $first; let last = $last) {
-                      <div class="mini-station-row">
-                        <span class="mini-track" aria-hidden="true">
-                          @if (!first) { <span class="mini-track-line top"></span> }
-                          <span class="mini-station-dot" [class.transfer-dot]="transferLineCodes(station.id, line.code).length > 0"></span>
-                          @if (!last) { <span class="mini-track-line bottom"></span> }
-                        </span>
-                        <span class="mini-station-content">
-                          <span><strong>{{ station.name }}</strong><small>{{ station.code }}</small></span>
-                          @if (transferLineCodes(station.id, line.code); as transfers) {
-                            @if (transfers.length > 0) {
-                              <span class="transfer-list">@for (transfer of transfers; track transfer) { <span class="transfer-badge" [style.background-color]="getLineColorByCode(transfer)" [style.color]="getLineTextColor(getLineColorByCode(transfer))">{{ transfer }}</span> }</span>
+                    <div class="mini-thermometer-route">
+                      @for (train of line.trains; track trackTrain($index, train)) {
+                        <span
+                          class="train-marker"
+                          [class.inbound]="train.direction === 'INBOUND'"
+                          [style.top.px]="getTrainPosition(line, train)"
+                          [attr.aria-label]="'Tren circulando en sentido ' + (train.direction === 'OUTBOUND' ? 'ida' : 'vuelta')"
+                          role="img"
+                        ><span aria-hidden="true"></span></span>
+                      }
+                      @for (station of line.stations; track station.id; let first = $first; let last = $last) {
+                        <div class="mini-station-row">
+                          <span class="mini-track" aria-hidden="true">
+                            @if (!first) { <span class="mini-track-line top"></span> }
+                            <span class="mini-station-dot" [class.transfer-dot]="transferLineCodes(station.id, line.code).length > 0"></span>
+                            @if (!last) { <span class="mini-track-line bottom"></span> }
+                          </span>
+                          <span class="mini-station-content">
+                            <span><strong>{{ station.name }}</strong><small>{{ station.code }}</small></span>
+                            @if (transferLineCodes(station.id, line.code); as transfers) {
+                              @if (transfers.length > 0) {
+                                <span class="transfer-list">@for (transfer of transfers; track transfer) { <span class="transfer-badge" [style.background-color]="getLineColorByCode(transfer)" [style.color]="getLineTextColor(getLineColorByCode(transfer))">{{ transfer }}</span> }</span>
+                              }
                             }
-                          }
-                        </span>
-                      </div>
-                    }
+                          </span>
+                        </div>
+                      }
+                    </div>
                   </div>
                 </section>
               </div>
