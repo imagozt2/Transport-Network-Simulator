@@ -10,10 +10,6 @@ Definición de MySQL 8 y datos iniciales de la red de transporte de Macegocia.
 - `data/02_operations.sql`: dispositivos, material rodante y cocheras.
 - `data/03_ticket_products.sql`: catálogo inicial de productos de transporte.
 - `data/04_service_configuration.sql`: calendarios, franjas, frecuencias, tiempos y cocheras por línea.
-- `migrations/01_add_dispatch_terminal_to_line_depots.sql`: adapta una base existente para asignar
-  a cada cochera su terminal de expedición.
-- `migrations/02_set_station_dwell_to_20_seconds.sql`: normaliza a 20 segundos las paradas de una
-  base existente.
 - `verification/verify_database.sql`: recuentos esperados y comprobaciones de integridad.
 
 ## Orden de instalación
@@ -39,19 +35,5 @@ registros mantenidos sin duplicarlos.
 
 La configuración ferroviaria se explica en
 [`docs/modelo-operacion-ferroviaria.md`](../docs/modelo-operacion-ferroviaria.md).
-
-Si la base se creó antes de incorporar los terminales de expedición, debe ejecutarse una sola vez la
-migración y volver a cargar la configuración operativa:
-
-```powershell
-Get-Content database/migrations/01_add_dispatch_terminal_to_line_depots.sql -Raw | mysql --user=$env:DB_USERNAME
-Get-Content database/data/04_service_configuration.sql -Raw | mysql --user=$env:DB_USERNAME
-```
-
-Para actualizar los tiempos de parada de una base ya inicializada:
-
-```powershell
-Get-Content database/migrations/02_set_station_dwell_to_20_seconds.sql -Raw | mysql --user=$env:DB_USERNAME
-```
 
 Este directorio no contiene credenciales.
