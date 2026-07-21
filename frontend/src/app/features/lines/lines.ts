@@ -1,0 +1,146 @@
+import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+
+import {
+  LineOperation,
+  LineOperationsResponse,
+  ServiceDirection,
+  ServiceOperationPhase,
+  ServicePeriodType
+} from '../../core/models/line-operation.model';
+import { LineOperationsService } from '../../core/services/line-operations.service';
+
+@Component({ selector: 'app-lines', templateUrl: './lines.html', styleUrl: './lines.css' })
+export class Lines implements OnInit, OnDestroy {
+  private readonly lineOperationsService = inject(LineOperationsService);
+  private readonly refreshIntervalMs = 5_000;
+  private refreshIntervalId: number | null = null;
+  private readonly expandedLineIds = new Set<number>();
+  private requestInFlight = false;
+  private hasInitializedExpansion = false;
+
+  operations: LineOperationsResponse | null = null;
+  loading = true;
+  refreshing = false;
+  errorMessage = '';
+  autoRefreshEnabled = true;
+
+  ngOnInit(): void {
+    this.loadOperations(true);
+    this.startAutoRefresh();
+  }
+
+  ngOnDestroy(): void { this.stopAutoRefresh(); }
+
+  loadOperations(showLoading = false): void {
+    if (this.requestInFlight) { return; }
+    this.requestInFlight = true;
+    if (showLoading && !this.operations) { this.loading = true; } else { this.refreshing = true; }
+    this.errorMessage = '';
+    this.lineOperationsService.getOperations().subscribe({
+      next: (operations) => {
+        this.operations = operations;
+        if (!this.hasInitializedExpansion && operations.lines.length > 0) {
+          this.expandedLineIds.add(operations.lines[0].id);
+        }
+        this.hasInitializedExpansion = true;
+        this.requestInFlight = false;
+        this.loading = false;
+        this.refreshing = false;
+      },
+      error: () => {
+        this.requestInFlight = false;
+        this.errorMessage = 'No se ha podido cargar el estado operativo de las líneas.';
+        this.loading = false;
+        this.refreshing = false;
+      }
+    });
+  }
+
+  toggleAutoRefresh(): void {
+    this.autoRefreshEnabled = !this.autoRefreshEnabled;
+    if (this.autoRefreshEnabled) { this.startAutoRefresh(); } else { this.stopAutoRefresh(); }
+  }
+
+  toggleLine(lineId: number): void {
+    if (this.expandedLineIds.has(lineId)) { this.expandedLineIds.delete(lineId); }
+    else { this.expandedLineIds.add(lineId); }
+  }
+
+  isExpanded(lineId: number): boolean { return this.expandedLineIds.has(lineId); }
+
+  totalTrains(): number {
+    return this.operations?.lines.reduce((total, line) => total + line.activeTrainCount, 0) ?? 0;
+  }
+
+  trainsInDirection(direction: ServiceDirection): number {
+    return this.operations?.lines.reduce(
+      (total, line) => total + line.trains.filter((train) => train.direction === direction).length,
+      0
+    ) ?? 0;
+  }
+
+  lineTrainsInDirection(line: LineOperation, direction: ServiceDirection): number {
+    return line.trains.filter((train) => train.direction === direction).length;
+  }
+
+  totalStations(): number {
+    const ids = new Set(this.operations?.lines.flatMap((line) => line.stations.map((station) => station.id)) ?? []);
+    return ids.size;
+  }
+
+  transferLineCodes(stationId: number, currentLineCode: string): string[] {
+    return this.operations?.lines
+      .filter((line) => line.code !== currentLineCode)
+      .filter((line) => line.stations.some((station) => station.id === stationId))
+      .map((line) => line.code) ?? [];
+  }
+
+  formatDuration(seconds: number | null): string {
+    if (seconds === null) { return 'No disponible'; }
+    const minutes = Math.floor(seconds / 60);
+    const remainder = seconds % 60;
+    return remainder === 0 ? `${minutes} min` : `${minutes} min ${remainder} s`;
+  }
+
+  formatTime(value: string | null): string {
+    if (!value) { return '—'; }
+    return new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false })
+      .format(new Date(value));
+  }
+
+  formatEvaluatedAt(value: string): string {
+    return new Intl.DateTimeFormat('es-ES', {
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+    }).format(new Date(value));
+  }
+
+  phaseLabel(phase: ServiceOperationPhase): string {
+    const labels: Record<ServiceOperationPhase, string> = {
+      CLOSED: 'Cerrado', STARTING: 'Inicio de servicio', OPERATING: 'En operación', ENDING: 'Fin de servicio'
+    };
+    return labels[phase];
+  }
+
+  periodLabel(period: ServicePeriodType | null): string {
+    if (!period) { return 'Fuera de servicio'; }
+    const labels: Record<ServicePeriodType, string> = {
+      SERVICE_START: 'Inicio de servicio', OFF_PEAK: 'Hora valle', PEAK: 'Hora punta',
+      REGULAR: 'Servicio regular', SERVICE_END: 'Fin de servicio'
+    };
+    return labels[period];
+  }
+
+  trackLine(_: number, line: LineOperation): number { return line.id; }
+
+  private startAutoRefresh(): void {
+    this.stopAutoRefresh();
+    this.refreshIntervalId = window.setInterval(() => this.loadOperations(), this.refreshIntervalMs);
+  }
+
+  private stopAutoRefresh(): void {
+    if (this.refreshIntervalId !== null) {
+      window.clearInterval(this.refreshIntervalId);
+      this.refreshIntervalId = null;
+    }
+  }
+}

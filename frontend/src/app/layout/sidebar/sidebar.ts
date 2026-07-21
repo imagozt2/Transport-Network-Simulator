@@ -29,6 +29,12 @@ export class Sidebar {
         { label: 'Panel General', route: '/dashboard', icon: '📊' },
         { label: 'Mapa de red', route: '/network-map', icon: '🗺️' }
       ]
+    },
+    {
+      title: 'Infraestructura',
+      items: [
+        { label: 'Líneas', route: '/lines', icon: 'LI' }
+      ]
     }
   ];
 }

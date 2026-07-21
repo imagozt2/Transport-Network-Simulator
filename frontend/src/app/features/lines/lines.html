@@ -1,0 +1,108 @@
+<section class="lines-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Operación de red</p>
+      <h1>Líneas</h1>
+      <p class="page-description">Estado del servicio, frecuencias, trenes activos y recorrido de cada línea.</p>
+      @if (operations) { <p class="last-update">Última actualización: {{ formatEvaluatedAt(operations.evaluatedAt) }}</p> }
+    </div>
+    <div class="header-actions">
+      <button class="refresh-button secondary" type="button" (click)="toggleAutoRefresh()">
+        {{ autoRefreshEnabled ? 'Pausar autoactualización' : 'Activar autoactualización' }}
+      </button>
+      <button class="refresh-button" type="button" [disabled]="refreshing" (click)="loadOperations()">
+        {{ refreshing ? 'Actualizando…' : 'Actualizar' }}
+      </button>
+    </div>
+  </header>
+
+  @if (loading) {
+    <div class="state-card" role="status">Cargando estado operativo de líneas…</div>
+  } @else if (errorMessage && !operations) {
+    <div class="state-card error-card" role="alert"><span>{{ errorMessage }}</span><button type="button" (click)="loadOperations(true)">Reintentar</button></div>
+  } @else if (operations; as data) {
+    @if (errorMessage) { <div class="refresh-warning" role="status">{{ errorMessage }} Se conservan los últimos datos disponibles.</div> }
+
+    <section class="summary-grid" aria-label="Resumen operativo de líneas">
+      <article class="summary-card"><span>Líneas de la red</span><strong>{{ data.lines.length }}</strong><small>Infraestructura activa</small></article>
+      <article class="summary-card"><span>Líneas abiertas</span><strong>{{ data.activeLineCount }}</strong><small>{{ phaseLabel(data.phase) }}</small></article>
+      <article class="summary-card"><span>Trenes en servicio</span><strong>{{ totalTrains() }}</strong><small>Serie 9000</small></article>
+      <article class="summary-card"><span>Estaciones</span><strong>{{ totalStations() }}</strong><small>Paradas únicas</small></article>
+    </section>
+
+    <section class="direction-summary-grid" aria-label="Trenes por sentido">
+      <article><span>Sentido ida</span><strong>{{ trainsInDirection('OUTBOUND') }}</strong></article>
+      <article><span>Sentido vuelta</span><strong>{{ trainsInDirection('INBOUND') }}</strong></article>
+      <article><span>Actualización</span><strong>5 s</strong></article>
+    </section>
+
+    <div class="lines-list">
+      @for (line of data.lines; track trackLine($index, line)) {
+        <article class="line-card" [class.expanded]="isExpanded(line.id)">
+          <button class="line-card-header" type="button" (click)="toggleLine(line.id)" [attr.aria-expanded]="isExpanded(line.id)">
+            <span class="line-badge">{{ line.code }}</span>
+            <span class="line-main-info">
+              <span class="line-title-row">
+                <strong>{{ line.name }}</strong>
+                <span class="service-pill" [class.service-open]="line.serviceOpen" [class.service-closed]="!line.serviceOpen">{{ line.serviceOpen ? 'Servicio abierto' : 'Servicio cerrado' }}</span>
+                <span class="phase-pill phase-{{ line.phase.toLowerCase() }}">{{ phaseLabel(line.phase) }}</span>
+              </span>
+              <small>{{ line.stationCount }} estaciones · {{ line.firstTerminal.name }} — {{ line.lastTerminal.name }} · {{ line.activeTrainCount }} trenes</small>
+            </span>
+            <span class="expand-icon" aria-hidden="true">{{ isExpanded(line.id) ? '−' : '+' }}</span>
+          </button>
+
+          @if (isExpanded(line.id)) {
+            <div class="line-card-body">
+              <div class="line-operational-grid">
+                <section class="metric-panel">
+                  <h2>Servicio</h2>
+                  <div class="large-metric"><strong>{{ line.headwaySeconds ? formatDuration(line.headwaySeconds) : '—' }}</strong><span>frecuencia actual</span></div>
+                  <dl class="detail-list">
+                    <div><dt>Franja</dt><dd>{{ periodLabel(line.currentPeriodType) }}</dd></div>
+                    <div><dt>Horario</dt><dd>{{ formatTime(line.serviceStartsAt) }} — {{ formatTime(line.serviceEndsAt) }}</dd></div>
+                    <div><dt>Trayecto</dt><dd>{{ formatDuration(line.estimatedOneWayDurationSeconds) }}</dd></div>
+                  </dl>
+                </section>
+
+                <section class="metric-panel">
+                  <h2>Circulación</h2>
+                  <div class="large-metric"><strong>{{ line.activeTrainCount }}</strong><span>trenes en servicio</span></div>
+                  <div class="mini-stats">
+                    <div><span>Ida</span><strong>{{ lineTrainsInDirection(line, 'OUTBOUND') }}</strong></div>
+                    <div><span>Vuelta</span><strong>{{ lineTrainsInDirection(line, 'INBOUND') }}</strong></div>
+                    <div><span>Serie</span><strong>9000</strong></div>
+                    <div><span>Estado</span><strong>{{ line.serviceOpen ? 'Normal' : 'Cerrado' }}</strong></div>
+                  </div>
+                </section>
+
+                <section class="stations-panel">
+                  <div class="panel-header"><h2>Estaciones</h2><span>{{ line.stations.length }} paradas</span></div>
+                  <div class="mini-thermometer">
+                    @for (station of line.stations; track station.id; let first = $first; let last = $last) {
+                      <div class="mini-station-row">
+                        <span class="mini-track" aria-hidden="true">
+                          @if (!first) { <span class="mini-track-line top"></span> }
+                          <span class="mini-station-dot" [class.transfer-dot]="transferLineCodes(station.id, line.code).length > 0"></span>
+                          @if (!last) { <span class="mini-track-line bottom"></span> }
+                        </span>
+                        <span class="mini-station-content">
+                          <span><strong>{{ station.name }}</strong><small>{{ station.code }}</small></span>
+                          @if (transferLineCodes(station.id, line.code); as transfers) {
+                            @if (transfers.length > 0) {
+                              <span class="transfer-list">@for (transfer of transfers; track transfer) { <span class="transfer-badge">{{ transfer }}</span> }</span>
+                            }
+                          }
+                        </span>
+                      </div>
+                    }
+                  </div>
+                </section>
+              </div>
+            </div>
+          }
+        </article>
+      } @empty { <div class="state-card">No hay líneas disponibles.</div> }
+    </div>
+  }
+</section>
