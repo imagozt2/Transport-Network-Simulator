@@ -1,21 +1,22 @@
-# Database
+# Base de datos
 
-MySQL 8 database definition and initial data for the Macegocia transport network.
+Definición de MySQL 8 y datos iniciales de la red de transporte de Macegocia.
 
-## Structure
+## Estructura
 
-- `schema/01_create_database.sql`: creates the UTF-8 database.
-- `schema/02_create_tables.sql`: creates the complete relational model.
-- `data/01_transport_network.sql`: stations, lines, ordered stops and connections.
-- `data/02_operations.sql`: devices, rolling stock and depots.
-- `data/03_ticket_products.sql`: initial ticket catalogue.
-- `data/04_service_configuration.sql`: calendars, service periods, line headways, route timing and line depots.
-- `verification/verify_database.sql`: expected counts and integrity checks.
+- `schema/01_create_database.sql`: crea la base de datos con codificación UTF-8.
+- `schema/02_create_tables.sql`: crea el modelo relacional completo.
+- `data/01_transport_network.sql`: estaciones, líneas, paradas ordenadas y conexiones.
+- `data/02_operations.sql`: dispositivos, material rodante y cocheras.
+- `data/03_ticket_products.sql`: catálogo inicial de productos de transporte.
+- `data/04_service_configuration.sql`: calendarios, franjas, frecuencias, tiempos y cocheras por línea.
+- `verification/verify_database.sql`: recuentos esperados y comprobaciones de integridad.
 
-## Installation order
+## Orden de instalación
 
-Run the files in the order shown above. From PowerShell, pass each file to the MySQL client through
-standard input. For example, after defining `DB_USERNAME` and temporarily defining `MYSQL_PWD`:
+Los archivos deben ejecutarse en el orden anterior. Desde PowerShell se puede pasar cada archivo al
+cliente de MySQL mediante la entrada estándar. Por ejemplo, después de definir `DB_USERNAME` y asignar
+temporalmente `MYSQL_PWD`:
 
 ```powershell
 Get-Content database/schema/01_create_database.sql -Raw | mysql --user=$env:DB_USERNAME
@@ -28,7 +29,11 @@ Get-Content database/verification/verify_database.sql -Raw | mysql --user=$env:D
 Remove-Item Env:MYSQL_PWD
 ```
 
-Schema scripts target a new database and are intentionally not repeatable. Data scripts use natural
-keys and can be executed again to update the maintained seed records without duplicating them.
+Los scripts de esquema están destinados a una base nueva y no son repetibles de forma intencionada.
+Los scripts de datos utilizan claves naturales y pueden ejecutarse de nuevo para actualizar los
+registros mantenidos sin duplicarlos.
 
-No credentials are stored in this directory.
+La configuración ferroviaria se explica en
+[`docs/modelo-operacion-ferroviaria.md`](../docs/modelo-operacion-ferroviaria.md).
+
+Este directorio no contiene credenciales.

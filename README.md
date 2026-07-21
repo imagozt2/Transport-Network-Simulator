@@ -15,6 +15,8 @@ La aplicación incluye actualmente:
 - un Panel General con indicadores de estaciones, líneas, trenes, dispositivos y cocheras;
 - un mapa SVG interactivo con las seis líneas y las 50 estaciones de Macegocia;
 - recorridos ordenados y correspondencias entre líneas;
+- calendarios, franjas horarias, frecuencias y tiempos de recorrido configurables;
+- flota regular, de reserva e histórica diferenciada;
 - una API REST conectada a MySQL;
 - datos iniciales reproducibles para la red, operaciones y productos de transporte;
 - pruebas unitarias del backend y del frontend;
@@ -63,7 +65,8 @@ La definición se encuentra en `database/` y debe ejecutarse en este orden:
 3. `database/data/01_transport_network.sql`
 4. `database/data/02_operations.sql`
 5. `database/data/03_ticket_products.sql`
-6. `database/verification/verify_database.sql`
+6. `database/data/04_service_configuration.sql`
+7. `database/verification/verify_database.sql`
 
 Ejemplo desde PowerShell, después de definir el usuario de MySQL y asignar temporalmente la contraseña
 a `MYSQL_PWD`:
@@ -74,6 +77,7 @@ Get-Content database/schema/02_create_tables.sql -Raw | mysql --user=$env:DB_USE
 Get-Content database/data/01_transport_network.sql -Raw | mysql --user=$env:DB_USERNAME
 Get-Content database/data/02_operations.sql -Raw | mysql --user=$env:DB_USERNAME
 Get-Content database/data/03_ticket_products.sql -Raw | mysql --user=$env:DB_USERNAME
+Get-Content database/data/04_service_configuration.sql -Raw | mysql --user=$env:DB_USERNAME
 Get-Content database/verification/verify_database.sql -Raw | mysql --user=$env:DB_USERNAME
 Remove-Item Env:MYSQL_PWD
 ```
@@ -90,6 +94,7 @@ La conexión a MySQL utiliza variables de entorno:
 | `DB_PASSWORD` | Sí | Contraseña de MySQL. |
 | `DB_URL` | No | URL JDBC; dispone de un valor local predeterminado. |
 | `FRONTEND_URL` | No | Origen permitido por CORS; por defecto, `http://localhost:4200`. |
+| `SERVICE_TIME_ZONE` | No | Zona horaria operativa; por defecto, `Europe/Madrid`. |
 
 El archivo [`backend/.env.example`](backend/.env.example) sirve como referencia. Los archivos `.env`
 están ignorados por Git y Spring Boot no los carga automáticamente.
@@ -162,6 +167,7 @@ y en cada actualización de esa rama.
 
 - [Panel General y endpoint de resumen](docs/panel-general.md)
 - [Mapa de red y endpoint del mapa](docs/mapa-red.md)
+- [Modelo de operación ferroviaria](docs/modelo-operacion-ferroviaria.md)
 - [Inicialización y estructura de la base de datos](database/README.md)
 
 ## Desarrollo por ramas

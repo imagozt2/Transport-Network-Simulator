@@ -56,12 +56,10 @@ ilustrativos:
     "activeTrains": 242,
     "byStatus": {
       "IN_SERVICE": 0,
-      "DEPOT": 230,
+      "DEPOT": 242,
       "MAINTENANCE": 0,
       "STOPPED": 0,
-      "OUT_OF_SERVICE": 0,
-      "RESERVE": 5,
-      "HISTORIC": 7
+      "OUT_OF_SERVICE": 0
     }
   },
   "devices": {
@@ -106,6 +104,10 @@ ilustrativos:
 }
 ```
 
+`byStatus` representa exclusivamente la situación física u operativa. La pertenencia al servicio
+regular, la reserva o la flota histórica se almacena mediante `fleetRole` en los trenes y no forma
+parte de este resumen.
+
 ## Contrato de respuesta
 
 | Campo | Tipo | Descripción |
@@ -127,14 +129,15 @@ ilustrativos:
 
 ### Valores enumerados
 
-- Estados de tren: `IN_SERVICE`, `DEPOT`, `MAINTENANCE`, `STOPPED`, `OUT_OF_SERVICE`, `RESERVE` y
-  `HISTORIC`.
+- Estados de tren: `IN_SERVICE`, `DEPOT`, `MAINTENANCE`, `STOPPED` y `OUT_OF_SERVICE`.
 - Estados de dispositivo: `ONLINE`, `OFFLINE`, `MAINTENANCE` y `ERROR`.
 - Tipos de dispositivo: `TICKET_MACHINE`, `ENTRY_VALIDATOR` y `EXIT_VALIDATOR`.
 
 Los mapas `byStatus` y `byType` siempre incluyen todos sus valores enumerados. Cuando no hay registros
 para uno de ellos, su recuento es `0`, lo que permite al frontend renderizar el panel sin completar
 datos ausentes.
+
+`RESERVE` y `HISTORIC` son valores de `fleetRole`, no de `TrainStatus`.
 
 ## Componentes relacionados
 
