@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface LineStationRepository extends JpaRepository<LineStation, Long> {
 
+    @EntityGraph(attributePaths = {"line", "station"})
     List<LineStation> findAllByActiveTrueOrderByLineCodeAscStationOrderAsc();
 
     @EntityGraph(attributePaths = "station")
