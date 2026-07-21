@@ -17,6 +17,7 @@ La aplicación incluye actualmente:
 - recorridos ordenados y correspondencias entre líneas;
 - calendarios, franjas horarias, frecuencias y tiempos de recorrido configurables;
 - flota regular, de reserva e histórica diferenciada;
+- un motor determinista de turnos, posiciones y movimientos de cocheras;
 - una API REST conectada a MySQL;
 - datos iniciales reproducibles para la red, operaciones y productos de transporte;
 - pruebas unitarias del backend y del frontend;
@@ -168,6 +169,7 @@ y en cada actualización de esa rama.
 - [Panel General y endpoint de resumen](docs/panel-general.md)
 - [Mapa de red y endpoint del mapa](docs/mapa-red.md)
 - [Modelo de operación ferroviaria](docs/modelo-operacion-ferroviaria.md)
+- [Motor de simulación ferroviaria](docs/motor-simulacion-ferroviaria.md)
 - [Inicialización y estructura de la base de datos](database/README.md)
 
 ## Desarrollo por ramas

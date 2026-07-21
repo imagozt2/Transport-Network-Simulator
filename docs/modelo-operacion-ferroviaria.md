@@ -1,8 +1,9 @@
 # Modelo de operación ferroviaria
 
-Este documento describe la configuración persistente sobre la que se construirá la simulación del
-servicio ferroviario de Macegocia. La fase actual define horarios, frecuencias, recorridos, cocheras y
-clasificación de la flota, pero todavía no calcula movimientos ni posiciones de trenes.
+Este documento describe la configuración persistente sobre la que se construye la simulación del
+servicio ferroviario de Macegocia. El modelo define horarios, frecuencias, recorridos, cocheras y
+clasificación de la flota. Su transformación en turnos, posiciones y movimientos está descrita en
+[Motor de simulación ferroviaria](motor-simulacion-ferroviaria.md).
 
 ## Principios del modelo
 
@@ -78,7 +79,7 @@ nombres y límites horarios. Los datos iniciales aplican estos ajustes a la frec
 | L5 | +30 segundos |
 | L6 | +60 segundos |
 
-Un intervalo menor representa mayor frecuencia. El motor utilizará la duración del recorrido y este
+Un intervalo menor representa mayor frecuencia. El motor utiliza la duración del recorrido y este
 intervalo para determinar la flota necesaria.
 
 ## Recorridos y tiempos
@@ -95,7 +96,7 @@ terminales. Las duraciones iniciales de los tramos proceden de
 `station_connections.estimated_minutes` y se almacenan en segundos.
 
 No existe otra tabla que vuelva a enumerar el recorrido. El mapa, los termómetros y el simulador
-utilizarán la misma secuencia.
+utilizan la misma secuencia.
 
 ## Líneas y cocheras
 
@@ -123,7 +124,7 @@ Los estados admitidos son `IN_SERVICE`, `DEPOT`, `MAINTENANCE`, `STOPPED` y `OUT
 Al cargar los datos, las 242 unidades tienen estado `DEPOT` porque están físicamente en una cochera.
 La reserva y el carácter histórico no son ubicaciones ni estados de circulación.
 
-Los trenes regulares disponen además de `dispatch_order`. Es único dentro de cada cochera y permitirá
+Los trenes regulares disponen además de `dispatch_order`. Es único dentro de cada cochera y permite
 seleccionar unidades de forma estable. La reserva y la flota histórica no tienen orden de salida
 ordinario.
 
@@ -187,9 +188,9 @@ Los datos mantenidos están en `database/data/04_service_configuration.sql`. Par
 Los scripts de esquema están destinados a instalaciones nuevas. Una base creada con el modelo
 anterior debe respaldarse y reconstruirse antes de validar esta fase.
 
-## Siguiente fase
+## Relación con el motor
 
-Este modelo todavía no mueve trenes ni persiste posiciones simuladas. El futuro motor lo utilizará
-para reconstruir cualquier hora, incorporar y retirar trenes, limitar el servicio ordinario a la serie
-9000 y calcular dirección, tramo, progreso y próxima llegada de forma coherente para todas las
-pantallas.
+El motor reconstruye cualquier hora a partir de este modelo, incorpora y retira trenes, limita el
+servicio ordinario a la serie 9000 y calcula dirección, tramo, progreso y próxima llegada. Las
+posiciones continúan siendo datos calculados: no se persisten ni requieren que Spring Boot haya estado
+ejecutándose desde el inicio de la jornada.
