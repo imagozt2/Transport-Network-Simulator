@@ -32,6 +32,8 @@ CREATE TABLE line_stations (
     line_id BIGINT NOT NULL,
     station_id BIGINT NOT NULL,
     station_order INT NOT NULL,
+    travel_seconds_to_next INT NULL,
+    dwell_seconds INT NOT NULL DEFAULT 30,
     active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -41,7 +43,11 @@ CREATE TABLE line_stations (
         ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT uk_line_stations_line_station UNIQUE (line_id, station_id),
     CONSTRAINT uk_line_stations_line_order UNIQUE (line_id, station_order),
-    CONSTRAINT chk_line_stations_order CHECK (station_order > 0)
+    CONSTRAINT chk_line_stations_order CHECK (station_order > 0),
+    CONSTRAINT chk_line_stations_travel_seconds CHECK (
+        travel_seconds_to_next IS NULL OR travel_seconds_to_next > 0
+    ),
+    CONSTRAINT chk_line_stations_dwell_seconds CHECK (dwell_seconds >= 0)
 );
 
 CREATE INDEX idx_line_stations_station ON line_stations (station_id);
@@ -179,26 +185,95 @@ CREATE INDEX idx_trains_next_station ON trains (next_station_id);
 CREATE INDEX idx_trains_current_depot ON trains (current_depot_id);
 CREATE INDEX idx_trains_status_active ON trains (status, active);
 
-CREATE TABLE line_service_settings (
+CREATE TABLE service_calendars (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    line_id BIGINT NOT NULL,
-    frequency_minutes INT NOT NULL,
+    code VARCHAR(30) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    day_type VARCHAR(30) NOT NULL,
     service_start_time TIME NOT NULL,
     service_end_time TIME NOT NULL,
-    average_stop_seconds INT NOT NULL DEFAULT 30,
-    transfer_margin_minutes INT NOT NULL DEFAULT 2,
+    valid_from DATE NOT NULL,
+    valid_until DATE NULL,
     active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT uk_line_service_settings_line UNIQUE (line_id),
-    CONSTRAINT fk_line_service_settings_line FOREIGN KEY (line_id) REFERENCES transport_lines (id)
-        ON UPDATE CASCADE ON DELETE RESTRICT,
-    CONSTRAINT chk_line_service_frequency CHECK (frequency_minutes > 0),
-    CONSTRAINT chk_line_service_stop CHECK (average_stop_seconds >= 0),
-    CONSTRAINT chk_line_service_transfer CHECK (transfer_margin_minutes >= 0)
+    CONSTRAINT uk_service_calendars_code UNIQUE (code),
+    CONSTRAINT chk_service_calendars_day_type CHECK (
+        day_type IN ('WEEKDAY', 'SATURDAY', 'SUNDAY_HOLIDAY')
+    ),
+    CONSTRAINT chk_service_calendars_hours CHECK (service_start_time <> service_end_time),
+    CONSTRAINT chk_service_calendars_validity CHECK (
+        valid_until IS NULL OR valid_until >= valid_from
+    )
 );
 
-CREATE INDEX idx_line_service_settings_active ON line_service_settings (active);
+CREATE INDEX idx_service_calendars_day_active
+    ON service_calendars (day_type, active, valid_from, valid_until);
+
+CREATE TABLE service_periods (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    service_calendar_id BIGINT NOT NULL,
+    code VARCHAR(30) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    period_type VARCHAR(30) NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    period_order INT NOT NULL,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_service_periods_calendar FOREIGN KEY (service_calendar_id)
+        REFERENCES service_calendars (id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT uk_service_periods_calendar_code UNIQUE (service_calendar_id, code),
+    CONSTRAINT uk_service_periods_calendar_order UNIQUE (service_calendar_id, period_order),
+    CONSTRAINT chk_service_periods_type CHECK (
+        period_type IN ('SERVICE_START', 'OFF_PEAK', 'PEAK', 'REGULAR', 'SERVICE_END')
+    ),
+    CONSTRAINT chk_service_periods_hours CHECK (start_time <> end_time),
+    CONSTRAINT chk_service_periods_order CHECK (period_order > 0)
+);
+
+CREATE INDEX idx_service_periods_calendar_active
+    ON service_periods (service_calendar_id, active, start_time, end_time);
+
+CREATE TABLE line_service_levels (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    line_id BIGINT NOT NULL,
+    service_period_id BIGINT NOT NULL,
+    headway_seconds INT NOT NULL,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_line_service_levels_line FOREIGN KEY (line_id) REFERENCES transport_lines (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_line_service_levels_period FOREIGN KEY (service_period_id)
+        REFERENCES service_periods (id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT uk_line_service_levels_line_period UNIQUE (line_id, service_period_id),
+    CONSTRAINT chk_line_service_levels_headway CHECK (headway_seconds > 0)
+);
+
+CREATE INDEX idx_line_service_levels_period_active
+    ON line_service_levels (service_period_id, active);
+
+CREATE TABLE line_depots (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    line_id BIGINT NOT NULL,
+    depot_id BIGINT NOT NULL,
+    dispatch_priority INT NOT NULL DEFAULT 1,
+    dispatch_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    reception_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_line_depots_line FOREIGN KEY (line_id) REFERENCES transport_lines (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_line_depots_depot FOREIGN KEY (depot_id) REFERENCES depots (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT uk_line_depots_line_depot UNIQUE (line_id, depot_id),
+    CONSTRAINT chk_line_depots_priority CHECK (dispatch_priority > 0)
+);
+
+CREATE INDEX idx_line_depots_depot_active ON line_depots (depot_id, active);
 
 CREATE TABLE ticket_products (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,

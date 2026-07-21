@@ -145,17 +145,6 @@ ON DUPLICATE KEY UPDATE
     assigned_line_id = VALUES(assigned_line_id), current_depot_id = VALUES(current_depot_id),
     status = VALUES(status), active = VALUES(active);
 
-INSERT INTO line_service_settings (
-    line_id, frequency_minutes, service_start_time, service_end_time,
-    average_stop_seconds, transfer_margin_minutes, active
-)
-SELECT id, 2, '05:00:00', '00:30:00', 30, 2, TRUE
-FROM transport_lines
-ON DUPLICATE KEY UPDATE
-    frequency_minutes = VALUES(frequency_minutes), service_start_time = VALUES(service_start_time),
-    service_end_time = VALUES(service_end_time), average_stop_seconds = VALUES(average_stop_seconds),
-    transfer_margin_minutes = VALUES(transfer_margin_minutes), active = VALUES(active);
-
 DROP TEMPORARY TABLE seed_train_distribution;
 DROP TEMPORARY TABLE seed_depots;
 DROP TEMPORARY TABLE seed_numbers;

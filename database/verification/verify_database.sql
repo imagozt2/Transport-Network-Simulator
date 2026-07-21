@@ -8,7 +8,10 @@ UNION ALL SELECT 'devices', COUNT(*), 622 FROM devices
 UNION ALL SELECT 'train_models', COUNT(*), 4 FROM train_models
 UNION ALL SELECT 'depots', COUNT(*), 12 FROM depots
 UNION ALL SELECT 'trains', COUNT(*), 242 FROM trains
-UNION ALL SELECT 'line_service_settings', COUNT(*), 6 FROM line_service_settings
+UNION ALL SELECT 'service_calendars', COUNT(*), 3 FROM service_calendars
+UNION ALL SELECT 'service_periods', COUNT(*), 15 FROM service_periods
+UNION ALL SELECT 'line_service_levels', COUNT(*), 90 FROM line_service_levels
+UNION ALL SELECT 'line_depots', COUNT(*), 12 FROM line_depots
 UNION ALL SELECT 'ticket_products', COUNT(*), 4 FROM ticket_products;
 
 SELECT transport_line.code, COUNT(line_stations.id) AS station_count
@@ -34,3 +37,34 @@ FROM depots
 LEFT JOIN trains ON trains.home_depot_id = depots.id
 GROUP BY depots.id, depots.code, depots.capacity
 HAVING assigned_trains > depots.capacity;
+
+SELECT lines.code, stops.station_order
+FROM line_stations stops
+JOIN transport_lines lines ON lines.id = stops.line_id
+JOIN (
+    SELECT line_id, MAX(station_order) AS last_stop
+    FROM line_stations
+    WHERE active = TRUE
+    GROUP BY line_id
+) routes ON routes.line_id = stops.line_id
+WHERE stops.active = TRUE
+  AND stops.station_order < routes.last_stop
+  AND stops.travel_seconds_to_next IS NULL;
+
+SELECT lines.code, calendars.code AS calendar_code, COUNT(levels.id) AS configured_periods
+FROM transport_lines lines
+CROSS JOIN service_calendars calendars
+LEFT JOIN service_periods periods ON periods.service_calendar_id = calendars.id AND periods.active = TRUE
+LEFT JOIN line_service_levels levels
+    ON levels.line_id = lines.id AND levels.service_period_id = periods.id AND levels.active = TRUE
+WHERE lines.active = TRUE AND calendars.active = TRUE
+GROUP BY lines.id, lines.code, calendars.id, calendars.code
+HAVING configured_periods <> COUNT(periods.id);
+
+SELECT lines.code
+FROM transport_lines lines
+LEFT JOIN line_depots ON line_depots.line_id = lines.id
+    AND line_depots.active = TRUE AND line_depots.dispatch_enabled = TRUE
+WHERE lines.active = TRUE
+GROUP BY lines.id, lines.code
+HAVING COUNT(line_depots.id) = 0;
