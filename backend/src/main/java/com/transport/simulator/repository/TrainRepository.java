@@ -14,6 +14,9 @@ public interface TrainRepository extends JpaRepository<Train, Long> {
 
     long countByFleetRoleAndActiveTrue(FleetRole fleetRole);
 
+    @EntityGraph(attributePaths = {"model", "homeDepot", "assignedLine"})
+    List<Train> findAllByActiveTrueOrderByCodeAsc();
+
     List<Train> findAllByFleetRoleAndActiveTrueOrderByHomeDepotCodeAscDispatchOrderAsc(FleetRole fleetRole);
 
     List<Train> findAllByAssignedLineIdAndFleetRoleAndActiveTrueOrderByDispatchOrderAsc(

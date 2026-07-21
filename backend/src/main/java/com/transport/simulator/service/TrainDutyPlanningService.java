@@ -63,6 +63,11 @@ public class TrainDutyPlanningService {
     public ServiceDutyPlan getPlanAt(ZonedDateTime requestedDateTime) {
         ZonedDateTime evaluatedAt = requestedDateTime.withZoneSameInstant(serviceClock.getZone());
         ServiceOperationState operationState = serviceOperationStateService.getStateAt(evaluatedAt);
+        return getPlan(operationState);
+    }
+
+    public ServiceDutyPlan getPlan(ServiceOperationState operationState) {
+        ZonedDateTime evaluatedAt = operationState.evaluatedAt();
         List<LineDutyPlan> linePlans = operationState.lines()
                 .stream()
                 .filter(LineServiceOperationState::serviceOpen)
