@@ -8,6 +8,7 @@ import {
   ServicePeriodType
 } from '../../core/models/line-operation.model';
 import { LineOperationsService } from '../../core/services/line-operations.service';
+import { contrastingTextColor, lineColor } from '../../core/utils/line-visuals';
 
 @Component({ selector: 'app-lines', templateUrl: './lines.html', styleUrl: './lines.css' })
 export class Lines implements OnInit, OnDestroy {
@@ -93,6 +94,19 @@ export class Lines implements OnInit, OnDestroy {
       .filter((line) => line.code !== currentLineCode)
       .filter((line) => line.stations.some((station) => station.id === stationId))
       .map((line) => line.code) ?? [];
+  }
+
+  getLineColor(line: Pick<LineOperation, 'code' | 'color'>): string {
+    return lineColor(line.code, line.color);
+  }
+
+  getLineColorByCode(code: string): string {
+    const configuredColor = this.operations?.lines.find((line) => line.code === code)?.color;
+    return lineColor(code, configuredColor);
+  }
+
+  getLineTextColor(color: string): string {
+    return contrastingTextColor(color);
   }
 
   formatDuration(seconds: number | null): string {

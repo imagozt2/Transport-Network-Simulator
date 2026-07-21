@@ -38,9 +38,9 @@
 
     <div class="lines-list">
       @for (line of data.lines; track trackLine($index, line)) {
-        <article class="line-card" [class.expanded]="isExpanded(line.id)">
+        <article class="line-card" [class.expanded]="isExpanded(line.id)" [style.--line-color]="getLineColor(line)">
           <button class="line-card-header" type="button" (click)="toggleLine(line.id)" [attr.aria-expanded]="isExpanded(line.id)">
-            <span class="line-badge">{{ line.code }}</span>
+            <span class="line-badge" [style.color]="getLineTextColor(getLineColor(line))">{{ line.code }}</span>
             <span class="line-main-info">
               <span class="line-title-row">
                 <strong>{{ line.name }}</strong>
@@ -90,7 +90,7 @@
                           <span><strong>{{ station.name }}</strong><small>{{ station.code }}</small></span>
                           @if (transferLineCodes(station.id, line.code); as transfers) {
                             @if (transfers.length > 0) {
-                              <span class="transfer-list">@for (transfer of transfers; track transfer) { <span class="transfer-badge">{{ transfer }}</span> }</span>
+                              <span class="transfer-list">@for (transfer of transfers; track transfer) { <span class="transfer-badge" [style.background-color]="getLineColorByCode(transfer)" [style.color]="getLineTextColor(getLineColorByCode(transfer))">{{ transfer }}</span> }</span>
                             }
                           }
                         </span>
