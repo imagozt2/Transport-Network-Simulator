@@ -5,6 +5,7 @@ import com.transport.simulator.entity.ServicePeriod;
 import com.transport.simulator.entity.Train;
 import com.transport.simulator.enums.FleetRole;
 import com.transport.simulator.enums.ServiceDirection;
+import com.transport.simulator.enums.TrainPositionState;
 import com.transport.simulator.repository.LineServiceLevelRepository;
 import com.transport.simulator.repository.TrainRepository;
 import com.transport.simulator.service.model.LineDutyPlan;
@@ -15,7 +16,9 @@ import com.transport.simulator.service.model.RouteStopConfiguration;
 import com.transport.simulator.service.model.ServiceDutyPlan;
 import com.transport.simulator.service.model.ServiceOperationState;
 import com.transport.simulator.service.model.ServicePeriodFleetPlan;
+import com.transport.simulator.service.model.SimulatedTrainPosition;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZonedDateTime;
@@ -60,12 +63,12 @@ public class TrainDutyPlanningService {
         List<LineDutyPlan> linePlans = operationState.lines()
                 .stream()
                 .filter(LineServiceOperationState::serviceOpen)
-                .map(this::createLinePlan)
+                .map(lineState -> createLinePlan(lineState, evaluatedAt))
                 .toList();
         return new ServiceDutyPlan(evaluatedAt, linePlans);
     }
 
-    private LineDutyPlan createLinePlan(LineServiceOperationState lineState) {
+    private LineDutyPlan createLinePlan(LineServiceOperationState lineState, ZonedDateTime evaluatedAt) {
         ResolvedLineServiceConfiguration configuration = lineState.configuration().orElseThrow();
         ZonedDateTime serviceStartsAt = atServiceTime(
                 configuration.serviceDate(),
@@ -90,6 +93,14 @@ public class TrainDutyPlanningService {
                 lineState.lineCode(),
                 generateDuties(configuration.route(), periodPlans, serviceEndsAt)
         );
+        List<SimulatedTrainPosition> positions = calculatePositions(
+                lineState.lineId(),
+                lineState.lineCode(),
+                configuration.route(),
+                duties,
+                evaluatedAt,
+                roundTripSeconds
+        );
 
         return new LineDutyPlan(
                 lineState.lineId(),
@@ -99,7 +110,154 @@ public class TrainDutyPlanningService {
                 serviceEndsAt,
                 roundTripSeconds,
                 periodPlans,
-                duties
+                duties,
+                positions
+        );
+    }
+
+    private List<SimulatedTrainPosition> calculatePositions(
+            Long lineId,
+            String lineCode,
+            List<RouteStopConfiguration> route,
+            List<PlannedTrainDuty> duties,
+            ZonedDateTime evaluatedAt,
+            long roundTripSeconds
+    ) {
+        if (route.size() < 2) {
+            throw new ServiceConfigurationException("Line " + lineCode + " requires at least two route stops");
+        }
+
+        return duties.stream()
+                .filter(duty -> duty.isActiveAt(evaluatedAt))
+                .map(duty -> calculatePosition(
+                        lineId,
+                        lineCode,
+                        route,
+                        duty,
+                        evaluatedAt,
+                        roundTripSeconds
+                ))
+                .toList();
+    }
+
+    private SimulatedTrainPosition calculatePosition(
+            Long lineId,
+            String lineCode,
+            List<RouteStopConfiguration> route,
+            PlannedTrainDuty duty,
+            ZonedDateTime evaluatedAt,
+            long roundTripSeconds
+    ) {
+        List<MovementSegment> cycle = buildMovementCycle(route, duty.initialDirection());
+        long calculatedCycleSeconds = cycle.stream().mapToLong(MovementSegment::durationSeconds).sum();
+        if (calculatedCycleSeconds != roundTripSeconds) {
+            throw new ServiceConfigurationException(
+                    "Movement cycle duration does not match the round trip for line " + lineCode
+            );
+        }
+
+        long elapsedDutySeconds = Duration.between(duty.plannedStartAt(), evaluatedAt).toSeconds();
+        long cycleOffsetSeconds = Math.floorMod(elapsedDutySeconds, roundTripSeconds);
+        for (MovementSegment segment : cycle) {
+            if (cycleOffsetSeconds < segment.durationSeconds()) {
+                return positionWithinSegment(lineId, lineCode, duty, segment, cycleOffsetSeconds, evaluatedAt);
+            }
+            cycleOffsetSeconds -= segment.durationSeconds();
+        }
+        throw new ServiceConfigurationException("Unable to resolve train position for line " + lineCode);
+    }
+
+    private List<MovementSegment> buildMovementCycle(
+            List<RouteStopConfiguration> route,
+            ServiceDirection initialDirection
+    ) {
+        List<MovementSegment> cycle = new ArrayList<>();
+        if (initialDirection == ServiceDirection.OUTBOUND) {
+            addOutboundSegments(route, cycle);
+            addInboundSegments(route, cycle);
+        } else {
+            addInboundSegments(route, cycle);
+            addOutboundSegments(route, cycle);
+        }
+        return cycle;
+    }
+
+    private void addOutboundSegments(List<RouteStopConfiguration> route, List<MovementSegment> cycle) {
+        for (int index = 0; index < route.size() - 1; index++) {
+            RouteStopConfiguration current = route.get(index);
+            cycle.add(new MovementSegment(
+                    current,
+                    route.get(index + 1),
+                    ServiceDirection.OUTBOUND,
+                    effectiveDwellSeconds(current, index, route.size()),
+                    requiredTravelSeconds(current)
+            ));
+        }
+    }
+
+    private void addInboundSegments(List<RouteStopConfiguration> route, List<MovementSegment> cycle) {
+        for (int index = route.size() - 1; index > 0; index--) {
+            RouteStopConfiguration current = route.get(index);
+            cycle.add(new MovementSegment(
+                    current,
+                    route.get(index - 1),
+                    ServiceDirection.INBOUND,
+                    effectiveDwellSeconds(current, index, route.size()),
+                    requiredTravelSeconds(route.get(index - 1))
+            ));
+        }
+    }
+
+    private long effectiveDwellSeconds(RouteStopConfiguration stop, int index, int routeSize) {
+        return (index == 0 || index == routeSize - 1)
+                ? Math.multiplyExact(2L, stop.dwellSeconds())
+                : stop.dwellSeconds();
+    }
+
+    private long requiredTravelSeconds(RouteStopConfiguration stop) {
+        if (stop.travelSecondsToNext() == null || stop.travelSecondsToNext() <= 0) {
+            throw new ServiceConfigurationException(
+                    "Missing travel time after station " + stop.stationCode()
+            );
+        }
+        return stop.travelSecondsToNext();
+    }
+
+    private SimulatedTrainPosition positionWithinSegment(
+            Long lineId,
+            String lineCode,
+            PlannedTrainDuty duty,
+            MovementSegment segment,
+            long segmentOffsetSeconds,
+            ZonedDateTime evaluatedAt
+    ) {
+        boolean atStation = segmentOffsetSeconds < segment.dwellSeconds();
+        long travelElapsedSeconds = atStation ? 0 : segmentOffsetSeconds - segment.dwellSeconds();
+        long secondsUntilArrival = atStation
+                ? segment.dwellSeconds() - segmentOffsetSeconds + segment.travelSeconds()
+                : segment.travelSeconds() - travelElapsedSeconds;
+        int progressPercentage = atStation
+                ? 0
+                : (int) Math.min(99, travelElapsedSeconds * 100 / segment.travelSeconds());
+
+        return new SimulatedTrainPosition(
+                duty.dutyNumber(),
+                duty.trainId(),
+                duty.trainCode(),
+                lineId,
+                lineCode,
+                atStation ? TrainPositionState.AT_STATION : TrainPositionState.BETWEEN_STATIONS,
+                segment.direction(),
+                atStation ? segment.previous().stationId() : null,
+                atStation ? segment.previous().stationCode() : null,
+                segment.previous().stationId(),
+                segment.previous().stationCode(),
+                segment.next().stationId(),
+                segment.next().stationCode(),
+                progressPercentage,
+                secondsUntilArrival,
+                evaluatedAt.plusSeconds(secondsUntilArrival),
+                evaluatedAt
         );
     }
 
@@ -387,5 +545,18 @@ public class TrainDutyPlanningService {
             ZonedDateTime plannedStartAt,
             ZonedDateTime plannedReleaseAt
     ) {
+    }
+
+    private record MovementSegment(
+            RouteStopConfiguration previous,
+            RouteStopConfiguration next,
+            ServiceDirection direction,
+            long dwellSeconds,
+            long travelSeconds
+    ) {
+
+        private long durationSeconds() {
+            return Math.addExact(dwellSeconds, travelSeconds);
+        }
     }
 }
