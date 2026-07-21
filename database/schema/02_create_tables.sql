@@ -153,6 +153,8 @@ CREATE TABLE trains (
     last_position_update_at DATETIME NULL,
     service_started_at DATETIME NULL,
     service_ended_at DATETIME NULL,
+    fleet_role VARCHAR(30) NOT NULL,
+    dispatch_order INT NULL,
     status VARCHAR(30) NOT NULL DEFAULT 'DEPOT',
     active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -173,7 +175,18 @@ CREATE TABLE trains (
     CONSTRAINT fk_trains_current_depot FOREIGN KEY (current_depot_id) REFERENCES depots (id)
         ON UPDATE CASCADE ON DELETE SET NULL,
     CONSTRAINT chk_trains_direction CHECK (direction IS NULL OR direction IN (-1, 1)),
-    CONSTRAINT chk_trains_progress CHECK (progress_percentage BETWEEN 0 AND 100)
+    CONSTRAINT chk_trains_progress CHECK (progress_percentage BETWEEN 0 AND 100),
+    CONSTRAINT chk_trains_fleet_role CHECK (
+        fleet_role IN ('REGULAR_SERVICE', 'RESERVE', 'HISTORIC')
+    ),
+    CONSTRAINT chk_trains_dispatch_order CHECK (
+        (fleet_role = 'REGULAR_SERVICE' AND dispatch_order IS NOT NULL AND dispatch_order > 0)
+        OR (fleet_role IN ('RESERVE', 'HISTORIC') AND dispatch_order IS NULL)
+    ),
+    CONSTRAINT chk_trains_status CHECK (
+        status IN ('IN_SERVICE', 'DEPOT', 'MAINTENANCE', 'STOPPED', 'OUT_OF_SERVICE')
+    ),
+    CONSTRAINT uk_trains_depot_dispatch_order UNIQUE (home_depot_id, dispatch_order)
 );
 
 CREATE INDEX idx_trains_model ON trains (train_model_id);
@@ -184,6 +197,8 @@ CREATE INDEX idx_trains_current_station ON trains (current_station_id);
 CREATE INDEX idx_trains_next_station ON trains (next_station_id);
 CREATE INDEX idx_trains_current_depot ON trains (current_depot_id);
 CREATE INDEX idx_trains_status_active ON trains (status, active);
+CREATE INDEX idx_trains_fleet_role_active ON trains (fleet_role, active);
+CREATE INDEX idx_trains_line_role ON trains (assigned_line_id, fleet_role, active);
 
 CREATE TABLE service_calendars (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,

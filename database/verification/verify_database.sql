@@ -8,6 +8,9 @@ UNION ALL SELECT 'devices', COUNT(*), 622 FROM devices
 UNION ALL SELECT 'train_models', COUNT(*), 4 FROM train_models
 UNION ALL SELECT 'depots', COUNT(*), 12 FROM depots
 UNION ALL SELECT 'trains', COUNT(*), 242 FROM trains
+UNION ALL SELECT 'regular_service_trains', COUNT(*), 230 FROM trains WHERE fleet_role = 'REGULAR_SERVICE'
+UNION ALL SELECT 'reserve_trains', COUNT(*), 5 FROM trains WHERE fleet_role = 'RESERVE'
+UNION ALL SELECT 'historic_trains', COUNT(*), 7 FROM trains WHERE fleet_role = 'HISTORIC'
 UNION ALL SELECT 'service_calendars', COUNT(*), 3 FROM service_calendars
 UNION ALL SELECT 'service_periods', COUNT(*), 15 FROM service_periods
 UNION ALL SELECT 'line_service_levels', COUNT(*), 90 FROM line_service_levels
@@ -37,6 +40,27 @@ FROM depots
 LEFT JOIN trains ON trains.home_depot_id = depots.id
 GROUP BY depots.id, depots.code, depots.capacity
 HAVING assigned_trains > depots.capacity;
+
+SELECT fleet_role, COUNT(*) AS train_count
+FROM trains
+GROUP BY fleet_role
+ORDER BY fleet_role;
+
+SELECT trains.code, models.series, trains.fleet_role
+FROM trains
+JOIN train_models models ON models.id = trains.train_model_id
+WHERE (trains.fleet_role = 'REGULAR_SERVICE' AND models.series <> '9000')
+   OR (trains.fleet_role <> 'REGULAR_SERVICE' AND trains.status = 'IN_SERVICE');
+
+SELECT trains.code, trains.fleet_role, trains.dispatch_order
+FROM trains
+WHERE (trains.fleet_role = 'REGULAR_SERVICE' AND trains.dispatch_order IS NULL)
+   OR (trains.fleet_role IN ('RESERVE', 'HISTORIC') AND trains.dispatch_order IS NOT NULL);
+
+SELECT trains.code, trains.status, depots.code AS current_depot
+FROM trains
+LEFT JOIN depots ON depots.id = trains.current_depot_id
+WHERE trains.status = 'DEPOT' AND depots.id IS NULL;
 
 SELECT lines.code, stops.station_order
 FROM line_stations stops

@@ -104,22 +104,22 @@ CREATE TEMPORARY TABLE seed_train_distribution (
     model_series VARCHAR(100) NOT NULL,
     train_count INT NOT NULL,
     code_prefix VARCHAR(40) NOT NULL,
-    status VARCHAR(30) NOT NULL
+    fleet_role VARCHAR(30) NOT NULL
 );
 
 INSERT INTO seed_train_distribution VALUES
-('L1','DEP-LF-A','9000',19,'RMM-L1-9000-LFA','DEPOT'),
-('L1','DEP-CC-A','9000',19,'RMM-L1-9000-CCA','DEPOT'),
-('L2','DEP-LF-B','9000',20,'RMM-L2-9000-LFB','DEPOT'),
-('L2','DEP-AIR-A','9000',26,'RMM-L2-9000-AIRA','DEPOT'),
-('L3','DEP-PO','9000',16,'RMM-L3-9000-PO','DEPOT'),
-('L3','DEP-HUB-E','9000',16,'RMM-L3-9000-HUBE','DEPOT'),
-('L4','DEP-AIR-B','9000',21,'RMM-L4-9000-AIRB','DEPOT'),
-('L4','DEP-MI','9000',20,'RMM-L4-9000-MI','DEPOT'),
-('L5','DEP-HUB-W','9000',20,'RMM-L5-9000-HUBW','DEPOT'),
-('L5','DEP-CC-B','9000',19,'RMM-L5-9000-CCB','DEPOT'),
-('L6','DEP-ESP','9000',17,'RMM-L6-9000-ESP','DEPOT'),
-('L6','DEP-MC','9000',17,'RMM-L6-9000-MC','DEPOT'),
+('L1','DEP-LF-A','9000',19,'RMM-L1-9000-LFA','REGULAR_SERVICE'),
+('L1','DEP-CC-A','9000',19,'RMM-L1-9000-CCA','REGULAR_SERVICE'),
+('L2','DEP-LF-B','9000',20,'RMM-L2-9000-LFB','REGULAR_SERVICE'),
+('L2','DEP-AIR-A','9000',26,'RMM-L2-9000-AIRA','REGULAR_SERVICE'),
+('L3','DEP-PO','9000',16,'RMM-L3-9000-PO','REGULAR_SERVICE'),
+('L3','DEP-HUB-E','9000',16,'RMM-L3-9000-HUBE','REGULAR_SERVICE'),
+('L4','DEP-AIR-B','9000',21,'RMM-L4-9000-AIRB','REGULAR_SERVICE'),
+('L4','DEP-MI','9000',20,'RMM-L4-9000-MI','REGULAR_SERVICE'),
+('L5','DEP-HUB-W','9000',20,'RMM-L5-9000-HUBW','REGULAR_SERVICE'),
+('L5','DEP-CC-B','9000',19,'RMM-L5-9000-CCB','REGULAR_SERVICE'),
+('L6','DEP-ESP','9000',17,'RMM-L6-9000-ESP','REGULAR_SERVICE'),
+('L6','DEP-MC','9000',17,'RMM-L6-9000-MC','REGULAR_SERVICE'),
 ('L1','DEP-LF-A','7000',1,'RMM-HIST-7000-LFA','RESERVE'),
 ('L1','DEP-CC-A','7000',1,'RMM-HIST-7000-CCA','RESERVE'),
 ('L2','DEP-AIR-A','7000',3,'RMM-HIST-7000-AIRA','RESERVE'),
@@ -130,11 +130,14 @@ INSERT INTO seed_train_distribution VALUES
 ('L6','DEP-ESP','3000 Histórica',1,'RMM-HIST-3000-ESP','HISTORIC');
 
 INSERT INTO trains (
-    code, train_model_id, home_depot_id, assigned_line_id, current_depot_id, status, active
+    code, train_model_id, home_depot_id, assigned_line_id, current_depot_id,
+    fleet_role, dispatch_order, status, active
 )
 SELECT
     CONCAT(distribution.code_prefix, '-', LPAD(numbers.n, 3, '0')),
-    models.id, depots.id, transport_line.id, depots.id, distribution.status, TRUE
+    models.id, depots.id, transport_line.id, depots.id, distribution.fleet_role,
+    CASE WHEN distribution.fleet_role = 'REGULAR_SERVICE' THEN numbers.n ELSE NULL END,
+    'DEPOT', TRUE
 FROM seed_train_distribution distribution
 JOIN seed_numbers numbers ON numbers.n <= distribution.train_count
 JOIN train_models models ON models.series = distribution.model_series
@@ -143,6 +146,7 @@ JOIN transport_lines transport_line ON transport_line.code = distribution.line_c
 ON DUPLICATE KEY UPDATE
     train_model_id = VALUES(train_model_id), home_depot_id = VALUES(home_depot_id),
     assigned_line_id = VALUES(assigned_line_id), current_depot_id = VALUES(current_depot_id),
+    fleet_role = VALUES(fleet_role), dispatch_order = VALUES(dispatch_order),
     status = VALUES(status), active = VALUES(active);
 
 DROP TEMPORARY TABLE seed_train_distribution;
