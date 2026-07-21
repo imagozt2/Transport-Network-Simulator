@@ -220,6 +220,10 @@ public class ServiceConfigurationService {
                         lineDepot.getDepot().getId(),
                         lineDepot.getDepot().getCode(),
                         lineDepot.getDepot().getName(),
+                        lineDepot.getDepot().getStation().getId(),
+                        lineDepot.getDepot().getStation().getCode(),
+                        lineDepot.getDispatchTerminalStation().getId(),
+                        lineDepot.getDispatchTerminalStation().getCode(),
                         lineDepot.getDispatchPriority(),
                         lineDepot.isDispatchEnabled(),
                         lineDepot.isReceptionEnabled()

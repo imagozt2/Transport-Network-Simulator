@@ -126,28 +126,32 @@ DROP TEMPORARY TABLE IF EXISTS seed_line_depots;
 CREATE TEMPORARY TABLE seed_line_depots (
     line_code VARCHAR(20) NOT NULL,
     depot_code VARCHAR(30) NOT NULL,
+    dispatch_terminal_code VARCHAR(20) NOT NULL,
     dispatch_priority INT NOT NULL,
     PRIMARY KEY (line_code, depot_code)
 );
 
 INSERT INTO seed_line_depots VALUES
-('L1','DEP-LF-A',1),('L1','DEP-CC-A',2),
-('L2','DEP-LF-B',1),('L2','DEP-AIR-A',2),
-('L3','DEP-PO',1),('L3','DEP-HUB-E',2),
-('L4','DEP-AIR-B',1),('L4','DEP-MI',2),
-('L5','DEP-HUB-W',1),('L5','DEP-CC-B',2),
-('L6','DEP-ESP',1),('L6','DEP-MC',2);
+('L1','DEP-LF-A','ST030',1),('L1','DEP-CC-A','ST045',2),
+('L2','DEP-LF-B','ST027',1),('L2','DEP-AIR-A','ST001',2),
+('L3','DEP-PO','ST048',1),('L3','DEP-HUB-E','ST049',2),
+('L4','DEP-MI','ST031',1),('L4','DEP-AIR-B','ST001',2),
+('L5','DEP-CC-B','ST047',1),('L5','DEP-HUB-W','ST050',2),
+('L6','DEP-ESP','ST046',1),('L6','DEP-MC','ST013',2);
 
 INSERT INTO line_depots (
-    line_id, depot_id, dispatch_priority, dispatch_enabled, reception_enabled, active
+    line_id, depot_id, dispatch_terminal_station_id,
+    dispatch_priority, dispatch_enabled, reception_enabled, active
 )
-SELECT transport_line.id, depots.id, seed.dispatch_priority, TRUE, TRUE, TRUE
+SELECT transport_line.id, depots.id, terminals.id, seed.dispatch_priority, TRUE, TRUE, TRUE
 FROM seed_line_depots seed
 JOIN transport_lines transport_line ON transport_line.code = seed.line_code
 JOIN depots ON depots.code = seed.depot_code
+JOIN stations terminals ON terminals.code = seed.dispatch_terminal_code
 WHERE TRUE
 ON DUPLICATE KEY UPDATE
     dispatch_priority = VALUES(dispatch_priority),
+    dispatch_terminal_station_id = VALUES(dispatch_terminal_station_id),
     dispatch_enabled = VALUES(dispatch_enabled),
     reception_enabled = VALUES(reception_enabled), active = VALUES(active);
 

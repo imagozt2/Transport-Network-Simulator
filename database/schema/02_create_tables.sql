@@ -274,6 +274,7 @@ CREATE TABLE line_depots (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     line_id BIGINT NOT NULL,
     depot_id BIGINT NOT NULL,
+    dispatch_terminal_station_id BIGINT NOT NULL,
     dispatch_priority INT NOT NULL DEFAULT 1,
     dispatch_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     reception_enabled BOOLEAN NOT NULL DEFAULT TRUE,
@@ -283,6 +284,8 @@ CREATE TABLE line_depots (
     CONSTRAINT fk_line_depots_line FOREIGN KEY (line_id) REFERENCES transport_lines (id)
         ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT fk_line_depots_depot FOREIGN KEY (depot_id) REFERENCES depots (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_line_depots_dispatch_terminal FOREIGN KEY (dispatch_terminal_station_id) REFERENCES stations (id)
         ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT uk_line_depots_line_depot UNIQUE (line_id, depot_id),
     CONSTRAINT chk_line_depots_priority CHECK (dispatch_priority > 0)

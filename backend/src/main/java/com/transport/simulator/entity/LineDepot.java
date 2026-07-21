@@ -26,6 +26,10 @@ public class LineDepot extends AuditableEntity {
     @JoinColumn(name = "depot_id", nullable = false)
     private Depot depot;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "dispatch_terminal_station_id", nullable = false)
+    private Station dispatchTerminalStation;
+
     @Column(name = "dispatch_priority", nullable = false)
     private int dispatchPriority;
 
@@ -51,6 +55,10 @@ public class LineDepot extends AuditableEntity {
 
     public Depot getDepot() {
         return depot;
+    }
+
+    public Station getDispatchTerminalStation() {
+        return dispatchTerminalStation;
     }
 
     public int getDispatchPriority() {

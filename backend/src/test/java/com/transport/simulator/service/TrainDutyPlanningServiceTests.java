@@ -8,7 +8,6 @@ import static org.mockito.Mockito.when;
 import com.transport.simulator.entity.Depot;
 import com.transport.simulator.entity.LineServiceLevel;
 import com.transport.simulator.entity.ServicePeriod;
-import com.transport.simulator.entity.Station;
 import com.transport.simulator.entity.Train;
 import com.transport.simulator.entity.TrainModel;
 import com.transport.simulator.enums.DepotMovementType;
@@ -244,6 +243,45 @@ class TrainDutyPlanningServiceTests {
                 .hasMessageContaining("STC");
     }
 
+    @Test
+    void shouldDispatchTrainsFromIntermediateDepotsToTheirNearestTerminals() {
+        route = List.of(
+                new RouteStopConfiguration(101L, "STA", "Terminal A", 1, 60, 10),
+                new RouteStopConfiguration(102L, "STB", "Cochera A", 2, 60, 10),
+                new RouteStopConfiguration(103L, "STC", "Centro", 3, 60, 10),
+                new RouteStopConfiguration(104L, "STD", "Cochera E", 4, 60, 10),
+                new RouteStopConfiguration(105L, "STE", "Terminal E", 5, null, 10)
+        );
+        ZonedDateTime evaluatedAt = at(SERVICE_DATE, 6, 30, 0);
+        ResolvedLineServiceConfiguration configuration = configuration(
+                SERVICE_DATE,
+                LocalTime.of(6, 0),
+                LocalTime.of(10, 0),
+                "REGULAR",
+                ServicePeriodType.REGULAR,
+                List.of(
+                        new LineDepotConfiguration(201L, "DEP-B", "Cochera B", 102L, "STB", 101L, "STA", 1, true, true),
+                        new LineDepotConfiguration(202L, "DEP-D", "Cochera D", 104L, "STD", 105L, "STE", 2, true, true)
+                )
+        );
+        stubOperation(evaluatedAt, configuration);
+        stubLevels(List.of(
+                level("REGULAR", ServicePeriodType.REGULAR, LocalTime.of(6, 0), LocalTime.of(10, 0), 300)
+        ));
+        stubTrains(List.of(
+                train(1L, "T-B-1", 201L, "DEP-B", 102L),
+                train(2L, "T-D-1", 202L, "DEP-D", 104L)
+        ));
+
+        var duties = planner(evaluatedAt).getCurrentPlan().lines().getFirst().duties();
+
+        assertThat(duties).hasSize(2);
+        assertThat(duties.get(0).originStationCode()).isEqualTo("STA");
+        assertThat(duties.get(0).homeDepotCode()).isEqualTo("DEP-B");
+        assertThat(duties.get(1).originStationCode()).isEqualTo("STE");
+        assertThat(duties.get(1).homeDepotCode()).isEqualTo("DEP-D");
+    }
+
     private TrainDutyPlanningService planner(ZonedDateTime evaluatedAt) {
         return new TrainDutyPlanningService(
                 Clock.fixed(evaluatedAt.toInstant(), SERVICE_ZONE),
@@ -299,6 +337,27 @@ class TrainDutyPlanningServiceTests {
             String periodCode,
             ServicePeriodType periodType
     ) {
+        return configuration(
+                serviceDate,
+                serviceStart,
+                serviceEnd,
+                periodCode,
+                periodType,
+                List.of(
+                        new LineDepotConfiguration(201L, "DEP-A", "Cochera A", 101L, "STA", 101L, "STA", 1, true, true),
+                        new LineDepotConfiguration(202L, "DEP-C", "Cochera C", 103L, "STC", 103L, "STC", 2, true, true)
+                )
+        );
+    }
+
+    private ResolvedLineServiceConfiguration configuration(
+            LocalDate serviceDate,
+            LocalTime serviceStart,
+            LocalTime serviceEnd,
+            String periodCode,
+            ServicePeriodType periodType,
+            List<LineDepotConfiguration> depots
+    ) {
         return new ResolvedLineServiceConfiguration(
                 1L,
                 "L1",
@@ -313,10 +372,7 @@ class TrainDutyPlanningServiceTests {
                 serviceEnd,
                 220,
                 route,
-                List.of(
-                        new LineDepotConfiguration(201L, "DEP-A", "Cochera A", 1, true, true),
-                        new LineDepotConfiguration(202L, "DEP-C", "Cochera C", 2, true, true)
-                )
+                depots
         );
     }
 
@@ -345,12 +401,9 @@ class TrainDutyPlanningServiceTests {
             String depotCode,
             Long stationId
     ) {
-        Station station = mock(Station.class);
-        when(station.getId()).thenReturn(stationId);
         Depot depot = mock(Depot.class);
         when(depot.getId()).thenReturn(depotId);
         when(depot.getCode()).thenReturn(depotCode);
-        when(depot.getStation()).thenReturn(station);
         TrainModel model = mock(TrainModel.class);
         when(model.getSeries()).thenReturn("9000");
         Train train = mock(Train.class);

@@ -491,9 +491,19 @@ class ServiceConfigurationServiceTests {
         when(depot.getId()).thenReturn(1L);
         when(depot.getCode()).thenReturn("DEP-L1");
         when(depot.getName()).thenReturn("Cochera L1");
+        if (dispatchEnabled && receptionEnabled) {
+            Station station = mock(Station.class);
+            when(station.getId()).thenReturn(100L);
+            when(station.getCode()).thenReturn("ST001");
+            when(depot.getStation()).thenReturn(station);
+        }
 
         LineDepot lineDepot = mock(LineDepot.class);
         when(lineDepot.getDepot()).thenReturn(depot);
+        if (dispatchEnabled && receptionEnabled) {
+            Station dispatchTerminal = depot.getStation();
+            when(lineDepot.getDispatchTerminalStation()).thenReturn(dispatchTerminal);
+        }
         when(lineDepot.getDispatchPriority()).thenReturn(1);
         when(lineDepot.isDispatchEnabled()).thenReturn(dispatchEnabled);
         when(lineDepot.isReceptionEnabled()).thenReturn(receptionEnabled);

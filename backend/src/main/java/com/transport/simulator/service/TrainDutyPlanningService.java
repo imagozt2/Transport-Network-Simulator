@@ -100,6 +100,7 @@ public class TrainDutyPlanningService {
                 lineState.lineId(),
                 lineState.lineCode(),
                 configuration.depots(),
+                configuration.route(),
                 generateDuties(configuration.route(), periodPlans, serviceEndsAt),
                 roundTripSeconds
         );
@@ -446,6 +447,7 @@ public class TrainDutyPlanningService {
             Long lineId,
             String lineCode,
             List<LineDepotConfiguration> depots,
+            List<RouteStopConfiguration> route,
             List<UnassignedDuty> duties,
             long roundTripSeconds
     ) {
@@ -459,6 +461,7 @@ public class TrainDutyPlanningService {
                     "Line " + lineCode + " has no depot enabled for both dispatch and reception"
             );
         }
+        validateOperationalDepotsBelongToRoute(lineCode, depots, operationalDepotIds, route);
         List<Train> eligibleTrains = trainRepository
                 .findAllByAssignedLineIdAndFleetRoleAndModelSeriesAndActiveTrueAndModelActiveTrueAndHomeDepotActiveTrueOrderByDispatchOrderAscCodeAsc(
                         lineId,
@@ -476,6 +479,8 @@ public class TrainDutyPlanningService {
                         lineCode,
                         duty,
                         eligibleTrains,
+                        depots,
+                        route,
                         availableFrom,
                         roundTripSeconds
                 ))
@@ -487,11 +492,15 @@ public class TrainDutyPlanningService {
             String lineCode,
             UnassignedDuty duty,
             List<Train> eligibleTrains,
+            List<LineDepotConfiguration> depots,
+            List<RouteStopConfiguration> route,
             Map<Long, ZonedDateTime> availableFrom,
             long roundTripSeconds
     ) {
         Train train = eligibleTrains.stream()
-                .filter(candidate -> candidate.getHomeDepot().getStation().getId().equals(duty.originStationId()))
+                .filter(candidate -> depotServesTerminal(
+                        candidate.getHomeDepot().getId(), duty.originStationId(), depots
+                ))
                 .filter(candidate -> {
                     ZonedDateTime nextAvailableAt = availableFrom.get(candidate.getId());
                     return nextAvailableAt == null || !nextAvailableAt.isAfter(duty.plannedStartAt());
@@ -525,6 +534,53 @@ public class TrainDutyPlanningService {
                 duty.plannedReleaseAt(),
                 depotEntryAt
         );
+    }
+
+    private void validateOperationalDepotsBelongToRoute(
+            String lineCode,
+            List<LineDepotConfiguration> depots,
+            List<Long> operationalDepotIds,
+            List<RouteStopConfiguration> route
+    ) {
+        List<Long> routeStationIds = route.stream().map(RouteStopConfiguration::stationId).toList();
+        depots.stream()
+                .filter(depot -> operationalDepotIds.contains(depot.depotId()))
+                .filter(depot -> !routeStationIds.contains(depot.stationId())
+                        || !routeStationIds.contains(depot.dispatchTerminalStationId()))
+                .findFirst()
+                .ifPresent(depot -> {
+                    throw new ServiceConfigurationException(
+                            "Depot " + depot.depotCode() + " or its dispatch terminal does not belong to route "
+                                    + lineCode
+                    );
+                });
+        Long firstTerminalId = route.getFirst().stationId();
+        Long lastTerminalId = route.getLast().stationId();
+        depots.stream()
+                .filter(depot -> operationalDepotIds.contains(depot.depotId()))
+                .filter(depot -> !depot.dispatchTerminalStationId().equals(firstTerminalId)
+                        && !depot.dispatchTerminalStationId().equals(lastTerminalId))
+                .findFirst()
+                .ifPresent(depot -> {
+                    throw new ServiceConfigurationException(
+                            "Dispatch station " + depot.dispatchTerminalStationCode()
+                                    + " is not a terminal of line " + lineCode
+                    );
+                });
+    }
+
+    private boolean depotServesTerminal(
+            Long depotId,
+            Long terminalStationId,
+            List<LineDepotConfiguration> depots
+    ) {
+        LineDepotConfiguration depot = depots.stream()
+                .filter(candidate -> candidate.depotId().equals(depotId))
+                .findFirst()
+                .orElseThrow(() -> new ServiceConfigurationException(
+                        "Train depot is not enabled for this line: " + depotId
+                ));
+        return depot.dispatchTerminalStationId().equals(terminalStationId);
     }
 
     private ZonedDateTime nextReturnToHomeDepot(
