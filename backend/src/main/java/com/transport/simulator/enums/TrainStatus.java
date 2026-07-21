@@ -5,7 +5,5 @@ public enum TrainStatus {
     DEPOT,
     MAINTENANCE,
     STOPPED,
-    OUT_OF_SERVICE,
-    RESERVE,
-    HISTORIC
+    OUT_OF_SERVICE
 }

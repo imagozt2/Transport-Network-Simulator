@@ -65,9 +65,7 @@ class DashboardQueryServiceTests {
         ));
 
         List<TrainStatusCountProjection> trainStatusCounts = List.of(
-                trainStatusCount(TrainStatus.DEPOT, 230),
-                trainStatusCount(TrainStatus.RESERVE, 5),
-                trainStatusCount(TrainStatus.HISTORIC, 7)
+                trainStatusCount(TrainStatus.DEPOT, 242)
         );
         when(trainRepository.countByActiveTrue()).thenReturn(242L);
         when(trainRepository.countActiveTrainsByStatus()).thenReturn(trainStatusCounts);
@@ -97,7 +95,7 @@ class DashboardQueryServiceTests {
         assertThat(result.lines()).extracting("code").containsExactly("L1", "L2");
 
         assertThat(result.fleet().activeTrains()).isEqualTo(242);
-        assertThat(result.fleet().byStatus().get(TrainStatus.DEPOT)).isEqualTo(230);
+        assertThat(result.fleet().byStatus().get(TrainStatus.DEPOT)).isEqualTo(242);
         assertThat(result.fleet().byStatus().get(TrainStatus.IN_SERVICE)).isZero();
 
         assertThat(result.devices().activeDevices()).isEqualTo(622);

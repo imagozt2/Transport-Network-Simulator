@@ -1,6 +1,7 @@
 package com.transport.simulator.entity;
 
 import com.transport.simulator.enums.TrainStatus;
+import com.transport.simulator.enums.FleetRole;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -68,6 +69,13 @@ public class Train extends AuditableEntity {
     private LocalDateTime serviceEndedAt;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "fleet_role", nullable = false, length = 30)
+    private FleetRole fleetRole;
+
+    @Column(name = "dispatch_order")
+    private Integer dispatchOrder;
+
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private TrainStatus status = TrainStatus.DEPOT;
 
@@ -131,6 +139,14 @@ public class Train extends AuditableEntity {
 
     public LocalDateTime getServiceEndedAt() {
         return serviceEndedAt;
+    }
+
+    public FleetRole getFleetRole() {
+        return fleetRole;
+    }
+
+    public Integer getDispatchOrder() {
+        return dispatchOrder;
     }
 
     public TrainStatus getStatus() {

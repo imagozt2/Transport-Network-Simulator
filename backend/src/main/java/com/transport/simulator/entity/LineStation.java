@@ -42,6 +42,12 @@ public class LineStation extends AuditableEntity {
     @Column(name = "station_order", nullable = false)
     private int stationOrder;
 
+    @Column(name = "travel_seconds_to_next")
+    private Integer travelSecondsToNext;
+
+    @Column(name = "dwell_seconds", nullable = false)
+    private int dwellSeconds = 30;
+
     @Column(nullable = false)
     private boolean active = true;
 
@@ -68,6 +74,14 @@ public class LineStation extends AuditableEntity {
 
     public int getStationOrder() {
         return stationOrder;
+    }
+
+    public Integer getTravelSecondsToNext() {
+        return travelSecondsToNext;
+    }
+
+    public int getDwellSeconds() {
+        return dwellSeconds;
     }
 
     public boolean isActive() {
