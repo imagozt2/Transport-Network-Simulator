@@ -66,7 +66,7 @@ La hora final de un calendario es exclusiva. Por ejemplo, si el servicio termina
 La duración de una vuelta completa se obtiene en segundos:
 
 ```text
-ida y vuelta = 2 × (suma de tiempos de tramo + suma de tiempos de parada)
+ida y vuelta = 2 × tiempos de tramo + 2 × paradas intermedias + paradas en ambos terminales
 ```
 
 Para cada franja, la flota objetivo se calcula redondeando hacia arriba:
@@ -84,9 +84,11 @@ cambia la franja, el planificador compara el nuevo objetivo con los turnos exist
 
 ## Turnos y salidas
 
-`TrainDutyPlanningService` genera un plan diario por línea. Las salidas alternan entre ambos
-terminales y se separan por la mitad del intervalo de paso. De esta manera, cada terminal mantiene el
-intervalo configurado mientras los trenes se intercalan en sentidos opuestos.
+`TrainDutyPlanningService` genera un plan diario por línea. Las salidas se forman por parejas desde
+ambos terminales: los dos trenes comienzan simultáneamente en sentidos opuestos. El intervalo
+operativo se obtiene dividiendo la vuelta completa entre la flota objetivo, evitando un hueco residual
+cuando la duración no es múltiplo exacto de la frecuencia configurada. Si una franja necesita ampliar
+la flota, las nuevas parejas se incorporan a mitad del primer intervalo para ocupar huecos.
 
 Cada turno contiene:
 

@@ -58,9 +58,9 @@ class TrainDutyPlanningServiceTests {
     @BeforeEach
     void setUp() {
         route = List.of(
-                new RouteStopConfiguration(101L, "STA", "Estación A", 1, 60, 10),
+                new RouteStopConfiguration(101L, "STA", "Estación A", 1, 60, 20),
                 new RouteStopConfiguration(102L, "STB", "Estación B", 2, 120, 20),
-                new RouteStopConfiguration(103L, "STC", "Estación C", 3, null, 10)
+                new RouteStopConfiguration(103L, "STC", "Estación C", 3, null, 20)
         );
     }
 
@@ -92,7 +92,9 @@ class TrainDutyPlanningServiceTests {
         assertThat(linePlan.periods()).extracting("targetFleetSize").containsExactly(2, 4);
         assertThat(linePlan.periods()).extracting("headwaySeconds").containsExactly(220, 110);
         assertThat(linePlan.duties()).hasSize(4);
-        assertThat(linePlan.duties().get(2).plannedStartAt()).isEqualTo(at(SERVICE_DATE, 7, 0, 0));
+        assertThat(linePlan.duties().get(0).plannedStartAt()).isEqualTo(at(SERVICE_DATE, 6, 0, 0));
+        assertThat(linePlan.duties().get(1).plannedStartAt()).isEqualTo(at(SERVICE_DATE, 6, 0, 0));
+        assertThat(linePlan.duties().get(2).plannedStartAt()).isEqualTo(at(SERVICE_DATE, 7, 0, 55));
         assertThat(linePlan.duties().get(3).plannedStartAt()).isEqualTo(at(SERVICE_DATE, 7, 0, 55));
         assertThat(linePlan.duties()).extracting("initialDirection")
                 .containsExactly(
@@ -141,6 +143,20 @@ class TrainDutyPlanningServiceTests {
         assertThat(stoppedPosition.nextStationCode()).isEqualTo("STC");
         assertThat(stoppedPosition.secondsUntilNextStation()).isEqualTo(140);
 
+        ZonedDateTime lastSecondAtMiddleStation = at(SERVICE_DATE, 6, 1, 39);
+        stubOperation(lastSecondAtMiddleStation, configuration);
+        var lastStoppedPosition = planner(lastSecondAtMiddleStation).getCurrentPlan()
+                .lines().getFirst().positions().getFirst();
+        assertThat(lastStoppedPosition.state()).isEqualTo(TrainPositionState.AT_STATION);
+        assertThat(lastStoppedPosition.currentStationCode()).isEqualTo("STB");
+
+        ZonedDateTime afterTwentySecondStop = at(SERVICE_DATE, 6, 1, 40);
+        stubOperation(afterTwentySecondStop, configuration);
+        var departedPosition = planner(afterTwentySecondStop).getCurrentPlan()
+                .lines().getFirst().positions().getFirst();
+        assertThat(departedPosition.state()).isEqualTo(TrainPositionState.BETWEEN_STATIONS);
+        assertThat(departedPosition.previousStationCode()).isEqualTo("STB");
+
         ZonedDateTime atTerminal = at(SERVICE_DATE, 6, 3, 40);
         stubOperation(atTerminal, configuration);
         var terminalPosition = planner(atTerminal).getCurrentPlan().lines().getFirst().positions().getFirst();
@@ -162,16 +178,18 @@ class TrainDutyPlanningServiceTests {
         );
         stubOperation(evaluatedAt, configuration);
         stubLevels(List.of(
-                level("REGULAR", ServicePeriodType.REGULAR, LocalTime.of(6, 0), LocalTime.of(7, 0), 220),
+                level("REGULAR", ServicePeriodType.REGULAR, LocalTime.of(6, 0), LocalTime.of(7, 0), 110),
                 level("QUIET", ServicePeriodType.OFF_PEAK, LocalTime.of(7, 0), LocalTime.of(10, 0), 440)
         ));
         stubTrains(List.of(
                 train(1L, "T-A-1", 201L, "DEP-A", 101L),
-                train(2L, "T-C-1", 202L, "DEP-C", 103L)
+                train(2L, "T-C-1", 202L, "DEP-C", 103L),
+                train(3L, "T-A-2", 201L, "DEP-A", 101L),
+                train(4L, "T-C-2", 202L, "DEP-C", 103L)
         ));
 
         var linePlan = planner(evaluatedAt).getCurrentPlan().lines().getFirst();
-        var withdrawnDuty = linePlan.duties().get(1);
+        var withdrawnDuty = linePlan.duties().get(2);
 
         assertThat(withdrawnDuty.requestedReleaseAt()).isEqualTo(at(SERVICE_DATE, 7, 0, 0));
         assertThat(withdrawnDuty.plannedReleaseAt()).isEqualTo(at(SERVICE_DATE, 7, 0, 30));

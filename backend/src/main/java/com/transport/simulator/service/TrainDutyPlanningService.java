@@ -101,7 +101,7 @@ public class TrainDutyPlanningService {
                 lineState.lineCode(),
                 configuration.depots(),
                 configuration.route(),
-                generateDuties(configuration.route(), periodPlans, serviceEndsAt),
+                generateDuties(configuration.route(), periodPlans, serviceEndsAt, roundTripSeconds),
                 roundTripSeconds
         );
         List<SimulatedTrainPosition> positions = calculatePositions(
@@ -244,7 +244,7 @@ public class TrainDutyPlanningService {
                     current,
                     route.get(index + 1),
                     ServiceDirection.OUTBOUND,
-                    effectiveDwellSeconds(current, index, route.size()),
+                    current.dwellSeconds(),
                     requiredTravelSeconds(current)
             ));
         }
@@ -257,16 +257,10 @@ public class TrainDutyPlanningService {
                     current,
                     route.get(index - 1),
                     ServiceDirection.INBOUND,
-                    effectiveDwellSeconds(current, index, route.size()),
+                    current.dwellSeconds(),
                     requiredTravelSeconds(route.get(index - 1))
             ));
         }
-    }
-
-    private long effectiveDwellSeconds(RouteStopConfiguration stop, int index, int routeSize) {
-        return (index == 0 || index == routeSize - 1)
-                ? Math.multiplyExact(2L, stop.dwellSeconds())
-                : stop.dwellSeconds();
     }
 
     private long requiredTravelSeconds(RouteStopConfiguration stop) {
@@ -395,7 +389,8 @@ public class TrainDutyPlanningService {
     private List<UnassignedDuty> generateDuties(
             List<RouteStopConfiguration> route,
             List<ServicePeriodFleetPlan> periods,
-            ZonedDateTime serviceEndsAt
+            ZonedDateTime serviceEndsAt,
+            long roundTripSeconds
     ) {
         List<MutableDuty> duties = new ArrayList<>();
         int nextDutyNumber = 1;
@@ -407,26 +402,35 @@ public class TrainDutyPlanningService {
             int fleetDifference = period.targetFleetSize() - activeAtPeriodStart.size();
 
             if (fleetDifference > 0) {
-                long departureSpacingSeconds = Math.max(1, period.headwaySeconds() / 2L);
-                ZonedDateTime nextDeparture = period.startsAt();
-                for (int index = 0; index < fleetDifference && nextDeparture.isBefore(period.endsAt()); index++) {
-                    ServiceDirection direction = nextDutyNumber % 2 == 1
-                            ? ServiceDirection.OUTBOUND
-                            : ServiceDirection.INBOUND;
-                    RouteStopConfiguration origin = direction == ServiceDirection.OUTBOUND
-                            ? route.getFirst()
-                            : route.getLast();
-                    duties.add(new MutableDuty(
-                            nextDutyNumber,
-                            direction,
-                            origin.stationId(),
-                            origin.stationCode(),
-                            period.periodCode(),
-                            period.headwaySeconds(),
-                            nextDeparture
-                    ));
-                    nextDutyNumber++;
-                    nextDeparture = nextDeparture.plusSeconds(departureSpacingSeconds);
+                long operatingSpacingSeconds = Math.max(
+                        1,
+                        roundTripSeconds / period.targetFleetSize()
+                );
+                ZonedDateTime nextDeparture = activeAtPeriodStart.isEmpty()
+                        ? period.startsAt()
+                        : period.startsAt().plusSeconds(Math.max(1, operatingSpacingSeconds / 2L));
+                int remainingAdditions = fleetDifference;
+                while (remainingAdditions > 0 && nextDeparture.isBefore(period.endsAt())) {
+                    for (ServiceDirection direction : ServiceDirection.values()) {
+                        if (remainingAdditions == 0) {
+                            break;
+                        }
+                        RouteStopConfiguration origin = direction == ServiceDirection.OUTBOUND
+                                ? route.getFirst()
+                                : route.getLast();
+                        duties.add(new MutableDuty(
+                                nextDutyNumber,
+                                direction,
+                                origin.stationId(),
+                                origin.stationCode(),
+                                period.periodCode(),
+                                period.headwaySeconds(),
+                                nextDeparture
+                        ));
+                        nextDutyNumber++;
+                        remainingAdditions--;
+                    }
+                    nextDeparture = nextDeparture.plusSeconds(operatingSpacingSeconds);
                 }
             } else if (fleetDifference < 0) {
                 activeAtPeriodStart.stream()
@@ -603,10 +607,19 @@ public class TrainDutyPlanningService {
                 .filter(seconds -> seconds != null)
                 .mapToLong(Integer::longValue)
                 .sum();
-        long oneWayDwellSeconds = route.stream()
+        long intermediateDwellSeconds = route.stream()
+                .skip(1)
+                .limit(Math.max(0, route.size() - 2L))
                 .mapToLong(RouteStopConfiguration::dwellSeconds)
                 .sum();
-        long roundTripSeconds = Math.multiplyExact(2, Math.addExact(oneWayTravelSeconds, oneWayDwellSeconds));
+        long terminalDwellSeconds = Math.addExact(
+                route.getFirst().dwellSeconds(),
+                route.getLast().dwellSeconds()
+        );
+        long roundTripSeconds = Math.addExact(
+                Math.multiplyExact(2, Math.addExact(oneWayTravelSeconds, intermediateDwellSeconds)),
+                terminalDwellSeconds
+        );
         if (roundTripSeconds <= 0) {
             throw new ServiceConfigurationException("A line round trip must have a positive duration");
         }
@@ -615,7 +628,11 @@ public class TrainDutyPlanningService {
 
     private int requiredFleetSize(long roundTripSeconds, int headwaySeconds) {
         long required = (roundTripSeconds + headwaySeconds - 1L) / headwaySeconds;
-        return Math.toIntExact(Math.max(1, required));
+        long balancedFleet = Math.max(2, required);
+        if (balancedFleet % 2 != 0) {
+            balancedFleet++;
+        }
+        return Math.toIntExact(balancedFleet);
     }
 
     private ZonedDateTime atServiceTime(LocalDate date, LocalTime time) {

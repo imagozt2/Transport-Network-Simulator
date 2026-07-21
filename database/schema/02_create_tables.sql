@@ -33,7 +33,7 @@ CREATE TABLE line_stations (
     station_id BIGINT NOT NULL,
     station_order INT NOT NULL,
     travel_seconds_to_next INT NULL,
-    dwell_seconds INT NOT NULL DEFAULT 30,
+    dwell_seconds INT NOT NULL DEFAULT 20,
     active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

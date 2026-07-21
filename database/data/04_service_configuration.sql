@@ -77,7 +77,7 @@ ON DUPLICATE KEY UPDATE
     headway_seconds = VALUES(headway_seconds), active = VALUES(active);
 
 UPDATE line_stations
-SET travel_seconds_to_next = NULL, dwell_seconds = 30
+SET travel_seconds_to_next = NULL, dwell_seconds = 20
 WHERE id > 0;
 
 UPDATE line_stations current_stop
@@ -98,29 +98,6 @@ WHERE current_stop.id > 0
   AND current_stop.active = TRUE
   AND next_stop.active = TRUE
   AND connections.active = TRUE;
-
-DROP TEMPORARY TABLE IF EXISTS seed_station_line_counts;
-CREATE TEMPORARY TABLE seed_station_line_counts AS
-SELECT station_id, COUNT(*) AS line_count
-FROM line_stations
-WHERE active = TRUE
-GROUP BY station_id;
-
-UPDATE line_stations stops
-JOIN seed_station_line_counts counts ON counts.station_id = stops.station_id
-SET stops.dwell_seconds = CASE WHEN counts.line_count > 1 THEN 45 ELSE 30 END
-WHERE stops.id > 0;
-
-UPDATE line_stations stops
-JOIN (
-    SELECT line_id, MIN(station_order) AS first_stop, MAX(station_order) AS last_stop
-    FROM line_stations
-    WHERE active = TRUE
-    GROUP BY line_id
-) terminals ON terminals.line_id = stops.line_id
-SET stops.dwell_seconds = 90
-WHERE stops.id > 0
-  AND stops.station_order IN (terminals.first_stop, terminals.last_stop);
 
 DROP TEMPORARY TABLE IF EXISTS seed_line_depots;
 CREATE TEMPORARY TABLE seed_line_depots (
@@ -156,6 +133,5 @@ ON DUPLICATE KEY UPDATE
     reception_enabled = VALUES(reception_enabled), active = VALUES(active);
 
 DROP TEMPORARY TABLE seed_line_depots;
-DROP TEMPORARY TABLE seed_station_line_counts;
 DROP TEMPORARY TABLE seed_line_headway_adjustments;
 DROP TEMPORARY TABLE seed_service_periods;

@@ -91,8 +91,8 @@ intervalo para determinar la flota necesaria.
 | `travel_seconds_to_next` | Duración hasta la siguiente estación; es `NULL` en la terminal final. |
 | `dwell_seconds` | Tiempo de permanencia antes de continuar. |
 
-Los datos iniciales asignan 30 segundos en estaciones normales, 45 en correspondencias y 90 en
-terminales. Las duraciones iniciales de los tramos proceden de
+Los datos iniciales asignan 20 segundos de parada en todas las estaciones, incluidas correspondencias
+y terminales. Las duraciones iniciales de los tramos proceden de
 `station_connections.estimated_minutes` y se almacenan en segundos.
 
 No existe otra tabla que vuelva a enumerar el recorrido. El mapa, los termómetros y el simulador
