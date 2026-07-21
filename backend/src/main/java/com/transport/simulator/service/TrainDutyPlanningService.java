@@ -2,8 +2,11 @@ package com.transport.simulator.service;
 
 import com.transport.simulator.entity.LineServiceLevel;
 import com.transport.simulator.entity.ServicePeriod;
+import com.transport.simulator.entity.Train;
+import com.transport.simulator.enums.FleetRole;
 import com.transport.simulator.enums.ServiceDirection;
 import com.transport.simulator.repository.LineServiceLevelRepository;
+import com.transport.simulator.repository.TrainRepository;
 import com.transport.simulator.service.model.LineDutyPlan;
 import com.transport.simulator.service.model.LineServiceOperationState;
 import com.transport.simulator.service.model.PlannedTrainDuty;
@@ -18,7 +21,9 @@ import java.time.LocalTime;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,18 +31,23 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class TrainDutyPlanningService {
 
+    private static final String REGULAR_SERVICE_SERIES = "9000";
+
     private final Clock serviceClock;
     private final ServiceOperationStateService serviceOperationStateService;
     private final LineServiceLevelRepository lineServiceLevelRepository;
+    private final TrainRepository trainRepository;
 
     public TrainDutyPlanningService(
             Clock serviceClock,
             ServiceOperationStateService serviceOperationStateService,
-            LineServiceLevelRepository lineServiceLevelRepository
+            LineServiceLevelRepository lineServiceLevelRepository,
+            TrainRepository trainRepository
     ) {
         this.serviceClock = serviceClock;
         this.serviceOperationStateService = serviceOperationStateService;
         this.lineServiceLevelRepository = lineServiceLevelRepository;
+        this.trainRepository = trainRepository;
     }
 
     public ServiceDutyPlan getCurrentPlan() {
@@ -75,7 +85,11 @@ public class TrainDutyPlanningService {
                 serviceEndsAt,
                 roundTripSeconds
         );
-        List<PlannedTrainDuty> duties = generateDuties(configuration.route(), periodPlans, serviceEndsAt);
+        List<PlannedTrainDuty> duties = assignRegularServiceTrains(
+                lineState.lineId(),
+                lineState.lineCode(),
+                generateDuties(configuration.route(), periodPlans, serviceEndsAt)
+        );
 
         return new LineDutyPlan(
                 lineState.lineId(),
@@ -165,7 +179,7 @@ public class TrainDutyPlanningService {
         );
     }
 
-    private List<PlannedTrainDuty> generateDuties(
+    private List<UnassignedDuty> generateDuties(
             List<RouteStopConfiguration> route,
             List<ServicePeriodFleetPlan> periods,
             ZonedDateTime serviceEndsAt
@@ -213,7 +227,65 @@ public class TrainDutyPlanningService {
                 .filter(duty -> duty.plannedReleaseAt() == null)
                 .forEach(duty -> duty.releaseAt(serviceEndsAt));
 
-        return duties.stream().map(MutableDuty::toPlan).toList();
+        return duties.stream().map(MutableDuty::toUnassignedDuty).toList();
+    }
+
+    private List<PlannedTrainDuty> assignRegularServiceTrains(
+            Long lineId,
+            String lineCode,
+            List<UnassignedDuty> duties
+    ) {
+        List<Train> eligibleTrains = trainRepository
+                .findAllByAssignedLineIdAndFleetRoleAndModelSeriesAndActiveTrueAndModelActiveTrueAndHomeDepotActiveTrueOrderByDispatchOrderAscCodeAsc(
+                        lineId,
+                        FleetRole.REGULAR_SERVICE,
+                        REGULAR_SERVICE_SERIES
+                );
+        Map<Long, ZonedDateTime> availableFrom = new HashMap<>();
+
+        return duties.stream()
+                .sorted(Comparator.comparing(UnassignedDuty::plannedStartAt)
+                        .thenComparingInt(UnassignedDuty::dutyNumber))
+                .map(duty -> assignTrain(lineCode, duty, eligibleTrains, availableFrom))
+                .sorted(Comparator.comparingInt(PlannedTrainDuty::dutyNumber))
+                .toList();
+    }
+
+    private PlannedTrainDuty assignTrain(
+            String lineCode,
+            UnassignedDuty duty,
+            List<Train> eligibleTrains,
+            Map<Long, ZonedDateTime> availableFrom
+    ) {
+        Train train = eligibleTrains.stream()
+                .filter(candidate -> candidate.getHomeDepot().getStation().getId().equals(duty.originStationId()))
+                .filter(candidate -> {
+                    ZonedDateTime nextAvailableAt = availableFrom.get(candidate.getId());
+                    return nextAvailableAt == null || !nextAvailableAt.isAfter(duty.plannedStartAt());
+                })
+                .findFirst()
+                .orElseThrow(() -> new ServiceConfigurationException(
+                        "Insufficient active 9000 series regular-service fleet for line " + lineCode
+                                + " at origin " + duty.originStationCode()
+                                + " and departure " + duty.plannedStartAt()
+                ));
+        availableFrom.put(train.getId(), duty.plannedReleaseAt());
+
+        return new PlannedTrainDuty(
+                duty.dutyNumber(),
+                train.getId(),
+                train.getCode(),
+                train.getModel().getSeries(),
+                train.getHomeDepot().getId(),
+                train.getHomeDepot().getCode(),
+                duty.initialDirection(),
+                duty.originStationId(),
+                duty.originStationCode(),
+                duty.startingPeriodCode(),
+                duty.startingHeadwaySeconds(),
+                duty.plannedStartAt(),
+                duty.plannedReleaseAt()
+        );
     }
 
     private long calculateRoundTripSeconds(List<RouteStopConfiguration> route) {
@@ -291,8 +363,8 @@ public class TrainDutyPlanningService {
             plannedReleaseAt = releaseAt;
         }
 
-        private PlannedTrainDuty toPlan() {
-            return new PlannedTrainDuty(
+        private UnassignedDuty toUnassignedDuty() {
+            return new UnassignedDuty(
                     dutyNumber,
                     initialDirection,
                     originStationId,
@@ -303,5 +375,17 @@ public class TrainDutyPlanningService {
                     plannedReleaseAt
             );
         }
+    }
+
+    private record UnassignedDuty(
+            int dutyNumber,
+            ServiceDirection initialDirection,
+            Long originStationId,
+            String originStationCode,
+            String startingPeriodCode,
+            int startingHeadwaySeconds,
+            ZonedDateTime plannedStartAt,
+            ZonedDateTime plannedReleaseAt
+    ) {
     }
 }
