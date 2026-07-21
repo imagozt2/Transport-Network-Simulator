@@ -85,9 +85,16 @@
                           class="train-marker"
                           [class.inbound]="train.direction === 'INBOUND'"
                           [style.top.px]="getTrainPosition(line, train)"
-                          [attr.aria-label]="'Tren circulando en sentido ' + (train.direction === 'OUTBOUND' ? 'ida' : 'vuelta')"
+                          [attr.aria-label]="'Tren ' + train.code + ', sentido ' + directionLabel(train.direction)"
+                          tabindex="0"
                           role="img"
-                        ><span aria-hidden="true"></span></span>
+                        >
+                          <span class="train-marker-core" aria-hidden="true"></span>
+                          <span class="train-tooltip" aria-hidden="true">
+                            <strong>{{ train.code }}</strong>
+                            <small>{{ directionLabel(train.direction) }}</small>
+                          </span>
+                        </span>
                       }
                       @for (station of line.stations; track station.id; let first = $first; let last = $last) {
                         <div class="mini-station-row">

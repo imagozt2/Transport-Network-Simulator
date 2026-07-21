@@ -133,6 +133,10 @@ export class Lines implements OnInit, OnDestroy {
     return train.id;
   }
 
+  directionLabel(direction: ServiceDirection): string {
+    return direction === 'OUTBOUND' ? 'Ida' : 'Vuelta';
+  }
+
   formatDuration(seconds: number | null): string {
     if (seconds === null) { return 'No disponible'; }
     const minutes = Math.floor(seconds / 60);

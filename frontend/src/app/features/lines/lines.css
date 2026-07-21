@@ -66,9 +66,14 @@
 .mini-track-line.top { top: 0; } .mini-track-line.bottom { bottom: 0; }
 .mini-station-dot { z-index: 2; width: 12px; height: 12px; margin-top: 19px; border: 3px solid var(--line-color); border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px #fff; }
 .mini-station-dot.transfer-dot { box-shadow: 0 0 0 3px #fff, 0 0 0 5px #111827; }
-.train-marker { position: absolute; left: 2px; z-index: 4; width: 14px; height: 14px; padding: 0; border: 2px solid #fff; border-radius: 50%; background: var(--line-color); box-shadow: 0 0 0 2px #111827, 0 3px 8px rgba(15, 23, 42, .35); pointer-events: none; transform: translateY(-50%); transition: top 4.5s linear; }
+.train-marker { position: absolute; left: 2px; z-index: 4; width: 14px; height: 14px; border: 2px solid #fff; border-radius: 50%; background: var(--line-color); box-shadow: 0 0 0 2px #111827; transform: translateY(-50%); transition: top 4.5s linear; }
 .train-marker.inbound { left: 18px; }
-.train-marker > span { position: absolute; inset: 3px; border-radius: 50%; background: #fff; }
+.train-marker:focus-visible { outline: 3px solid #2563eb; }
+.train-marker-core { position: absolute; inset: 3px; border-radius: 50%; background: #fff; }
+.train-tooltip { position: absolute; top: 50%; left: 22px; z-index: 8; display: flex; gap: 6px; padding: 7px 9px; border-radius: 8px; color: #fff; background: #111827; opacity: 0; pointer-events: none; transform: translateY(-50%); white-space: nowrap; }
+.train-tooltip small { color: #cbd5e1; font-size: 10px; font-weight: 700; }
+.train-marker:hover, .train-marker:focus-visible { z-index: 10; }
+.train-marker:hover .train-tooltip, .train-marker:focus-visible .train-tooltip { opacity: 1; }
 .mini-station-content { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 6px; border-bottom: 1px solid #f3f4f6; }
 .mini-station-row:last-child .mini-station-content { border-bottom: 0; }
 .mini-station-content > span:first-child { min-width: 0; display: flex; flex-direction: column; }
