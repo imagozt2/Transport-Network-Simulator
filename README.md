@@ -14,6 +14,7 @@ La aplicación incluye actualmente:
 
 - un Panel General con indicadores de estaciones, líneas, trenes, dispositivos y cocheras;
 - un mapa SVG interactivo con las seis líneas y las 50 estaciones de Macegocia;
+- una sección operativa de líneas con frecuencias, termómetros y trenes en movimiento;
 - recorridos ordenados y correspondencias entre líneas;
 - calendarios, franjas horarias, frecuencias y tiempos de recorrido configurables;
 - flota regular, de reserva e histórica diferenciada;
@@ -142,6 +143,7 @@ La aplicación estará disponible en `http://localhost:4200`. La ruta inicial re
 | `GET` | `/api/health` | Comprueba el estado del backend y de MySQL. |
 | `GET` | `/api/dashboard/summary` | Devuelve el resumen agregado del Panel General. |
 | `GET` | `/api/network-map` | Devuelve las líneas activas y sus estaciones ordenadas. |
+| `GET` | `/api/lines/operations` | Devuelve el estado operativo, recorridos y trenes de cada línea. |
 
 ## Pruebas y compilación
 
@@ -168,6 +170,7 @@ y en cada actualización de esa rama.
 
 - [Panel General y endpoint de resumen](docs/panel-general.md)
 - [Mapa de red y endpoint del mapa](docs/mapa-red.md)
+- [Sección de Líneas y endpoint operativo](docs/lineas.md)
 - [Modelo de operación ferroviaria](docs/modelo-operacion-ferroviaria.md)
 - [Motor de simulación ferroviaria](docs/motor-simulacion-ferroviaria.md)
 - [Inicialización y estructura de la base de datos](database/README.md)
