@@ -52,9 +52,9 @@ La función es una propiedad estable de la unidad y no debe confundirse con su e
 
 | Función | Presentación | Uso |
 | --- | --- | --- |
-| `REGULAR_SERVICE` | Verde | Flota principal destinada al servicio diario. Solo los trenes de la serie 9000 pueden circular en el servicio regular simulado. |
-| `RESERVE` | Ámbar | Unidades disponibles para refuerzos o sustituciones. No se incorporan automáticamente al servicio regular actual. |
-| `HISTORIC` | Morado | Material clásico preservado, sin asignación a la circulación regular. |
+| `REGULAR_SERVICE` | Gris claro con texto negro | Flota principal destinada al servicio diario. Solo los trenes de la serie 9000 pueden circular en el servicio regular simulado. |
+| `RESERVE` | Gris oscuro con texto blanco | Unidades disponibles para refuerzos o sustituciones. No se incorporan automáticamente al servicio regular actual. |
+| `HISTORIC` | Negro con texto blanco | Material clásico preservado, sin asignación a la circulación regular. |
 
 El estado describe la situación de la unidad en la instantánea:
 
