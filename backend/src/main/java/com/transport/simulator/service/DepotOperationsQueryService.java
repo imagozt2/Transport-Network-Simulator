@@ -1,19 +1,31 @@
 package com.transport.simulator.service;
 
 import com.transport.simulator.dto.response.depotoperation.DepotFleetDistributionResponse;
+import com.transport.simulator.dto.response.depotoperation.DepotMovementLineResponse;
+import com.transport.simulator.dto.response.depotoperation.DepotMovementResponse;
+import com.transport.simulator.dto.response.depotoperation.DepotMovementsSummaryResponse;
+import com.transport.simulator.dto.response.depotoperation.DepotMovementTrainResponse;
 import com.transport.simulator.dto.response.depotoperation.DepotOperationResponse;
 import com.transport.simulator.dto.response.depotoperation.DepotOperationsResponse;
 import com.transport.simulator.dto.response.depotoperation.DepotOperationsSummaryResponse;
 import com.transport.simulator.dto.response.depotoperation.DepotOperationStationResponse;
 import com.transport.simulator.entity.Depot;
+import com.transport.simulator.entity.Station;
 import com.transport.simulator.entity.Train;
+import com.transport.simulator.enums.DepotMovementStatus;
+import com.transport.simulator.enums.DepotMovementType;
 import com.transport.simulator.enums.DepotOperationStatus;
 import com.transport.simulator.enums.FleetRole;
 import com.transport.simulator.enums.TrainStatus;
 import com.transport.simulator.repository.DepotRepository;
+import com.transport.simulator.repository.StationRepository;
 import com.transport.simulator.repository.TrainRepository;
+import com.transport.simulator.service.model.PlannedDepotMovement;
 import com.transport.simulator.service.model.RailwaySimulationState;
 import com.transport.simulator.service.model.SimulatedTrainState;
+import java.time.Duration;
+import java.time.ZonedDateTime;
+import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -32,15 +44,18 @@ public class DepotOperationsQueryService {
     private final RailwaySimulationStateService railwaySimulationStateService;
     private final DepotRepository depotRepository;
     private final TrainRepository trainRepository;
+    private final StationRepository stationRepository;
 
     public DepotOperationsQueryService(
             RailwaySimulationStateService railwaySimulationStateService,
             DepotRepository depotRepository,
-            TrainRepository trainRepository
+            TrainRepository trainRepository,
+            StationRepository stationRepository
     ) {
         this.railwaySimulationStateService = railwaySimulationStateService;
         this.depotRepository = depotRepository;
         this.trainRepository = trainRepository;
+        this.stationRepository = stationRepository;
     }
 
     public DepotOperationsResponse getOperations() {
@@ -57,6 +72,10 @@ public class DepotOperationsQueryService {
                 ));
         List<Train> activeTrains = trainRepository.findAllByActiveTrueOrderByCodeAsc();
         validateFleet(activeTrains, simulatedTrainsById);
+        Map<Long, Train> trainsById = activeTrains.stream()
+                .collect(Collectors.toUnmodifiableMap(Train::getId, Function.identity()));
+        Map<Long, Station> stationsById = stationRepository.findAllByActiveTrueOrderByNameAsc().stream()
+                .collect(Collectors.toUnmodifiableMap(Station::getId, Function.identity()));
 
         Map<Long, List<Train>> assignedTrainsByDepot = activeTrains.stream()
                 .collect(Collectors.groupingBy(train -> train.getHomeDepot().getId()));
@@ -69,7 +88,13 @@ public class DepotOperationsQueryService {
                         depot,
                         assignedTrainsByDepot.getOrDefault(depot.getId(), List.of()),
                         occupancyByDepot.getOrDefault(depot.getId(), 0L),
-                        simulatedTrainsById
+                        simulatedTrainsById,
+                        simulation.depotMovements().stream()
+                                .filter(movement -> movement.depotId().equals(depot.getId()))
+                                .toList(),
+                        simulation.evaluatedAt(),
+                        trainsById,
+                        stationsById
                 ))
                 .toList();
 
@@ -85,11 +110,23 @@ public class DepotOperationsQueryService {
             Depot depot,
             List<Train> assignedTrains,
             long occupiedSpaces,
-            Map<Long, SimulatedTrainState> simulatedTrainsById
+            Map<Long, SimulatedTrainState> simulatedTrainsById,
+            List<PlannedDepotMovement> plannedMovements,
+            ZonedDateTime evaluatedAt,
+            Map<Long, Train> trainsById,
+            Map<Long, Station> stationsById
     ) {
         int capacity = depot.getCapacity();
         long availableSpaces = Math.max(0, capacity - occupiedSpaces);
         int occupancyPercentage = percentage(occupiedSpaces, capacity);
+        List<DepotMovementResponse> movements = plannedMovements.stream()
+                .map(movement -> toMovementResponse(
+                        movement, evaluatedAt, trainsById, stationsById
+                ))
+                .sorted(Comparator.comparing(DepotMovementResponse::scheduledAt)
+                        .thenComparing(DepotMovementResponse::type)
+                        .thenComparingInt(DepotMovementResponse::dutyNumber))
+                .toList();
         return new DepotOperationResponse(
                 depot.getId(),
                 depot.getCode(),
@@ -106,7 +143,56 @@ public class DepotOperationsQueryService {
                 availableSpaces,
                 occupancyPercentage,
                 operationalStatus(occupiedSpaces, capacity, occupancyPercentage),
-                fleetDistribution(assignedTrains, simulatedTrainsById)
+                fleetDistribution(assignedTrains, simulatedTrainsById),
+                summarizeMovements(movements),
+                movements
+        );
+    }
+
+    private DepotMovementResponse toMovementResponse(
+            PlannedDepotMovement movement,
+            ZonedDateTime evaluatedAt,
+            Map<Long, Train> trainsById,
+            Map<Long, Station> stationsById
+    ) {
+        Train train = trainsById.get(movement.trainId());
+        if (train == null) {
+            throw new ServiceConfigurationException(
+                    "Depot movement references an inactive train " + movement.trainCode()
+            );
+        }
+        Station terminal = stationsById.get(movement.stationId());
+        if (terminal == null) {
+            throw new ServiceConfigurationException(
+                    "Depot movement references an inactive station " + movement.stationCode()
+            );
+        }
+        if (!train.getCode().equals(movement.trainCode())
+                || !train.getAssignedLine().getId().equals(movement.lineId())
+                || !train.getAssignedLine().getCode().equals(movement.lineCode())
+                || !train.getHomeDepot().getId().equals(movement.depotId())
+                || !train.getHomeDepot().getCode().equals(movement.depotCode())) {
+            throw new ServiceConfigurationException(
+                    "Persisted data and depot movement disagree for train " + movement.trainCode()
+            );
+        }
+        boolean completed = movement.hasOccurredAt(evaluatedAt);
+        return new DepotMovementResponse(
+                movement.dutyNumber(),
+                movement.movementType(),
+                completed ? DepotMovementStatus.COMPLETED : DepotMovementStatus.SCHEDULED,
+                movement.scheduledAt(),
+                completed ? null : Duration.between(evaluatedAt, movement.scheduledAt()).toSeconds(),
+                new DepotMovementTrainResponse(
+                        train.getId(), train.getCode(), train.getModel().getSeries(), train.getFleetRole()
+                ),
+                new DepotMovementLineResponse(
+                        train.getAssignedLine().getId(),
+                        train.getAssignedLine().getCode(),
+                        train.getAssignedLine().getName(),
+                        train.getAssignedLine().getColor()
+                ),
+                new DepotOperationStationResponse(terminal.getId(), terminal.getCode(), terminal.getName())
         );
     }
 
@@ -144,7 +230,25 @@ public class DepotOperationsQueryService {
                 Math.max(0, totalCapacity - occupiedSpaces),
                 percentage(occupiedSpaces, totalCapacity),
                 assignedFleet,
-                trainsInService
+                trainsInService,
+                summarizeMovements(depots.stream().flatMap(depot -> depot.movements().stream()).toList())
+        );
+    }
+
+    private DepotMovementsSummaryResponse summarizeMovements(List<DepotMovementResponse> movements) {
+        long exits = movements.stream().filter(movement -> movement.type() == DepotMovementType.EXIT).count();
+        long entries = movements.stream().filter(movement -> movement.type() == DepotMovementType.ENTRY).count();
+        long completed = movements.stream()
+                .filter(movement -> movement.status() == DepotMovementStatus.COMPLETED)
+                .count();
+        long scheduled = movements.size() - completed;
+        ZonedDateTime nextMovementAt = movements.stream()
+                .filter(movement -> movement.status() == DepotMovementStatus.SCHEDULED)
+                .map(DepotMovementResponse::scheduledAt)
+                .min(ZonedDateTime::compareTo)
+                .orElse(null);
+        return new DepotMovementsSummaryResponse(
+                movements.size(), exits, entries, completed, scheduled, nextMovementAt
         );
     }
 

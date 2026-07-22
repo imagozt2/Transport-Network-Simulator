@@ -1,6 +1,7 @@
 package com.transport.simulator.dto.response.depotoperation;
 
 import com.transport.simulator.enums.DepotOperationStatus;
+import java.util.List;
 
 public record DepotOperationResponse(
         Long id,
@@ -14,6 +15,11 @@ public record DepotOperationResponse(
         long availableSpaces,
         int occupancyPercentage,
         DepotOperationStatus status,
-        DepotFleetDistributionResponse fleet
+        DepotFleetDistributionResponse fleet,
+        DepotMovementsSummaryResponse movementsSummary,
+        List<DepotMovementResponse> movements
 ) {
+    public DepotOperationResponse {
+        movements = List.copyOf(movements);
+    }
 }

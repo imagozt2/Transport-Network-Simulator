@@ -7,6 +7,7 @@ public record DepotOperationsSummaryResponse(
         long availableSpaces,
         int occupancyPercentage,
         long assignedFleet,
-        long trainsInService
+        long trainsInService,
+        DepotMovementsSummaryResponse movements
 ) {
 }
