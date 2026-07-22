@@ -16,6 +16,7 @@ La aplicación incluye actualmente:
 - un mapa SVG interactivo con las seis líneas y las 50 estaciones de Macegocia;
 - una sección operativa de líneas con frecuencias, termómetros y trenes en movimiento;
 - una sección de estaciones con estados, dispositivos y próximas llegadas en formato `mm:ss`;
+- una sección de trenes con filtros, clasificación de la flota y situación operativa en tiempo real;
 - recorridos ordenados y correspondencias entre líneas;
 - calendarios, franjas horarias, frecuencias y tiempos de recorrido configurables;
 - flota regular, de reserva e histórica diferenciada;
@@ -146,6 +147,7 @@ La aplicación estará disponible en `http://localhost:4200`. La ruta inicial re
 | `GET` | `/api/network-map` | Devuelve las líneas activas y sus estaciones ordenadas. |
 | `GET` | `/api/lines/operations` | Devuelve el estado operativo, recorridos y trenes de cada línea. |
 | `GET` | `/api/stations/operations` | Devuelve el estado, líneas, dispositivos y próximas llegadas de cada estación. |
+| `GET` | `/api/trains/operations` | Devuelve la flota, su clasificación y la ubicación operativa de cada tren. |
 
 ## Pruebas y compilación
 
@@ -174,6 +176,7 @@ y en cada actualización de esa rama.
 - [Mapa de red y endpoint del mapa](docs/mapa-red.md)
 - [Sección de Líneas y endpoint operativo](docs/lineas.md)
 - [Sección de Estaciones y próximas llegadas](docs/estaciones.md)
+- [Sección de Trenes y situación operativa](docs/trenes.md)
 - [Modelo de operación ferroviaria](docs/modelo-operacion-ferroviaria.md)
 - [Motor de simulación ferroviaria](docs/motor-simulacion-ferroviaria.md)
 - [Inicialización y estructura de la base de datos](database/README.md)
