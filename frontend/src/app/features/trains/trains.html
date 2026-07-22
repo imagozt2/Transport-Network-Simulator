@@ -57,9 +57,30 @@
 
           @if (isExpanded(train.id)) {
             <div class="train-card-body">
-              <section class="situation-panel">
+              <section class="situation-panel" [class.in-service]="train.serviceLocation">
                 <span>Situación operativa</span><strong>{{ situationLabel(train) }}</strong>
-                <small>{{ train.status === 'IN_SERVICE' ? 'Unidad asignada al servicio actual' : 'Unidad fuera de circulación' }}</small>
+                @if (train.serviceLocation; as location) {
+                  <small>{{ directionLabel(train) }}</small>
+                  <div class="live-location">
+                    <div class="live-location-heading">
+                      <span>{{ positionLabel(train) }}</span>
+                      <strong>{{ location.positionState === 'AT_STATION' ? 'En estación' : progressValue(train) + '%' }}</strong>
+                    </div>
+                    <div class="progress-track" [style.--line-color]="getLineColor(location.currentLine)">
+                      <span class="progress-fill" [style.width.%]="progressValue(train)"></span>
+                      <span class="train-marker" [style.left.%]="progressValue(train)" aria-hidden="true"></span>
+                    </div>
+                    <div class="arrival-row">
+                      <span>Próxima estación <strong>{{ location.nextStation.name }}</strong></span>
+                      <span>Llegada en <strong class="countdown">{{ nextArrivalLabel(train) }}</strong></span>
+                    </div>
+                  </div>
+                } @else {
+                  <small>Unidad fuera de circulación</small>
+                  @if (train.currentDepot) {
+                    <div class="depot-location"><span>Cochera actual</span><strong>{{ train.currentDepot.name }}</strong><small>{{ train.currentDepot.stationName }}</small></div>
+                  }
+                }
               </section>
               <dl class="train-details">
                 <div><dt>Modelo</dt><dd>{{ train.manufacturer }} {{ train.model }}</dd></div>

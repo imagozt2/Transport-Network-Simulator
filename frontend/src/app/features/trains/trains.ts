@@ -13,12 +13,18 @@ import { contrastingTextColor, lineColor } from '../../core/utils/line-visuals';
 type StatusFilter = TrainStatus | 'ALL';
 type RoleFilter = FleetRole | 'ALL';
 
-@Component({ selector: 'app-trains', templateUrl: './trains.html', styleUrls: ['./trains.css', './trains-cards.css'] })
+@Component({
+  selector: 'app-trains',
+  templateUrl: './trains.html',
+  styleUrls: ['./trains.css', './trains-cards.css', './trains-realtime.css']
+})
 export class Trains implements OnInit, OnDestroy {
   private readonly trainOperationsService = inject(TrainOperationsService);
   private readonly refreshIntervalMs = 15_000;
   private readonly expandedTrainIds = new Set<number>();
   private refreshIntervalId: number | null = null;
+  private countdownIntervalId: number | null = null;
+  private snapshotReceivedAtMs = Date.now();
   private requestInFlight = false;
   private hasInitializedExpansion = false;
 
@@ -27,6 +33,7 @@ export class Trains implements OnInit, OnDestroy {
   refreshing = false;
   errorMessage = '';
   autoRefreshEnabled = true;
+  countdownNowMs = Date.now();
   searchText = '';
   selectedStatus: StatusFilter = 'ALL';
   selectedRole: RoleFilter = 'ALL';
@@ -39,9 +46,13 @@ export class Trains implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadOperations(true);
     this.startAutoRefresh();
+    this.startCountdown();
   }
 
-  ngOnDestroy(): void { this.stopAutoRefresh(); }
+  ngOnDestroy(): void {
+    this.stopAutoRefresh();
+    this.stopCountdown();
+  }
 
   loadOperations(showLoading = false): void {
     if (this.requestInFlight) { return; }
@@ -51,6 +62,8 @@ export class Trains implements OnInit, OnDestroy {
     this.trainOperationsService.getOperations().subscribe({
       next: (operations) => {
         this.operations = operations;
+        this.snapshotReceivedAtMs = Date.now();
+        this.countdownNowMs = this.snapshotReceivedAtMs;
         if (!this.hasInitializedExpansion && operations.trains.length > 0) {
           this.expandedTrainIds.add(operations.trains[0].id);
         }
@@ -138,10 +151,35 @@ export class Trains implements OnInit, OnDestroy {
   }
 
   situationLabel(train: TrainOperation): string {
-    return train.status === 'IN_SERVICE'
-      ? 'En circulación'
-      : train.currentDepot?.name ?? 'Sin ubicación operativa';
+    if (!train.serviceLocation) { return train.currentDepot?.name ?? 'Sin ubicación operativa'; }
+    return train.serviceLocation.positionState === 'AT_STATION'
+      ? `En ${train.serviceLocation.currentStation?.name ?? train.serviceLocation.nextStation.name}`
+      : `Entre ${train.serviceLocation.previousStation.name} y ${train.serviceLocation.nextStation.name}`;
   }
+
+  directionLabel(train: TrainOperation): string {
+    return train.serviceLocation ? `Dirección ${train.serviceLocation.destination.name}` : 'Sin servicio asignado';
+  }
+
+  positionLabel(train: TrainOperation): string {
+    const location = train.serviceLocation;
+    if (!location) { return train.currentDepot?.name ?? 'Ubicación no disponible'; }
+    return location.positionState === 'AT_STATION'
+      ? `Parado en ${location.currentStation?.name ?? location.nextStation.name}`
+      : `${location.previousStation.name} — ${location.nextStation.name}`;
+  }
+
+  nextArrivalLabel(train: TrainOperation): string {
+    const location = train.serviceLocation;
+    if (!location) { return '—'; }
+    const elapsedSeconds = Math.floor((this.countdownNowMs - this.snapshotReceivedAtMs) / 1_000);
+    const remainingSeconds = Math.max(0, location.secondsUntilNextStation - elapsedSeconds);
+    const minutes = Math.floor(remainingSeconds / 60);
+    const seconds = remainingSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  progressValue(train: TrainOperation): number { return train.serviceLocation?.progressPercentage ?? 0; }
 
   getLineColor(line: TrainOperationLine): string { return lineColor(line.code, line.color); }
   getLineTextColor(color: string): string { return contrastingTextColor(color); }
@@ -163,6 +201,18 @@ export class Trains implements OnInit, OnDestroy {
     if (this.refreshIntervalId !== null) {
       window.clearInterval(this.refreshIntervalId);
       this.refreshIntervalId = null;
+    }
+  }
+
+  private startCountdown(): void {
+    this.stopCountdown();
+    this.countdownIntervalId = window.setInterval(() => { this.countdownNowMs = Date.now(); }, 1_000);
+  }
+
+  private stopCountdown(): void {
+    if (this.countdownIntervalId !== null) {
+      window.clearInterval(this.countdownIntervalId);
+      this.countdownIntervalId = null;
     }
   }
 }
