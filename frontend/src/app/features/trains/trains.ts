@@ -16,7 +16,7 @@ type RoleFilter = FleetRole | 'ALL';
 @Component({
   selector: 'app-trains',
   templateUrl: './trains.html',
-  styleUrls: ['./trains.css', './trains-cards.css', './trains-realtime.css']
+  styleUrls: ['./trains.css', './trains-cards.css', './trains-realtime.css', './trains-roles.css']
 })
 export class Trains implements OnInit, OnDestroy {
   private readonly trainOperationsService = inject(TrainOperationsService);
@@ -148,6 +148,15 @@ export class Trains implements OnInit, OnDestroy {
       REGULAR_SERVICE: 'Servicio regular', RESERVE: 'Reserva', HISTORIC: 'Histórico'
     };
     return labels[role];
+  }
+
+  roleDescription(role: FleetRole): string {
+    const descriptions: Record<FleetRole, string> = {
+      REGULAR_SERVICE: 'Flota principal destinada al servicio diario',
+      RESERVE: 'Unidades disponibles para refuerzos y sustituciones',
+      HISTORIC: 'Material preservado sin asignación al servicio regular'
+    };
+    return descriptions[role];
   }
 
   situationLabel(train: TrainOperation): string {

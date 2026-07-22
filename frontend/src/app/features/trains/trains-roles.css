@@ -1,0 +1,30 @@
+.fleet-role-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.fleet-role-card { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 15px; border: 1px solid; border-radius: 17px; }
+.role-symbol { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 12px; color: #fff; font-size: 11px; font-weight: 900; }
+.role-summary-copy { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.role-summary-copy strong { font-size: 13px; }
+.role-summary-copy small { color: #64748b; font-size: 11px; line-height: 1.35; }
+.role-total { font-size: 24px; }
+.fleet-role-card.role-regular { border-color: #bbf7d0; background: #f0fdf4; }
+.fleet-role-card.role-regular .role-symbol { background: #15803d; }
+.fleet-role-card.role-regular .role-total { color: #166534; }
+.fleet-role-card.role-reserve { border-color: #fde68a; background: #fffbeb; }
+.fleet-role-card.role-reserve .role-symbol { background: #d97706; }
+.fleet-role-card.role-reserve .role-total { color: #92400e; }
+.fleet-role-card.role-historic { border-color: #d8b4fe; background: #faf5ff; }
+.fleet-role-card.role-historic .role-symbol { background: #7e22ce; }
+.fleet-role-card.role-historic .role-total { color: #6b21a8; }
+.train-card { border-left-width: 5px; }
+.train-card.role-regular { border-left-color: #16a34a; }
+.train-card.role-reserve { border-left-color: #f59e0b; }
+.train-card.role-historic { border-left-color: #9333ea; }
+.train-card.role-regular .train-code { background: #166534; }
+.train-card.role-reserve .train-code { background: #b45309; }
+.train-card.role-historic .train-code { background: #6b21a8; }
+.train-card.role-regular .role-pill { color: #166534; background: #dcfce7; }
+.train-card.role-reserve .role-pill { color: #92400e; background: #fef3c7; }
+.train-card.role-historic .role-pill { color: #6b21a8; background: #f3e8ff; }
+.train-details .role-detail { grid-column: 1 / -1; }
+.train-details .role-detail dd { white-space: normal; }
+.train-details .role-detail small { display: block; margin-top: 5px; color: #6b7280; font-size: 11px; line-height: 1.35; }
+@media (max-width: 900px) { .fleet-role-summary { grid-template-columns: 1fr; } }
