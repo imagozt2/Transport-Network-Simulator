@@ -91,6 +91,71 @@
                 </div>
                 <div class="next-movement"><span>Próximo movimiento</span><strong>{{ nextMovementLabel(depot) }}</strong></div>
               </section>
+
+              <section class="fleet-distribution-panel">
+                <header class="section-heading"><div><span class="panel-label">Distribución operativa</span><h2>Flota asignada</h2></div><strong>{{ depot.fleet.assignedTrainCount }} trenes</strong></header>
+                <div class="fleet-distribution-grid">
+                  <div class="role-distribution">
+                    <h3>Función en la flota</h3>
+                    @for (role of fleetRoles; track role) {
+                      <div class="role-row role-{{ role.toLowerCase().replace('_', '-') }}">
+                        <span>{{ roleLabel(role) }}</span><strong>{{ depot.fleet.byRole[role] }}</strong>
+                      </div>
+                    }
+                  </div>
+                  <div class="series-distribution">
+                    <h3>Series</h3>
+                    @for (entry of seriesEntries(depot); track entry.series) {
+                      <div class="series-row">
+                        <span class="series-copy"><strong>Serie {{ entry.series }}</strong><small>{{ entry.count }} trenes</small></span>
+                        <span class="series-track"><i [style.width.%]="entry.percentage"></i></span>
+                        <strong>{{ entry.percentage }}%</strong>
+                      </div>
+                    } @empty { <p class="empty-detail">No hay material asignado.</p> }
+                  </div>
+                  <div class="status-distribution">
+                    <h3>Situación actual</h3>
+                    <div class="status-grid">
+                      @for (entry of fleetStatusEntries(depot); track entry.status) {
+                        <div><span>{{ trainStatusLabel(entry.status) }}</span><strong>{{ entry.count }}</strong></div>
+                      }
+                    </div>
+                    <p><strong>{{ depot.occupiedSpaces }}</strong> unidades presentes y <strong>{{ depot.fleet.assignedTrainsInService }}</strong> circulando.</p>
+                  </div>
+                </div>
+              </section>
+
+              <section class="movements-panel">
+                <header class="section-heading"><div><span class="panel-label">Agenda ferroviaria</span><h2>Entradas y salidas</h2></div><strong>{{ depot.movementsSummary.scheduled }} pendientes</strong></header>
+                <div class="movement-columns">
+                  <div class="movement-group">
+                    <h3>Próximos movimientos</h3>
+                    <div class="movement-list">
+                      @for (movement of upcomingMovements(depot); track movement.type + '-' + movement.dutyNumber + '-' + movement.scheduledAt) {
+                        <article class="movement-card scheduled">
+                          <span class="movement-type type-{{ movement.type.toLowerCase() }}">{{ movementTypeLabel(movement) }}</span>
+                          <span class="movement-train"><strong>{{ movement.train.code }}</strong><small>Turno {{ movement.dutyNumber }} · {{ movement.terminal.name }}</small></span>
+                          <span class="movement-line" [style.background-color]="getLineColor(movement)" [style.color]="getLineTextColor(getLineColor(movement))">{{ movement.line.code }}</span>
+                          <time [attr.datetime]="movement.scheduledAt">{{ movementTimeLabel(movement) }}</time>
+                        </article>
+                      } @empty { <p class="empty-detail">No hay movimientos pendientes.</p> }
+                    </div>
+                  </div>
+                  <div class="movement-group">
+                    <h3>Movimientos recientes</h3>
+                    <div class="movement-list">
+                      @for (movement of recentMovements(depot); track movement.type + '-' + movement.dutyNumber + '-' + movement.scheduledAt) {
+                        <article class="movement-card completed">
+                          <span class="movement-type type-{{ movement.type.toLowerCase() }}">{{ movementTypeLabel(movement) }}</span>
+                          <span class="movement-train"><strong>{{ movement.train.code }}</strong><small>Turno {{ movement.dutyNumber }} · {{ movement.terminal.name }}</small></span>
+                          <span class="movement-line" [style.background-color]="getLineColor(movement)" [style.color]="getLineTextColor(getLineColor(movement))">{{ movement.line.code }}</span>
+                          <time [attr.datetime]="movement.scheduledAt">{{ movementTimeLabel(movement) }}</time>
+                        </article>
+                      } @empty { <p class="empty-detail">Todavía no hay movimientos completados.</p> }
+                    </div>
+                  </div>
+                </div>
+              </section>
             </div>
           }
         </article>

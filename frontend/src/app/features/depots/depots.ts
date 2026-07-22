@@ -1,19 +1,22 @@
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 
 import {
+  DepotMovement,
   DepotOperation,
   DepotOperationStatus,
   DepotOperationsResponse
 } from '../../core/models/depot-operation.model';
+import { FleetRole, TrainStatus } from '../../core/models/train-operation.model';
 import { DepotOperationsService } from '../../core/services/depot-operations.service';
 import { depotShortCode } from '../../core/utils/depot-visuals';
+import { contrastingTextColor, lineColor } from '../../core/utils/line-visuals';
 
 type StatusFilter = DepotOperationStatus | 'ALL';
 
 @Component({
   selector: 'app-depots',
   templateUrl: './depots.html',
-  styleUrls: ['./depots.css', './depots-cards.css']
+  styleUrls: ['./depots.css', './depots-cards.css', './depots-fleet.css']
 })
 export class Depots implements OnInit, OnDestroy {
   private readonly depotOperationsService = inject(DepotOperationsService);
@@ -34,6 +37,7 @@ export class Depots implements OnInit, OnDestroy {
   readonly statuses: readonly DepotOperationStatus[] = [
     'EMPTY', 'AVAILABLE', 'HIGH_OCCUPANCY', 'FULL', 'OVER_CAPACITY'
   ];
+  readonly fleetRoles: readonly FleetRole[] = ['REGULAR_SERVICE', 'RESERVE', 'HISTORIC'];
 
   ngOnInit(): void {
     this.loadOperations(true);
@@ -111,6 +115,50 @@ export class Depots implements OnInit, OnDestroy {
     const value = depot.movementsSummary.nextMovementAt;
     return value ? this.formatTime(value) : 'Sin movimientos pendientes';
   }
+
+  roleLabel(role: FleetRole): string {
+    const labels: Record<FleetRole, string> = {
+      REGULAR_SERVICE: 'Servicio regular', RESERVE: 'Reserva', HISTORIC: 'Histórica'
+    };
+    return labels[role];
+  }
+
+  trainStatusLabel(status: TrainStatus): string {
+    const labels: Record<TrainStatus, string> = {
+      IN_SERVICE: 'En servicio', DEPOT: 'En cochera', MAINTENANCE: 'Mantenimiento',
+      STOPPED: 'Detenidos', OUT_OF_SERVICE: 'Fuera de servicio'
+    };
+    return labels[status];
+  }
+
+  fleetStatusEntries(depot: DepotOperation): { status: TrainStatus; count: number }[] {
+    return (Object.entries(depot.fleet.byStatus) as [TrainStatus, number][])
+      .filter(([, count]) => count > 0)
+      .map(([status, count]) => ({ status, count }));
+  }
+
+  seriesEntries(depot: DepotOperation): { series: string; count: number; percentage: number }[] {
+    const total = Math.max(1, depot.fleet.assignedTrainCount);
+    return Object.entries(depot.fleet.bySeries)
+      .map(([series, count]) => ({ series, count, percentage: Math.round(count * 100 / total) }))
+      .sort((first, second) => second.count - first.count || first.series.localeCompare(second.series));
+  }
+
+  upcomingMovements(depot: DepotOperation): DepotMovement[] {
+    return depot.movements.filter((movement) => movement.status === 'SCHEDULED').slice(0, 5);
+  }
+
+  recentMovements(depot: DepotOperation): DepotMovement[] {
+    return depot.movements.filter((movement) => movement.status === 'COMPLETED').slice(-5).reverse();
+  }
+
+  movementTypeLabel(movement: DepotMovement): string {
+    return movement.type === 'EXIT' ? 'Salida' : 'Entrada';
+  }
+
+  movementTimeLabel(movement: DepotMovement): string { return this.formatTime(movement.scheduledAt); }
+  getLineColor(movement: DepotMovement): string { return lineColor(movement.line.code, movement.line.color); }
+  getLineTextColor(color: string): string { return contrastingTextColor(color); }
 
   formatEvaluatedAt(value: string): string { return this.formatTime(value, true); }
 
