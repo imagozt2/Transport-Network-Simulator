@@ -4,12 +4,16 @@ import com.transport.simulator.entity.Device;
 import com.transport.simulator.repository.projection.DeviceStatusCountProjection;
 import com.transport.simulator.repository.projection.DeviceTypeCountProjection;
 import java.util.List;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 public interface DeviceRepository extends JpaRepository<Device, Long> {
 
     long countByActiveTrue();
+
+    @EntityGraph(attributePaths = "station")
+    List<Device> findAllByActiveTrueOrderByCodeAsc();
 
     @Query("""
             SELECT device.status AS status, COUNT(device.id) AS total
