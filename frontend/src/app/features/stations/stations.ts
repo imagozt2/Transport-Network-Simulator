@@ -3,10 +3,12 @@ import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import {
   StationArrival,
   StationOperation,
+  StationOperationLine,
   StationOperationStatus,
   StationOperationsResponse
 } from '../../core/models/station-operation.model';
 import { StationOperationsService } from '../../core/services/station-operations.service';
+import { contrastingTextColor, lineColor } from '../../core/utils/line-visuals';
 
 type StatusFilter = StationOperationStatus | 'ALL';
 type StationTypeFilter = 'ALL' | 'TRANSFER' | 'SIMPLE';
@@ -135,6 +137,24 @@ export class Stations implements OnInit, OnDestroy {
 
   arrivalTimeLabel(arrival: StationArrival): string {
     return arrival.atStation ? 'En estación' : `${arrival.secondsUntilArrival} s`;
+  }
+
+  getLineColor(line: Pick<StationOperationLine, 'code' | 'color'>): string {
+    return lineColor(line.code, line.color);
+  }
+
+  getArrivalLineColor(arrival: StationArrival): string {
+    return lineColor(arrival.lineCode, arrival.lineColor);
+  }
+
+  getLineTextColor(color: string): string { return contrastingTextColor(color); }
+
+  stationPositionPercentage(line: StationOperationLine): number {
+    const stationCount = this.operations?.stations.reduce((maximum, station) => {
+      const membership = station.lines.find((candidate) => candidate.id === line.id);
+      return membership ? Math.max(maximum, membership.stationOrder) : maximum;
+    }, 0) ?? 0;
+    return stationCount <= 1 ? 0 : (line.stationOrder - 1) * 100 / (stationCount - 1);
   }
 
   formatEvaluatedAt(value: string): string {

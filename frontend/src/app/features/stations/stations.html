@@ -96,10 +96,16 @@
                   <div class="large-metric"><strong>{{ station.activeTrainCount }}</strong><span>trenes en las líneas</span></div>
                   <div class="line-list">
                     @for (line of station.lines; track line.id) {
-                      <article class="station-line" [class.closed]="!line.serviceOpen">
-                        <span class="line-badge" [style.background-color]="line.color">{{ line.code }}</span>
+                      <article class="station-line" [class.closed]="!line.serviceOpen" [style.--line-color]="getLineColor(line)">
+                        <span class="line-badge" [style.background-color]="getLineColor(line)" [style.color]="getLineTextColor(getLineColor(line))">{{ line.code }}</span>
                         <span><strong>{{ line.name }}</strong><small>{{ line.firstTerminal.name }} — {{ line.lastTerminal.name }}</small></span>
                         <em>{{ line.serviceOpen ? line.activeTrainCount + ' trenes' : 'Cerrada' }}</em>
+                        <span class="line-thermometer" aria-hidden="true">
+                          <i class="line-track"></i>
+                          <i class="terminal-dot first"></i>
+                          <i class="station-dot" [style.left.%]="stationPositionPercentage(line)"></i>
+                          <i class="terminal-dot last"></i>
+                        </span>
                       </article>
                     }
                   </div>
@@ -112,8 +118,8 @@
                   } @else {
                     <div class="arrival-list">
                       @for (arrival of station.nextArrivals; track trackArrival($index, arrival)) {
-                        <article class="arrival-card">
-                          <span class="line-badge" [style.background-color]="arrival.lineColor">{{ arrival.lineCode }}</span>
+                        <article class="arrival-card" [style.--line-color]="getArrivalLineColor(arrival)">
+                          <span class="line-badge" [style.background-color]="getArrivalLineColor(arrival)" [style.color]="getLineTextColor(getArrivalLineColor(arrival))">{{ arrival.lineCode }}</span>
                           <span class="arrival-info"><strong>{{ arrival.trainCode }}</strong><small>{{ directionLabel(arrival) }}</small></span>
                           <strong class="arrival-time">{{ arrivalTimeLabel(arrival) }}</strong>
                           <span class="arrival-meta">{{ arrival.stationsAway }} {{ arrival.stationsAway === 1 ? 'estación' : 'estaciones' }}</span>
