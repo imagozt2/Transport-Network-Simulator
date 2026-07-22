@@ -19,6 +19,8 @@ export class Stations implements OnInit, OnDestroy {
   private readonly refreshIntervalMs = 15_000;
   private readonly expandedStationIds = new Set<number>();
   private refreshIntervalId: number | null = null;
+  private countdownIntervalId: number | null = null;
+  private snapshotReceivedAtMs = Date.now();
   private requestInFlight = false;
   private hasInitializedExpansion = false;
 
@@ -30,13 +32,18 @@ export class Stations implements OnInit, OnDestroy {
   selectedStatus: StatusFilter = 'ALL';
   selectedType: StationTypeFilter = 'ALL';
   searchText = '';
+  countdownNowMs = Date.now();
 
   ngOnInit(): void {
     this.loadOperations(true);
     this.startAutoRefresh();
+    this.startCountdown();
   }
 
-  ngOnDestroy(): void { this.stopAutoRefresh(); }
+  ngOnDestroy(): void {
+    this.stopAutoRefresh();
+    this.stopCountdown();
+  }
 
   loadOperations(showLoading = false): void {
     if (this.requestInFlight) { return; }
@@ -47,6 +54,8 @@ export class Stations implements OnInit, OnDestroy {
     this.stationOperationsService.getOperations().subscribe({
       next: (operations) => {
         this.operations = operations;
+        this.snapshotReceivedAtMs = Date.now();
+        this.countdownNowMs = this.snapshotReceivedAtMs;
         if (!this.hasInitializedExpansion && operations.stations.length > 0) {
           this.expandedStationIds.add(operations.stations[0].id);
         }
@@ -136,7 +145,16 @@ export class Stations implements OnInit, OnDestroy {
   }
 
   arrivalTimeLabel(arrival: StationArrival): string {
-    return arrival.atStation ? 'En estación' : `${arrival.secondsUntilArrival} s`;
+    if (arrival.atStation) { return 'En estación'; }
+    const remainingSeconds = this.remainingSeconds(arrival);
+    const minutes = Math.floor(remainingSeconds / 60);
+    const seconds = remainingSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  remainingSeconds(arrival: StationArrival): number {
+    const elapsedSeconds = Math.floor((this.countdownNowMs - this.snapshotReceivedAtMs) / 1_000);
+    return Math.max(0, arrival.secondsUntilArrival - elapsedSeconds);
   }
 
   getLineColor(line: Pick<StationOperationLine, 'code' | 'color'>): string {
@@ -175,6 +193,20 @@ export class Stations implements OnInit, OnDestroy {
     if (this.refreshIntervalId !== null) {
       window.clearInterval(this.refreshIntervalId);
       this.refreshIntervalId = null;
+    }
+  }
+
+  private startCountdown(): void {
+    this.stopCountdown();
+    this.countdownIntervalId = window.setInterval(() => {
+      this.countdownNowMs = Date.now();
+    }, 1_000);
+  }
+
+  private stopCountdown(): void {
+    if (this.countdownIntervalId !== null) {
+      window.clearInterval(this.countdownIntervalId);
+      this.countdownIntervalId = null;
     }
   }
 }

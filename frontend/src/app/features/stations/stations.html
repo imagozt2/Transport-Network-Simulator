@@ -121,7 +121,7 @@
                         <article class="arrival-card" [style.--line-color]="getArrivalLineColor(arrival)">
                           <span class="line-badge" [style.background-color]="getArrivalLineColor(arrival)" [style.color]="getLineTextColor(getArrivalLineColor(arrival))">{{ arrival.lineCode }}</span>
                           <span class="arrival-info"><strong>{{ arrival.trainCode }}</strong><small>{{ directionLabel(arrival) }}</small></span>
-                          <strong class="arrival-time">{{ arrivalTimeLabel(arrival) }}</strong>
+                          <strong class="arrival-time" [attr.aria-label]="arrival.atStation ? 'Tren en estación' : remainingSeconds(arrival) + ' segundos para la llegada'">{{ arrivalTimeLabel(arrival) }}</strong>
                           <span class="arrival-meta">{{ arrival.stationsAway }} {{ arrival.stationsAway === 1 ? 'estación' : 'estaciones' }}</span>
                         </article>
                       }
