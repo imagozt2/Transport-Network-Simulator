@@ -1,0 +1,100 @@
+import { TestBed } from '@angular/core/testing';
+import { of, throwError } from 'rxjs';
+
+import { StationOperationsResponse } from '../../core/models/station-operation.model';
+import { StationOperationsService } from '../../core/services/station-operations.service';
+import { Stations } from './stations';
+
+const response: StationOperationsResponse = {
+  evaluatedAt: '2026-07-22T08:30:00+02:00',
+  phase: 'OPERATING',
+  stationCount: 1,
+  activeStationCount: 1,
+  stations: [{
+    id: 2,
+    code: 'STB',
+    name: 'Estación B',
+    status: 'NORMAL',
+    transferStation: false,
+    lineCount: 1,
+    activeLineCount: 1,
+    activeTrainCount: 4,
+    devices: {
+      total: 3, ticketMachines: 1, entryValidators: 1, exitValidators: 1,
+      online: 3, offline: 0, maintenance: 0, errors: 0
+    },
+    lines: [{
+      id: 10, code: 'L3', name: 'Línea 3', color: 'Amarilla', stationOrder: 2,
+      phase: 'OPERATING', serviceOpen: true, activeTrainCount: 4,
+      firstTerminal: { id: 1, code: 'STA', name: 'Estación A' },
+      lastTerminal: { id: 3, code: 'STC', name: 'Estación C' }
+    }],
+    nextArrivals: [{
+      trainId: 90, trainCode: 'T-9001', trainSeries: '9000',
+      lineId: 10, lineCode: 'L3', lineName: 'Línea 3', lineColor: 'Amarilla',
+      direction: 'OUTBOUND', destination: { id: 3, code: 'STC', name: 'Estación C' },
+      stationsAway: 1, secondsUntilArrival: 65,
+      estimatedArrivalAt: '2026-07-22T08:31:05+02:00', atStation: false
+    }]
+  }]
+};
+
+describe('Stations', () => {
+  it('should render station state, line colors and a live mm:ss countdown', async () => {
+    await TestBed.configureTestingModule({
+      imports: [Stations],
+      providers: [{ provide: StationOperationsService, useValue: { getOperations: () => of(response) } }]
+    }).compileComponents();
+    const fixture = TestBed.createComponent(Stations);
+    fixture.detectChanges();
+    let compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.querySelectorAll('.station-card')).toHaveLength(1);
+    expect(compiled.querySelector('.status-pill')?.textContent).toContain('Normal');
+    expect(compiled.querySelector('.line-badge')?.getAttribute('style')).toContain('rgb(251, 192, 45)');
+    expect(compiled.querySelector('.line-thermometer')).not.toBeNull();
+    expect(compiled.querySelector('.arrival-time')?.textContent).toContain('1:05');
+
+    fixture.componentInstance.ngOnDestroy();
+    fixture.componentInstance.countdownNowMs += 1_000;
+    const arrival = response.stations[0].nextArrivals[0];
+    expect(fixture.componentInstance.arrivalTimeLabel(arrival)).toBe('1:04');
+    expect(fixture.componentInstance.remainingSeconds(arrival)).toBe(64);
+    fixture.destroy();
+  });
+
+  it('should filter stations and clear all active filters', async () => {
+    await TestBed.configureTestingModule({
+      imports: [Stations],
+      providers: [{ provide: StationOperationsService, useValue: { getOperations: () => of(response) } }]
+    }).compileComponents();
+    const fixture = TestBed.createComponent(Stations);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+
+    component.setSearchText('inexistente');
+    expect(component.filteredStations()).toHaveLength(0);
+    component.setStatusFilter('CRITICAL');
+    expect(component.hasActiveFilters()).toBe(true);
+    component.clearFilters();
+    expect(component.filteredStations()).toHaveLength(1);
+    fixture.destroy();
+  });
+
+  it('should expose a retry action when the operational API fails', async () => {
+    await TestBed.configureTestingModule({
+      imports: [Stations],
+      providers: [{
+        provide: StationOperationsService,
+        useValue: { getOperations: () => throwError(() => new Error('API error')) }
+      }]
+    }).compileComponents();
+    const fixture = TestBed.createComponent(Stations);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.querySelector('[role="alert"]')?.textContent).toContain('No se ha podido cargar');
+    expect(compiled.querySelector('.error-card button')?.textContent).toContain('Reintentar');
+    fixture.destroy();
+  });
+});
