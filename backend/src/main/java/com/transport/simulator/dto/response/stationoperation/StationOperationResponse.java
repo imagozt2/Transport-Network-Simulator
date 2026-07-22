@@ -13,9 +13,11 @@ public record StationOperationResponse(
         int activeLineCount,
         int activeTrainCount,
         StationOperationDevicesResponse devices,
-        List<StationOperationLineResponse> lines
+        List<StationOperationLineResponse> lines,
+        List<StationArrivalResponse> nextArrivals
 ) {
     public StationOperationResponse {
         lines = List.copyOf(lines);
+        nextArrivals = List.copyOf(nextArrivals);
     }
 }
