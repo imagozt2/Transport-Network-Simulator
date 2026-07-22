@@ -1,0 +1,160 @@
+import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+
+import {
+  StationArrival,
+  StationOperation,
+  StationOperationStatus,
+  StationOperationsResponse
+} from '../../core/models/station-operation.model';
+import { StationOperationsService } from '../../core/services/station-operations.service';
+
+type StatusFilter = StationOperationStatus | 'ALL';
+type StationTypeFilter = 'ALL' | 'TRANSFER' | 'SIMPLE';
+
+@Component({ selector: 'app-stations', templateUrl: './stations.html', styleUrls: ['./stations.css', './stations-arrivals.css'] })
+export class Stations implements OnInit, OnDestroy {
+  private readonly stationOperationsService = inject(StationOperationsService);
+  private readonly refreshIntervalMs = 15_000;
+  private readonly expandedStationIds = new Set<number>();
+  private refreshIntervalId: number | null = null;
+  private requestInFlight = false;
+  private hasInitializedExpansion = false;
+
+  operations: StationOperationsResponse | null = null;
+  loading = true;
+  refreshing = false;
+  errorMessage = '';
+  autoRefreshEnabled = true;
+  selectedStatus: StatusFilter = 'ALL';
+  selectedType: StationTypeFilter = 'ALL';
+  searchText = '';
+
+  ngOnInit(): void {
+    this.loadOperations(true);
+    this.startAutoRefresh();
+  }
+
+  ngOnDestroy(): void { this.stopAutoRefresh(); }
+
+  loadOperations(showLoading = false): void {
+    if (this.requestInFlight) { return; }
+    this.requestInFlight = true;
+    if (showLoading && !this.operations) { this.loading = true; } else { this.refreshing = true; }
+    this.errorMessage = '';
+
+    this.stationOperationsService.getOperations().subscribe({
+      next: (operations) => {
+        this.operations = operations;
+        if (!this.hasInitializedExpansion && operations.stations.length > 0) {
+          this.expandedStationIds.add(operations.stations[0].id);
+        }
+        this.hasInitializedExpansion = true;
+        this.requestInFlight = false;
+        this.loading = false;
+        this.refreshing = false;
+      },
+      error: () => {
+        this.requestInFlight = false;
+        this.errorMessage = 'No se ha podido cargar el estado operativo de las estaciones.';
+        this.loading = false;
+        this.refreshing = false;
+      }
+    });
+  }
+
+  toggleAutoRefresh(): void {
+    this.autoRefreshEnabled = !this.autoRefreshEnabled;
+    if (this.autoRefreshEnabled) { this.startAutoRefresh(); } else { this.stopAutoRefresh(); }
+  }
+
+  setSearchText(value: string): void { this.searchText = value; }
+  setStatusFilter(status: StatusFilter): void { this.selectedStatus = status; }
+  setTypeFilter(type: StationTypeFilter): void { this.selectedType = type; }
+
+  clearFilters(): void {
+    this.searchText = '';
+    this.selectedStatus = 'ALL';
+    this.selectedType = 'ALL';
+  }
+
+  hasActiveFilters(): boolean {
+    return this.searchText.trim().length > 0 || this.selectedStatus !== 'ALL' || this.selectedType !== 'ALL';
+  }
+
+  filteredStations(): StationOperation[] {
+    const search = this.searchText.trim().toLocaleLowerCase('es');
+    return (this.operations?.stations ?? []).filter((station) => {
+      const matchesSearch = !search
+        || station.name.toLocaleLowerCase('es').includes(search)
+        || station.code.toLocaleLowerCase('es').includes(search);
+      const matchesStatus = this.selectedStatus === 'ALL' || station.status === this.selectedStatus;
+      const matchesType = this.selectedType === 'ALL'
+        || (this.selectedType === 'TRANSFER' && station.transferStation)
+        || (this.selectedType === 'SIMPLE' && !station.transferStation);
+      return matchesSearch && matchesStatus && matchesType;
+    });
+  }
+
+  toggleStation(stationId: number): void {
+    if (this.expandedStationIds.has(stationId)) { this.expandedStationIds.delete(stationId); }
+    else { this.expandedStationIds.add(stationId); }
+  }
+
+  isExpanded(stationId: number): boolean { return this.expandedStationIds.has(stationId); }
+
+  transferStationCount(): number {
+    return this.operations?.stations.filter((station) => station.transferStation).length ?? 0;
+  }
+
+  totalDevices(): number {
+    return this.operations?.stations.reduce((total, station) => total + station.devices.total, 0) ?? 0;
+  }
+
+  onlineDevices(): number {
+    return this.operations?.stations.reduce((total, station) => total + station.devices.online, 0) ?? 0;
+  }
+
+  deviceAvailability(station: StationOperation): number {
+    return station.devices.total === 0 ? 0 : Math.round(station.devices.online * 100 / station.devices.total);
+  }
+
+  stationTypeLabel(station: StationOperation): string {
+    return station.transferStation ? 'Estación de transbordo' : 'Estación simple';
+  }
+
+  statusLabel(status: StationOperationStatus): string {
+    const labels: Record<StationOperationStatus, string> = {
+      NORMAL: 'Normal', DEGRADED: 'Degradada', CRITICAL: 'Crítica', NO_TRAINS: 'Sin trenes', CLOSED: 'Cerrada'
+    };
+    return labels[status];
+  }
+
+  directionLabel(arrival: StationArrival): string {
+    return `Dirección ${arrival.destination.name}`;
+  }
+
+  arrivalTimeLabel(arrival: StationArrival): string {
+    return arrival.atStation ? 'En estación' : `${arrival.secondsUntilArrival} s`;
+  }
+
+  formatEvaluatedAt(value: string): string {
+    return new Intl.DateTimeFormat('es-ES', {
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+    }).format(new Date(value));
+  }
+
+  trackStation(_: number, station: StationOperation): number { return station.id; }
+  trackArrival(_: number, arrival: StationArrival): number { return arrival.trainId; }
+
+  private startAutoRefresh(): void {
+    this.stopAutoRefresh();
+    this.refreshIntervalId = window.setInterval(() => this.loadOperations(), this.refreshIntervalMs);
+  }
+
+  private stopAutoRefresh(): void {
+    if (this.refreshIntervalId !== null) {
+      window.clearInterval(this.refreshIntervalId);
+      this.refreshIntervalId = null;
+    }
+  }
+}

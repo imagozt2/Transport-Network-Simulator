@@ -1,0 +1,132 @@
+<section class="stations-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Operación de red</p>
+      <h1>Estaciones</h1>
+      <p class="page-description">Estado operativo, líneas, dispositivos y próximas llegadas de cada estación.</p>
+      @if (operations) { <p class="last-update">Última actualización: {{ formatEvaluatedAt(operations.evaluatedAt) }}</p> }
+    </div>
+    <div class="header-actions">
+      <button class="refresh-button secondary" type="button" (click)="toggleAutoRefresh()">
+        {{ autoRefreshEnabled ? 'Pausar autoactualización' : 'Activar autoactualización' }}
+      </button>
+      <button class="refresh-button" type="button" [disabled]="refreshing" (click)="loadOperations()">
+        {{ refreshing ? 'Actualizando…' : 'Actualizar' }}
+      </button>
+    </div>
+  </header>
+
+  @if (loading) {
+    <div class="state-card" role="status">Cargando estado operativo de estaciones…</div>
+  } @else if (errorMessage && !operations) {
+    <div class="state-card error-card" role="alert"><span>{{ errorMessage }}</span><button type="button" (click)="loadOperations(true)">Reintentar</button></div>
+  } @else if (operations; as data) {
+    @if (errorMessage) { <div class="refresh-warning" role="status">{{ errorMessage }} Se conservan los últimos datos disponibles.</div> }
+
+    <section class="summary-grid" aria-label="Resumen operativo de estaciones">
+      <article class="summary-card"><span>Estaciones</span><strong>{{ data.stationCount }}</strong><small>{{ data.activeStationCount }} con servicio</small></article>
+      <article class="summary-card"><span>Transbordos</span><strong>{{ transferStationCount() }}</strong><small>Conexión entre líneas</small></article>
+      <article class="summary-card"><span>Dispositivos</span><strong>{{ totalDevices() }}</strong><small>Máquinas y validadores</small></article>
+      <article class="summary-card"><span>Dispositivos online</span><strong>{{ onlineDevices() }}</strong><small>Disponibles actualmente</small></article>
+    </section>
+
+    <section class="filters-panel" aria-label="Filtros de estaciones">
+      <label class="search-box">
+        <span>Buscar estación</span>
+        <input type="search" [value]="searchText" placeholder="Nombre o código" (input)="setSearchText($any($event.target).value)" />
+      </label>
+      <div class="filter-group">
+        <strong>Estado</strong>
+        <div class="filter-buttons">
+          <button type="button" [class.active]="selectedStatus === 'ALL'" (click)="setStatusFilter('ALL')">Todas</button>
+          <button type="button" [class.active]="selectedStatus === 'NORMAL'" (click)="setStatusFilter('NORMAL')">Normal</button>
+          <button type="button" [class.active]="selectedStatus === 'DEGRADED'" (click)="setStatusFilter('DEGRADED')">Degradada</button>
+          <button type="button" [class.active]="selectedStatus === 'CRITICAL'" (click)="setStatusFilter('CRITICAL')">Crítica</button>
+          <button type="button" [class.active]="selectedStatus === 'NO_TRAINS'" (click)="setStatusFilter('NO_TRAINS')">Sin trenes</button>
+          <button type="button" [class.active]="selectedStatus === 'CLOSED'" (click)="setStatusFilter('CLOSED')">Cerrada</button>
+        </div>
+      </div>
+      <div class="filter-group">
+        <strong>Tipo</strong>
+        <div class="filter-buttons">
+          <button type="button" [class.active]="selectedType === 'ALL'" (click)="setTypeFilter('ALL')">Todas</button>
+          <button type="button" [class.active]="selectedType === 'TRANSFER'" (click)="setTypeFilter('TRANSFER')">Transbordo</button>
+          <button type="button" [class.active]="selectedType === 'SIMPLE'" (click)="setTypeFilter('SIMPLE')">Simples</button>
+        </div>
+      </div>
+    </section>
+
+    @if (hasActiveFilters()) {
+      <div class="filter-notice"><span>{{ filteredStations().length }} estaciones coinciden con los filtros.</span><button type="button" (click)="clearFilters()">Limpiar filtros</button></div>
+    }
+
+    <div class="stations-list">
+      @for (station of filteredStations(); track trackStation($index, station)) {
+        <article class="station-card" [class.expanded]="isExpanded(station.id)">
+          <button class="station-card-header" type="button" (click)="toggleStation(station.id)" [attr.aria-expanded]="isExpanded(station.id)">
+            <span class="station-code">{{ station.code }}</span>
+            <span class="station-main-info">
+              <span class="station-title-row">
+                <strong>{{ station.name }}</strong>
+                <span class="status-pill status-{{ station.status.toLowerCase().replace('_', '-') }}">{{ statusLabel(station.status) }}</span>
+                <span class="type-pill">{{ stationTypeLabel(station) }}</span>
+              </span>
+              <small>{{ station.lineCount }} líneas · {{ station.devices.total }} dispositivos · {{ station.nextArrivals.length }} próximas llegadas</small>
+            </span>
+            <span class="expand-icon" aria-hidden="true">{{ isExpanded(station.id) ? '−' : '+' }}</span>
+          </button>
+
+          @if (isExpanded(station.id)) {
+            <div class="station-card-body">
+              <div class="station-operational-grid">
+                <section class="metric-panel devices-panel">
+                  <h2>Dispositivos</h2>
+                  <div class="large-metric"><strong>{{ station.devices.online }}</strong><span>online de {{ station.devices.total }}</span></div>
+                  <div class="availability"><span><small>Disponibilidad</small><strong>{{ deviceAvailability(station) }}%</strong></span><div><i [style.width.%]="deviceAvailability(station)"></i></div></div>
+                  <div class="mini-stats">
+                    <div><span>Máquinas</span><strong>{{ station.devices.ticketMachines }}</strong></div>
+                    <div><span>Entrada</span><strong>{{ station.devices.entryValidators }}</strong></div>
+                    <div><span>Salida</span><strong>{{ station.devices.exitValidators }}</strong></div>
+                    <div><span>Errores</span><strong>{{ station.devices.errors }}</strong></div>
+                  </div>
+                </section>
+
+                <section class="metric-panel service-panel">
+                  <h2>Servicio ferroviario</h2>
+                  <div class="large-metric"><strong>{{ station.activeTrainCount }}</strong><span>trenes en las líneas</span></div>
+                  <div class="line-list">
+                    @for (line of station.lines; track line.id) {
+                      <article class="station-line" [class.closed]="!line.serviceOpen">
+                        <span class="line-badge" [style.background-color]="line.color">{{ line.code }}</span>
+                        <span><strong>{{ line.name }}</strong><small>{{ line.firstTerminal.name }} — {{ line.lastTerminal.name }}</small></span>
+                        <em>{{ line.serviceOpen ? line.activeTrainCount + ' trenes' : 'Cerrada' }}</em>
+                      </article>
+                    }
+                  </div>
+                </section>
+
+                <section class="arrivals-panel">
+                  <header><h2>Próximas llegadas</h2><span>{{ station.nextArrivals.length }} trenes</span></header>
+                  @if (station.nextArrivals.length === 0) {
+                    <div class="empty-arrivals">No hay llegadas previstas para esta estación.</div>
+                  } @else {
+                    <div class="arrival-list">
+                      @for (arrival of station.nextArrivals; track trackArrival($index, arrival)) {
+                        <article class="arrival-card">
+                          <span class="line-badge" [style.background-color]="arrival.lineColor">{{ arrival.lineCode }}</span>
+                          <span class="arrival-info"><strong>{{ arrival.trainCode }}</strong><small>{{ directionLabel(arrival) }}</small></span>
+                          <strong class="arrival-time">{{ arrivalTimeLabel(arrival) }}</strong>
+                          <span class="arrival-meta">{{ arrival.stationsAway }} {{ arrival.stationsAway === 1 ? 'estación' : 'estaciones' }}</span>
+                        </article>
+                      }
+                    </div>
+                  }
+                </section>
+              </div>
+            </div>
+          }
+        </article>
+      } @empty { <div class="state-card">No hay estaciones que coincidan con los filtros seleccionados.</div> }
+    </div>
+  }
+</section>

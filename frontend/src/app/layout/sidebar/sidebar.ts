@@ -33,7 +33,8 @@ export class Sidebar {
     {
       title: 'Infraestructura',
       items: [
-        { label: 'Líneas', route: '/lines', icon: 'LI' }
+        { label: 'Líneas', route: '/lines', icon: 'LI' },
+        { label: 'Estaciones', route: '/stations', icon: 'ES' }
       ]
     }
   ];
