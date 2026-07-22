@@ -1,0 +1,100 @@
+<section class="depots-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Operación ferroviaria</p>
+      <h1>Cocheras</h1>
+      <p class="page-description">Capacidad, ocupación e infraestructura de las instalaciones de la red.</p>
+      @if (operations) { <p class="last-update">Última actualización: {{ formatEvaluatedAt(operations.evaluatedAt) }}</p> }
+    </div>
+    <div class="header-actions">
+      <button class="refresh-button secondary" type="button" (click)="toggleAutoRefresh()">
+        {{ autoRefreshEnabled ? 'Pausar autoactualización' : 'Activar autoactualización' }}
+      </button>
+      <button class="refresh-button" type="button" [disabled]="refreshing" (click)="loadOperations()">
+        {{ refreshing ? 'Actualizando…' : 'Actualizar' }}
+      </button>
+    </div>
+  </header>
+
+  @if (loading) {
+    <div class="state-card" role="status">Cargando estado operativo de las cocheras…</div>
+  } @else if (errorMessage && !operations) {
+    <div class="state-card error-card" role="alert"><span>{{ errorMessage }}</span><button type="button" (click)="loadOperations(true)">Reintentar</button></div>
+  } @else if (operations; as data) {
+    @if (errorMessage) { <div class="refresh-warning" role="status">{{ errorMessage }} Se conservan los últimos datos disponibles.</div> }
+
+    <section class="summary-grid" aria-label="Resumen operativo de cocheras">
+      <article class="summary-card"><span>Cocheras</span><strong>{{ data.summary.depotCount }}</strong><small>Instalaciones activas</small></article>
+      <article class="summary-card"><span>Ocupación</span><strong>{{ data.summary.occupiedSpaces }}/{{ data.summary.totalCapacity }}</strong><small>{{ data.summary.occupancyPercentage }}% de las plazas</small></article>
+      <article class="summary-card"><span>Plazas disponibles</span><strong>{{ data.summary.availableSpaces }}</strong><small>Capacidad libre actual</small></article>
+      <article class="summary-card"><span>Flota asignada</span><strong>{{ data.summary.assignedFleet }}</strong><small>{{ data.summary.trainsInService }} trenes en servicio</small></article>
+    </section>
+
+    <section class="filters-panel" aria-label="Filtros de cocheras">
+      <label class="search-box">
+        <span>Buscar cochera</span>
+        <input type="search" [value]="searchText" placeholder="Nombre, código o estación" (input)="setSearchText($any($event.target).value)" />
+      </label>
+      <div class="filter-group">
+        <strong>Estado de ocupación</strong>
+        <div class="filter-buttons">
+          <button type="button" [class.active]="selectedStatus === 'ALL'" (click)="setStatusFilter('ALL')">Todas</button>
+          @for (status of statuses; track status) {
+            <button type="button" [class.active]="selectedStatus === status" (click)="setStatusFilter(status)">{{ statusLabel(status) }}</button>
+          }
+        </div>
+      </div>
+    </section>
+
+    @if (hasActiveFilters()) {
+      <div class="filter-notice"><span>{{ filteredDepots().length }} cocheras coinciden con los filtros.</span><button type="button" (click)="clearFilters()">Limpiar filtros</button></div>
+    }
+
+    <div class="depots-list">
+      @for (depot of filteredDepots(); track trackDepot($index, depot)) {
+        <article class="depot-card" [class.expanded]="isExpanded(depot.id)">
+          <button class="depot-card-header" type="button" (click)="toggleDepot(depot.id)" [attr.aria-expanded]="isExpanded(depot.id)">
+            <span class="depot-code">{{ shortCode(depot) }}</span>
+            <span class="depot-main-info">
+              <span class="depot-title-row"><strong>{{ depot.name }}</strong><span class="status-pill status-{{ depot.status.toLowerCase().replace('_', '-') }}">{{ statusLabel(depot.status) }}</span></span>
+              <small>{{ depot.code }} · {{ depot.station.name }} · {{ depot.occupiedSpaces }} de {{ depot.capacity }} plazas ocupadas</small>
+            </span>
+            <span class="occupancy-badge">{{ depot.occupancyPercentage }}%</span>
+            <span class="expand-icon" aria-hidden="true">{{ isExpanded(depot.id) ? '−' : '+' }}</span>
+          </button>
+
+          @if (isExpanded(depot.id)) {
+            <div class="depot-card-body">
+              <section class="occupancy-panel">
+                <span class="panel-label">Ocupación actual</span>
+                <div class="large-metric"><strong>{{ depot.occupiedSpaces }}</strong><span>trenes de {{ depot.capacity }} plazas</span></div>
+                <div class="occupancy-track"><i [style.width.%]="depot.occupancyPercentage"></i></div>
+                <div class="occupancy-footer"><span>{{ depot.occupancyPercentage }}% ocupado</span><strong>{{ depot.availableSpaces }} plazas libres</strong></div>
+              </section>
+
+              <section class="infrastructure-panel">
+                <span class="panel-label">Infraestructura</span>
+                <dl>
+                  <div><dt>Estación</dt><dd>{{ depot.station.name }}</dd><small>{{ depot.station.code }}</small></div>
+                  <div><dt>Vías</dt><dd>{{ depot.trackCount }}</dd><small>Vías de estacionamiento</small></div>
+                  <div><dt>Trenes por vía</dt><dd>{{ depot.trainsPerTrack }}</dd><small>Capacidad configurada</small></div>
+                  <div><dt>Código</dt><dd>{{ depot.code }}</dd><small>Identificador estable</small></div>
+                </dl>
+              </section>
+
+              <section class="operation-panel">
+                <span class="panel-label">Situación operativa</span>
+                <div class="operation-metrics">
+                  <div><span>Flota asignada</span><strong>{{ depot.fleet.assignedTrainCount }}</strong></div>
+                  <div><span>En servicio</span><strong>{{ depot.fleet.assignedTrainsInService }}</strong></div>
+                  <div><span>Movimientos pendientes</span><strong>{{ depot.movementsSummary.scheduled }}</strong></div>
+                </div>
+                <div class="next-movement"><span>Próximo movimiento</span><strong>{{ nextMovementLabel(depot) }}</strong></div>
+              </section>
+            </div>
+          }
+        </article>
+      } @empty { <div class="state-card">No hay cocheras que coincidan con los filtros seleccionados.</div> }
+    </div>
+  }
+</section>

@@ -8,6 +8,7 @@ import {
   TrainStatus
 } from '../../core/models/train-operation.model';
 import { TrainOperationsService } from '../../core/services/train-operations.service';
+import { depotShortCode } from '../../core/utils/depot-visuals';
 import { contrastingTextColor, lineColor } from '../../core/utils/line-visuals';
 
 type StatusFilter = TrainStatus | 'ALL';
@@ -193,21 +194,7 @@ export class Trains implements OnInit, OnDestroy {
   depotBadgeLabel(train: TrainOperation): string {
     const depotCode = train.currentDepot?.code;
     if (!depotCode) { return '--'; }
-    const labels: Record<string, string> = {
-      'DEP-LF-A': 'LF',
-      'DEP-LF-B': 'LF',
-      'DEP-CC-A': 'CC',
-      'DEP-CC-B': 'CC',
-      'DEP-AIR-A': 'AE',
-      'DEP-AIR-B': 'AE',
-      'DEP-HUB-E': 'HE',
-      'DEP-HUB-W': 'HO',
-      'DEP-PO': 'PO',
-      'DEP-ESP': 'ES',
-      'DEP-MC': 'MC',
-      'DEP-MI': 'MI'
-    };
-    return labels[depotCode] ?? depotCode.replace(/^DEP-/, '').replaceAll('-', '').slice(0, 2).toUpperCase();
+    return depotShortCode(depotCode);
   }
 
   locationBadgeTitle(train: TrainOperation): string {
