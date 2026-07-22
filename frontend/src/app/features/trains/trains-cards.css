@@ -13,7 +13,8 @@
 .status-maintenance { color: #92400e; background: #fef3c7; }
 .status-stopped, .status-out-of-service { color: #991b1b; background: #fee2e2; }
 .role-pill { color: #374151; background: #f3f4f6; }
-.line-badge { width: 46px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 12px; color: #fff; box-shadow: 0 6px 14px rgba(15, 23, 42, .16); font-size: 12px; font-weight: 900; }
+.location-badge { width: 46px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 12px; color: #fff; box-shadow: 0 6px 14px rgba(15, 23, 42, .16); font-size: 12px; font-weight: 900; }
+.depot-badge { color: #fff; background: #000; }
 .expand-icon { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 12px; color: #111827; background: #f3f4f6; font-size: 20px; font-weight: 900; }
 .train-card-body { display: grid; grid-template-columns: minmax(240px, .7fr) minmax(0, 2fr); gap: 18px; padding: 20px; border-top: 1px solid #e5e7eb; background: #f9fafb; }
 .situation-panel { min-height: 150px; display: flex; flex-direction: column; justify-content: center; padding: 20px; border: 1px solid #e5e7eb; border-radius: 18px; background: #fff; }
@@ -25,4 +26,4 @@
 .train-details dt { margin-bottom: 5px; color: #6b7280; font-size: 11px; font-weight: 800; }
 .train-details dd { margin: 0; overflow: hidden; color: #111827; font-size: 13px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 900px) { .train-card-body { grid-template-columns: 1fr; } }
-@media (max-width: 640px) { .train-card-header { grid-template-columns: 80px minmax(0, 1fr) 32px; gap: 10px; padding: 16px; } .train-card-header > .line-badge { display: none; } .train-title-row { align-items: flex-start; flex-direction: column; } .train-details { grid-template-columns: 1fr; } }
+@media (max-width: 640px) { .train-card-header { grid-template-columns: 80px minmax(0, 1fr) 32px; gap: 10px; padding: 16px; } .train-card-header > .location-badge { display: none; } .train-title-row { align-items: flex-start; flex-direction: column; } .train-details { grid-template-columns: 1fr; } }

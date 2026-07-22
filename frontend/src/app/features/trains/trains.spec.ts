@@ -7,7 +7,7 @@ import { Trains } from './trains';
 
 const line = { id: 1, code: 'L1', name: 'Línea 1', color: 'Roja' };
 const depot = {
-  id: 20, code: 'DEP01', name: 'Cocheras Norte',
+  id: 20, code: 'DEP-LF-A', name: 'Cochera de Las Fuentes - Sector A',
   stationId: 10, stationCode: 'ST010', stationName: 'Plaza de la Mina'
 };
 const regularTrain: TrainOperation = {
@@ -54,6 +54,10 @@ describe('Trains', () => {
     expect(compiled.querySelector('.train-card.role-regular')).not.toBeNull();
     expect(compiled.querySelector('.train-card.role-reserve')).not.toBeNull();
     expect(compiled.querySelector('.train-card.role-historic')).not.toBeNull();
+    expect(compiled.querySelector('.train-card.role-regular .line-badge')?.textContent).toContain('L1');
+    expect(compiled.querySelector('.train-card.role-reserve .depot-badge')?.textContent).toContain('LF');
+    expect(compiled.querySelector('.train-card.role-reserve .depot-badge')?.getAttribute('title'))
+      .toContain('Cochera de Las Fuentes');
     expect(compiled.querySelector('.live-location')?.textContent).toContain('Las Fuentes');
     expect(compiled.querySelector('.countdown')?.textContent).toContain('1:05');
 

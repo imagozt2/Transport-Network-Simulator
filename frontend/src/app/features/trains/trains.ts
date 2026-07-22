@@ -190,6 +190,32 @@ export class Trains implements OnInit, OnDestroy {
 
   progressValue(train: TrainOperation): number { return train.serviceLocation?.progressPercentage ?? 0; }
 
+  depotBadgeLabel(train: TrainOperation): string {
+    const depotCode = train.currentDepot?.code;
+    if (!depotCode) { return '--'; }
+    const labels: Record<string, string> = {
+      'DEP-LF-A': 'LF',
+      'DEP-LF-B': 'LF',
+      'DEP-CC-A': 'CC',
+      'DEP-CC-B': 'CC',
+      'DEP-AIR-A': 'AE',
+      'DEP-AIR-B': 'AE',
+      'DEP-HUB-E': 'HE',
+      'DEP-HUB-W': 'HO',
+      'DEP-PO': 'PO',
+      'DEP-ESP': 'ES',
+      'DEP-MC': 'MC',
+      'DEP-MI': 'MI'
+    };
+    return labels[depotCode] ?? depotCode.replace(/^DEP-/, '').replaceAll('-', '').slice(0, 2).toUpperCase();
+  }
+
+  locationBadgeTitle(train: TrainOperation): string {
+    if (train.serviceLocation) { return `Circulando por ${train.serviceLocation.currentLine.name}`; }
+    if (train.currentDepot) { return `En ${train.currentDepot.name}`; }
+    return 'Ubicación operativa no disponible';
+  }
+
   getLineColor(line: TrainOperationLine): string { return lineColor(line.code, line.color); }
   getLineTextColor(color: string): string { return contrastingTextColor(color); }
 

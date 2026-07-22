@@ -67,7 +67,17 @@
               <span class="train-title-row"><strong>{{ train.manufacturer }} {{ train.model }}</strong><span class="status-pill status-{{ train.status.toLowerCase().replace('_', '-') }}">{{ statusLabel(train.status) }}</span><span class="role-pill">{{ roleLabel(train.fleetRole) }}</span></span>
               <small>Serie {{ train.series }} · {{ train.assignedLine.name }} · {{ situationLabel(train) }}</small>
             </span>
-            <span class="line-badge" [style.background-color]="getLineColor(train.assignedLine)" [style.color]="getLineTextColor(getLineColor(train.assignedLine))">{{ train.assignedLine.code }}</span>
+            @if (train.serviceLocation; as location) {
+              <span class="location-badge line-badge"
+                [attr.title]="locationBadgeTitle(train)"
+                [attr.aria-label]="locationBadgeTitle(train)"
+                [style.background-color]="getLineColor(location.currentLine)"
+                [style.color]="getLineTextColor(getLineColor(location.currentLine))">{{ location.currentLine.code }}</span>
+            } @else {
+              <span class="location-badge depot-badge"
+                [attr.title]="locationBadgeTitle(train)"
+                [attr.aria-label]="locationBadgeTitle(train)">{{ depotBadgeLabel(train) }}</span>
+            }
             <span class="expand-icon" aria-hidden="true">{{ isExpanded(train.id) ? '−' : '+' }}</span>
           </button>
 
