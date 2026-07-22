@@ -1,0 +1,110 @@
+import { TestBed } from '@angular/core/testing';
+import { Observable, of, throwError } from 'rxjs';
+
+import { DepotOperation, DepotOperationsResponse } from '../../core/models/depot-operation.model';
+import { DepotOperationsService } from '../../core/services/depot-operations.service';
+import { Depots } from './depots';
+
+const movements = {
+  total: 2, exits: 1, entries: 1, completed: 1, scheduled: 1,
+  nextMovementAt: '2026-07-22T09:00:00+02:00'
+};
+const lasFuentes: DepotOperation = {
+  id: 20, code: 'DEP-LF-A', name: 'Cochera de Las Fuentes - Sector A',
+  station: { id: 10, code: 'ST010', name: 'Las Fuentes' },
+  capacity: 20, trackCount: 4, trainsPerTrack: 5,
+  occupiedSpaces: 12, availableSpaces: 8, occupancyPercentage: 60, status: 'AVAILABLE',
+  fleet: {
+    assignedTrainCount: 14, assignedTrainsInService: 2,
+    byStatus: { IN_SERVICE: 2, DEPOT: 12, MAINTENANCE: 0, STOPPED: 0, OUT_OF_SERVICE: 0 },
+    byRole: { REGULAR_SERVICE: 12, RESERVE: 1, HISTORIC: 1 },
+    bySeries: { '9000': 12, '7000': 1, '6000': 1 }
+  },
+  movementsSummary: movements,
+  movements: [
+    {
+      dutyNumber: 1, type: 'EXIT', status: 'COMPLETED',
+      scheduledAt: '2026-07-22T08:00:00+02:00', secondsUntilMovement: null,
+      train: { id: 100, code: 'T-9001', series: '9000', fleetRole: 'REGULAR_SERVICE' },
+      line: { id: 1, code: 'L1', name: 'Línea 1', color: 'Roja' },
+      terminal: { id: 10, code: 'ST010', name: 'Las Fuentes' }
+    },
+    {
+      dutyNumber: 1, type: 'ENTRY', status: 'SCHEDULED',
+      scheduledAt: '2026-07-22T09:00:00+02:00', secondsUntilMovement: 1800,
+      train: { id: 100, code: 'T-9001', series: '9000', fleetRole: 'REGULAR_SERVICE' },
+      line: { id: 1, code: 'L1', name: 'Línea 1', color: 'Roja' },
+      terminal: { id: 10, code: 'ST010', name: 'Las Fuentes' }
+    }
+  ]
+};
+const cuatroCaminos: DepotOperation = {
+  ...lasFuentes, id: 21, code: 'DEP-CC-A', name: 'Cochera de Cuatro Caminos - Sector A',
+  station: { id: 11, code: 'ST011', name: 'Cuatro Caminos' },
+  occupiedSpaces: 20, availableSpaces: 0, occupancyPercentage: 100, status: 'FULL',
+  movementsSummary: { total: 0, exits: 0, entries: 0, completed: 0, scheduled: 0, nextMovementAt: null },
+  movements: []
+};
+const response: DepotOperationsResponse = {
+  evaluatedAt: '2026-07-22T08:30:00+02:00', phase: 'OPERATING',
+  summary: {
+    depotCount: 2, totalCapacity: 40, occupiedSpaces: 32, availableSpaces: 8,
+    occupancyPercentage: 80, assignedFleet: 28, trainsInService: 4, movements
+  },
+  depots: [lasFuentes, cuatroCaminos]
+};
+
+describe('Depots', () => {
+  it('should render occupancy, fleet distribution, entries and exits', async () => {
+    await configureWith(() => of(response));
+    const fixture = TestBed.createComponent(Depots);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.querySelectorAll('.depot-card')).toHaveLength(2);
+    expect(compiled.querySelector('.depot-code')?.textContent).toContain('LF');
+    expect(compiled.querySelector('.occupancy-panel')?.textContent).toContain('12');
+    expect(compiled.querySelectorAll('.role-row')).toHaveLength(3);
+    expect(compiled.querySelector('.role-regular-service')?.textContent).toContain('12');
+    expect(compiled.querySelectorAll('.series-row')).toHaveLength(3);
+    expect(compiled.querySelector('.movement-group:first-child')?.textContent).toContain('Entrada');
+    expect(compiled.querySelector('.movement-group:last-child')?.textContent).toContain('Salida');
+    expect(compiled.querySelector('.movement-line')?.getAttribute('style')).toContain('rgb(211, 47, 47)');
+    fixture.destroy();
+  });
+
+  it('should combine search and occupancy status filters and clear them', async () => {
+    await configureWith(() => of(response));
+    const fixture = TestBed.createComponent(Depots);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+
+    component.setSearchText('cuatro caminos');
+    component.setStatusFilter('FULL');
+    expect(component.hasActiveFilters()).toBe(true);
+    expect(component.filteredDepots().map((depot) => depot.code)).toEqual(['DEP-CC-A']);
+    component.setStatusFilter('AVAILABLE');
+    expect(component.filteredDepots()).toHaveLength(0);
+    component.clearFilters();
+    expect(component.filteredDepots()).toHaveLength(2);
+    fixture.destroy();
+  });
+
+  it('should expose a retry action when the depot query fails', async () => {
+    await configureWith(() => throwError(() => new Error('API error')));
+    const fixture = TestBed.createComponent(Depots);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.querySelector('[role="alert"]')?.textContent).toContain('No se ha podido cargar');
+    expect(compiled.querySelector('.error-card button')?.textContent).toContain('Reintentar');
+    fixture.destroy();
+  });
+});
+
+async function configureWith(getOperations: () => Observable<DepotOperationsResponse>) {
+  await TestBed.configureTestingModule({
+    imports: [Depots],
+    providers: [{ provide: DepotOperationsService, useValue: { getOperations } }]
+  }).compileComponents();
+}
