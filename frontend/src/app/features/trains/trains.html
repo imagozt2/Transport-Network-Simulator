@@ -87,8 +87,14 @@
                       <span class="train-marker" [style.left.%]="progressValue(train)" aria-hidden="true"></span>
                     </div>
                     <div class="arrival-row">
-                      <span>Próxima estación <strong>{{ location.nextStation.name }}</strong></span>
-                      <span>Llegada en <strong class="countdown">{{ nextArrivalLabel(train) }}</strong></span>
+                      <span class="arrival-item">
+                        <span class="arrival-label">Próxima estación</span>
+                        <strong>{{ location.nextStation.name }}</strong>
+                      </span>
+                      <span class="arrival-item">
+                        <span class="arrival-label">Llegada en</span>
+                        <strong class="countdown">{{ nextArrivalLabel(train) }}</strong>
+                      </span>
                     </div>
                   </div>
                 } @else {
