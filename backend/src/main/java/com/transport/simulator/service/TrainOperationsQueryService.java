@@ -4,13 +4,18 @@ import com.transport.simulator.dto.response.trainoperation.TrainFleetSummaryResp
 import com.transport.simulator.dto.response.trainoperation.TrainOperationDepotResponse;
 import com.transport.simulator.dto.response.trainoperation.TrainOperationLineResponse;
 import com.transport.simulator.dto.response.trainoperation.TrainOperationResponse;
+import com.transport.simulator.dto.response.trainoperation.TrainOperationStationResponse;
 import com.transport.simulator.dto.response.trainoperation.TrainOperationsResponse;
+import com.transport.simulator.dto.response.trainoperation.TrainServiceLocationResponse;
 import com.transport.simulator.entity.Depot;
+import com.transport.simulator.entity.LineStation;
 import com.transport.simulator.entity.Train;
 import com.transport.simulator.entity.TrainModel;
 import com.transport.simulator.entity.TransportLine;
 import com.transport.simulator.enums.FleetRole;
+import com.transport.simulator.enums.ServiceDirection;
 import com.transport.simulator.enums.TrainStatus;
+import com.transport.simulator.repository.LineStationRepository;
 import com.transport.simulator.repository.TrainRepository;
 import com.transport.simulator.service.model.RailwaySimulationState;
 import com.transport.simulator.service.model.SimulatedTrainState;
@@ -29,13 +34,16 @@ public class TrainOperationsQueryService {
 
     private final RailwaySimulationStateService railwaySimulationStateService;
     private final TrainRepository trainRepository;
+    private final LineStationRepository lineStationRepository;
 
     public TrainOperationsQueryService(
             RailwaySimulationStateService railwaySimulationStateService,
-            TrainRepository trainRepository
+            TrainRepository trainRepository,
+            LineStationRepository lineStationRepository
     ) {
         this.railwaySimulationStateService = railwaySimulationStateService;
         this.trainRepository = trainRepository;
+        this.lineStationRepository = lineStationRepository;
     }
 
     public TrainOperationsResponse getOperations() {
@@ -50,10 +58,18 @@ public class TrainOperationsQueryService {
                             );
                         }
                 ));
+        Map<Long, List<LineStation>> routesByLine = lineStationRepository
+                .findAllByActiveTrueOrderByLineCodeAscStationOrderAsc()
+                .stream()
+                .collect(Collectors.groupingBy(lineStation -> lineStation.getLine().getId()));
 
         List<TrainOperationResponse> trains = trainRepository.findAllByActiveTrueOrderByCodeAsc()
                 .stream()
-                .map(train -> toTrainResponse(train, requiredSimulatedState(train, simulatedTrainsById)))
+                .map(train -> toTrainResponse(
+                        train,
+                        requiredSimulatedState(train, simulatedTrainsById),
+                        routesByLine
+                ))
                 .toList();
         if (trains.size() != simulatedTrainsById.size()) {
             throw new ServiceConfigurationException(
@@ -69,9 +85,14 @@ public class TrainOperationsQueryService {
         );
     }
 
-    private TrainOperationResponse toTrainResponse(Train train, SimulatedTrainState simulatedState) {
+    private TrainOperationResponse toTrainResponse(
+            Train train,
+            SimulatedTrainState simulatedState,
+            Map<Long, List<LineStation>> routesByLine
+    ) {
         validateStableAssignment(train, simulatedState);
         TrainModel model = train.getModel();
+        TrainOperationDepotResponse homeDepot = toDepotResponse(train.getHomeDepot());
 
         return new TrainOperationResponse(
                 train.getId(),
@@ -86,7 +107,91 @@ public class TrainOperationsQueryService {
                 simulatedState.status(),
                 train.getDispatchOrder(),
                 toLineResponse(train.getAssignedLine()),
-                toDepotResponse(train.getHomeDepot())
+                homeDepot,
+                currentDepot(train, simulatedState, homeDepot),
+                serviceLocation(train, simulatedState, routesByLine)
+        );
+    }
+
+    private TrainOperationDepotResponse currentDepot(
+            Train train,
+            SimulatedTrainState state,
+            TrainOperationDepotResponse homeDepot
+    ) {
+        if (state.status() != TrainStatus.DEPOT) {
+            return null;
+        }
+        if (!train.getHomeDepot().getId().equals(state.currentDepotId())
+                || !train.getHomeDepot().getCode().equals(state.currentDepotCode())) {
+            throw new ServiceConfigurationException(
+                    "Simulated depot does not match the configured home depot for train " + train.getCode()
+            );
+        }
+        return homeDepot;
+    }
+
+    private TrainServiceLocationResponse serviceLocation(
+            Train train,
+            SimulatedTrainState state,
+            Map<Long, List<LineStation>> routesByLine
+    ) {
+        if (state.status() != TrainStatus.IN_SERVICE) {
+            return null;
+        }
+        if (!train.getAssignedLine().getId().equals(state.currentLineId())) {
+            throw new ServiceConfigurationException(
+                    "Train " + train.getCode() + " is circulating on an unexpected line"
+            );
+        }
+        List<LineStation> route = requiredRoute(train, routesByLine);
+        LineStation destination = state.direction() == ServiceDirection.OUTBOUND
+                ? route.getLast()
+                : route.getFirst();
+
+        return new TrainServiceLocationResponse(
+                toLineResponse(train.getAssignedLine()),
+                state.dutyNumber(),
+                state.positionState(),
+                state.direction(),
+                toStationResponse(destination),
+                state.currentStationId() == null
+                        ? null
+                        : toStationResponse(requiredStation(route, state.currentStationId(), train.getCode())),
+                toStationResponse(requiredStation(route, state.previousStationId(), train.getCode())),
+                toStationResponse(requiredStation(route, state.nextStationId(), train.getCode())),
+                state.progressPercentage(),
+                state.secondsUntilNextStation(),
+                state.estimatedArrivalAt()
+        );
+    }
+
+    private List<LineStation> requiredRoute(
+            Train train,
+            Map<Long, List<LineStation>> routesByLine
+    ) {
+        List<LineStation> route = routesByLine.get(train.getAssignedLine().getId());
+        if (route == null || route.size() < 2) {
+            throw new ServiceConfigurationException(
+                    "Line " + train.getAssignedLine().getCode() + " requires at least two active stations"
+            );
+        }
+        return route;
+    }
+
+    private LineStation requiredStation(List<LineStation> route, Long stationId, String trainCode) {
+        return route.stream()
+                .filter(lineStation -> lineStation.getStation().getId().equals(stationId))
+                .findFirst()
+                .orElseThrow(() -> new ServiceConfigurationException(
+                        "Train " + trainCode + " references a station outside its route"
+                ));
+    }
+
+    private TrainOperationStationResponse toStationResponse(LineStation lineStation) {
+        return new TrainOperationStationResponse(
+                lineStation.getStation().getId(),
+                lineStation.getStation().getCode(),
+                lineStation.getStation().getName()
         );
     }
 
