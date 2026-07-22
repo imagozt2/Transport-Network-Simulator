@@ -1,0 +1,82 @@
+<section class="trains-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Operación de flota</p>
+      <h1>Trenes</h1>
+      <p class="page-description">Consulta la flota, su asignación operativa, modelo y situación actual.</p>
+      @if (operations) { <p class="last-update">Última actualización: {{ formatEvaluatedAt(operations.evaluatedAt) }}</p> }
+    </div>
+    <div class="header-actions">
+      <button class="refresh-button secondary" type="button" (click)="toggleAutoRefresh()">
+        {{ autoRefreshEnabled ? 'Pausar autoactualización' : 'Activar autoactualización' }}
+      </button>
+      <button class="refresh-button" type="button" [disabled]="refreshing" (click)="loadOperations()">
+        {{ refreshing ? 'Actualizando…' : 'Actualizar' }}
+      </button>
+    </div>
+  </header>
+
+  @if (loading) {
+    <div class="state-card" role="status">Cargando estado operativo de la flota…</div>
+  } @else if (errorMessage && !operations) {
+    <div class="state-card error-card" role="alert"><span>{{ errorMessage }}</span><button type="button" (click)="loadOperations(true)">Reintentar</button></div>
+  } @else if (operations; as data) {
+    @if (errorMessage) { <div class="refresh-warning">{{ errorMessage }} Se conservan los últimos datos disponibles.</div> }
+
+    <section class="summary-grid" aria-label="Resumen operativo de la flota">
+      <article class="summary-card"><span>Flota activa</span><strong>{{ data.summary.activeFleet }}</strong><small>Unidades registradas</small></article>
+      <article class="summary-card"><span>En servicio</span><strong>{{ data.summary.trainsInService }}</strong><small>Circulando por la red</small></article>
+      <article class="summary-card"><span>En cocheras</span><strong>{{ data.summary.trainsInDepots }}</strong><small>Unidades guardadas</small></article>
+      <article class="summary-card"><span>Resultados</span><strong>{{ filteredTrains().length }}</strong><small>Según los filtros</small></article>
+    </section>
+
+    <section class="filters-panel" aria-label="Filtros de trenes">
+      <label class="filter-field search-field"><span>Buscar tren</span><input type="search" [value]="searchText" placeholder="Código, fabricante, modelo o serie" (input)="setSearchText($any($event.target).value)" /></label>
+      <label class="filter-field"><span>Estado</span><select [value]="selectedStatus" (change)="setStatusFilter($any($event.target).value)"><option value="ALL">Todos</option>@for (status of statuses; track status) { <option [value]="status">{{ statusLabel(status) }}</option> }</select></label>
+      <label class="filter-field"><span>Línea asignada</span><select [value]="selectedLineCode" (change)="setLineFilter($any($event.target).value)"><option value="ALL">Todas</option>@for (line of lineOptions(); track line.code) { <option [value]="line.code">{{ line.code }} · {{ line.name }}</option> }</select></label>
+      <label class="filter-field"><span>Serie</span><select [value]="selectedSeries" (change)="setSeriesFilter($any($event.target).value)"><option value="ALL">Todas</option>@for (series of seriesOptions(); track series) { <option [value]="series">Serie {{ series }}</option> }</select></label>
+      <label class="filter-field"><span>Rol de flota</span><select [value]="selectedRole" (change)="setRoleFilter($any($event.target).value)"><option value="ALL">Todos</option>@for (role of roles; track role) { <option [value]="role">{{ roleLabel(role) }}</option> }</select></label>
+    </section>
+
+    @if (hasActiveFilters()) {
+      <div class="filter-notice"><span>{{ filteredTrains().length }} trenes coinciden con los filtros.</span><button type="button" (click)="clearFilters()">Limpiar filtros</button></div>
+    }
+
+    <div class="trains-list">
+      @for (train of filteredTrains(); track trackTrain($index, train)) {
+        <article class="train-card" [class.expanded]="isExpanded(train.id)">
+          <button class="train-card-header" type="button" (click)="toggleTrain(train.id)" [attr.aria-expanded]="isExpanded(train.id)">
+            <span class="train-code">{{ train.code }}</span>
+            <span class="train-main-info">
+              <span class="train-title-row"><strong>{{ train.manufacturer }} {{ train.model }}</strong><span class="status-pill status-{{ train.status.toLowerCase().replace('_', '-') }}">{{ statusLabel(train.status) }}</span><span class="role-pill">{{ roleLabel(train.fleetRole) }}</span></span>
+              <small>Serie {{ train.series }} · {{ train.assignedLine.name }} · {{ situationLabel(train) }}</small>
+            </span>
+            <span class="line-badge" [style.background-color]="getLineColor(train.assignedLine)" [style.color]="getLineTextColor(getLineColor(train.assignedLine))">{{ train.assignedLine.code }}</span>
+            <span class="expand-icon" aria-hidden="true">{{ isExpanded(train.id) ? '−' : '+' }}</span>
+          </button>
+
+          @if (isExpanded(train.id)) {
+            <div class="train-card-body">
+              <section class="situation-panel">
+                <span>Situación operativa</span><strong>{{ situationLabel(train) }}</strong>
+                <small>{{ train.status === 'IN_SERVICE' ? 'Unidad asignada al servicio actual' : 'Unidad fuera de circulación' }}</small>
+              </section>
+              <dl class="train-details">
+                <div><dt>Modelo</dt><dd>{{ train.manufacturer }} {{ train.model }}</dd></div>
+                <div><dt>Serie</dt><dd>{{ train.series }}</dd></div>
+                <div><dt>Composición</dt><dd>{{ train.carCount }} coches</dd></div>
+                <div><dt>Capacidad</dt><dd>{{ train.passengerCapacity }} viajeros</dd></div>
+                <div><dt>Velocidad máxima</dt><dd>{{ train.maximumSpeedKmh }} km/h</dd></div>
+                <div><dt>Línea asignada</dt><dd>{{ train.assignedLine.code }} · {{ train.assignedLine.name }}</dd></div>
+                <div><dt>Cochera base</dt><dd>{{ train.homeDepot.name }}</dd></div>
+                <div><dt>Estación de cochera</dt><dd>{{ train.homeDepot.stationName }}</dd></div>
+                <div><dt>Orden de salida</dt><dd>{{ train.dispatchOrder ?? 'No asignado' }}</dd></div>
+                <div><dt>Rol</dt><dd>{{ roleLabel(train.fleetRole) }}</dd></div>
+              </dl>
+            </div>
+          }
+        </article>
+      } @empty { <div class="state-card">No hay trenes que coincidan con los filtros seleccionados.</div> }
+    </div>
+  }
+</section>
