@@ -18,6 +18,8 @@ La aplicación incluye actualmente:
 - una sección de estaciones con estados, dispositivos y próximas llegadas en formato `mm:ss`;
 - una sección de trenes con filtros, clasificación de la flota y situación operativa en tiempo real;
 - una sección de cocheras con ocupación, distribución de flota y movimientos de entrada y salida;
+- una sección de máquinas con estado operativo, ubicación, filtros y acceso contextual a sus logs;
+- una pantalla global de logs con filtros combinables y paginación;
 - recorridos ordenados y correspondencias entre líneas;
 - calendarios, franjas horarias, frecuencias y tiempos de recorrido configurables;
 - flota regular, de reserva e histórica diferenciada;
@@ -155,6 +157,8 @@ La aplicación estará disponible en `http://localhost:4200`. La ruta inicial re
 | `GET` | `/api/stations/operations` | Devuelve el estado, líneas, dispositivos y próximas llegadas de cada estación. |
 | `GET` | `/api/trains/operations` | Devuelve la flota, su clasificación y la ubicación operativa de cada tren. |
 | `GET` | `/api/depots/operations` | Devuelve capacidad, ocupación, distribución y movimientos de las cocheras. |
+| `GET` | `/api/devices/operations` | Devuelve el inventario y estado operativo de las máquinas. |
+| `GET` | `/api/logs` | Devuelve los eventos de máquinas filtrados y paginados. |
 
 ## Pruebas y compilación
 
@@ -185,6 +189,7 @@ y en cada actualización de esa rama.
 - [Sección de Estaciones y próximas llegadas](docs/estaciones.md)
 - [Sección de Trenes y situación operativa](docs/trenes.md)
 - [Sección de Cocheras y movimientos de flota](docs/cocheras.md)
+- [Secciones de Máquinas y Logs](docs/maquinas-y-logs.md)
 - [Modelo de operación ferroviaria](docs/modelo-operacion-ferroviaria.md)
 - [Motor de simulación ferroviaria](docs/motor-simulacion-ferroviaria.md)
 - [Ciclo de eventos de las máquinas](docs/eventos-maquinas.md)

@@ -176,10 +176,13 @@ Esta fase no incluye:
 - consumidor de mensajes;
 - publicación de respuestas MQTT;
 - endpoints HTTP para crear eventos;
-- interfaz web de máquinas o consulta de logs.
 
 Esas capas se construirán sobre `DeviceEventIngress`, manteniendo un único ciclo de validación,
 transición y persistencia.
+
+La consulta del estado actual y del historial ya está disponible mediante las secciones web de
+Máquinas y Logs. Su funcionamiento y los endpoints de lectura se documentan en
+[Secciones de Máquinas y Logs](maquinas-y-logs.md).
 
 ## Pruebas
 
