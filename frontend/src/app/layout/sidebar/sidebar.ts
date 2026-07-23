@@ -39,6 +39,12 @@ export class Sidebar {
         { label: 'Cocheras', route: '/depots', icon: 'CO' },
         { label: 'Máquinas', route: '/devices', icon: 'MA' }
       ]
+    },
+    {
+      title: 'Operación',
+      items: [
+        { label: 'Logs', route: '/logs', icon: 'LG' }
+      ]
     }
   ];
 }
