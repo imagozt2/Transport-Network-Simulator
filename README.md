@@ -183,6 +183,7 @@ y en cada actualización de esa rama.
 
 ## Documentación
 
+- [Visión transversal de la operación simulada](docs/operacion-simulada.md)
 - [Panel General y endpoint de resumen](docs/panel-general.md)
 - [Mapa de red y endpoint del mapa](docs/mapa-red.md)
 - [Sección de Líneas y endpoint operativo](docs/lineas.md)

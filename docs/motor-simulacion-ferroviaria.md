@@ -162,7 +162,7 @@ distingue `requestedReleaseAt` de `plannedReleaseAt` para conservar ambas horas.
 
 ## Estado centralizado
 
-Los futuros módulos de Líneas, Estaciones, Trenes y Cocheras deben consumir
+Los módulos de Líneas, Estaciones, Trenes y Cocheras consumen
 `RailwaySimulationStateService`, que es la fachada del motor:
 
 ```java
@@ -171,8 +171,8 @@ RailwaySimulationState getStateAt(ZonedDateTime requestedDateTime)
 ```
 
 La primera operación utiliza el reloj compartido. La segunda permite reproducir un instante en
-pruebas o herramientas internas. No se debe coordinar manualmente
-`ServiceOperationStateService` y `TrainDutyPlanningService` desde controladores.
+pruebas o herramientas internas. Los servicios de consulta no coordinan manualmente
+`ServiceOperationStateService` y `TrainDutyPlanningService`.
 
 `RailwaySimulationState` reúne una instantánea coherente:
 
@@ -185,8 +185,18 @@ pruebas o herramientas internas. No se debe coordinar manualmente
 La fachada valida que un tren no tenga dos posiciones simultáneas, que una línea abierta tenga plan y
 que solo los 9000 regulares aparezcan en servicio.
 
-El motor todavía no expone un endpoint REST propio. Las futuras APIs deben transformar esta
-instantánea en DTO de respuesta y no devolver directamente los modelos internos.
+El motor no expone un endpoint REST que devuelva directamente su modelo interno. Las APIs de
+Líneas, Estaciones, Trenes y Cocheras transforman la instantánea en DTO específicos:
+
+| Endpoint | Vista derivada |
+| --- | --- |
+| `/api/lines/operations` | Frecuencia, recorrido y posiciones por línea. |
+| `/api/stations/operations` | Estado de estación y próximas llegadas. |
+| `/api/trains/operations` | Inventario y ubicación individual de cada tren. |
+| `/api/depots/operations` | Ocupación, distribución y movimientos de cocheras. |
+
+Las correspondencias entre estas respuestas están documentadas en
+[Operación simulada](operacion-simulada.md).
 
 ## Persistencia y límites actuales
 
@@ -196,7 +206,7 @@ La simulación es calculada y de solo lectura:
 - no cambia el estado persistido de las unidades;
 - no genera logs ferroviarios;
 - no simula incidencias, mantenimiento ni sustituciones con la reserva;
-- no contiene todavía una API pública para consultar la instantánea completa.
+- no contiene una API pública para consultar la instantánea interna completa.
 
 Estas decisiones evitan que la simulación dependa de un proceso iniciado continuamente. La
 persistencia de eventos reales procedentes de máquinas MQTT tendrá un ciclo de vida independiente.
@@ -206,12 +216,15 @@ persistencia de eventos reales procedentes de máquinas MQTT tendrá un ciclo de
 `ServiceOperationStateServiceTests` cubre horarios cerrados y jornadas que continúan después de
 medianoche. `TrainDutyPlanningServiceTests` cubre frecuencias, flota objetivo, salidas escalonadas,
 recorridos, cambios de sentido, progreso, llegadas y movimientos de cochera.
+`ServiceDayIntegrationTests` reproduce momentos representativos de una jornada completa y
+`OperationalSectionsConsistencyTests` comprueba que Líneas, Estaciones, Trenes y Cocheras describan
+la misma instantánea.
 
 Para ejecutar las pruebas unitarias del motor:
 
 ```powershell
 Set-Location backend
-.\mvnw.cmd test "-Dtest=ServiceOperationStateServiceTests,TrainDutyPlanningServiceTests"
+.\mvnw.cmd test "-Dtest=ServiceOperationStateServiceTests,TrainDutyPlanningServiceTests,ServiceDayIntegrationTests,OperationalSectionsConsistencyTests"
 ```
 
 La prueba de contexto completa necesita una instancia de MySQL y las variables `DB_USERNAME` y
