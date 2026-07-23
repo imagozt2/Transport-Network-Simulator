@@ -4,7 +4,7 @@ import com.transport.simulator.enums.DeviceStatus;
 import org.springframework.stereotype.Component;
 
 @Component
-public class DeviceStatusTransitionPolicy {
+class DeviceStatusTransitionPolicy {
 
     public DeviceStatus resolve(DeviceStatus currentStatus, DeviceEvent event) {
         return switch (event.type()) {

@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class DeviceEventRegistrationService {
+class DeviceEventRegistrationService {
 
     private final DeviceRepository deviceRepository;
     private final DeviceEventLogRepository deviceEventLogRepository;

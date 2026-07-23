@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
         havingValue = "true",
         matchIfMissing = true
 )
-public class DeviceEventSimulationScheduler {
+class DeviceEventSimulationScheduler {
 
     private static final Logger LOGGER =
             LoggerFactory.getLogger(DeviceEventSimulationScheduler.class);

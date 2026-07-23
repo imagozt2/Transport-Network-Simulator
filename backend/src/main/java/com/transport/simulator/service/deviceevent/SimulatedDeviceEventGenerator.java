@@ -12,7 +12,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.springframework.stereotype.Component;
 
 @Component
-public class SimulatedDeviceEventGenerator {
+class SimulatedDeviceEventGenerator {
 
     private final Clock clock;
 

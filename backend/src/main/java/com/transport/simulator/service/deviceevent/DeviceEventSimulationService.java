@@ -6,10 +6,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class DeviceEventSimulationService {
+class DeviceEventSimulationService {
 
     private static final int MAX_EVENTS_PER_CYCLE = 100;
 
@@ -27,8 +26,7 @@ public class DeviceEventSimulationService {
         this.eventRegistrationService = eventRegistrationService;
     }
 
-    @Transactional(readOnly = true)
-    public List<DeviceEvent> generateEvents(int requestedEventCount) {
+    private List<DeviceEvent> generateEvents(int requestedEventCount) {
         int eventCount = Math.clamp(requestedEventCount, 1, MAX_EVENTS_PER_CYCLE);
         List<Device> activeDevices = new ArrayList<>(
                 deviceRepository.findAllByActiveTrueOrderByCodeAsc()
