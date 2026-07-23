@@ -1,4 +1,5 @@
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 import {
   DeviceOperation,
@@ -14,6 +15,7 @@ type StatusFilter = DeviceStatus | 'ALL';
 
 @Component({
   selector: 'app-devices',
+  imports: [RouterLink],
   templateUrl: './devices.html',
   styleUrls: ['./devices.css', './devices-cards.css']
 })

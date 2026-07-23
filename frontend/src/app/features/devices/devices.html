@@ -163,6 +163,18 @@
               <dd>{{ formatDateTime(device.lastConnectionAt) }}</dd>
             </div>
           </dl>
+
+          <footer class="device-actions">
+            <a
+              class="logs-link"
+              [routerLink]="['/logs']"
+              [queryParams]="{ deviceCode: device.code }"
+              [attr.aria-label]="'Ver logs de ' + device.name + ' (' + device.code + ')'"
+            >
+              Ver logs
+              <span aria-hidden="true">→</span>
+            </a>
+          </footer>
         </article>
       } @empty {
         <div class="state-card empty-card">
