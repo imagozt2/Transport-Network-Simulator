@@ -12,19 +12,27 @@ public class DeviceEventRegistrationService {
 
     private final DeviceRepository deviceRepository;
     private final OperationalLogRepository operationalLogRepository;
+    private final DeviceStatusTransitionPolicy statusTransitionPolicy;
 
     public DeviceEventRegistrationService(
             DeviceRepository deviceRepository,
-            OperationalLogRepository operationalLogRepository
+            OperationalLogRepository operationalLogRepository,
+            DeviceStatusTransitionPolicy statusTransitionPolicy
     ) {
         this.deviceRepository = deviceRepository;
         this.operationalLogRepository = operationalLogRepository;
+        this.statusTransitionPolicy = statusTransitionPolicy;
     }
 
     @Transactional
     public OperationalLog register(DeviceEvent event) {
         Device device = deviceRepository.findByCodeAndActiveTrue(event.deviceCode())
                 .orElseThrow(() -> new UnknownDeviceException(event.deviceCode()));
+
+        device.recordEvent(
+                statusTransitionPolicy.resolve(device.getStatus(), event),
+                event.occurredAt()
+        );
 
         OperationalLog log = new OperationalLog(
                 event.origin(),

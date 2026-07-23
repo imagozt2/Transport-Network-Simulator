@@ -1,6 +1,7 @@
 package com.transport.simulator.service.deviceevent;
 
 import com.transport.simulator.entity.Device;
+import com.transport.simulator.enums.DeviceStatus;
 import com.transport.simulator.enums.DeviceType;
 import com.transport.simulator.enums.LogOrigin;
 import com.transport.simulator.enums.LogSeverity;
@@ -36,6 +37,30 @@ public class SimulatedDeviceEventGenerator {
     }
 
     private EventDefinition selectDefinition(Device device) {
+        if (device.getStatus() == DeviceStatus.OFFLINE) {
+            return new EventDefinition(
+                    OperationalEventType.DEVICE_ONLINE,
+                    LogSeverity.INFO,
+                    "Conexión simulada restablecida en "
+            );
+        }
+
+        if (device.getStatus() == DeviceStatus.ERROR) {
+            return new EventDefinition(
+                    OperationalEventType.DEVICE_MAINTENANCE_STARTED,
+                    LogSeverity.WARNING,
+                    "Mantenimiento simulado iniciado en "
+            );
+        }
+
+        if (device.getStatus() == DeviceStatus.MAINTENANCE) {
+            return new EventDefinition(
+                    OperationalEventType.DEVICE_MAINTENANCE_FINISHED,
+                    LogSeverity.INFO,
+                    "Mantenimiento simulado finalizado en "
+            );
+        }
+
         int option = ThreadLocalRandom.current().nextInt(100);
 
         if (device.getType() == DeviceType.TICKET_MACHINE) {

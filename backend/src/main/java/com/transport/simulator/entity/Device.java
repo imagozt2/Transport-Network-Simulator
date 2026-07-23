@@ -14,6 +14,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
 @Table(name = "devices")
@@ -48,6 +49,15 @@ public class Device extends AuditableEntity {
     private boolean active = true;
 
     protected Device() {
+    }
+
+    public void recordEvent(DeviceStatus resultingStatus, LocalDateTime connectionAt) {
+        status = Objects.requireNonNull(resultingStatus, "resultingStatus is required");
+        Objects.requireNonNull(connectionAt, "connectionAt is required");
+
+        if (lastConnectionAt == null || connectionAt.isAfter(lastConnectionAt)) {
+            lastConnectionAt = connectionAt;
+        }
     }
 
     public Long getId() {
