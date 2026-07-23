@@ -1,6 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { NetworkMapLine, NetworkMapStation } from '../../core/models/network-map.model';
 import { NetworkMapService } from '../../core/services/network-map.service';
+import { contrastingTextColor } from '../../core/utils/line-visuals';
 import { MAP_LINES, MAP_STATIONS, MAP_VIEWBOX, MapLineLayout, MapStationLayout } from './network-map.data';
 
 @Component({ selector: 'app-network-map', templateUrl: './network-map.html', styleUrl: './network-map.css' })
@@ -98,5 +99,5 @@ export class NetworkMap implements OnInit {
   getLineLabelTextX(line: MapLineLayout, position: 'start' | 'end'): number { const label = position === 'start' ? line.startLabel : line.endLabel; return label.x + this.getLineLabelWidth(line, position) / 2; }
   getLineLabelTextY(line: MapLineLayout, position: 'start' | 'end'): number { return (position === 'start' ? line.startLabel : line.endLabel).y + 17; }
   getMapLineColor(code: string): string { return this.mapLines.find((line) => line.code === code)?.color ?? '#111827'; }
-  getLineTextColor(color: string): string { return color === '#fbc02d' ? '#111827' : '#ffffff'; }
+  getLineTextColor(color: string): string { return contrastingTextColor(color); }
 }

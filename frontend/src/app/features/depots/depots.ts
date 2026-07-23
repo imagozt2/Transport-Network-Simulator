@@ -10,6 +10,8 @@ import { FleetRole, TrainStatus } from '../../core/models/train-operation.model'
 import { DepotOperationsService } from '../../core/services/depot-operations.service';
 import { depotShortCode } from '../../core/utils/depot-visuals';
 import { contrastingTextColor, lineColor } from '../../core/utils/line-visuals';
+import { depotStatusLabel, fleetRoleLabel, trainStatusLabel } from '../../core/utils/operation-labels';
+import { formatTime } from '../../core/utils/temporal-formatters';
 
 type StatusFilter = DepotOperationStatus | 'ALL';
 
@@ -104,31 +106,20 @@ export class Depots implements OnInit, OnDestroy {
   shortCode(depot: DepotOperation): string { return depotShortCode(depot.code); }
 
   statusLabel(status: DepotOperationStatus): string {
-    const labels: Record<DepotOperationStatus, string> = {
-      EMPTY: 'Vacía', AVAILABLE: 'Disponible', HIGH_OCCUPANCY: 'Ocupación alta',
-      FULL: 'Completa', OVER_CAPACITY: 'Sobreocupada'
-    };
-    return labels[status];
+    return depotStatusLabel(status);
   }
 
   nextMovementLabel(depot: DepotOperation): string {
     const value = depot.movementsSummary.nextMovementAt;
-    return value ? this.formatTime(value) : 'Sin movimientos pendientes';
+    return formatTime(value, false, 'Sin movimientos pendientes');
   }
 
   roleLabel(role: FleetRole): string {
-    const labels: Record<FleetRole, string> = {
-      REGULAR_SERVICE: 'Servicio regular', RESERVE: 'Reserva', HISTORIC: 'Histórica'
-    };
-    return labels[role];
+    return fleetRoleLabel(role);
   }
 
   trainStatusLabel(status: TrainStatus): string {
-    const labels: Record<TrainStatus, string> = {
-      IN_SERVICE: 'En servicio', DEPOT: 'En cochera', MAINTENANCE: 'Mantenimiento',
-      STOPPED: 'Detenidos', OUT_OF_SERVICE: 'Fuera de servicio'
-    };
-    return labels[status];
+    return trainStatusLabel(status);
   }
 
   fleetStatusEntries(depot: DepotOperation): { status: TrainStatus; count: number }[] {
@@ -156,19 +147,13 @@ export class Depots implements OnInit, OnDestroy {
     return movement.type === 'EXIT' ? 'Salida' : 'Entrada';
   }
 
-  movementTimeLabel(movement: DepotMovement): string { return this.formatTime(movement.scheduledAt); }
+  movementTimeLabel(movement: DepotMovement): string { return formatTime(movement.scheduledAt); }
   getLineColor(movement: DepotMovement): string { return lineColor(movement.line.code, movement.line.color); }
   getLineTextColor(color: string): string { return contrastingTextColor(color); }
 
-  formatEvaluatedAt(value: string): string { return this.formatTime(value, true); }
+  formatEvaluatedAt(value: string): string { return formatTime(value, true); }
 
   trackDepot(_: number, depot: DepotOperation): number { return depot.id; }
-
-  private formatTime(value: string, includeSeconds = false): string {
-    return new Intl.DateTimeFormat('es-ES', {
-      hour: '2-digit', minute: '2-digit', second: includeSeconds ? '2-digit' : undefined, hour12: false
-    }).format(new Date(value));
-  }
 
   private startAutoRefresh(): void {
     this.stopAutoRefresh();

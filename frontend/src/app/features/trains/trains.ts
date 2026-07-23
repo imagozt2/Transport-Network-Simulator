@@ -10,6 +10,8 @@ import {
 import { TrainOperationsService } from '../../core/services/train-operations.service';
 import { depotShortCode } from '../../core/utils/depot-visuals';
 import { contrastingTextColor, lineColor } from '../../core/utils/line-visuals';
+import { fleetRoleLabel, trainStatusLabel } from '../../core/utils/operation-labels';
+import { formatCountdown, formatTime } from '../../core/utils/temporal-formatters';
 
 type StatusFilter = TrainStatus | 'ALL';
 type RoleFilter = FleetRole | 'ALL';
@@ -137,18 +139,11 @@ export class Trains implements OnInit, OnDestroy {
   isExpanded(trainId: number): boolean { return this.expandedTrainIds.has(trainId); }
 
   statusLabel(status: TrainStatus): string {
-    const labels: Record<TrainStatus, string> = {
-      IN_SERVICE: 'En servicio', DEPOT: 'En cochera', MAINTENANCE: 'Mantenimiento',
-      STOPPED: 'Detenido', OUT_OF_SERVICE: 'Fuera de servicio'
-    };
-    return labels[status];
+    return trainStatusLabel(status);
   }
 
   roleLabel(role: FleetRole): string {
-    const labels: Record<FleetRole, string> = {
-      REGULAR_SERVICE: 'Servicio regular', RESERVE: 'Reserva', HISTORIC: 'Histórico'
-    };
-    return labels[role];
+    return fleetRoleLabel(role);
   }
 
   roleDescription(role: FleetRole): string {
@@ -184,9 +179,7 @@ export class Trains implements OnInit, OnDestroy {
     if (!location) { return '—'; }
     const elapsedSeconds = Math.floor((this.countdownNowMs - this.snapshotReceivedAtMs) / 1_000);
     const remainingSeconds = Math.max(0, location.secondsUntilNextStation - elapsedSeconds);
-    const minutes = Math.floor(remainingSeconds / 60);
-    const seconds = remainingSeconds % 60;
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    return formatCountdown(remainingSeconds);
   }
 
   progressValue(train: TrainOperation): number { return train.serviceLocation?.progressPercentage ?? 0; }
@@ -207,9 +200,7 @@ export class Trains implements OnInit, OnDestroy {
   getLineTextColor(color: string): string { return contrastingTextColor(color); }
 
   formatEvaluatedAt(value: string): string {
-    return new Intl.DateTimeFormat('es-ES', {
-      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-    }).format(new Date(value));
+    return formatTime(value, true);
   }
 
   trackTrain(_: number, train: TrainOperation): number { return train.id; }

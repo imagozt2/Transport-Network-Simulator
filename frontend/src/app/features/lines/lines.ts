@@ -10,6 +10,8 @@ import {
 } from '../../core/models/line-operation.model';
 import { LineOperationsService } from '../../core/services/line-operations.service';
 import { contrastingTextColor, lineColor } from '../../core/utils/line-visuals';
+import { servicePeriodLabel, servicePhaseLabel } from '../../core/utils/operation-labels';
+import { formatDuration, formatTime } from '../../core/utils/temporal-formatters';
 
 @Component({ selector: 'app-lines', templateUrl: './lines.html', styleUrls: ['./lines.css', './lines-circulation.css'] })
 export class Lines implements OnInit, OnDestroy {
@@ -152,38 +154,24 @@ export class Lines implements OnInit, OnDestroy {
   }
 
   formatDuration(seconds: number | null): string {
-    if (seconds === null) { return 'No disponible'; }
-    const minutes = Math.floor(seconds / 60);
-    const remainder = seconds % 60;
-    return remainder === 0 ? `${minutes} min` : `${minutes} min ${remainder} s`;
+    return formatDuration(seconds);
   }
 
   formatTime(value: string | null): string {
-    if (!value) { return '—'; }
-    return new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false })
-      .format(new Date(value));
+    return formatTime(value);
   }
 
   formatEvaluatedAt(value: string): string {
-    return new Intl.DateTimeFormat('es-ES', {
-      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-    }).format(new Date(value));
+    return formatTime(value, true);
   }
 
   phaseLabel(phase: ServiceOperationPhase): string {
-    const labels: Record<ServiceOperationPhase, string> = {
-      CLOSED: 'Cerrado', STARTING: 'Inicio de servicio', OPERATING: 'En operación', ENDING: 'Fin de servicio'
-    };
-    return labels[phase];
+    return servicePhaseLabel(phase);
   }
 
   periodLabel(period: ServicePeriodType | null): string {
     if (!period) { return 'Fuera de servicio'; }
-    const labels: Record<ServicePeriodType, string> = {
-      SERVICE_START: 'Inicio de servicio', OFF_PEAK: 'Hora valle', PEAK: 'Hora punta',
-      REGULAR: 'Servicio regular', SERVICE_END: 'Fin de servicio'
-    };
-    return labels[period];
+    return servicePeriodLabel(period);
   }
 
   trackLine(_: number, line: LineOperation): number { return line.id; }

@@ -3,10 +3,21 @@ export const LINE_COLORS: Readonly<Record<string, string>> = {
   L4: '#7b1fa2', L5: '#1976d2', L6: '#f57c00'
 };
 
+const NAMED_LINE_COLORS: Readonly<Record<string, string>> = {
+  Roja: LINE_COLORS['L1'],
+  Verde: LINE_COLORS['L2'],
+  Amarilla: LINE_COLORS['L3'],
+  Lila: LINE_COLORS['L4'],
+  Azul: LINE_COLORS['L5'],
+  Naranja: LINE_COLORS['L6']
+};
+
 const HEX_COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
 
 export function lineColor(code: string, configuredColor?: string | null): string {
-  return LINE_COLORS[code] ?? (configuredColor && HEX_COLOR_PATTERN.test(configuredColor) ? configuredColor : '#64748b');
+  return LINE_COLORS[code]
+    ?? (configuredColor && NAMED_LINE_COLORS[configuredColor])
+    ?? (configuredColor && HEX_COLOR_PATTERN.test(configuredColor) ? configuredColor : '#64748b');
 }
 
 export function contrastingTextColor(color: string): string {

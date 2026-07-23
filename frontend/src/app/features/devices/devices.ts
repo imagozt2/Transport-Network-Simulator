@@ -9,6 +9,12 @@ import {
   DeviceType
 } from '../../core/models/device-operation.model';
 import { DeviceOperationsService } from '../../core/services/device-operations.service';
+import {
+  deviceStatusLabel,
+  deviceTypeLabel,
+  deviceTypeShortLabel
+} from '../../core/utils/operation-labels';
+import { formatDateTime, formatTime } from '../../core/utils/temporal-formatters';
 
 type TypeFilter = DeviceType | 'ALL';
 type StatusFilter = DeviceStatus | 'ALL';
@@ -167,55 +173,23 @@ export class Devices implements OnInit, OnDestroy {
   }
 
   typeLabel(type: DeviceType): string {
-    const labels: Record<DeviceType, string> = {
-      TICKET_MACHINE: 'Máquina de billetes',
-      ENTRY_VALIDATOR: 'Validador de entrada',
-      EXIT_VALIDATOR: 'Validador de salida'
-    };
-    return labels[type];
+    return deviceTypeLabel(type);
   }
 
   typeShortLabel(type: DeviceType): string {
-    const labels: Record<DeviceType, string> = {
-      TICKET_MACHINE: 'MB',
-      ENTRY_VALIDATOR: 'VE',
-      EXIT_VALIDATOR: 'VS'
-    };
-    return labels[type];
+    return deviceTypeShortLabel(type);
   }
 
   statusLabel(status: DeviceStatus): string {
-    const labels: Record<DeviceStatus, string> = {
-      ONLINE: 'Online',
-      OFFLINE: 'Offline',
-      MAINTENANCE: 'Mantenimiento',
-      ERROR: 'Error'
-    };
-    return labels[status];
+    return deviceStatusLabel(status);
   }
 
   formatDateTime(value: string | null): string {
-    if (!value) {
-      return 'Sin conexión registrada';
-    }
-    return new Intl.DateTimeFormat('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
-    }).format(new Date(value));
+    return formatDateTime(value, 'Sin conexión registrada');
   }
 
   formatEvaluatedAt(value: string): string {
-    return new Intl.DateTimeFormat('es-ES', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
-    }).format(new Date(value));
+    return formatTime(value, true);
   }
 
   trackDevice(_: number, device: DeviceOperation): number {

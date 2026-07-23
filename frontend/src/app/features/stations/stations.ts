@@ -9,6 +9,8 @@ import {
 } from '../../core/models/station-operation.model';
 import { StationOperationsService } from '../../core/services/station-operations.service';
 import { contrastingTextColor, lineColor } from '../../core/utils/line-visuals';
+import { stationStatusLabel } from '../../core/utils/operation-labels';
+import { formatCountdown, formatTime } from '../../core/utils/temporal-formatters';
 
 type StatusFilter = StationOperationStatus | 'ALL';
 type StationTypeFilter = 'ALL' | 'TRANSFER' | 'SIMPLE';
@@ -134,10 +136,7 @@ export class Stations implements OnInit, OnDestroy {
   }
 
   statusLabel(status: StationOperationStatus): string {
-    const labels: Record<StationOperationStatus, string> = {
-      NORMAL: 'Normal', DEGRADED: 'Degradada', CRITICAL: 'Crítica', NO_TRAINS: 'Sin trenes', CLOSED: 'Cerrada'
-    };
-    return labels[status];
+    return stationStatusLabel(status);
   }
 
   directionLabel(arrival: StationArrival): string {
@@ -147,9 +146,7 @@ export class Stations implements OnInit, OnDestroy {
   arrivalTimeLabel(arrival: StationArrival): string {
     if (arrival.atStation) { return 'En estación'; }
     const remainingSeconds = this.remainingSeconds(arrival);
-    const minutes = Math.floor(remainingSeconds / 60);
-    const seconds = remainingSeconds % 60;
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    return formatCountdown(remainingSeconds);
   }
 
   remainingSeconds(arrival: StationArrival): number {
@@ -176,9 +173,7 @@ export class Stations implements OnInit, OnDestroy {
   }
 
   formatEvaluatedAt(value: string): string {
-    return new Intl.DateTimeFormat('es-ES', {
-      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-    }).format(new Date(value));
+    return formatTime(value, true);
   }
 
   trackStation(_: number, station: StationOperation): number { return station.id; }

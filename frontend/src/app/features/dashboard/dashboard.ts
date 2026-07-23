@@ -1,6 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { DashboardResponse, DeviceStatus, DeviceType, TrainStatus } from '../../core/models/dashboard.model';
 import { DashboardService } from '../../core/services/dashboard.service';
+import { lineColor } from '../../core/utils/line-visuals';
 
 interface StatusItem<T extends string> { status: T; label: string; tone: 'ok' | 'neutral' | 'warning' | 'danger'; }
 
@@ -49,7 +50,6 @@ export class Dashboard implements OnInit {
   deviceTypeCount(type: DeviceType): number { return this.summary?.devices.byType[type] ?? 0; }
 
   lineColor(color: string): string {
-    const colors: Record<string, string> = { Roja: '#d32f2f', Verde: '#388e3c', Amarilla: '#d4a900', Lila: '#7b1fa2', Azul: '#1976d2', Naranja: '#f57c00' };
-    return colors[color] ?? (/^#[0-9a-f]{6}$/i.test(color) ? color : '#607d8b');
+    return lineColor('', color);
   }
 }
