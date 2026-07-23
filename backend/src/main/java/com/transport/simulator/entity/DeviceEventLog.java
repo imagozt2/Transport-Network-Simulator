@@ -1,8 +1,8 @@
 package com.transport.simulator.entity;
 
+import com.transport.simulator.enums.DeviceEventType;
 import com.transport.simulator.enums.LogOrigin;
 import com.transport.simulator.enums.LogSeverity;
-import com.transport.simulator.enums.OperationalEventType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "operational_logs")
-public class OperationalLog {
+public class DeviceEventLog {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -31,7 +31,7 @@ public class OperationalLog {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "event_type", nullable = false, length = 80)
-    private OperationalEventType eventType;
+    private DeviceEventType eventType;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
@@ -60,12 +60,12 @@ public class OperationalLog {
     @Column(name = "received_at", nullable = false)
     private LocalDateTime receivedAt;
 
-    protected OperationalLog() {
+    protected DeviceEventLog() {
     }
 
-    public OperationalLog(
+    public DeviceEventLog(
             LogOrigin origin,
-            OperationalEventType eventType,
+            DeviceEventType eventType,
             LogSeverity severity,
             String message,
             Device device,
@@ -99,7 +99,7 @@ public class OperationalLog {
         return origin;
     }
 
-    public OperationalEventType getEventType() {
+    public DeviceEventType getEventType() {
         return eventType;
     }
 

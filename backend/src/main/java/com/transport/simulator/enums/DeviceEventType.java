@@ -1,6 +1,6 @@
 package com.transport.simulator.enums;
 
-public enum OperationalEventType {
+public enum DeviceEventType {
     DEVICE_ONLINE,
     DEVICE_OFFLINE,
     DEVICE_STATUS_CHANGED,

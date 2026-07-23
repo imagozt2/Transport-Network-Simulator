@@ -1,15 +1,15 @@
 package com.transport.simulator.service.deviceevent;
 
+import com.transport.simulator.enums.DeviceEventType;
 import com.transport.simulator.enums.LogOrigin;
 import com.transport.simulator.enums.LogSeverity;
-import com.transport.simulator.enums.OperationalEventType;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
 public record DeviceEvent(
         String deviceCode,
         LogOrigin origin,
-        OperationalEventType type,
+        DeviceEventType type,
         LogSeverity severity,
         String message,
         LocalDateTime occurredAt,

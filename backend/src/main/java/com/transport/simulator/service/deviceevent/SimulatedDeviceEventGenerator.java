@@ -1,11 +1,11 @@
 package com.transport.simulator.service.deviceevent;
 
 import com.transport.simulator.entity.Device;
+import com.transport.simulator.enums.DeviceEventType;
 import com.transport.simulator.enums.DeviceStatus;
 import com.transport.simulator.enums.DeviceType;
 import com.transport.simulator.enums.LogOrigin;
 import com.transport.simulator.enums.LogSeverity;
-import com.transport.simulator.enums.OperationalEventType;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.concurrent.ThreadLocalRandom;
@@ -26,7 +26,7 @@ public class SimulatedDeviceEventGenerator {
 
         return new DeviceEvent(
                 device.getCode(),
-                LogOrigin.BACKEND_SIMULATION,
+                LogOrigin.DEVICE_SIMULATION,
                 definition.type(),
                 definition.severity(),
                 definition.messagePrefix() + device.getName() + ".",
@@ -39,7 +39,7 @@ public class SimulatedDeviceEventGenerator {
     private EventDefinition selectDefinition(Device device) {
         if (device.getStatus() == DeviceStatus.OFFLINE) {
             return new EventDefinition(
-                    OperationalEventType.DEVICE_ONLINE,
+                    DeviceEventType.DEVICE_ONLINE,
                     LogSeverity.INFO,
                     "Conexión simulada restablecida en "
             );
@@ -47,7 +47,7 @@ public class SimulatedDeviceEventGenerator {
 
         if (device.getStatus() == DeviceStatus.ERROR) {
             return new EventDefinition(
-                    OperationalEventType.DEVICE_MAINTENANCE_STARTED,
+                    DeviceEventType.DEVICE_MAINTENANCE_STARTED,
                     LogSeverity.WARNING,
                     "Mantenimiento simulado iniciado en "
             );
@@ -55,7 +55,7 @@ public class SimulatedDeviceEventGenerator {
 
         if (device.getStatus() == DeviceStatus.MAINTENANCE) {
             return new EventDefinition(
-                    OperationalEventType.DEVICE_MAINTENANCE_FINISHED,
+                    DeviceEventType.DEVICE_MAINTENANCE_FINISHED,
                     LogSeverity.INFO,
                     "Mantenimiento simulado finalizado en "
             );
@@ -66,20 +66,20 @@ public class SimulatedDeviceEventGenerator {
         if (device.getType() == DeviceType.TICKET_MACHINE) {
             if (option < 75) {
                 return new EventDefinition(
-                        OperationalEventType.TICKET_PURCHASE_COMPLETED,
+                        DeviceEventType.TICKET_PURCHASE_COMPLETED,
                         LogSeverity.INFO,
                         "Compra simulada completada en "
                 );
             }
             if (option < 95) {
                 return new EventDefinition(
-                        OperationalEventType.TICKET_PURCHASE_REQUESTED,
+                        DeviceEventType.TICKET_PURCHASE_REQUESTED,
                         LogSeverity.INFO,
                         "Solicitud de compra simulada recibida en "
                 );
             }
             return new EventDefinition(
-                    OperationalEventType.TICKET_PURCHASE_FAILED,
+                    DeviceEventType.TICKET_PURCHASE_FAILED,
                     LogSeverity.ERROR,
                     "Error simulado durante una compra en "
             );
@@ -87,20 +87,20 @@ public class SimulatedDeviceEventGenerator {
 
         if (option < 75) {
             return new EventDefinition(
-                    OperationalEventType.VALIDATION_ACCEPTED,
+                    DeviceEventType.VALIDATION_ACCEPTED,
                     LogSeverity.INFO,
                     "Validación simulada aceptada en "
             );
         }
         if (option < 95) {
             return new EventDefinition(
-                    OperationalEventType.VALIDATION_REJECTED,
+                    DeviceEventType.VALIDATION_REJECTED,
                     LogSeverity.WARNING,
                     "Validación simulada rechazada en "
             );
         }
         return new EventDefinition(
-                OperationalEventType.VALIDATION_FAILED,
+                DeviceEventType.VALIDATION_FAILED,
                 LogSeverity.ERROR,
                 "Error simulado durante la validación en "
         );
@@ -121,7 +121,7 @@ public class SimulatedDeviceEventGenerator {
     }
 
     private record EventDefinition(
-            OperationalEventType type,
+            DeviceEventType type,
             LogSeverity severity,
             String messagePrefix
     ) {

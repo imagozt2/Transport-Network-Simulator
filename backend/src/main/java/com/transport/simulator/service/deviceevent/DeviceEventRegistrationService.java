@@ -1,9 +1,9 @@
 package com.transport.simulator.service.deviceevent;
 
 import com.transport.simulator.entity.Device;
-import com.transport.simulator.entity.OperationalLog;
+import com.transport.simulator.entity.DeviceEventLog;
+import com.transport.simulator.repository.DeviceEventLogRepository;
 import com.transport.simulator.repository.DeviceRepository;
-import com.transport.simulator.repository.OperationalLogRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,21 +11,21 @@ import org.springframework.transaction.annotation.Transactional;
 public class DeviceEventRegistrationService {
 
     private final DeviceRepository deviceRepository;
-    private final OperationalLogRepository operationalLogRepository;
+    private final DeviceEventLogRepository deviceEventLogRepository;
     private final DeviceStatusTransitionPolicy statusTransitionPolicy;
 
     public DeviceEventRegistrationService(
             DeviceRepository deviceRepository,
-            OperationalLogRepository operationalLogRepository,
+            DeviceEventLogRepository deviceEventLogRepository,
             DeviceStatusTransitionPolicy statusTransitionPolicy
     ) {
         this.deviceRepository = deviceRepository;
-        this.operationalLogRepository = operationalLogRepository;
+        this.deviceEventLogRepository = deviceEventLogRepository;
         this.statusTransitionPolicy = statusTransitionPolicy;
     }
 
     @Transactional
-    public OperationalLog register(DeviceEvent event) {
+    public DeviceEventLog register(DeviceEvent event) {
         Device device = deviceRepository.findByCodeAndActiveTrue(event.deviceCode())
                 .orElseThrow(() -> new UnknownDeviceException(event.deviceCode()));
 
@@ -34,7 +34,7 @@ public class DeviceEventRegistrationService {
                 event.occurredAt()
         );
 
-        OperationalLog log = new OperationalLog(
+        DeviceEventLog log = new DeviceEventLog(
                 event.origin(),
                 event.type(),
                 event.severity(),
@@ -45,6 +45,6 @@ public class DeviceEventRegistrationService {
                 event.payloadJson()
         );
 
-        return operationalLogRepository.save(log);
+        return deviceEventLogRepository.save(log);
     }
 }
