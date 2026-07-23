@@ -4,6 +4,7 @@ import com.transport.simulator.entity.Device;
 import com.transport.simulator.repository.projection.DeviceStatusCountProjection;
 import com.transport.simulator.repository.projection.DeviceTypeCountProjection;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -11,6 +12,8 @@ import org.springframework.data.jpa.repository.Query;
 public interface DeviceRepository extends JpaRepository<Device, Long> {
 
     long countByActiveTrue();
+
+    Optional<Device> findByCodeAndActiveTrue(String code);
 
     @EntityGraph(attributePaths = "station")
     List<Device> findAllByActiveTrueOrderByCodeAsc();

@@ -1,0 +1,104 @@
+package com.transport.simulator.service.deviceevent;
+
+import com.transport.simulator.entity.Device;
+import com.transport.simulator.enums.DeviceType;
+import com.transport.simulator.enums.LogOrigin;
+import com.transport.simulator.enums.LogSeverity;
+import com.transport.simulator.enums.OperationalEventType;
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.util.concurrent.ThreadLocalRandom;
+import org.springframework.stereotype.Component;
+
+@Component
+public class SimulatedDeviceEventGenerator {
+
+    private final Clock clock;
+
+    public SimulatedDeviceEventGenerator(Clock clock) {
+        this.clock = clock;
+    }
+
+    public DeviceEvent generate(Device device) {
+        EventDefinition definition = selectDefinition(device);
+        LocalDateTime occurredAt = LocalDateTime.now(clock);
+
+        return new DeviceEvent(
+                device.getCode(),
+                LogOrigin.BACKEND_SIMULATION,
+                definition.type(),
+                definition.severity(),
+                definition.messagePrefix() + device.getName() + ".",
+                occurredAt,
+                null,
+                buildPayload(device)
+        );
+    }
+
+    private EventDefinition selectDefinition(Device device) {
+        int option = ThreadLocalRandom.current().nextInt(100);
+
+        if (device.getType() == DeviceType.TICKET_MACHINE) {
+            if (option < 75) {
+                return new EventDefinition(
+                        OperationalEventType.TICKET_PURCHASE_COMPLETED,
+                        LogSeverity.INFO,
+                        "Compra simulada completada en "
+                );
+            }
+            if (option < 95) {
+                return new EventDefinition(
+                        OperationalEventType.TICKET_PURCHASE_REQUESTED,
+                        LogSeverity.INFO,
+                        "Solicitud de compra simulada recibida en "
+                );
+            }
+            return new EventDefinition(
+                    OperationalEventType.TICKET_PURCHASE_FAILED,
+                    LogSeverity.ERROR,
+                    "Error simulado durante una compra en "
+            );
+        }
+
+        if (option < 75) {
+            return new EventDefinition(
+                    OperationalEventType.VALIDATION_ACCEPTED,
+                    LogSeverity.INFO,
+                    "Validación simulada aceptada en "
+            );
+        }
+        if (option < 95) {
+            return new EventDefinition(
+                    OperationalEventType.VALIDATION_REJECTED,
+                    LogSeverity.WARNING,
+                    "Validación simulada rechazada en "
+            );
+        }
+        return new EventDefinition(
+                OperationalEventType.VALIDATION_FAILED,
+                LogSeverity.ERROR,
+                "Error simulado durante la validación en "
+        );
+    }
+
+    private String buildPayload(Device device) {
+        return """
+                {"simulation":true,"deviceCode":"%s","deviceType":"%s","stationCode":"%s"}
+                """.formatted(
+                escape(device.getCode()),
+                device.getType(),
+                escape(device.getStation().getCode())
+        ).strip();
+    }
+
+    private String escape(String value) {
+        return value.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private record EventDefinition(
+            OperationalEventType type,
+            LogSeverity severity,
+            String messagePrefix
+    ) {
+    }
+}
