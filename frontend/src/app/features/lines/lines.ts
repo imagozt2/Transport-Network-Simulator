@@ -11,49 +11,46 @@ import {
 import { LineOperationsService } from '../../core/services/line-operations.service';
 import { contrastingTextColor, lineColor } from '../../core/utils/line-visuals';
 import { servicePeriodLabel, servicePhaseLabel } from '../../core/utils/operation-labels';
+import { PeriodicRefresh } from '../../core/utils/periodic-refresh';
 import { formatDuration, formatTime } from '../../core/utils/temporal-formatters';
 
 @Component({ selector: 'app-lines', templateUrl: './lines.html', styleUrls: ['./lines.css', './lines-circulation.css'] })
 export class Lines implements OnInit, OnDestroy {
   private readonly lineOperationsService = inject(LineOperationsService);
-  private readonly refreshIntervalMs = 5_000;
-  private refreshIntervalId: number | null = null;
+  private readonly periodicRefresh = new PeriodicRefresh(5_000, () => this.loadOperations());
   private readonly expandedLineIds = new Set<number>();
-  private requestInFlight = false;
   private hasInitializedExpansion = false;
 
   operations: LineOperationsResponse | null = null;
   loading = true;
   refreshing = false;
   errorMessage = '';
-  autoRefreshEnabled = true;
+  get autoRefreshEnabled(): boolean { return this.periodicRefresh.enabled; }
   readonly serviceDirections: readonly ServiceDirection[] = ['OUTBOUND', 'INBOUND'];
 
   ngOnInit(): void {
     this.loadOperations(true);
-    this.startAutoRefresh();
+    this.periodicRefresh.start();
   }
 
-  ngOnDestroy(): void { this.stopAutoRefresh(); }
+  ngOnDestroy(): void { this.periodicRefresh.destroy(); }
 
   loadOperations(showLoading = false): void {
-    if (this.requestInFlight) { return; }
-    this.requestInFlight = true;
+    const request = this.periodicRefresh.request(() => this.lineOperationsService.getOperations());
+    if (!request) { return; }
     if (showLoading && !this.operations) { this.loading = true; } else { this.refreshing = true; }
     this.errorMessage = '';
-    this.lineOperationsService.getOperations().subscribe({
+    request.subscribe({
       next: (operations) => {
         this.operations = operations;
         if (!this.hasInitializedExpansion && operations.lines.length > 0) {
           this.expandedLineIds.add(operations.lines[0].id);
         }
         this.hasInitializedExpansion = true;
-        this.requestInFlight = false;
         this.loading = false;
         this.refreshing = false;
       },
       error: () => {
-        this.requestInFlight = false;
         this.errorMessage = 'No se ha podido cargar el estado operativo de las líneas.';
         this.loading = false;
         this.refreshing = false;
@@ -62,8 +59,7 @@ export class Lines implements OnInit, OnDestroy {
   }
 
   toggleAutoRefresh(): void {
-    this.autoRefreshEnabled = !this.autoRefreshEnabled;
-    if (this.autoRefreshEnabled) { this.startAutoRefresh(); } else { this.stopAutoRefresh(); }
+    this.periodicRefresh.toggle();
   }
 
   toggleLine(lineId: number): void {
@@ -176,15 +172,4 @@ export class Lines implements OnInit, OnDestroy {
 
   trackLine(_: number, line: LineOperation): number { return line.id; }
 
-  private startAutoRefresh(): void {
-    this.stopAutoRefresh();
-    this.refreshIntervalId = window.setInterval(() => this.loadOperations(), this.refreshIntervalMs);
-  }
-
-  private stopAutoRefresh(): void {
-    if (this.refreshIntervalId !== null) {
-      window.clearInterval(this.refreshIntervalId);
-      this.refreshIntervalId = null;
-    }
-  }
 }

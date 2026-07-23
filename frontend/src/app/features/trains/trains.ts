@@ -11,6 +11,7 @@ import { TrainOperationsService } from '../../core/services/train-operations.ser
 import { depotShortCode } from '../../core/utils/depot-visuals';
 import { contrastingTextColor, lineColor } from '../../core/utils/line-visuals';
 import { fleetRoleLabel, trainStatusLabel } from '../../core/utils/operation-labels';
+import { PeriodicRefresh } from '../../core/utils/periodic-refresh';
 import { formatCountdown, formatTime } from '../../core/utils/temporal-formatters';
 
 type StatusFilter = TrainStatus | 'ALL';
@@ -23,19 +24,17 @@ type RoleFilter = FleetRole | 'ALL';
 })
 export class Trains implements OnInit, OnDestroy {
   private readonly trainOperationsService = inject(TrainOperationsService);
-  private readonly refreshIntervalMs = 15_000;
+  private readonly periodicRefresh = new PeriodicRefresh(15_000, () => this.loadOperations());
   private readonly expandedTrainIds = new Set<number>();
-  private refreshIntervalId: number | null = null;
   private countdownIntervalId: number | null = null;
   private snapshotReceivedAtMs = Date.now();
-  private requestInFlight = false;
   private hasInitializedExpansion = false;
 
   operations: TrainOperationsResponse | null = null;
   loading = true;
   refreshing = false;
   errorMessage = '';
-  autoRefreshEnabled = true;
+  get autoRefreshEnabled(): boolean { return this.periodicRefresh.enabled; }
   countdownNowMs = Date.now();
   searchText = '';
   selectedStatus: StatusFilter = 'ALL';
@@ -48,21 +47,21 @@ export class Trains implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadOperations(true);
-    this.startAutoRefresh();
+    this.periodicRefresh.start();
     this.startCountdown();
   }
 
   ngOnDestroy(): void {
-    this.stopAutoRefresh();
+    this.periodicRefresh.destroy();
     this.stopCountdown();
   }
 
   loadOperations(showLoading = false): void {
-    if (this.requestInFlight) { return; }
-    this.requestInFlight = true;
+    const request = this.periodicRefresh.request(() => this.trainOperationsService.getOperations());
+    if (!request) { return; }
     if (showLoading && !this.operations) { this.loading = true; } else { this.refreshing = true; }
     this.errorMessage = '';
-    this.trainOperationsService.getOperations().subscribe({
+    request.subscribe({
       next: (operations) => {
         this.operations = operations;
         this.snapshotReceivedAtMs = Date.now();
@@ -71,12 +70,10 @@ export class Trains implements OnInit, OnDestroy {
           this.expandedTrainIds.add(operations.trains[0].id);
         }
         this.hasInitializedExpansion = true;
-        this.requestInFlight = false;
         this.loading = false;
         this.refreshing = false;
       },
       error: () => {
-        this.requestInFlight = false;
         this.errorMessage = 'No se ha podido cargar el estado operativo de la flota.';
         this.loading = false;
         this.refreshing = false;
@@ -85,8 +82,7 @@ export class Trains implements OnInit, OnDestroy {
   }
 
   toggleAutoRefresh(): void {
-    this.autoRefreshEnabled = !this.autoRefreshEnabled;
-    if (this.autoRefreshEnabled) { this.startAutoRefresh(); } else { this.stopAutoRefresh(); }
+    this.periodicRefresh.toggle();
   }
 
   setSearchText(value: string): void { this.searchText = value; }
@@ -204,18 +200,6 @@ export class Trains implements OnInit, OnDestroy {
   }
 
   trackTrain(_: number, train: TrainOperation): number { return train.id; }
-
-  private startAutoRefresh(): void {
-    this.stopAutoRefresh();
-    this.refreshIntervalId = window.setInterval(() => this.loadOperations(), this.refreshIntervalMs);
-  }
-
-  private stopAutoRefresh(): void {
-    if (this.refreshIntervalId !== null) {
-      window.clearInterval(this.refreshIntervalId);
-      this.refreshIntervalId = null;
-    }
-  }
 
   private startCountdown(): void {
     this.stopCountdown();

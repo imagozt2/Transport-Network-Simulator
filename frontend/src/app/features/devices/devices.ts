@@ -14,6 +14,7 @@ import {
   deviceTypeLabel,
   deviceTypeShortLabel
 } from '../../core/utils/operation-labels';
+import { PeriodicRefresh } from '../../core/utils/periodic-refresh';
 import { formatDateTime, formatTime } from '../../core/utils/temporal-formatters';
 
 type TypeFilter = DeviceType | 'ALL';
@@ -27,15 +28,13 @@ type StatusFilter = DeviceStatus | 'ALL';
 })
 export class Devices implements OnInit, OnDestroy {
   private readonly deviceOperationsService = inject(DeviceOperationsService);
-  private readonly refreshIntervalMs = 15_000;
-  private refreshIntervalId: number | null = null;
-  private requestInFlight = false;
+  private readonly periodicRefresh = new PeriodicRefresh(15_000, () => this.loadOperations());
 
   operations: DeviceOperationsResponse | null = null;
   loading = true;
   refreshing = false;
   errorMessage = '';
-  autoRefreshEnabled = true;
+  get autoRefreshEnabled(): boolean { return this.periodicRefresh.enabled; }
   searchText = '';
   selectedType: TypeFilter = 'ALL';
   selectedStatus: StatusFilter = 'ALL';
@@ -55,19 +54,16 @@ export class Devices implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadOperations(true);
-    this.startAutoRefresh();
+    this.periodicRefresh.start();
   }
 
   ngOnDestroy(): void {
-    this.stopAutoRefresh();
+    this.periodicRefresh.destroy();
   }
 
   loadOperations(showLoading = false): void {
-    if (this.requestInFlight) {
-      return;
-    }
-
-    this.requestInFlight = true;
+    const request = this.periodicRefresh.request(() => this.deviceOperationsService.getOperations());
+    if (!request) { return; }
     if (showLoading && !this.operations) {
       this.loading = true;
     } else {
@@ -75,15 +71,13 @@ export class Devices implements OnInit, OnDestroy {
     }
     this.errorMessage = '';
 
-    this.deviceOperationsService.getOperations().subscribe({
+    request.subscribe({
       next: (operations) => {
         this.operations = operations;
-        this.requestInFlight = false;
         this.loading = false;
         this.refreshing = false;
       },
       error: () => {
-        this.requestInFlight = false;
         this.errorMessage = 'No se ha podido cargar el estado operativo de las máquinas.';
         this.loading = false;
         this.refreshing = false;
@@ -92,12 +86,7 @@ export class Devices implements OnInit, OnDestroy {
   }
 
   toggleAutoRefresh(): void {
-    this.autoRefreshEnabled = !this.autoRefreshEnabled;
-    if (this.autoRefreshEnabled) {
-      this.startAutoRefresh();
-    } else {
-      this.stopAutoRefresh();
-    }
+    this.periodicRefresh.toggle();
   }
 
   setSearchText(value: string): void {
@@ -196,18 +185,4 @@ export class Devices implements OnInit, OnDestroy {
     return device.id;
   }
 
-  private startAutoRefresh(): void {
-    this.stopAutoRefresh();
-    this.refreshIntervalId = window.setInterval(
-      () => this.loadOperations(),
-      this.refreshIntervalMs
-    );
-  }
-
-  private stopAutoRefresh(): void {
-    if (this.refreshIntervalId !== null) {
-      window.clearInterval(this.refreshIntervalId);
-      this.refreshIntervalId = null;
-    }
-  }
 }

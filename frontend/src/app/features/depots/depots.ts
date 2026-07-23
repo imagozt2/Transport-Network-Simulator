@@ -11,6 +11,7 @@ import { DepotOperationsService } from '../../core/services/depot-operations.ser
 import { depotShortCode } from '../../core/utils/depot-visuals';
 import { contrastingTextColor, lineColor } from '../../core/utils/line-visuals';
 import { depotStatusLabel, fleetRoleLabel, trainStatusLabel } from '../../core/utils/operation-labels';
+import { PeriodicRefresh } from '../../core/utils/periodic-refresh';
 import { formatTime } from '../../core/utils/temporal-formatters';
 
 type StatusFilter = DepotOperationStatus | 'ALL';
@@ -22,17 +23,15 @@ type StatusFilter = DepotOperationStatus | 'ALL';
 })
 export class Depots implements OnInit, OnDestroy {
   private readonly depotOperationsService = inject(DepotOperationsService);
-  private readonly refreshIntervalMs = 15_000;
+  private readonly periodicRefresh = new PeriodicRefresh(15_000, () => this.loadOperations());
   private readonly expandedDepotIds = new Set<number>();
-  private refreshIntervalId: number | null = null;
-  private requestInFlight = false;
   private hasInitializedExpansion = false;
 
   operations: DepotOperationsResponse | null = null;
   loading = true;
   refreshing = false;
   errorMessage = '';
-  autoRefreshEnabled = true;
+  get autoRefreshEnabled(): boolean { return this.periodicRefresh.enabled; }
   searchText = '';
   selectedStatus: StatusFilter = 'ALL';
 
@@ -43,29 +42,27 @@ export class Depots implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadOperations(true);
-    this.startAutoRefresh();
+    this.periodicRefresh.start();
   }
 
-  ngOnDestroy(): void { this.stopAutoRefresh(); }
+  ngOnDestroy(): void { this.periodicRefresh.destroy(); }
 
   loadOperations(showLoading = false): void {
-    if (this.requestInFlight) { return; }
-    this.requestInFlight = true;
+    const request = this.periodicRefresh.request(() => this.depotOperationsService.getOperations());
+    if (!request) { return; }
     if (showLoading && !this.operations) { this.loading = true; } else { this.refreshing = true; }
     this.errorMessage = '';
-    this.depotOperationsService.getOperations().subscribe({
+    request.subscribe({
       next: (operations) => {
         this.operations = operations;
         if (!this.hasInitializedExpansion && operations.depots.length > 0) {
           this.expandedDepotIds.add(operations.depots[0].id);
         }
         this.hasInitializedExpansion = true;
-        this.requestInFlight = false;
         this.loading = false;
         this.refreshing = false;
       },
       error: () => {
-        this.requestInFlight = false;
         this.errorMessage = 'No se ha podido cargar el estado operativo de las cocheras.';
         this.loading = false;
         this.refreshing = false;
@@ -74,8 +71,7 @@ export class Depots implements OnInit, OnDestroy {
   }
 
   toggleAutoRefresh(): void {
-    this.autoRefreshEnabled = !this.autoRefreshEnabled;
-    if (this.autoRefreshEnabled) { this.startAutoRefresh(); } else { this.stopAutoRefresh(); }
+    this.periodicRefresh.toggle();
   }
 
   setSearchText(value: string): void { this.searchText = value; }
@@ -155,15 +151,4 @@ export class Depots implements OnInit, OnDestroy {
 
   trackDepot(_: number, depot: DepotOperation): number { return depot.id; }
 
-  private startAutoRefresh(): void {
-    this.stopAutoRefresh();
-    this.refreshIntervalId = window.setInterval(() => this.loadOperations(), this.refreshIntervalMs);
-  }
-
-  private stopAutoRefresh(): void {
-    if (this.refreshIntervalId !== null) {
-      window.clearInterval(this.refreshIntervalId);
-      this.refreshIntervalId = null;
-    }
-  }
 }
