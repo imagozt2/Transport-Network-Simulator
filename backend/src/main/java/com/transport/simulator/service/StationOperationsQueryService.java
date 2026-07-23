@@ -6,11 +6,8 @@ import com.transport.simulator.dto.response.stationoperation.StationOperationRes
 import com.transport.simulator.dto.response.stationoperation.StationOperationsResponse;
 import com.transport.simulator.dto.response.stationoperation.StationOperationTerminalResponse;
 import com.transport.simulator.dto.response.stationoperation.StationArrivalResponse;
-import com.transport.simulator.entity.Device;
 import com.transport.simulator.entity.LineStation;
 import com.transport.simulator.entity.Station;
-import com.transport.simulator.enums.DeviceStatus;
-import com.transport.simulator.enums.DeviceType;
 import com.transport.simulator.enums.ServiceDirection;
 import com.transport.simulator.enums.StationOperationStatus;
 import com.transport.simulator.enums.TrainPositionState;
@@ -18,6 +15,7 @@ import com.transport.simulator.enums.TrainStatus;
 import com.transport.simulator.repository.DeviceRepository;
 import com.transport.simulator.repository.LineStationRepository;
 import com.transport.simulator.repository.StationRepository;
+import com.transport.simulator.repository.projection.StationDeviceSummaryProjection;
 import com.transport.simulator.service.model.RailwaySimulationState;
 import com.transport.simulator.service.model.SimulatedLineState;
 import com.transport.simulator.service.model.SimulatedTrainState;
@@ -74,9 +72,9 @@ public class StationOperationsQueryService {
                         train -> train.currentLineId(),
                         Collectors.toList()
                 ));
-        Map<Long, List<Device>> devicesByStation = deviceRepository.findAllByActiveTrueOrderByCodeAsc()
-                .stream()
-                .collect(Collectors.groupingBy(device -> device.getStation().getId()));
+        Map<Long, StationOperationDevicesResponse> devicesByStation = summarizeDevicesByStation(
+                deviceRepository.summarizeActiveDevicesByStation()
+        );
 
         List<StationOperationResponse> responses = stations.stream()
                 .map(station -> toStationResponse(
@@ -85,7 +83,7 @@ public class StationOperationsQueryService {
                         routesByLine,
                         simulatedLinesById,
                         activeTrainsByLine,
-                        devicesByStation.getOrDefault(station.getId(), List.of()),
+                        devicesByStation.getOrDefault(station.getId(), StationOperationDevicesResponse.empty()),
                         simulation.evaluatedAt()
                 ))
                 .toList();
@@ -108,7 +106,7 @@ public class StationOperationsQueryService {
             Map<Long, List<LineStation>> routesByLine,
             Map<Long, SimulatedLineState> simulatedLinesById,
             Map<Long, List<SimulatedTrainState>> activeTrainsByLine,
-            List<Device> devices,
+            StationOperationDevicesResponse deviceSummary,
             ZonedDateTime evaluatedAt
     ) {
         List<StationOperationLineResponse> lines = memberships.stream()
@@ -126,7 +124,6 @@ public class StationOperationsQueryService {
                 .filter(StationOperationLineResponse::serviceOpen)
                 .mapToInt(StationOperationLineResponse::activeTrainCount)
                 .sum();
-        StationOperationDevicesResponse deviceSummary = summarizeDevices(devices);
         List<StationArrivalResponse> nextArrivals = calculateNextArrivals(
                 station,
                 memberships,
@@ -351,25 +348,17 @@ public class StationOperationsQueryService {
         return line;
     }
 
-    private StationOperationDevicesResponse summarizeDevices(List<Device> devices) {
-        return new StationOperationDevicesResponse(
-                devices.size(),
-                countType(devices, DeviceType.TICKET_MACHINE),
-                countType(devices, DeviceType.ENTRY_VALIDATOR),
-                countType(devices, DeviceType.EXIT_VALIDATOR),
-                countStatus(devices, DeviceStatus.ONLINE),
-                countStatus(devices, DeviceStatus.OFFLINE),
-                countStatus(devices, DeviceStatus.MAINTENANCE),
-                countStatus(devices, DeviceStatus.ERROR)
-        );
-    }
-
-    private long countType(List<Device> devices, DeviceType type) {
-        return devices.stream().filter(device -> device.getType() == type).count();
-    }
-
-    private long countStatus(List<Device> devices, DeviceStatus status) {
-        return devices.stream().filter(device -> device.getStatus() == status).count();
+    private Map<Long, StationOperationDevicesResponse> summarizeDevicesByStation(
+            List<StationDeviceSummaryProjection> summaries
+    ) {
+        Map<Long, DeviceSummaryAccumulator> accumulators = new java.util.HashMap<>();
+        summaries.forEach(summary -> accumulators
+                .computeIfAbsent(summary.getStationId(), ignored -> new DeviceSummaryAccumulator())
+                .add(summary));
+        return accumulators.entrySet().stream().collect(Collectors.toUnmodifiableMap(
+                Map.Entry::getKey,
+                entry -> entry.getValue().toResponse()
+        ));
     }
 
     private StationOperationStatus resolveStatus(
@@ -400,5 +389,39 @@ public class StationOperationsQueryService {
             int stationsAway,
             long secondsUntilArrival
     ) {
+    }
+
+    private static final class DeviceSummaryAccumulator {
+        private long total;
+        private long ticketMachines;
+        private long entryValidators;
+        private long exitValidators;
+        private long online;
+        private long offline;
+        private long maintenance;
+        private long errors;
+
+        private void add(StationDeviceSummaryProjection summary) {
+            long count = summary.getTotal();
+            total += count;
+            switch (summary.getType()) {
+                case TICKET_MACHINE -> ticketMachines += count;
+                case ENTRY_VALIDATOR -> entryValidators += count;
+                case EXIT_VALIDATOR -> exitValidators += count;
+            }
+            switch (summary.getStatus()) {
+                case ONLINE -> online += count;
+                case OFFLINE -> offline += count;
+                case MAINTENANCE -> maintenance += count;
+                case ERROR -> errors += count;
+            }
+        }
+
+        private StationOperationDevicesResponse toResponse() {
+            return new StationOperationDevicesResponse(
+                    total, ticketMachines, entryValidators, exitValidators,
+                    online, offline, maintenance, errors
+            );
+        }
     }
 }

@@ -10,4 +10,7 @@ public record StationOperationDevicesResponse(
         long maintenance,
         long errors
 ) {
+    public static StationOperationDevicesResponse empty() {
+        return new StationOperationDevicesResponse(0, 0, 0, 0, 0, 0, 0, 0);
+    }
 }

@@ -29,6 +29,7 @@ import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -74,7 +75,10 @@ public class DepotOperationsQueryService {
         validateFleet(activeTrains, simulatedTrainsById);
         Map<Long, Train> trainsById = activeTrains.stream()
                 .collect(Collectors.toUnmodifiableMap(Train::getId, Function.identity()));
-        Map<Long, Station> stationsById = stationRepository.findAllByActiveTrueOrderByNameAsc().stream()
+        Set<Long> movementStationIds = simulation.depotMovements().stream()
+                .map(PlannedDepotMovement::stationId)
+                .collect(Collectors.toUnmodifiableSet());
+        Map<Long, Station> stationsById = stationRepository.findAllById(movementStationIds).stream()
                 .collect(Collectors.toUnmodifiableMap(Station::getId, Function.identity()));
 
         Map<Long, List<Train>> assignedTrainsByDepot = activeTrains.stream()
@@ -82,6 +86,8 @@ public class DepotOperationsQueryService {
         Map<Long, Long> occupancyByDepot = simulation.trains().stream()
                 .filter(train -> train.status() == TrainStatus.DEPOT)
                 .collect(Collectors.groupingBy(SimulatedTrainState::currentDepotId, Collectors.counting()));
+        Map<Long, List<PlannedDepotMovement>> movementsByDepot = simulation.depotMovements().stream()
+                .collect(Collectors.groupingBy(PlannedDepotMovement::depotId));
 
         List<DepotOperationResponse> depots = depotRepository.findAllByActiveTrueOrderByCodeAsc().stream()
                 .map(depot -> toDepotResponse(
@@ -89,9 +95,7 @@ public class DepotOperationsQueryService {
                         assignedTrainsByDepot.getOrDefault(depot.getId(), List.of()),
                         occupancyByDepot.getOrDefault(depot.getId(), 0L),
                         simulatedTrainsById,
-                        simulation.depotMovements().stream()
-                                .filter(movement -> movement.depotId().equals(depot.getId()))
-                                .toList(),
+                        movementsByDepot.getOrDefault(depot.getId(), List.of()),
                         simulation.evaluatedAt(),
                         trainsById,
                         stationsById

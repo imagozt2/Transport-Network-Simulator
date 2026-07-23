@@ -26,6 +26,7 @@ import com.transport.simulator.service.model.SimulatedTrainState;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -74,7 +75,7 @@ class DepotOperationsQueryServiceTests {
         when(simulation.depotMovements()).thenReturn(movements);
         when(simulationStateService.getCurrentState()).thenReturn(simulation);
         when(trainRepository.findAllByActiveTrueOrderByCodeAsc()).thenReturn(List.of(regular, reserve));
-        when(stationRepository.findAllByActiveTrueOrderByNameAsc()).thenReturn(List.of(terminal));
+        when(stationRepository.findAllById(Set.of(terminal.getId()))).thenReturn(List.of(terminal));
         when(depotRepository.findAllByActiveTrueOrderByCodeAsc()).thenReturn(List.of(depot));
 
         var response = queryService.getOperations();

@@ -107,7 +107,7 @@ class OperationalSectionsConsistencyTests {
         when(trainRepository.findAllByActiveTrueOrderByCodeAsc())
                 .thenReturn(List.of(circulatingTrain, storedTrain));
         when(depotRepository.findAllByActiveTrueOrderByCodeAsc()).thenReturn(List.of(depot));
-        when(deviceRepository.findAllByActiveTrueOrderByCodeAsc()).thenReturn(List.of());
+        when(deviceRepository.summarizeActiveDevicesByStation()).thenReturn(List.of());
 
         var lineOperations = lineQueryService.getOperations();
         var stationOperations = stationQueryService.getOperations();

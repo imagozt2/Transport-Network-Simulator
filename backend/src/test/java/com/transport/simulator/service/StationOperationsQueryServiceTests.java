@@ -5,7 +5,6 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.transport.simulator.entity.Device;
 import com.transport.simulator.entity.LineStation;
 import com.transport.simulator.entity.Station;
 import com.transport.simulator.entity.TransportLine;
@@ -20,6 +19,7 @@ import com.transport.simulator.enums.TrainStatus;
 import com.transport.simulator.repository.DeviceRepository;
 import com.transport.simulator.repository.LineStationRepository;
 import com.transport.simulator.repository.StationRepository;
+import com.transport.simulator.repository.projection.StationDeviceSummaryProjection;
 import com.transport.simulator.service.model.LineDutyPlan;
 import com.transport.simulator.service.model.LineServiceOperationState;
 import com.transport.simulator.service.model.RailwaySimulationState;
@@ -83,10 +83,12 @@ class StationOperationsQueryServiceTests {
                 91L, "T-9002", TrainPositionState.AT_STATION,
                 ServiceDirection.OUTBOUND, stationB, stationB, stationC, 140
         );
-        Device failedDevice = mock(Device.class);
-        when(failedDevice.getStation()).thenReturn(stationA);
+        StationDeviceSummaryProjection failedDevice = mock(StationDeviceSummaryProjection.class);
+        Long stationAId = stationA.getId();
+        when(failedDevice.getStationId()).thenReturn(stationAId);
         when(failedDevice.getType()).thenReturn(DeviceType.TICKET_MACHINE);
         when(failedDevice.getStatus()).thenReturn(DeviceStatus.ERROR);
+        when(failedDevice.getTotal()).thenReturn(1L);
 
         RailwaySimulationState simulation = simulation(
                 line,
@@ -97,7 +99,7 @@ class StationOperationsQueryServiceTests {
                 .thenReturn(List.of(stationA, stationB, stationC));
         when(lineStationRepository.findAllByActiveTrueOrderByLineCodeAscStationOrderAsc())
                 .thenReturn(route);
-        when(deviceRepository.findAllByActiveTrueOrderByCodeAsc()).thenReturn(List.of(failedDevice));
+        when(deviceRepository.summarizeActiveDevicesByStation()).thenReturn(List.of(failedDevice));
 
         var response = queryService.getOperations();
 

@@ -3,6 +3,7 @@ package com.transport.simulator.repository;
 import com.transport.simulator.entity.Device;
 import com.transport.simulator.repository.projection.DeviceStatusCountProjection;
 import com.transport.simulator.repository.projection.DeviceTypeCountProjection;
+import com.transport.simulator.repository.projection.StationDeviceSummaryProjection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -33,4 +34,15 @@ public interface DeviceRepository extends JpaRepository<Device, Long> {
             GROUP BY device.type
             """)
     List<DeviceTypeCountProjection> countActiveDevicesByType();
+
+    @Query("""
+            SELECT device.station.id AS stationId,
+                   device.type AS type,
+                   device.status AS status,
+                   COUNT(device.id) AS total
+            FROM Device device
+            WHERE device.active = true
+            GROUP BY device.station.id, device.type, device.status
+            """)
+    List<StationDeviceSummaryProjection> summarizeActiveDevicesByStation();
 }
