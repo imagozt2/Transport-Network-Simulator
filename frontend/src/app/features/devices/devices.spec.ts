@@ -1,0 +1,58 @@
+import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { of } from 'rxjs';
+
+import { routes } from '../../app.routes';
+import { DeviceOperationsResponse } from '../../core/models/device-operation.model';
+import { DeviceOperationsService } from '../../core/services/device-operations.service';
+import { Devices } from './devices';
+
+const response: DeviceOperationsResponse = {
+  evaluatedAt: '2026-07-23T12:00:00+02:00',
+  summary: {
+    totalDevices: 1,
+    filteredDevices: 1,
+    byType: { TICKET_MACHINE: 1, ENTRY_VALIDATOR: 0, EXIT_VALIDATOR: 0 },
+    byStatus: { ONLINE: 1, OFFLINE: 0, MAINTENANCE: 0, ERROR: 0 }
+  },
+  devices: [{
+    id: 10,
+    code: 'RMM-MB-ST001-001',
+    name: 'Máquina de billetes 1',
+    type: 'TICKET_MACHINE',
+    status: 'ONLINE',
+    lastConnectionAt: '2026-07-23T11:59:55+02:00',
+    station: { id: 1, code: 'ST001', name: 'Los Molinos' }
+  }]
+};
+
+describe('Devices log navigation', () => {
+  it('should link each device card to logs using its stable code', async () => {
+    await TestBed.configureTestingModule({
+      imports: [Devices],
+      providers: [
+        provideRouter([]),
+        {
+          provide: DeviceOperationsService,
+          useValue: { getOperations: () => of(response) }
+        }
+      ]
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(Devices);
+    fixture.detectChanges();
+    const link = fixture.nativeElement.querySelector('.logs-link') as HTMLAnchorElement;
+
+    expect(link).not.toBeNull();
+    expect(link.getAttribute('href')).toBe('/logs?deviceCode=RMM-MB-ST001-001');
+    expect(link.getAttribute('aria-label')).toContain('RMM-MB-ST001-001');
+    fixture.destroy();
+  });
+
+  it('should register the global logs route', () => {
+    const layoutRoute = routes.find((route) => route.path === '');
+    const logsRoute = layoutRoute?.children?.find((route) => route.path === 'logs');
+
+    expect(logsRoute).toBeDefined();
+  });
+});
