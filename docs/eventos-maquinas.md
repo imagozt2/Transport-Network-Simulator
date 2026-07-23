@@ -1,0 +1,197 @@
+# Ciclo de eventos de las máquinas
+
+El backend simula actividad operativa de las máquinas de venta y de los validadores de la red de
+Macegocia. Cada evento se registra como un log, actualiza cuando corresponde el estado de su máquina
+y conserva la estación en la que se encuentra.
+
+Este mecanismo es independiente del motor ferroviario. Las líneas, estaciones, trenes y cocheras no
+generan logs simulados.
+
+## Flujo general
+
+```text
+generador automático                   futuro consumidor MQTT
+         │                                      │
+         └──────────────┬───────────────────────┘
+                        ▼
+                  DeviceEvent
+                        │
+                        ▼
+           validación y resolución de máquina
+                        │
+                 misma transacción
+               ┌────────┴────────┐
+               ▼                 ▼
+       estado de la máquina   operational_logs
+```
+
+La generación y el registro son responsabilidades separadas:
+
+- `SimulatedDeviceEventGenerator` decide qué evento produce una máquina;
+- `DeviceEventRegistrationService` localiza la máquina, aplica la transición y persiste el log;
+- `DeviceEventSimulationService` selecciona las máquinas de cada ciclo;
+- `DeviceEventSimulationScheduler` ejecuta automáticamente esos ciclos;
+- `DeviceEventIngress` es el puerto que utilizará la futura integración MQTT.
+
+No existe ningún endpoint HTTP para generar logs manualmente.
+
+## Simulación automática
+
+El scheduler espera un tiempo inicial y después ejecuta ciclos con retardo fijo. En cada ciclo:
+
+1. consulta las máquinas activas;
+2. mezcla la lista para repartir la actividad;
+3. selecciona máquinas diferentes hasta alcanzar el límite configurado;
+4. genera un evento compatible con cada máquina;
+5. registra cada evento mediante el servicio común.
+
+Un ciclo sin máquinas activas termina sin generar registros. El número solicitado se limita al
+intervalo de 1 a 100 eventos.
+
+### Configuración
+
+| Variable de entorno | Valor predeterminado | Descripción |
+| --- | ---: | --- |
+| `DEVICE_EVENT_SIMULATION_ENABLED` | `true` | Activa o desactiva el scheduler. |
+| `DEVICE_EVENT_SIMULATION_INITIAL_DELAY_MS` | `10000` | Espera antes del primer ciclo. |
+| `DEVICE_EVENT_SIMULATION_INTERVAL_MS` | `60000` | Retardo entre el final de un ciclo y el siguiente. |
+| `DEVICE_EVENTS_PER_CYCLE` | `5` | Cantidad de máquinas seleccionadas por ciclo. |
+
+Para desactivar la simulación durante una ejecución:
+
+```powershell
+$env:DEVICE_EVENT_SIMULATION_ENABLED = "false"
+```
+
+## Eventos por tipo de máquina
+
+Una máquina de venta en estado `ONLINE` puede producir:
+
+- `TICKET_PURCHASE_REQUESTED`;
+- `TICKET_PURCHASE_COMPLETED`;
+- `TICKET_PURCHASE_FAILED`.
+
+Un validador de entrada o salida en estado `ONLINE` puede producir:
+
+- `VALIDATION_ACCEPTED`;
+- `VALIDATION_REJECTED`;
+- `VALIDATION_FAILED`.
+
+Antes de generar actividad ordinaria se respeta el ciclo operativo de la máquina:
+
+| Estado anterior | Evento generado | Estado resultante |
+| --- | --- | --- |
+| `OFFLINE` | `DEVICE_ONLINE` | `ONLINE` |
+| `ERROR` | `DEVICE_MAINTENANCE_STARTED` | `MAINTENANCE` |
+| `MAINTENANCE` | `DEVICE_MAINTENANCE_FINISHED` | `ONLINE` |
+
+## Transiciones de estado
+
+La política centralizada aplica las siguientes reglas:
+
+| Eventos | Estado resultante |
+| --- | --- |
+| Conexión, fin de mantenimiento y actividad correcta | `ONLINE` |
+| Validación rechazada | `ONLINE` |
+| `DEVICE_OFFLINE` | `OFFLINE` |
+| Inicio de mantenimiento | `MAINTENANCE` |
+| Error de dispositivo, compra o validación | `ERROR` |
+| `DEVICE_STATUS_CHANGED` sin estado explícito | Conserva el estado anterior |
+
+Una validación rechazada no implica que el validador esté averiado. Por eso la máquina continúa
+conectada.
+
+Cada evento actualiza `last_connection_at` si su fecha es posterior a la conexión ya registrada. La
+transición y el `INSERT` en `operational_logs` comparten una transacción: si la persistencia falla,
+el estado tampoco se confirma.
+
+## Persistencia
+
+El modelo `DeviceEventLog` usa la tabla `operational_logs`. Para los eventos simulados:
+
+- `log_origin` contiene `DEVICE_SIMULATION`;
+- `device_id` identifica obligatoriamente la máquina emisora;
+- `station_id` se obtiene de esa máquina;
+- `event_type`, `severity` y `message` describen el suceso;
+- `created_at` conserva el instante del evento;
+- `received_at` registra su recepción por el backend;
+- `payload_json` guarda contexto adicional;
+- `external_reference` queda vacío porque el simulador no necesita idempotencia externa.
+
+La estación solo representa la ubicación. No se considera emisora del evento.
+
+## Contrato preparado para MQTT
+
+Todavía no se ha añadido un cliente MQTT ni una conexión con un broker. El backend sí dispone del
+puerto `DeviceEventIngress`, al que podrá llamar el futuro consumidor sin duplicar la lógica de
+registro.
+
+El contrato actual usa la versión `1.0`:
+
+```json
+{
+  "schemaVersion": "1.0",
+  "eventId": "17dfd715-a55f-4e5f-b319-e254cb8436f8",
+  "deviceCode": "TVM-ST001-01",
+  "type": "DEVICE_ONLINE",
+  "severity": "INFO",
+  "message": "Máquina conectada",
+  "occurredAt": "2026-07-23T08:30:00Z",
+  "payload": {
+    "temperature": 37
+  }
+}
+```
+
+| Campo | Obligatorio | Regla |
+| --- | --- | --- |
+| `schemaVersion` | Sí | Debe ser `1.0`; máximo 20 caracteres. |
+| `eventId` | Sí | Identificador global del evento; máximo 150 caracteres. |
+| `deviceCode` | Sí | Debe corresponder a una máquina activa; máximo 50 caracteres. |
+| `type` | Sí | Valor de `DeviceEventType`. |
+| `severity` | Sí | `DEBUG`, `INFO`, `WARNING`, `ERROR` o `CRITICAL`. |
+| `message` | Sí | Texto no vacío de hasta 500 caracteres. |
+| `occurredAt` | Sí | Instante ISO 8601 con referencia UTC. |
+| `payload` | No | Objeto JSON con datos adicionales. |
+
+El emisor no decide el origen del log. El adaptador lo establece siempre como `MQTT`.
+
+### Idempotencia
+
+MQTT puede volver a entregar un mensaje. Antes de registrar un evento, el puerto busca la combinación
+de origen y `eventId`:
+
+- si no existe, registra el evento y devuelve `ACCEPTED`;
+- si ya existe, no repite la transición ni la persistencia y devuelve `DUPLICATE`.
+
+El índice único `uk_operational_logs_origin_external_reference` refuerza esta regla en MySQL. Los
+eventos simulados pueden conservar `external_reference` como `NULL`.
+
+## Límites actuales
+
+Esta fase no incluye:
+
+- conexión o autenticación con un broker MQTT;
+- definición de topics;
+- consumidor de mensajes;
+- publicación de respuestas MQTT;
+- endpoints HTTP para crear eventos;
+- interfaz web de máquinas o consulta de logs.
+
+Esas capas se construirán sobre `DeviceEventIngress`, manteniendo un único ciclo de validación,
+transición y persistencia.
+
+## Pruebas
+
+La suite de `service/deviceevent` cubre:
+
+- generación según tipo y estado;
+- selección y límite por ciclo;
+- ausencia de máquinas activas;
+- asociación entre log, máquina y estación;
+- cambios de estado y última conexión;
+- rechazo de máquinas desconocidas;
+- validación y conversión del contrato MQTT;
+- versiones incompatibles;
+- reintentos idempotentes.
+

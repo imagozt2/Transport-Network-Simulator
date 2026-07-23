@@ -22,6 +22,7 @@ La aplicación incluye actualmente:
 - calendarios, franjas horarias, frecuencias y tiempos de recorrido configurables;
 - flota regular, de reserva e histórica diferenciada;
 - un motor determinista de turnos, posiciones y movimientos de cocheras;
+- un ciclo automático de eventos y estados para las máquinas de venta y validación;
 - una API REST conectada a MySQL;
 - datos iniciales reproducibles para la red, operaciones y productos de transporte;
 - pruebas unitarias del backend y del frontend;
@@ -100,6 +101,10 @@ La conexión a MySQL utiliza variables de entorno:
 | `DB_URL` | No | URL JDBC; dispone de un valor local predeterminado. |
 | `FRONTEND_URL` | No | Origen permitido por CORS; por defecto, `http://localhost:4200`. |
 | `SERVICE_TIME_ZONE` | No | Zona horaria operativa; por defecto, `Europe/Madrid`. |
+| `DEVICE_EVENT_SIMULATION_ENABLED` | No | Activa la simulación automática; por defecto, `true`. |
+| `DEVICE_EVENT_SIMULATION_INITIAL_DELAY_MS` | No | Retraso inicial en milisegundos; por defecto, `10000`. |
+| `DEVICE_EVENT_SIMULATION_INTERVAL_MS` | No | Retardo entre ciclos; por defecto, `60000`. |
+| `DEVICE_EVENTS_PER_CYCLE` | No | Eventos generados por ciclo; por defecto, `5`. |
 
 El archivo [`backend/.env.example`](backend/.env.example) sirve como referencia. Los archivos `.env`
 están ignorados por Git y Spring Boot no los carga automáticamente.
@@ -182,6 +187,7 @@ y en cada actualización de esa rama.
 - [Sección de Cocheras y movimientos de flota](docs/cocheras.md)
 - [Modelo de operación ferroviaria](docs/modelo-operacion-ferroviaria.md)
 - [Motor de simulación ferroviaria](docs/motor-simulacion-ferroviaria.md)
+- [Ciclo de eventos de las máquinas](docs/eventos-maquinas.md)
 - [Inicialización y estructura de la base de datos](database/README.md)
 
 ## Desarrollo por ramas
