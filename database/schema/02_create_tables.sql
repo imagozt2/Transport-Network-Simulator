@@ -592,5 +592,6 @@ CREATE INDEX idx_operational_logs_train ON operational_logs (train_id);
 CREATE INDEX idx_operational_logs_ticket ON operational_logs (ticket_id);
 CREATE INDEX idx_operational_logs_purchase ON operational_logs (purchase_id);
 CREATE INDEX idx_operational_logs_validation ON operational_logs (validation_id);
-CREATE INDEX idx_operational_logs_external_reference ON operational_logs (external_reference);
+CREATE UNIQUE INDEX uk_operational_logs_origin_external_reference
+    ON operational_logs (log_origin, external_reference);
 CREATE INDEX idx_operational_logs_received_at ON operational_logs (received_at);
