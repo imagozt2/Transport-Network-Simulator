@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 
 import { Dashboard } from './features/dashboard/dashboard';
 import { Depots } from './features/depots/depots';
+import { Devices } from './features/devices/devices';
 import { Lines } from './features/lines/lines';
 import { NetworkMap } from './features/network-map/network-map';
 import { Stations } from './features/stations/stations';
@@ -41,6 +42,10 @@ export const routes: Routes = [
       {
         path: 'depots',
         component: Depots
+      },
+      {
+        path: 'devices',
+        component: Devices
       }
     ]
   },

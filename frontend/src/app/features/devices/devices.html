@@ -1,0 +1,174 @@
+<section class="devices-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Operación de dispositivos</p>
+      <h1>Máquinas</h1>
+      <p class="page-description">
+        Consulta las máquinas de billetes y los validadores instalados en cada estación.
+      </p>
+      @if (operations) {
+        <p class="last-update">
+          Última actualización: {{ formatEvaluatedAt(operations.evaluatedAt) }}
+        </p>
+      }
+    </div>
+
+    <div class="header-actions">
+      <button class="refresh-button secondary" type="button" (click)="toggleAutoRefresh()">
+        {{ autoRefreshEnabled ? 'Pausar autoactualización' : 'Activar autoactualización' }}
+      </button>
+      <button
+        class="refresh-button"
+        type="button"
+        [disabled]="refreshing"
+        (click)="loadOperations()"
+      >
+        {{ refreshing ? 'Actualizando…' : 'Actualizar' }}
+      </button>
+    </div>
+  </header>
+
+  @if (loading) {
+    <div class="state-card" role="status">Cargando estado operativo de las máquinas…</div>
+  } @else if (errorMessage && !operations) {
+    <div class="state-card error-card" role="alert">
+      <span>{{ errorMessage }}</span>
+      <button type="button" (click)="loadOperations(true)">Reintentar</button>
+    </div>
+  } @else if (operations; as data) {
+    @if (errorMessage) {
+      <div class="refresh-warning">
+        {{ errorMessage }} Se conservan los últimos datos disponibles.
+      </div>
+    }
+
+    <section class="summary-grid" aria-label="Resumen operativo de máquinas">
+      <article class="summary-card">
+        <span>Máquinas activas</span>
+        <strong>{{ data.summary.totalDevices }}</strong>
+        <small>Dispositivos registrados</small>
+      </article>
+      <article class="summary-card online">
+        <span>Online</span>
+        <strong>{{ data.summary.byStatus.ONLINE }}</strong>
+        <small>{{ availabilityPercentage() }}% de disponibilidad</small>
+      </article>
+      <article class="summary-card attention">
+        <span>Requieren atención</span>
+        <strong>{{ attentionCount() }}</strong>
+        <small>Mantenimiento o error</small>
+      </article>
+      <article class="summary-card">
+        <span>Resultados</span>
+        <strong>{{ filteredDevices().length }}</strong>
+        <small>Según los filtros actuales</small>
+      </article>
+    </section>
+
+    <section class="type-overview" aria-label="Distribución por tipo">
+      @for (type of types; track type) {
+        <article class="type-card type-{{ type.toLowerCase().replace('_', '-') }}">
+          <span class="type-symbol" aria-hidden="true">{{ typeShortLabel(type) }}</span>
+          <span>
+            <strong>{{ typeLabel(type) }}</strong>
+            <small>{{ data.summary.byType[type] }} dispositivos</small>
+          </span>
+        </article>
+      }
+    </section>
+
+    <section class="filters-panel" aria-label="Filtros de máquinas">
+      <label class="filter-field search-field">
+        <span>Buscar máquina</span>
+        <input
+          type="search"
+          [value]="searchText"
+          placeholder="Código, nombre o estación"
+          (input)="setSearchText($any($event.target).value)"
+        />
+      </label>
+      <label class="filter-field">
+        <span>Tipo</span>
+        <select [value]="selectedType" (change)="setTypeFilter($any($event.target).value)">
+          <option value="ALL">Todos</option>
+          @for (type of types; track type) {
+            <option [value]="type">{{ typeLabel(type) }}</option>
+          }
+        </select>
+      </label>
+      <label class="filter-field">
+        <span>Estado</span>
+        <select [value]="selectedStatus" (change)="setStatusFilter($any($event.target).value)">
+          <option value="ALL">Todos</option>
+          @for (status of statuses; track status) {
+            <option [value]="status">{{ statusLabel(status) }}</option>
+          }
+        </select>
+      </label>
+      <label class="filter-field">
+        <span>Estación</span>
+        <select
+          [value]="selectedStationCode"
+          (change)="setStationFilter($any($event.target).value)"
+        >
+          <option value="ALL">Todas</option>
+          @for (station of stationOptions(); track station.code) {
+            <option [value]="station.code">{{ station.name }} · {{ station.code }}</option>
+          }
+        </select>
+      </label>
+    </section>
+
+    @if (hasActiveFilters()) {
+      <div class="filter-notice">
+        <span>{{ filteredDevices().length }} máquinas coinciden con los filtros.</span>
+        <button type="button" (click)="clearFilters()">Limpiar filtros</button>
+      </div>
+    }
+
+    <div class="devices-grid">
+      @for (device of filteredDevices(); track trackDevice($index, device)) {
+        <article class="device-card status-border-{{ device.status.toLowerCase() }}">
+          <header class="device-card-header">
+            <span class="device-icon type-{{ device.type.toLowerCase().replace('_', '-') }}">
+              {{ typeShortLabel(device.type) }}
+            </span>
+            <span class="device-heading">
+              <span class="device-code">{{ device.code }}</span>
+              <strong>{{ device.name }}</strong>
+              <small>{{ typeLabel(device.type) }}</small>
+            </span>
+            <span class="status-pill status-{{ device.status.toLowerCase() }}">
+              {{ statusLabel(device.status) }}
+            </span>
+          </header>
+
+          <section class="device-location">
+            <span>Estación</span>
+            <strong>{{ device.station.name }}</strong>
+            <small>{{ device.station.code }}</small>
+          </section>
+
+          <dl class="device-details">
+            <div>
+              <dt>Tipo</dt>
+              <dd>{{ typeLabel(device.type) }}</dd>
+            </div>
+            <div>
+              <dt>Estado operativo</dt>
+              <dd>{{ statusLabel(device.status) }}</dd>
+            </div>
+            <div class="connection-detail">
+              <dt>Última conexión</dt>
+              <dd>{{ formatDateTime(device.lastConnectionAt) }}</dd>
+            </div>
+          </dl>
+        </article>
+      } @empty {
+        <div class="state-card empty-card">
+          No hay máquinas que coincidan con los filtros seleccionados.
+        </div>
+      }
+    </div>
+  }
+</section>

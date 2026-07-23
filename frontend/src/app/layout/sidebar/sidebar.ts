@@ -36,7 +36,8 @@ export class Sidebar {
         { label: 'Líneas', route: '/lines', icon: 'LI' },
         { label: 'Estaciones', route: '/stations', icon: 'ES' },
         { label: 'Trenes', route: '/trains', icon: 'TR' },
-        { label: 'Cocheras', route: '/depots', icon: 'CO' }
+        { label: 'Cocheras', route: '/depots', icon: 'CO' },
+        { label: 'Máquinas', route: '/devices', icon: 'MA' }
       ]
     }
   ];
