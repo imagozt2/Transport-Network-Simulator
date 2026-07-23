@@ -1,4 +1,5 @@
 import { Component, inject, OnInit } from '@angular/core';
+import { ActivatedRoute, ParamMap } from '@angular/router';
 
 import { DeviceOperation } from '../../core/models/device-operation.model';
 import { OperationalLog } from '../../core/models/operational-log.model';
@@ -25,6 +26,7 @@ type OptionalEventType = DeviceEventType | 'ALL';
 export class Logs implements OnInit {
   private readonly logsService = inject(OperationalLogsService);
   private readonly devicesService = inject(DeviceOperationsService);
+  private readonly route = inject(ActivatedRoute);
 
   logs: OperationalLog[] = [];
   devices: DeviceOperation[] = [];
@@ -67,6 +69,7 @@ export class Logs implements OnInit {
   ];
 
   ngOnInit(): void {
+    this.initializeFiltersFromUrl(this.route.snapshot.queryParamMap);
     this.loadFilterOptions();
     this.loadLogs(0);
   }
@@ -221,6 +224,47 @@ export class Logs implements OnInit {
       occurredFrom: this.occurredFrom || undefined,
       occurredTo: this.occurredTo || undefined
     };
+  }
+
+  private initializeFiltersFromUrl(queryParams: ParamMap): void {
+    this.selectedSeverity = this.readEnumQueryParam(
+      queryParams,
+      'severity',
+      this.severities
+    ) ?? 'ALL';
+    this.selectedOrigin = this.readEnumQueryParam(
+      queryParams,
+      'origin',
+      this.origins
+    ) ?? 'ALL';
+    this.selectedEventType = this.readEnumQueryParam(
+      queryParams,
+      'eventType',
+      this.eventTypes
+    ) ?? 'ALL';
+    this.selectedDeviceCode = this.readTextQueryParam(queryParams, 'deviceCode') ?? 'ALL';
+    this.selectedStationCode = this.readTextQueryParam(queryParams, 'stationCode') ?? 'ALL';
+    this.occurredFrom = this.readDateTimeQueryParam(queryParams, 'occurredFrom') ?? '';
+    this.occurredTo = this.readDateTimeQueryParam(queryParams, 'occurredTo') ?? '';
+  }
+
+  private readEnumQueryParam<T extends string>(
+    queryParams: ParamMap,
+    name: string,
+    allowedValues: readonly T[]
+  ): T | null {
+    const value = queryParams.get(name);
+    return value && allowedValues.includes(value as T) ? value as T : null;
+  }
+
+  private readTextQueryParam(queryParams: ParamMap, name: string): string | null {
+    const value = queryParams.get(name)?.trim();
+    return value ? value : null;
+  }
+
+  private readDateTimeQueryParam(queryParams: ParamMap, name: string): string | null {
+    const value = queryParams.get(name);
+    return value && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value) ? value : null;
   }
 
   private loadFilterOptions(): void {
