@@ -79,7 +79,14 @@ describe('Logs URL filters', () => {
       occurredTo: '2026-07-23T12:00'
     });
     expect(fixture.componentInstance.selectedDeviceCode).toBe('RMM-MB-ST001-001');
-    expect(fixture.nativeElement.querySelector('.log-card')).not.toBeNull();
+    const deviceFilter = fixture.nativeElement.querySelector(
+      '.filters-grid label:nth-of-type(4) select'
+    ) as HTMLSelectElement;
+    expect(deviceFilter.value).toBe('RMM-MB-ST001-001');
+    expect(deviceFilter.selectedOptions[0]?.textContent).toContain('Máquina de billetes 1');
+    expect(fixture.nativeElement.querySelector('.logs-table tbody tr')).not.toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('.pagination-panel.bottom button'))
+      .toHaveLength(4);
   });
 
   it('should ignore invalid enumerations and malformed dates from the URL', async () => {

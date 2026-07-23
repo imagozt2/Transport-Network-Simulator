@@ -10,6 +10,7 @@ import com.transport.simulator.enums.DeviceEventType;
 import com.transport.simulator.enums.DeviceStatus;
 import com.transport.simulator.enums.DeviceType;
 import com.transport.simulator.enums.LogOrigin;
+import com.transport.simulator.enums.LogSeverity;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -25,12 +26,12 @@ class SimulatedDeviceEventGeneratorTests {
             new SimulatedDeviceEventGenerator(Clock.fixed(NOW, SERVICE_ZONE));
 
     @Test
-    void shouldRestoreAnOfflineDeviceBeforeGeneratingOperationalActivity() {
-        DeviceEvent event = generator.generate(device(
+    void shouldGenerateTheServiceOpeningEventExplicitly() {
+        DeviceEvent event = generator.generateServiceState(device(
                 "TVM-ST001-01",
                 DeviceType.TICKET_MACHINE,
                 DeviceStatus.OFFLINE
-        ));
+        ), true);
 
         assertThat(event.type()).isEqualTo(DeviceEventType.DEVICE_ONLINE);
         assertThat(event.origin()).isEqualTo(LogOrigin.DEVICE_SIMULATION);
@@ -44,49 +45,49 @@ class SimulatedDeviceEventGeneratorTests {
     }
 
     @Test
-    void shouldMoveAnErroredDeviceThroughMaintenanceBeforeReturningOnline() {
-        DeviceEvent maintenanceStarted = generator.generate(device(
+    void shouldGenerateTheServiceClosingEventExplicitly() {
+        DeviceEvent event = generator.generateServiceState(device(
                 "VAL-ST001-01",
                 DeviceType.ENTRY_VALIDATOR,
-                DeviceStatus.ERROR
-        ));
-        DeviceEvent maintenanceFinished = generator.generate(device(
-                "VAL-ST001-02",
-                DeviceType.EXIT_VALIDATOR,
-                DeviceStatus.MAINTENANCE
-        ));
+                DeviceStatus.ONLINE
+        ), false);
 
-        assertThat(maintenanceStarted.type())
-                .isEqualTo(DeviceEventType.DEVICE_MAINTENANCE_STARTED);
-        assertThat(maintenanceFinished.type())
-                .isEqualTo(DeviceEventType.DEVICE_MAINTENANCE_FINISHED);
+        assertThat(event.type()).isEqualTo(DeviceEventType.DEVICE_OFFLINE);
+        assertThat(event.severity()).isEqualTo(LogSeverity.INFO);
     }
 
     @Test
-    void shouldOnlyGenerateEventsCompatibleWithTheDeviceType() {
-        DeviceEvent ticketMachineEvent = generator.generate(device(
+    void shouldOnlyGenerateNonErrorEventsCompatibleWithTheDeviceType() {
+        Device ticketMachine = device(
                 "TVM-ST001-01",
                 DeviceType.TICKET_MACHINE,
                 DeviceStatus.ONLINE
-        ));
-        DeviceEvent validatorEvent = generator.generate(device(
+        );
+        Device validator = device(
                 "VAL-ST001-01",
                 DeviceType.ENTRY_VALIDATOR,
                 DeviceStatus.ONLINE
-        ));
+        );
 
-        assertThat(ticketMachineEvent.type()).isIn(
-                DeviceEventType.TICKET_PURCHASE_REQUESTED,
-                DeviceEventType.TICKET_PURCHASE_COMPLETED,
-                DeviceEventType.TICKET_PURCHASE_FAILED
-        );
-        assertThat(validatorEvent.type()).isIn(
-                DeviceEventType.VALIDATION_ACCEPTED,
-                DeviceEventType.VALIDATION_REJECTED,
-                DeviceEventType.VALIDATION_FAILED
-        );
-        assertThat(Set.of(ticketMachineEvent.deviceCode(), validatorEvent.deviceCode()))
-                .hasSize(2);
+        Set<DeviceEventType> ticketEvents = java.util.stream.IntStream.range(0, 200)
+                .mapToObj(ignored -> generator.generateOperationalActivity(ticketMachine))
+                .peek(event -> assertThat(event.severity()).isNotIn(
+                        LogSeverity.ERROR,
+                        LogSeverity.CRITICAL
+                ))
+                .map(DeviceEvent::type)
+                .collect(java.util.stream.Collectors.toSet());
+        Set<DeviceEventType> validatorEvents = java.util.stream.IntStream.range(0, 200)
+                .mapToObj(ignored -> generator.generateOperationalActivity(validator))
+                .peek(event -> assertThat(event.severity()).isNotIn(
+                        LogSeverity.ERROR,
+                        LogSeverity.CRITICAL
+                ))
+                .map(DeviceEvent::type)
+                .collect(java.util.stream.Collectors.toSet());
+
+        assertThat(ticketEvents).doesNotContain(DeviceEventType.TICKET_PURCHASE_FAILED);
+        assertThat(validatorEvents).doesNotContain(DeviceEventType.VALIDATION_FAILED);
     }
 
     private Device device(String code, DeviceType type, DeviceStatus status) {

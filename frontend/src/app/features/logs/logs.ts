@@ -136,9 +136,21 @@ export class Logs implements OnInit {
     }
   }
 
+  goToFirstPage(): void {
+    if (!this.firstPage) {
+      this.loadLogs(0);
+    }
+  }
+
   goToNextPage(): void {
     if (!this.lastPage) {
       this.loadLogs(this.currentPage + 1);
+    }
+  }
+
+  goToLastPage(): void {
+    if (!this.lastPage && this.totalPages > 0) {
+      this.loadLogs(this.totalPages - 1);
     }
   }
 
@@ -151,6 +163,15 @@ export class Logs implements OnInit {
     return this.totalPages === 0
       ? 'Página 0 de 0'
       : `Página ${this.currentPage + 1} de ${this.totalPages}`;
+  }
+
+  paginationRangeLabel(): string {
+    if (this.totalElements === 0 || this.logs.length === 0) {
+      return 'Sin resultados';
+    }
+    const firstResult = this.currentPage * this.pageSize + 1;
+    const lastResult = firstResult + this.logs.length - 1;
+    return `Mostrando ${firstResult}-${lastResult} de ${this.totalElements}`;
   }
 
   warningCount(): number {

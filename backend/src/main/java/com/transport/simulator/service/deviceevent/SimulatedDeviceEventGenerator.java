@@ -2,7 +2,6 @@ package com.transport.simulator.service.deviceevent;
 
 import com.transport.simulator.entity.Device;
 import com.transport.simulator.enums.DeviceEventType;
-import com.transport.simulator.enums.DeviceStatus;
 import com.transport.simulator.enums.DeviceType;
 import com.transport.simulator.enums.LogOrigin;
 import com.transport.simulator.enums.LogSeverity;
@@ -20,8 +19,27 @@ class SimulatedDeviceEventGenerator {
         this.clock = clock;
     }
 
-    public DeviceEvent generate(Device device) {
-        EventDefinition definition = selectDefinition(device);
+    public DeviceEvent generateOperationalActivity(Device device) {
+        EventDefinition definition = selectOperationalDefinition(device);
+        return createEvent(device, definition);
+    }
+
+    public DeviceEvent generateServiceState(Device device, boolean serviceOpen) {
+        EventDefinition definition = serviceOpen
+                ? new EventDefinition(
+                        DeviceEventType.DEVICE_ONLINE,
+                        LogSeverity.INFO,
+                        "Conexión simulada iniciada en "
+                )
+                : new EventDefinition(
+                        DeviceEventType.DEVICE_OFFLINE,
+                        LogSeverity.INFO,
+                        "Conexión simulada finalizada en "
+                );
+        return createEvent(device, definition);
+    }
+
+    private DeviceEvent createEvent(Device device, EventDefinition definition) {
         LocalDateTime occurredAt = LocalDateTime.now(clock);
 
         return new DeviceEvent(
@@ -36,35 +54,11 @@ class SimulatedDeviceEventGenerator {
         );
     }
 
-    private EventDefinition selectDefinition(Device device) {
-        if (device.getStatus() == DeviceStatus.OFFLINE) {
-            return new EventDefinition(
-                    DeviceEventType.DEVICE_ONLINE,
-                    LogSeverity.INFO,
-                    "Conexión simulada restablecida en "
-            );
-        }
-
-        if (device.getStatus() == DeviceStatus.ERROR) {
-            return new EventDefinition(
-                    DeviceEventType.DEVICE_MAINTENANCE_STARTED,
-                    LogSeverity.WARNING,
-                    "Mantenimiento simulado iniciado en "
-            );
-        }
-
-        if (device.getStatus() == DeviceStatus.MAINTENANCE) {
-            return new EventDefinition(
-                    DeviceEventType.DEVICE_MAINTENANCE_FINISHED,
-                    LogSeverity.INFO,
-                    "Mantenimiento simulado finalizado en "
-            );
-        }
-
+    private EventDefinition selectOperationalDefinition(Device device) {
         int option = ThreadLocalRandom.current().nextInt(100);
 
         if (device.getType() == DeviceType.TICKET_MACHINE) {
-            if (option < 75) {
+            if (option < 70) {
                 return new EventDefinition(
                         DeviceEventType.TICKET_PURCHASE_COMPLETED,
                         LogSeverity.INFO,
@@ -79,9 +73,9 @@ class SimulatedDeviceEventGenerator {
                 );
             }
             return new EventDefinition(
-                    DeviceEventType.TICKET_PURCHASE_FAILED,
-                    LogSeverity.ERROR,
-                    "Error simulado durante una compra en "
+                    DeviceEventType.QR_TICKET_GENERATED,
+                    LogSeverity.INFO,
+                    "Billete QR simulado generado en "
             );
         }
 
@@ -100,9 +94,9 @@ class SimulatedDeviceEventGenerator {
             );
         }
         return new EventDefinition(
-                DeviceEventType.VALIDATION_FAILED,
-                LogSeverity.ERROR,
-                "Error simulado durante la validación en "
+                DeviceEventType.VALIDATION_REQUESTED,
+                LogSeverity.INFO,
+                "Solicitud de validación simulada recibida en "
         );
     }
 

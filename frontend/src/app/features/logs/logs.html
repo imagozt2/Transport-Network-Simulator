@@ -33,8 +33,8 @@
       <label><span>Severidad</span><select [value]="selectedSeverity" (change)="selectedSeverity = $any($event.target).value"><option value="ALL">Todas</option>@for (severity of severities; track severity) { <option [value]="severity">{{ severityLabel(severity) }}</option> }</select></label>
       <label><span>Origen</span><select [value]="selectedOrigin" (change)="selectedOrigin = $any($event.target).value"><option value="ALL">Todos</option>@for (origin of origins; track origin) { <option [value]="origin">{{ originLabel(origin) }}</option> }</select></label>
       <label><span>Evento</span><select [value]="selectedEventType" (change)="selectedEventType = $any($event.target).value"><option value="ALL">Todos</option>@for (type of eventTypes; track type) { <option [value]="type">{{ eventTypeLabel(type) }}</option> }</select></label>
-      <label><span>Máquina</span><select [value]="selectedDeviceCode" (change)="selectedDeviceCode = $any($event.target).value"><option value="ALL">Todas</option>@for (device of devices; track device.code) { <option [value]="device.code">{{ device.code }} · {{ device.name }}</option> }</select></label>
-      <label><span>Estación</span><select [value]="selectedStationCode" (change)="selectedStationCode = $any($event.target).value"><option value="ALL">Todas</option>@for (station of stationOptions(); track station.code) { <option [value]="station.code">{{ station.name }} · {{ station.code }}</option> }</select></label>
+      <label><span>Máquina</span><select [value]="selectedDeviceCode" (change)="selectedDeviceCode = $any($event.target).value"><option value="ALL">Todas</option>@for (device of devices; track device.code) { <option [value]="device.code" [selected]="device.code === selectedDeviceCode">{{ device.code }} · {{ device.name }}</option> }</select></label>
+      <label><span>Estación</span><select [value]="selectedStationCode" (change)="selectedStationCode = $any($event.target).value"><option value="ALL">Todas</option>@for (station of stationOptions(); track station.code) { <option [value]="station.code" [selected]="station.code === selectedStationCode">{{ station.name }} · {{ station.code }}</option> }</select></label>
       <label><span>Desde</span><input type="datetime-local" [value]="occurredFrom" (change)="occurredFrom = $any($event.target).value" /></label>
       <label><span>Hasta</span><input type="datetime-local" [value]="occurredTo" (change)="occurredTo = $any($event.target).value" /></label>
     </div>
@@ -45,33 +45,67 @@
   } @else if (errorMessage) {
     <div class="state-card error-state" role="alert"><span>{{ errorMessage }}</span><button type="button" (click)="loadLogs(0)">Reintentar</button></div>
   } @else {
-    <section class="logs-list" aria-label="Resultados">
-      @for (log of logs; track trackLog($index, log)) {
-        <article class="log-card severity-border-{{ log.severity.toLowerCase() }}">
-          <header>
-            <div class="log-identity">
-              <span class="severity-pill severity-{{ log.severity.toLowerCase() }}">{{ severityLabel(log.severity) }}</span>
-              <strong>{{ eventTypeLabel(log.eventType) }}</strong>
-            </div>
-            <time [attr.datetime]="log.occurredAt">{{ formatDateTime(log.occurredAt) }}</time>
-          </header>
-          <p class="log-message">{{ log.message }}</p>
-          <dl>
-            <div><dt>Máquina</dt><dd>{{ log.deviceCode }} · {{ log.deviceName }}</dd></div>
-            <div><dt>Estación</dt><dd>{{ log.stationName }} · {{ log.stationCode }}</dd></div>
-            <div><dt>Origen</dt><dd>{{ originLabel(log.origin) }}</dd></div>
-            <div><dt>Referencia</dt><dd>{{ log.externalReference || 'Sin referencia externa' }}</dd></div>
-          </dl>
-        </article>
-      } @empty {
+    <section class="logs-results" aria-label="Resultados">
+      <header class="results-header">
+        <div>
+          <h2>Registros operativos</h2>
+          <p>{{ hasActiveFilters() ? 'Resultados filtrados.' : 'Últimos logs disponibles.' }}</p>
+        </div>
+        <label class="pagination-size">
+          <span>Logs por página</span>
+          <select [value]="pageSize" (change)="setPageSize($any($event.target).value)">
+            @for (size of pageSizes; track size) { <option [value]="size">{{ size }}</option> }
+          </select>
+        </label>
+      </header>
+
+      <nav class="pagination-panel" aria-label="Paginación superior">
+        <div><strong>{{ pageLabel() }}</strong><span>{{ paginationRangeLabel() }}</span></div>
+        <div class="pagination-actions">
+          <button class="pagination-button" type="button" [disabled]="firstPage" (click)="goToFirstPage()">Primera</button>
+          <button class="pagination-button" type="button" [disabled]="firstPage" (click)="goToPreviousPage()">Anterior</button>
+          <button class="pagination-button" type="button" [disabled]="lastPage" (click)="goToNextPage()">Siguiente</button>
+          <button class="pagination-button" type="button" [disabled]="lastPage" (click)="goToLastPage()">Última</button>
+        </div>
+      </nav>
+
+      @if (logs.length === 0) {
         <div class="state-card">No hay logs que coincidan con los filtros seleccionados.</div>
+      } @else {
+        <div class="logs-table-wrapper">
+          <table class="logs-table">
+            <thead>
+              <tr>
+                <th>Fecha</th><th>Severidad</th><th>Evento</th><th>Origen</th>
+                <th>Máquina</th><th>Estación</th><th>Mensaje</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (log of logs; track trackLog($index, log)) {
+                <tr>
+                  <td class="date-cell"><time [attr.datetime]="log.occurredAt">{{ formatDateTime(log.occurredAt) }}</time></td>
+                  <td><span class="severity-pill severity-{{ log.severity.toLowerCase() }}">{{ severityLabel(log.severity) }}</span></td>
+                  <td class="event-cell">{{ eventTypeLabel(log.eventType) }}</td>
+                  <td><span class="origin-chip">{{ originLabel(log.origin) }}</span></td>
+                  <td class="entity-cell">{{ log.deviceCode }} · {{ log.deviceName }}</td>
+                  <td class="location-cell">{{ log.stationName }} · {{ log.stationCode }}</td>
+                  <td class="message-cell">{{ log.message }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <nav class="pagination-panel bottom" aria-label="Paginación inferior">
+          <div><strong>{{ pageLabel() }}</strong><span>{{ paginationRangeLabel() }}</span></div>
+          <div class="pagination-actions">
+            <button class="pagination-button" type="button" [disabled]="firstPage" (click)="goToFirstPage()">Primera</button>
+            <button class="pagination-button" type="button" [disabled]="firstPage" (click)="goToPreviousPage()">Anterior</button>
+            <button class="pagination-button" type="button" [disabled]="lastPage" (click)="goToNextPage()">Siguiente</button>
+            <button class="pagination-button" type="button" [disabled]="lastPage" (click)="goToLastPage()">Última</button>
+          </div>
+        </nav>
       }
     </section>
-
-    <footer class="pagination" aria-label="Paginación">
-      <label><span>Resultados por página</span><select [value]="pageSize" (change)="setPageSize($any($event.target).value)">@for (size of pageSizes; track size) { <option [value]="size">{{ size }}</option> }</select></label>
-      <span>{{ pageLabel() }}</span>
-      <div><button type="button" [disabled]="firstPage" (click)="goToPreviousPage()">Anterior</button><button type="button" [disabled]="lastPage" (click)="goToNextPage()">Siguiente</button></div>
-    </footer>
   }
 </section>

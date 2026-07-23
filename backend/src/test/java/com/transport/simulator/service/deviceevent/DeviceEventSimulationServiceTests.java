@@ -11,9 +11,12 @@ import static org.mockito.Mockito.when;
 
 import com.transport.simulator.entity.Device;
 import com.transport.simulator.enums.DeviceEventType;
+import com.transport.simulator.enums.DeviceStatus;
 import com.transport.simulator.enums.LogOrigin;
 import com.transport.simulator.enums.LogSeverity;
 import com.transport.simulator.repository.DeviceRepository;
+import com.transport.simulator.service.ServiceOperationStateService;
+import com.transport.simulator.service.model.ServiceOperationState;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,6 +35,8 @@ class DeviceEventSimulationServiceTests {
     private SimulatedDeviceEventGenerator eventGenerator;
     @Mock
     private DeviceEventRegistrationService registrationService;
+    @Mock
+    private ServiceOperationStateService serviceOperationStateService;
 
     private DeviceEventSimulationService simulationService;
 
@@ -40,7 +45,8 @@ class DeviceEventSimulationServiceTests {
         simulationService = new DeviceEventSimulationService(
                 deviceRepository,
                 eventGenerator,
-                registrationService
+                registrationService,
+                serviceOperationStateService
         );
     }
 
@@ -51,7 +57,8 @@ class DeviceEventSimulationServiceTests {
         Device third = device("DEV-003");
         when(deviceRepository.findAllByActiveTrueOrderByCodeAsc())
                 .thenReturn(List.of(first, second, third));
-        when(eventGenerator.generate(any(Device.class)))
+        serviceOpen(true);
+        when(eventGenerator.generateOperationalActivity(any(Device.class)))
                 .thenAnswer(invocation -> event(invocation.getArgument(0)));
         ArgumentCaptor<DeviceEvent> captor = ArgumentCaptor.forClass(DeviceEvent.class);
 
@@ -71,7 +78,7 @@ class DeviceEventSimulationServiceTests {
 
         assertThat(simulationService.runCycle(5)).isZero();
 
-        verify(eventGenerator, never()).generate(any());
+        verify(eventGenerator, never()).generateOperationalActivity(any());
         verify(registrationService, never()).register(any());
     }
 
@@ -81,16 +88,60 @@ class DeviceEventSimulationServiceTests {
         DeviceEvent generatedEvent = event(device);
         when(deviceRepository.findAllByActiveTrueOrderByCodeAsc())
                 .thenReturn(List.of(device));
-        when(eventGenerator.generate(device)).thenReturn(generatedEvent);
+        serviceOpen(true);
+        when(eventGenerator.generateOperationalActivity(device)).thenReturn(generatedEvent);
 
         assertThat(simulationService.runCycle(0)).isEqualTo(1);
         verify(registrationService).register(any());
     }
 
+    @Test
+    void shouldSynchronizeEveryDeviceWithTheServiceOpeningBeforeActivity() {
+        Device first = device("DEV-001", DeviceStatus.OFFLINE);
+        Device second = device("DEV-002", DeviceStatus.ERROR);
+        when(deviceRepository.findAllByActiveTrueOrderByCodeAsc()).thenReturn(List.of(first, second));
+        serviceOpen(true);
+        when(eventGenerator.generateServiceState(any(Device.class), org.mockito.ArgumentMatchers.eq(true)))
+                .thenAnswer(invocation -> event(invocation.getArgument(0)));
+        when(eventGenerator.generateOperationalActivity(any(Device.class)))
+                .thenAnswer(invocation -> event(invocation.getArgument(0)));
+
+        int generated = simulationService.runCycle(1);
+
+        assertThat(generated).isEqualTo(3);
+        verify(eventGenerator, times(2)).generateServiceState(any(Device.class), org.mockito.ArgumentMatchers.eq(true));
+        verify(eventGenerator).generateOperationalActivity(any(Device.class));
+    }
+
+    @Test
+    void shouldSwitchEveryDeviceOfflineAndGenerateNoActivityWhenServiceCloses() {
+        Device first = device("DEV-001", DeviceStatus.ONLINE);
+        Device second = device("DEV-002", DeviceStatus.ONLINE);
+        when(deviceRepository.findAllByActiveTrueOrderByCodeAsc()).thenReturn(List.of(first, second));
+        serviceOpen(false);
+        when(eventGenerator.generateServiceState(any(Device.class), org.mockito.ArgumentMatchers.eq(false)))
+                .thenAnswer(invocation -> event(invocation.getArgument(0)));
+
+        assertThat(simulationService.runCycle(5)).isEqualTo(2);
+        verify(eventGenerator, times(2)).generateServiceState(any(Device.class), org.mockito.ArgumentMatchers.eq(false));
+        verify(eventGenerator, never()).generateOperationalActivity(any());
+    }
+
     private Device device(String code) {
+        return device(code, DeviceStatus.ONLINE);
+    }
+
+    private Device device(String code, DeviceStatus status) {
         Device device = mock(Device.class);
         lenient().when(device.getCode()).thenReturn(code);
+        lenient().when(device.getStatus()).thenReturn(status);
         return device;
+    }
+
+    private void serviceOpen(boolean open) {
+        ServiceOperationState state = mock(ServiceOperationState.class);
+        when(state.serviceOpen()).thenReturn(open);
+        when(serviceOperationStateService.getCurrentState()).thenReturn(state);
     }
 
     private DeviceEvent event(Device device) {

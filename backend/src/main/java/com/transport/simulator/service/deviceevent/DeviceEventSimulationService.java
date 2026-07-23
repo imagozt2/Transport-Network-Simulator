@@ -1,7 +1,9 @@
 package com.transport.simulator.service.deviceevent;
 
 import com.transport.simulator.entity.Device;
+import com.transport.simulator.enums.DeviceStatus;
 import com.transport.simulator.repository.DeviceRepository;
+import com.transport.simulator.service.ServiceOperationStateService;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -15,37 +17,53 @@ class DeviceEventSimulationService {
     private final DeviceRepository deviceRepository;
     private final SimulatedDeviceEventGenerator eventGenerator;
     private final DeviceEventRegistrationService eventRegistrationService;
+    private final ServiceOperationStateService serviceOperationStateService;
 
     public DeviceEventSimulationService(
             DeviceRepository deviceRepository,
             SimulatedDeviceEventGenerator eventGenerator,
-            DeviceEventRegistrationService eventRegistrationService
+            DeviceEventRegistrationService eventRegistrationService,
+            ServiceOperationStateService serviceOperationStateService
     ) {
         this.deviceRepository = deviceRepository;
         this.eventGenerator = eventGenerator;
         this.eventRegistrationService = eventRegistrationService;
+        this.serviceOperationStateService = serviceOperationStateService;
     }
 
-    private List<DeviceEvent> generateEvents(int requestedEventCount) {
+    private List<DeviceEvent> generateOperationalEvents(
+            List<Device> activeDevices,
+            int requestedEventCount
+    ) {
         int eventCount = Math.clamp(requestedEventCount, 1, MAX_EVENTS_PER_CYCLE);
-        List<Device> activeDevices = new ArrayList<>(
-                deviceRepository.findAllByActiveTrueOrderByCodeAsc()
-        );
+        List<Device> shuffledDevices = new ArrayList<>(activeDevices);
+        Collections.shuffle(shuffledDevices);
 
-        if (activeDevices.isEmpty()) {
-            return List.of();
-        }
-
-        Collections.shuffle(activeDevices);
-
-        return activeDevices.stream()
-                .limit(Math.min(eventCount, activeDevices.size()))
-                .map(eventGenerator::generate)
+        return shuffledDevices.stream()
+                .limit(Math.min(eventCount, shuffledDevices.size()))
+                .map(eventGenerator::generateOperationalActivity)
                 .toList();
     }
 
     public int runCycle(int requestedEventCount) {
-        List<DeviceEvent> events = generateEvents(requestedEventCount);
+        List<Device> activeDevices = deviceRepository.findAllByActiveTrueOrderByCodeAsc();
+        if (activeDevices.isEmpty()) {
+            return 0;
+        }
+
+        boolean serviceOpen = serviceOperationStateService.getCurrentState().serviceOpen();
+        DeviceStatus expectedStatus = serviceOpen ? DeviceStatus.ONLINE : DeviceStatus.OFFLINE;
+        List<DeviceEvent> events = new ArrayList<>();
+
+        activeDevices.stream()
+                .filter(device -> device.getStatus() != expectedStatus)
+                .map(device -> eventGenerator.generateServiceState(device, serviceOpen))
+                .forEach(events::add);
+
+        if (serviceOpen) {
+            events.addAll(generateOperationalEvents(activeDevices, requestedEventCount));
+        }
+
         events.forEach(eventRegistrationService::register);
         return events.size();
     }

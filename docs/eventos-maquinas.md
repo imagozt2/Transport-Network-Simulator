@@ -40,13 +40,15 @@ No existe ningún endpoint HTTP para generar logs manualmente.
 El scheduler espera un tiempo inicial y después ejecuta ciclos con retardo fijo. En cada ciclo:
 
 1. consulta las máquinas activas;
-2. mezcla la lista para repartir la actividad;
-3. selecciona máquinas diferentes hasta alcanzar el límite configurado;
-4. genera un evento compatible con cada máquina;
-5. registra cada evento mediante el servicio común.
+2. consulta si el servicio ferroviario se encuentra abierto;
+3. conecta todas las máquinas si el servicio está abierto o las desconecta cuando está cerrado;
+4. durante el servicio, mezcla la lista para repartir la actividad ordinaria;
+5. selecciona máquinas diferentes hasta alcanzar el límite configurado;
+6. genera y registra eventos operativos sin simular averías.
 
 Un ciclo sin máquinas activas termina sin generar registros. El número solicitado se limita al
-intervalo de 1 a 100 eventos.
+intervalo de 1 a 100 eventos ordinarios. Las conexiones o desconexiones necesarias para sincronizar
+el estado de toda la red no están sujetas a ese límite.
 
 ### Configuración
 
@@ -69,21 +71,24 @@ Una máquina de venta en estado `ONLINE` puede producir:
 
 - `TICKET_PURCHASE_REQUESTED`;
 - `TICKET_PURCHASE_COMPLETED`;
-- `TICKET_PURCHASE_FAILED`.
+- `QR_TICKET_GENERATED`.
 
 Un validador de entrada o salida en estado `ONLINE` puede producir:
 
 - `VALIDATION_ACCEPTED`;
 - `VALIDATION_REJECTED`;
-- `VALIDATION_FAILED`.
+- `VALIDATION_REQUESTED`.
 
-Antes de generar actividad ordinaria se respeta el ciclo operativo de la máquina:
+Antes de generar actividad ordinaria se sincronizan todas las máquinas con el horario:
 
-| Estado anterior | Evento generado | Estado resultante |
+| Estado del servicio | Evento generado cuando sea necesario | Estado resultante |
 | --- | --- | --- |
-| `OFFLINE` | `DEVICE_ONLINE` | `ONLINE` |
-| `ERROR` | `DEVICE_MAINTENANCE_STARTED` | `MAINTENANCE` |
-| `MAINTENANCE` | `DEVICE_MAINTENANCE_FINISHED` | `ONLINE` |
+| Abierto | `DEVICE_ONLINE` | `ONLINE` |
+| Cerrado | `DEVICE_OFFLINE` | `OFFLINE` |
+
+El simulador automático no genera `DEVICE_ERROR`, `TICKET_PURCHASE_FAILED`,
+`VALIDATION_FAILED` ni transiciones de mantenimiento. Estos valores permanecen en el contrato para
+eventos reales que puedan recibirse en el futuro mediante MQTT.
 
 ## Transiciones de estado
 

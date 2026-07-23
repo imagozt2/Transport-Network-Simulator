@@ -116,7 +116,8 @@ La ruta del frontend es:
 /logs
 ```
 
-La pantalla muestra los eventos ordenados desde el más reciente. Cada tarjeta presenta:
+La pantalla muestra los eventos ordenados desde el más reciente en una tabla inspirada en el
+proyecto original. Cada fila presenta:
 
 - severidad;
 - tipo de evento;
@@ -162,8 +163,9 @@ AAAA-MM-DDTHH:mm
 
 ### Paginación
 
-La pantalla permite solicitar 25, 50 o 100 resultados. Los controles Anterior y Siguiente se
-habilitan según los campos `first` y `last` de la respuesta.
+La pantalla permite solicitar 25, 50 o 100 resultados. Los controles Primera, Anterior, Siguiente y
+Última aparecen tanto encima como debajo de la tabla y se habilitan según los campos `first` y
+`last` de la respuesta.
 
 El backend limita cualquier tamaño superior a 100 para evitar consultas excesivas. Los resultados
 se ordenan por `occurredAt` descendente y, cuando varios eventos comparten el mismo instante, por
