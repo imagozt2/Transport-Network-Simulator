@@ -27,8 +27,47 @@ export interface LineOperation {
   firstTerminal: LineOperationStation;
   lastTerminal: LineOperationStation;
   activeTrainCount: number;
+  depots: LineOperationDepot[];
+  nextArrivals: LineOperationArrival[];
   stations: LineOperationStation[];
   trains: LineOperationTrain[];
+}
+
+export interface LineOperationDepot {
+  id: number;
+  code: string;
+  name: string;
+  station: LineOperationLocation;
+  dispatchTerminal: LineOperationLocation;
+  dispatchPriority: number;
+  dispatchEnabled: boolean;
+  receptionEnabled: boolean;
+  assignedTrainCount: number;
+  trainsInService: number;
+  availableTrainCount: number;
+}
+
+export interface LineOperationArrival {
+  stationId: number;
+  stationCode: string;
+  stationName: string;
+  trainId: number;
+  trainCode: string;
+  trainSeries: string;
+  direction: ServiceDirection;
+  destinationStationId: number;
+  destinationStationCode: string;
+  destinationStationName: string;
+  stationsAway: number;
+  secondsUntilArrival: number;
+  estimatedArrivalAt: string;
+  atStation: boolean;
+}
+
+export interface LineOperationLocation {
+  id: number;
+  code: string;
+  name: string;
 }
 
 export interface LineOperationStation {

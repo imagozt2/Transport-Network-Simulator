@@ -11,6 +11,8 @@ const firstLine: LineOperation = {
   estimatedOneWayDurationSeconds: 600, stationCount: 2,
   firstTerminal: { id: 1, code: 'ST001', name: 'Aeropuerto', stationOrder: 1 },
   lastTerminal: { id: 2, code: 'ST002', name: 'Centro', stationOrder: 2 }, activeTrainCount: 2,
+  depots: [],
+  nextArrivals: [],
   stations: [
     { id: 1, code: 'ST001', name: 'Aeropuerto', stationOrder: 1 },
     { id: 2, code: 'ST002', name: 'Centro', stationOrder: 2 }
@@ -48,7 +50,18 @@ describe('Lines', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
     expect(compiled.querySelectorAll('.line-card')).toHaveLength(2);
-    expect(compiled.textContent).toContain('Trenes en servicio');
+    const summaryCards = Array.from(compiled.querySelectorAll<HTMLElement>('.summary-card'));
+    expect(summaryCards.map((card) => card.querySelector('span')?.textContent?.trim())).toEqual([
+      'Líneas de la red',
+      'Estaciones',
+      'Trenes en servicio',
+      'Sentido ida',
+      'Sentido vuelta'
+    ]);
+    expect(summaryCards.map((card) => card.querySelector('strong')?.textContent?.trim())).toEqual(['2', '2', '2', '1', '1']);
+    expect(compiled.querySelector('.summary-grid small')).toBeNull();
+    expect(compiled.querySelector('.summary-grid')?.textContent).not.toContain('Líneas abiertas');
+    expect(compiled.querySelector('.summary-grid')?.textContent).not.toContain('Actualización');
     expect(compiled.querySelector('.line-badge')?.getAttribute('style')).toContain('color: rgb(17, 24, 39)');
     expect(compiled.querySelectorAll('.horizontal-route')).toHaveLength(2);
     expect(compiled.querySelectorAll('.horizontal-station-label')).toHaveLength(4);

@@ -10,16 +10,11 @@
     @if (errorMessage) { <div class="refresh-warning" role="status">{{ errorMessage }} Se conservan los últimos datos disponibles.</div> }
 
     <section class="summary-grid" aria-label="Resumen operativo de líneas">
-      <article class="summary-card"><span>Líneas de la red</span><strong>{{ data.lines.length }}</strong><small>Infraestructura activa</small></article>
-      <article class="summary-card"><span>Líneas abiertas</span><strong>{{ data.activeLineCount }}</strong><small>{{ phaseLabel(data.phase) }}</small></article>
-      <article class="summary-card"><span>Trenes en servicio</span><strong>{{ totalTrains() }}</strong><small>Serie 9000</small></article>
-      <article class="summary-card"><span>Estaciones</span><strong>{{ totalStations() }}</strong><small>Paradas únicas</small></article>
-    </section>
-
-    <section class="direction-summary-grid" aria-label="Trenes por sentido">
-      <article><span>Sentido ida</span><strong>{{ trainsInDirection('OUTBOUND') }}</strong></article>
-      <article><span>Sentido vuelta</span><strong>{{ trainsInDirection('INBOUND') }}</strong></article>
-      <article><span>Actualización</span><strong>5 s</strong></article>
+      <article class="summary-card"><span>Líneas de la red</span><strong>{{ data.lines.length }}</strong></article>
+      <article class="summary-card"><span>Estaciones</span><strong>{{ totalStations() }}</strong></article>
+      <article class="summary-card"><span>Trenes en servicio</span><strong>{{ totalTrains() }}</strong></article>
+      <article class="summary-card"><span>Sentido ida</span><strong>{{ trainsInDirection('OUTBOUND') }}</strong></article>
+      <article class="summary-card"><span>Sentido vuelta</span><strong>{{ trainsInDirection('INBOUND') }}</strong></article>
     </section>
 
     <div class="lines-list">
