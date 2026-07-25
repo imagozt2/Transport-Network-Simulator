@@ -183,6 +183,7 @@ y en cada actualización de esa rama.
 
 ## Documentación
 
+- [Navegación y estructura de la aplicación web](docs/navegacion-aplicacion.md)
 - [Visión transversal de la operación simulada](docs/operacion-simulada.md)
 - [Panel General y endpoint de resumen](docs/panel-general.md)
 - [Mapa de red y endpoint del mapa](docs/mapa-red.md)
