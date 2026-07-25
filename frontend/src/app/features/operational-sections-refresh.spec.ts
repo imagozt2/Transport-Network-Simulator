@@ -1,5 +1,6 @@
 import { Type } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { of, Subject } from 'rxjs';
 
 import { DepotOperationsService } from '../core/services/depot-operations.service';
@@ -95,6 +96,7 @@ describe('Operational sections periodic refresh', () => {
     await TestBed.configureTestingModule({
       imports: [Lines, Stations, Trains, Depots, Devices],
       providers: [
+        provideRouter([]),
         { provide: LineOperationsService, useValue: lineService },
         { provide: StationOperationsService, useValue: stationService },
         { provide: TrainOperationsService, useValue: trainService },

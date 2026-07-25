@@ -2,10 +2,14 @@
 .availability > span { display: flex; justify-content: space-between; margin-bottom: 8px; color: #4b5563; font-size: 13px; }
 .availability > div { height: 10px; overflow: hidden; border-radius: 999px; background: #e5e7eb; }
 .availability i { height: 100%; display: block; border-radius: inherit; background: #111827; }
-.mini-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.mini-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .mini-stats div { padding: 12px; border: 1px solid #e5e7eb; border-radius: 14px; background: #f9fafb; }
 .mini-stats span { display: block; margin-bottom: 4px; color: #6b7280; font-size: 12px; font-weight: 700; }
 .mini-stats strong { color: #111827; font-size: 19px; }
+.station-context-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.station-context-actions a { flex: 1 1 130px; padding: 10px 13px; border: 1px solid #d1d5db; border-radius: 12px; color: #111827; background: #fff; font-size: 12px; font-weight: 900; text-align: center; text-decoration: none; transition: border-color .15s ease, background .15s ease; }
+.station-context-actions a:hover { border-color: #111827; background: #f8fafc; }
+.station-context-actions a:focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
 .line-list { display: flex; flex-direction: column; gap: 10px; }
 .station-line { --line-color: #64748b; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 11px; border: 1px solid #e5e7eb; border-radius: 14px; background: #f8fafc; }
 .station-line.closed { opacity: .55; }

@@ -1,4 +1,5 @@
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 import {
   StationArrival,
@@ -16,7 +17,12 @@ import { formatCountdown } from '../../core/utils/temporal-formatters';
 type StatusFilter = StationOperationStatus | 'ALL';
 type LineCountFilter = 'ALL' | '1' | '2' | '3_PLUS';
 
-@Component({ selector: 'app-stations', templateUrl: './stations.html', styleUrls: ['./stations.css', './stations-arrivals.css'] })
+@Component({
+  selector: 'app-stations',
+  imports: [RouterLink],
+  templateUrl: './stations.html',
+  styleUrls: ['./stations.css', './stations-arrivals.css']
+})
 export class Stations implements OnInit, OnDestroy {
   private readonly stationOperationsService = inject(StationOperationsService);
   private readonly periodicRefresh = new PeriodicRefresh(15_000, () => this.loadOperations());

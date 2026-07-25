@@ -67,15 +67,18 @@
             <div class="station-card-body">
               <div class="station-operational-grid">
                 <section class="metric-panel devices-panel">
-                  <h2>Dispositivos</h2>
+                  <h2>Máquinas</h2>
                   <div class="large-metric"><strong>{{ station.devices.online }}</strong><span>online de {{ station.devices.total }}</span></div>
                   <div class="availability"><span><small>Disponibilidad</small><strong>{{ deviceAvailability(station) }}%</strong></span><div><i [style.width.%]="deviceAvailability(station)"></i></div></div>
                   <div class="mini-stats">
-                    <div><span>Máquinas</span><strong>{{ station.devices.ticketMachines }}</strong></div>
-                    <div><span>Entrada</span><strong>{{ station.devices.entryValidators }}</strong></div>
-                    <div><span>Salida</span><strong>{{ station.devices.exitValidators }}</strong></div>
-                    <div><span>Errores</span><strong>{{ station.devices.errors }}</strong></div>
+                    <div><span>Máquinas de billetes</span><strong>{{ station.devices.ticketMachines }}</strong></div>
+                    <div><span>Validadores de entrada</span><strong>{{ station.devices.entryValidators }}</strong></div>
+                    <div><span>Validadores de salida</span><strong>{{ station.devices.exitValidators }}</strong></div>
                   </div>
+                  <nav class="station-context-actions" aria-label="Acciones sobre las máquinas de la estación">
+                    <a [routerLink]="['/devices']" [queryParams]="{ stationCode: station.code }">Ver máquinas</a>
+                    <a [routerLink]="['/logs']" [queryParams]="{ stationCode: station.code }">Ver logs</a>
+                  </nav>
                 </section>
 
                 <section class="metric-panel service-panel">

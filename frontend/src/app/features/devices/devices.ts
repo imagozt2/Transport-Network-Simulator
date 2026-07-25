@@ -1,5 +1,5 @@
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import {
   DeviceOperation,
@@ -29,6 +29,7 @@ type StatusFilter = DeviceStatus | 'ALL';
 export class Devices implements OnInit, OnDestroy {
   private readonly deviceOperationsService = inject(DeviceOperationsService);
   private readonly periodicRefresh = new PeriodicRefresh(15_000, () => this.loadOperations());
+  private readonly route = inject(ActivatedRoute);
 
   operations: DeviceOperationsResponse | null = null;
   loading = true;
@@ -51,6 +52,7 @@ export class Devices implements OnInit, OnDestroy {
   ];
 
   ngOnInit(): void {
+    this.selectedStationCode = this.route.snapshot.queryParamMap.get('stationCode')?.trim() || 'ALL';
     this.loadOperations(true);
     this.periodicRefresh.start();
   }

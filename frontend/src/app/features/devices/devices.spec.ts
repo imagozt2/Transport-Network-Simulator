@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
 import { routes } from '../../app.routes';
@@ -33,6 +33,10 @@ describe('Devices log navigation', () => {
       providers: [
         provideRouter([]),
         {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { queryParamMap: convertToParamMap({ stationCode: 'ST001' }) } }
+        },
+        {
           provide: DeviceOperationsService,
           useValue: { getOperations: () => of(response) }
         }
@@ -46,6 +50,8 @@ describe('Devices log navigation', () => {
     expect(link).not.toBeNull();
     expect(link.getAttribute('href')).toBe('/logs?deviceCode=RMM-MB-ST001-001');
     expect(link.getAttribute('aria-label')).toContain('RMM-MB-ST001-001');
+    expect(fixture.componentInstance.selectedStationCode).toBe('ST001');
+    expect(fixture.componentInstance.filteredDevices()).toHaveLength(1);
     fixture.destroy();
   });
 

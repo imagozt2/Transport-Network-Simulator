@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
 import { StationOperationsResponse } from '../../core/models/station-operation.model';
@@ -63,7 +64,10 @@ describe('Stations', () => {
   it('should render station state, line colors and a live mm:ss countdown', async () => {
     await TestBed.configureTestingModule({
       imports: [Stations],
-      providers: [{ provide: StationOperationsService, useValue: { getOperations: () => of(response) } }]
+      providers: [
+        provideRouter([]),
+        { provide: StationOperationsService, useValue: { getOperations: () => of(response) } }
+      ]
     }).compileComponents();
     const fixture = TestBed.createComponent(Stations);
     fixture.detectChanges();
@@ -93,6 +97,11 @@ describe('Stations', () => {
     expect(compiled.querySelector('.line-badge')?.getAttribute('style')).toContain('rgb(251, 192, 45)');
     expect(compiled.querySelector('.line-thermometer')).not.toBeNull();
     expect(compiled.querySelector('.arrival-time')?.textContent).toContain('1:05');
+    expect(compiled.querySelector('.devices-panel h2')?.textContent?.trim()).toBe('Máquinas');
+    expect(compiled.querySelector('.devices-panel')?.textContent).not.toContain('Errores');
+    const contextLinks = compiled.querySelectorAll<HTMLAnchorElement>('.station-context-actions a');
+    expect(contextLinks.item(0).getAttribute('href')).toBe('/devices?stationCode=STB');
+    expect(contextLinks.item(1).getAttribute('href')).toBe('/logs?stationCode=STB');
 
     fixture.componentInstance.ngOnDestroy();
     fixture.componentInstance.countdownNowMs += 1_000;
@@ -105,7 +114,10 @@ describe('Stations', () => {
   it('should filter stations and clear all active filters', async () => {
     await TestBed.configureTestingModule({
       imports: [Stations],
-      providers: [{ provide: StationOperationsService, useValue: { getOperations: () => of(response) } }]
+      providers: [
+        provideRouter([]),
+        { provide: StationOperationsService, useValue: { getOperations: () => of(response) } }
+      ]
     }).compileComponents();
     const fixture = TestBed.createComponent(Stations);
     fixture.detectChanges();
@@ -156,7 +168,7 @@ describe('Stations', () => {
       providers: [{
         provide: StationOperationsService,
         useValue: { getOperations: () => throwError(() => new Error('API error')) }
-      }]
+      }, provideRouter([])]
     }).compileComponents();
     const fixture = TestBed.createComponent(Stations);
     fixture.detectChanges();
