@@ -23,9 +23,7 @@ export class Lines implements OnInit, OnDestroy {
 
   operations: LineOperationsResponse | null = null;
   loading = true;
-  refreshing = false;
   errorMessage = '';
-  get autoRefreshEnabled(): boolean { return this.periodicRefresh.enabled; }
   readonly serviceDirections: readonly ServiceDirection[] = ['OUTBOUND', 'INBOUND'];
 
   ngOnInit(): void {
@@ -38,7 +36,7 @@ export class Lines implements OnInit, OnDestroy {
   loadOperations(showLoading = false): void {
     const request = this.periodicRefresh.request(() => this.lineOperationsService.getOperations());
     if (!request) { return; }
-    if (showLoading && !this.operations) { this.loading = true; } else { this.refreshing = true; }
+    if (showLoading && !this.operations) { this.loading = true; }
     this.errorMessage = '';
     request.subscribe({
       next: (operations) => {
@@ -48,18 +46,12 @@ export class Lines implements OnInit, OnDestroy {
         }
         this.hasInitializedExpansion = true;
         this.loading = false;
-        this.refreshing = false;
       },
       error: () => {
         this.errorMessage = 'No se ha podido cargar el estado operativo de las líneas.';
         this.loading = false;
-        this.refreshing = false;
       }
     });
-  }
-
-  toggleAutoRefresh(): void {
-    this.periodicRefresh.toggle();
   }
 
   toggleLine(lineId: number): void {

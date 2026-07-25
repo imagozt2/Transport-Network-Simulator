@@ -32,9 +32,7 @@ export class Trains implements OnInit, OnDestroy {
 
   operations: TrainOperationsResponse | null = null;
   loading = true;
-  refreshing = false;
   errorMessage = '';
-  get autoRefreshEnabled(): boolean { return this.periodicRefresh.enabled; }
   countdownNowMs = Date.now();
   searchText = '';
   selectedStatus: StatusFilter = 'ALL';
@@ -59,7 +57,7 @@ export class Trains implements OnInit, OnDestroy {
   loadOperations(showLoading = false): void {
     const request = this.periodicRefresh.request(() => this.trainOperationsService.getOperations());
     if (!request) { return; }
-    if (showLoading && !this.operations) { this.loading = true; } else { this.refreshing = true; }
+    if (showLoading && !this.operations) { this.loading = true; }
     this.errorMessage = '';
     request.subscribe({
       next: (operations) => {
@@ -71,18 +69,12 @@ export class Trains implements OnInit, OnDestroy {
         }
         this.hasInitializedExpansion = true;
         this.loading = false;
-        this.refreshing = false;
       },
       error: () => {
         this.errorMessage = 'No se ha podido cargar el estado operativo de la flota.';
         this.loading = false;
-        this.refreshing = false;
       }
     });
-  }
-
-  toggleAutoRefresh(): void {
-    this.periodicRefresh.toggle();
   }
 
   setSearchText(value: string): void { this.searchText = value; }

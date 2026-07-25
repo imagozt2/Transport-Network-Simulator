@@ -29,9 +29,7 @@ export class Depots implements OnInit, OnDestroy {
 
   operations: DepotOperationsResponse | null = null;
   loading = true;
-  refreshing = false;
   errorMessage = '';
-  get autoRefreshEnabled(): boolean { return this.periodicRefresh.enabled; }
   searchText = '';
   selectedStatus: StatusFilter = 'ALL';
 
@@ -50,7 +48,7 @@ export class Depots implements OnInit, OnDestroy {
   loadOperations(showLoading = false): void {
     const request = this.periodicRefresh.request(() => this.depotOperationsService.getOperations());
     if (!request) { return; }
-    if (showLoading && !this.operations) { this.loading = true; } else { this.refreshing = true; }
+    if (showLoading && !this.operations) { this.loading = true; }
     this.errorMessage = '';
     request.subscribe({
       next: (operations) => {
@@ -60,18 +58,12 @@ export class Depots implements OnInit, OnDestroy {
         }
         this.hasInitializedExpansion = true;
         this.loading = false;
-        this.refreshing = false;
       },
       error: () => {
         this.errorMessage = 'No se ha podido cargar el estado operativo de las cocheras.';
         this.loading = false;
-        this.refreshing = false;
       }
     });
-  }
-
-  toggleAutoRefresh(): void {
-    this.periodicRefresh.toggle();
   }
 
   setSearchText(value: string): void { this.searchText = value; }

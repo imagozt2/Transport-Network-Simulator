@@ -27,9 +27,7 @@ export class Stations implements OnInit, OnDestroy {
 
   operations: StationOperationsResponse | null = null;
   loading = true;
-  refreshing = false;
   errorMessage = '';
-  get autoRefreshEnabled(): boolean { return this.periodicRefresh.enabled; }
   selectedStatus: StatusFilter = 'ALL';
   selectedType: StationTypeFilter = 'ALL';
   searchText = '';
@@ -49,7 +47,7 @@ export class Stations implements OnInit, OnDestroy {
   loadOperations(showLoading = false): void {
     const request = this.periodicRefresh.request(() => this.stationOperationsService.getOperations());
     if (!request) { return; }
-    if (showLoading && !this.operations) { this.loading = true; } else { this.refreshing = true; }
+    if (showLoading && !this.operations) { this.loading = true; }
     this.errorMessage = '';
 
     request.subscribe({
@@ -62,18 +60,12 @@ export class Stations implements OnInit, OnDestroy {
         }
         this.hasInitializedExpansion = true;
         this.loading = false;
-        this.refreshing = false;
       },
       error: () => {
         this.errorMessage = 'No se ha podido cargar el estado operativo de las estaciones.';
         this.loading = false;
-        this.refreshing = false;
       }
     });
-  }
-
-  toggleAutoRefresh(): void {
-    this.periodicRefresh.toggle();
   }
 
   setSearchText(value: string): void { this.searchText = value; }

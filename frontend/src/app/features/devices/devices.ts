@@ -32,9 +32,7 @@ export class Devices implements OnInit, OnDestroy {
 
   operations: DeviceOperationsResponse | null = null;
   loading = true;
-  refreshing = false;
   errorMessage = '';
-  get autoRefreshEnabled(): boolean { return this.periodicRefresh.enabled; }
   searchText = '';
   selectedType: TypeFilter = 'ALL';
   selectedStatus: StatusFilter = 'ALL';
@@ -66,8 +64,6 @@ export class Devices implements OnInit, OnDestroy {
     if (!request) { return; }
     if (showLoading && !this.operations) {
       this.loading = true;
-    } else {
-      this.refreshing = true;
     }
     this.errorMessage = '';
 
@@ -75,18 +71,12 @@ export class Devices implements OnInit, OnDestroy {
       next: (operations) => {
         this.operations = operations;
         this.loading = false;
-        this.refreshing = false;
       },
       error: () => {
         this.errorMessage = 'No se ha podido cargar el estado operativo de las máquinas.';
         this.loading = false;
-        this.refreshing = false;
       }
     });
-  }
-
-  toggleAutoRefresh(): void {
-    this.periodicRefresh.toggle();
   }
 
   setSearchText(value: string): void {
