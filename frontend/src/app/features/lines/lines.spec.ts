@@ -114,7 +114,7 @@ describe('Lines', () => {
     expect(compiled.querySelector('.horizontal-station-label')?.textContent).toContain('Aeropuerto');
     expect(compiled.querySelector('.horizontal-station-label')?.textContent).not.toContain('...');
     expect(compiled.querySelectorAll('.horizontal-train-marker')).toHaveLength(2);
-    expect(compiled.querySelector('.horizontal-train-marker .train-marker-core span')).not.toBeNull();
+    expect(compiled.querySelector('.horizontal-train-marker .train-marker-core')?.textContent?.trim()).toBe('M');
     expect((compiled.querySelectorAll('.horizontal-train-marker').item(0) as HTMLElement).style.left).toBe('50%');
     expect((compiled.querySelectorAll('.horizontal-train-marker').item(1) as HTMLElement).style.left).toBe('100%');
     expect(compiled.querySelector('.mini-thermometer .horizontal-train-marker')).toBeNull();

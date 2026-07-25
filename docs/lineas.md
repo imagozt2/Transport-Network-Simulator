@@ -77,8 +77,9 @@ Los recuentos corresponden a la misma instantánea `evaluatedAt` que las posicio
 
 ## Trenes sobre el recorrido
 
-Los trenes activos se dibujan mediante iconos ferroviarios sobre dos termómetros horizontales, uno
-por sentido. El frontend no inventa su posición:
+Los trenes activos se dibujan mediante marcadores circulares azules con la `M` blanca de la
+identidad visual de la aplicación. Se distribuyen sobre dos termómetros horizontales, uno por
+sentido. El frontend no inventa su posición:
 utiliza la estación anterior, la estación siguiente y `progressPercentage` recibidos del backend.
 
 Para un tren entre estaciones se interpola su posición en el tramo:
