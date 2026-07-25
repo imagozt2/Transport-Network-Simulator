@@ -87,9 +87,22 @@
                   <div class="line-list">
                     @for (line of station.lines; track line.id) {
                       <article class="station-line" [class.closed]="!line.serviceOpen" [style.--line-color]="getLineColor(line)">
-                        <span class="line-badge" [style.background-color]="getLineColor(line)" [style.color]="getLineTextColor(getLineColor(line))">{{ line.code }}</span>
-                        <span><strong>{{ line.name }}</strong><small>{{ line.firstTerminal.name }} — {{ line.lastTerminal.name }}</small></span>
-                        <em>{{ line.serviceOpen ? line.activeTrainCount + ' trenes' : 'Cerrada' }}</em>
+                        <div class="station-line-heading">
+                          <span class="line-badge" [style.background-color]="getLineColor(line)" [style.color]="getLineTextColor(getLineColor(line))">{{ line.code }}</span>
+                          <span class="line-name"><strong>{{ line.name }}</strong><small>{{ line.firstTerminal.name }} — {{ line.lastTerminal.name }}</small></span>
+                          <em>{{ line.serviceOpen ? line.activeTrainCount + ' trenes' : 'Cerrada' }}</em>
+                        </div>
+                        @if (line.serviceOpen) {
+                          <div class="line-directions" [attr.aria-label]="'Circulación de ' + line.name + ' por sentido'">
+                            @for (direction of line.directions; track direction.direction) {
+                              <div class="line-direction">
+                                <span aria-hidden="true">→</span>
+                                <span><small>Dirección</small><strong>{{ direction.destination.name }}</strong></span>
+                                <em>{{ direction.activeTrainCount }} {{ direction.activeTrainCount === 1 ? 'tren' : 'trenes' }}</em>
+                              </div>
+                            }
+                          </div>
+                        }
                         <span class="line-thermometer" aria-hidden="true">
                           <i class="line-track"></i>
                           <i class="terminal-dot first"></i>

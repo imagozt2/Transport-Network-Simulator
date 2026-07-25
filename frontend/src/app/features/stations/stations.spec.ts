@@ -96,6 +96,13 @@ describe('Stations', () => {
     expect(compiled.querySelector('.status-pill')?.textContent).toContain('Normal');
     expect(compiled.querySelector('.line-badge')?.getAttribute('style')).toContain('rgb(251, 192, 45)');
     expect(compiled.querySelector('.line-thermometer')).not.toBeNull();
+    const directions = compiled.querySelectorAll<HTMLElement>('.line-direction');
+    expect(directions).toHaveLength(2);
+    expect(directions.item(0).textContent).toContain('Dirección');
+    expect(directions.item(0).textContent).toContain('Estación C');
+    expect(directions.item(0).textContent).toContain('3 trenes');
+    expect(directions.item(1).textContent).toContain('Estación A');
+    expect(directions.item(1).textContent).toContain('1 tren');
     expect(compiled.querySelector('.arrival-time')?.textContent).toContain('1:05');
     expect(compiled.querySelector('.devices-panel h2')?.textContent?.trim()).toBe('Máquinas');
     expect(compiled.querySelector('.devices-panel')?.textContent).not.toContain('Errores');
