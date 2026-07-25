@@ -113,10 +113,22 @@
                             <span
                               class="horizontal-station"
                               [class.terminal]="$first || $last"
+                              [class.transfer]="transferLineCodes(station.id, line.code).length > 0"
                               [style.left.%]="stationPositionPercentage(stationIndex, line.stations.length)"
-                              [attr.title]="station.name"
-                              aria-hidden="true"
-                            ></span>
+                              [attr.aria-label]="'Estación ' + station.name + ', dirección ' + directionDestination(line, direction)"
+                              tabindex="0"
+                              role="img"
+                            >
+                              <span class="station-arrival-tooltip" aria-hidden="true">
+                                <strong>{{ station.name }}</strong>
+                                <small>Dirección {{ directionDestination(line, direction) }}</small>
+                                @if (nextArrival(line, station.id, direction); as arrival) {
+                                  <span>Próximo tren en {{ formatCountdown(arrival.secondsUntilArrival) }}</span>
+                                } @else {
+                                  <span>Sin próximas llegadas</span>
+                                }
+                              </span>
+                            </span>
                             <span
                               class="horizontal-station-label"
                               [style.left.%]="stationPositionPercentage(stationIndex, line.stations.length)"
@@ -131,7 +143,7 @@
                               tabindex="0"
                               role="img"
                             >
-                              <span class="train-marker-core" aria-hidden="true"></span>
+                              <span class="train-marker-core" aria-hidden="true"><span></span><span></span></span>
                               <span class="train-tooltip" aria-hidden="true">
                                 <strong>{{ train.code }}</strong>
                                 <small>{{ directionDestination(line, direction) }}</small>

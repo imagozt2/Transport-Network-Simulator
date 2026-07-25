@@ -27,7 +27,22 @@ const firstLine: LineOperation = {
       assignedTrainCount: 6, trainsInService: 4, availableTrainCount: 2
     }
   ],
-  nextArrivals: [],
+  nextArrivals: [
+    {
+      stationId: 1, stationCode: 'ST001', stationName: 'Aeropuerto',
+      trainId: 90, trainCode: 'T-9001', trainSeries: '9000', direction: 'OUTBOUND',
+      destinationStationId: 2, destinationStationCode: 'ST002', destinationStationName: 'Centro',
+      stationsAway: 1, secondsUntilArrival: 75, estimatedArrivalAt: '2026-07-21T08:31:15+02:00',
+      atStation: false
+    },
+    {
+      stationId: 2, stationCode: 'ST002', stationName: 'Centro',
+      trainId: 91, trainCode: 'T-9002', trainSeries: '9000', direction: 'INBOUND',
+      destinationStationId: 1, destinationStationCode: 'ST001', destinationStationName: 'Aeropuerto',
+      stationsAway: 0, secondsUntilArrival: 30, estimatedArrivalAt: '2026-07-21T08:30:30+02:00',
+      atStation: true
+    }
+  ],
   stations: [
     { id: 1, code: 'ST001', name: 'Aeropuerto', stationOrder: 1 },
     { id: 2, code: 'ST002', name: 'Centro', stationOrder: 2 }
@@ -93,10 +108,13 @@ describe('Lines', () => {
     expect(compiled.querySelector('.line-badge')?.getAttribute('style')).toContain('color: rgb(17, 24, 39)');
     expect(compiled.querySelectorAll('.horizontal-route')).toHaveLength(2);
     expect(compiled.querySelectorAll('.horizontal-station-label')).toHaveLength(4);
+    expect(compiled.querySelectorAll('.horizontal-station.transfer')).toHaveLength(2);
+    expect(compiled.querySelector('.station-arrival-tooltip')?.textContent).toContain('Próximo tren en 1:15');
     expect(compiled.querySelectorAll('.horizontal-line-label')).toHaveLength(4);
     expect(compiled.querySelector('.horizontal-station-label')?.textContent).toContain('Aeropuerto');
     expect(compiled.querySelector('.horizontal-station-label')?.textContent).not.toContain('...');
     expect(compiled.querySelectorAll('.horizontal-train-marker')).toHaveLength(2);
+    expect(compiled.querySelector('.horizontal-train-marker .train-marker-core span')).not.toBeNull();
     expect((compiled.querySelectorAll('.horizontal-train-marker').item(0) as HTMLElement).style.left).toBe('50%');
     expect((compiled.querySelectorAll('.horizontal-train-marker').item(1) as HTMLElement).style.left).toBe('100%');
     expect(compiled.querySelector('.mini-thermometer .horizontal-train-marker')).toBeNull();
@@ -117,6 +135,9 @@ describe('Lines', () => {
     expect(component.totalTrains()).toBe(2);
     expect(component.totalStations()).toBe(2);
     expect(component.trainsInDirection('OUTBOUND')).toBe(1);
+    expect(component.nextArrival(firstLine, 1, 'OUTBOUND')?.trainCode).toBe('T-9001');
+    expect(component.nextArrival(firstLine, 2, 'OUTBOUND')).toBeNull();
+    expect(component.formatCountdown(75)).toBe('1:15');
     expect(component.transferLineCodes(2, 'L3')).toEqual(['L4']);
     expect(component.getTrainPositionPercentage(firstLine, { ...firstLine.trains[0], progressPercentage: 140 })).toBe(100);
     fixture.destroy();

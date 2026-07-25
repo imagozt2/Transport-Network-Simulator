@@ -2,6 +2,7 @@ import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 
 import {
   LineOperation,
+  LineOperationArrival,
   LineOperationTrain,
   LineOperationsResponse,
   ServiceDirection,
@@ -12,7 +13,7 @@ import { LineOperationsService } from '../../core/services/line-operations.servi
 import { contrastingTextColor, lineColor } from '../../core/utils/line-visuals';
 import { servicePeriodLabel, servicePhaseLabel } from '../../core/utils/operation-labels';
 import { PeriodicRefresh } from '../../core/utils/periodic-refresh';
-import { formatDuration, formatTime } from '../../core/utils/temporal-formatters';
+import { formatCountdown, formatDuration, formatTime } from '../../core/utils/temporal-formatters';
 
 @Component({
   selector: 'app-lines',
@@ -107,6 +108,23 @@ export class Lines implements OnInit, OnDestroy {
 
   trainsForDirection(line: LineOperation, direction: ServiceDirection): LineOperationTrain[] {
     return line.trains.filter((train) => train.direction === direction);
+  }
+
+  nextArrival(
+    line: LineOperation,
+    stationId: number,
+    direction: ServiceDirection
+  ): LineOperationArrival | null {
+    return line.nextArrivals
+      .filter((arrival) => arrival.stationId === stationId && arrival.direction === direction)
+      .reduce<LineOperationArrival | null>(
+        (next, arrival) => !next || arrival.secondsUntilArrival < next.secondsUntilArrival ? arrival : next,
+        null
+      );
+  }
+
+  formatCountdown(seconds: number): string {
+    return formatCountdown(seconds);
   }
 
   directionDestination(line: LineOperation, direction: ServiceDirection): string {
