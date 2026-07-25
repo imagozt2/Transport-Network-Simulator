@@ -10,7 +10,6 @@ import com.transport.simulator.entity.LineStation;
 import com.transport.simulator.entity.Station;
 import com.transport.simulator.enums.ServiceDirection;
 import com.transport.simulator.enums.StationOperationStatus;
-import com.transport.simulator.enums.TrainPositionState;
 import com.transport.simulator.enums.TrainStatus;
 import com.transport.simulator.repository.DeviceRepository;
 import com.transport.simulator.repository.LineStationRepository;
@@ -19,6 +18,7 @@ import com.transport.simulator.repository.projection.StationDeviceSummaryProject
 import com.transport.simulator.service.model.RailwaySimulationState;
 import com.transport.simulator.service.model.SimulatedLineState;
 import com.transport.simulator.service.model.SimulatedTrainState;
+import com.transport.simulator.service.model.TrainArrivalEstimate;
 import java.time.ZonedDateTime;
 import java.util.Comparator;
 import java.util.List;
@@ -187,7 +187,7 @@ public class StationOperationsQueryService {
             SimulatedTrainState train,
             ZonedDateTime evaluatedAt
     ) {
-        ArrivalEstimate estimate = estimateArrival(station.getId(), route, train);
+        TrainArrivalEstimate estimate = TrainArrivalEstimator.estimate(station.getId(), route, train);
         LineStation destinationStop = estimate.direction() == ServiceDirection.OUTBOUND
                 ? route.getLast()
                 : route.getFirst();
@@ -207,91 +207,6 @@ public class StationOperationsQueryService {
                 evaluatedAt.plusSeconds(estimate.secondsUntilArrival()),
                 estimate.secondsUntilArrival() == 0
         );
-    }
-
-    private ArrivalEstimate estimateArrival(
-            Long targetStationId,
-            List<LineStation> route,
-            SimulatedTrainState train
-    ) {
-        if (train.positionState() == TrainPositionState.AT_STATION
-                && targetStationId.equals(train.currentStationId())) {
-            return new ArrivalEstimate(train.direction(), 0, 0);
-        }
-
-        int nextIndex = findStationIndex(route, train.nextStationId());
-        long secondsUntilArrival = train.secondsUntilNextStation();
-        int stationsAway = 1;
-        ServiceDirection arrivalDirection = train.direction();
-        if (targetStationId.equals(route.get(nextIndex).getStation().getId())) {
-            return new ArrivalEstimate(arrivalDirection, stationsAway, secondsUntilArrival);
-        }
-
-        int currentIndex = nextIndex;
-        int maximumSegments = 2 * (route.size() - 1);
-        for (int traversedSegments = 1; traversedSegments <= maximumSegments; traversedSegments++) {
-            ServiceDirection departureDirection = directionAfterArrival(
-                    arrivalDirection,
-                    currentIndex,
-                    route.size()
-            );
-            int followingIndex = currentIndex + departureDirection.getValue();
-            secondsUntilArrival = Math.addExact(
-                    secondsUntilArrival,
-                    route.get(currentIndex).getDwellSeconds()
-                            + travelSeconds(route, currentIndex, departureDirection)
-            );
-            stationsAway++;
-            arrivalDirection = departureDirection;
-            currentIndex = followingIndex;
-            if (targetStationId.equals(route.get(currentIndex).getStation().getId())) {
-                return new ArrivalEstimate(arrivalDirection, stationsAway, secondsUntilArrival);
-            }
-        }
-
-        throw new ServiceConfigurationException(
-                "Unable to estimate arrival of train " + train.trainCode()
-                        + " at station " + targetStationId
-        );
-    }
-
-    private int findStationIndex(List<LineStation> route, Long stationId) {
-        for (int index = 0; index < route.size(); index++) {
-            if (route.get(index).getStation().getId().equals(stationId)) {
-                return index;
-            }
-        }
-        throw new ServiceConfigurationException("Train position references a station outside its route");
-    }
-
-    private ServiceDirection directionAfterArrival(
-            ServiceDirection arrivalDirection,
-            int stationIndex,
-            int routeSize
-    ) {
-        if (stationIndex == 0) {
-            return ServiceDirection.OUTBOUND;
-        }
-        if (stationIndex == routeSize - 1) {
-            return ServiceDirection.INBOUND;
-        }
-        return arrivalDirection;
-    }
-
-    private long travelSeconds(
-            List<LineStation> route,
-            int stationIndex,
-            ServiceDirection direction
-    ) {
-        Integer travelSeconds = direction == ServiceDirection.OUTBOUND
-                ? route.get(stationIndex).getTravelSecondsToNext()
-                : route.get(stationIndex - 1).getTravelSecondsToNext();
-        if (travelSeconds == null || travelSeconds <= 0) {
-            throw new ServiceConfigurationException(
-                    "Missing travel time on line " + route.getFirst().getLine().getCode()
-            );
-        }
-        return travelSeconds;
     }
 
     private StationOperationLineResponse toLineResponse(
@@ -382,13 +297,6 @@ public class StationOperationsQueryService {
     }
 
     private record ArrivalGroup(Long lineId, ServiceDirection direction) {
-    }
-
-    private record ArrivalEstimate(
-            ServiceDirection direction,
-            int stationsAway,
-            long secondsUntilArrival
-    ) {
     }
 
     private static final class DeviceSummaryAccumulator {

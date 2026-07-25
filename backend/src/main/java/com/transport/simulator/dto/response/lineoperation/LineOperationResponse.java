@@ -23,6 +23,7 @@ public record LineOperationResponse(
         LineOperationStationResponse lastTerminal,
         int activeTrainCount,
         List<LineOperationDepotResponse> depots,
+        List<LineOperationArrivalResponse> nextArrivals,
         List<LineOperationStationResponse> stations,
         List<LineOperationTrainResponse> trains
 ) {

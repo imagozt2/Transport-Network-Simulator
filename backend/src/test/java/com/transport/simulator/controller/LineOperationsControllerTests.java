@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.transport.simulator.dto.response.lineoperation.LineOperationArrivalResponse;
 import com.transport.simulator.dto.response.lineoperation.LineOperationDepotResponse;
 import com.transport.simulator.dto.response.lineoperation.LineOperationDepotStationResponse;
 import com.transport.simulator.dto.response.lineoperation.LineOperationResponse;
@@ -64,10 +65,27 @@ class LineOperationsControllerTests {
                 5,
                 3
         );
+        LineOperationArrivalResponse arrival = new LineOperationArrivalResponse(
+                2L,
+                "ST002",
+                "Centro",
+                90L,
+                "T-9001",
+                "9000",
+                ServiceDirection.OUTBOUND,
+                2L,
+                "ST002",
+                "Centro",
+                1,
+                72L,
+                evaluatedAt.plusSeconds(72),
+                false
+        );
         LineOperationResponse line = new LineOperationResponse(
                 4L, "L4", "Línea 4", "Lila", ServiceOperationPhase.OPERATING, true,
                 evaluatedAt.minusHours(2), evaluatedAt.plusHours(14), "PEAK_MORNING", ServicePeriodType.PEAK,
-                240, 1_200L, 2, first, last, 1, List.of(depot), List.of(first, last), List.of(train)
+                240, 1_200L, 2, first, last, 1,
+                List.of(depot), List.of(arrival), List.of(first, last), List.of(train)
         );
         when(queryService.getOperations()).thenReturn(new LineOperationsResponse(
                 evaluatedAt, ServiceOperationPhase.OPERATING, 1, List.of(line)
@@ -87,6 +105,9 @@ class LineOperationsControllerTests {
                 .andExpect(jsonPath("$.lines[0].depots[0].assignedTrainCount").value(8))
                 .andExpect(jsonPath("$.lines[0].depots[0].trainsInService").value(5))
                 .andExpect(jsonPath("$.lines[0].depots[0].availableTrainCount").value(3))
+                .andExpect(jsonPath("$.lines[0].nextArrivals[0].stationCode").value("ST002"))
+                .andExpect(jsonPath("$.lines[0].nextArrivals[0].direction").value("OUTBOUND"))
+                .andExpect(jsonPath("$.lines[0].nextArrivals[0].secondsUntilArrival").value(72))
                 .andExpect(jsonPath("$.lines[0].trains[0].code").value("T-9001"))
                 .andExpect(jsonPath("$.lines[0].trains[0].progressPercentage").value(40))
                 .andExpect(jsonPath("$.lines[0].trains[0].direction").value("OUTBOUND"));

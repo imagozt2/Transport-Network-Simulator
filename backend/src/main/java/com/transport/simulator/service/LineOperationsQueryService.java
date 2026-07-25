@@ -1,5 +1,6 @@
 package com.transport.simulator.service;
 
+import com.transport.simulator.dto.response.lineoperation.LineOperationArrivalResponse;
 import com.transport.simulator.dto.response.lineoperation.LineOperationDepotResponse;
 import com.transport.simulator.dto.response.lineoperation.LineOperationDepotStationResponse;
 import com.transport.simulator.dto.response.lineoperation.LineOperationResponse;
@@ -11,6 +12,7 @@ import com.transport.simulator.entity.LineStation;
 import com.transport.simulator.entity.Train;
 import com.transport.simulator.entity.TransportLine;
 import com.transport.simulator.enums.FleetRole;
+import com.transport.simulator.enums.ServiceDirection;
 import com.transport.simulator.enums.TrainStatus;
 import com.transport.simulator.repository.LineDepotRepository;
 import com.transport.simulator.repository.LineStationRepository;
@@ -21,8 +23,13 @@ import com.transport.simulator.service.model.RailwaySimulationState;
 import com.transport.simulator.service.model.ServicePeriodFleetPlan;
 import com.transport.simulator.service.model.SimulatedLineState;
 import com.transport.simulator.service.model.SimulatedTrainState;
+import com.transport.simulator.service.model.TrainArrivalEstimate;
+import java.time.ZonedDateTime;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
@@ -57,13 +64,15 @@ public class LineOperationsQueryService {
         Map<Long, TransportLine> lineDetails = transportLineRepository.findAllByActiveTrueOrderByCodeAsc()
                 .stream()
                 .collect(Collectors.toUnmodifiableMap(TransportLine::getId, Function.identity()));
-        Map<Long, List<LineOperationStationResponse>> stationsByLine = lineStationRepository
-                .findAllByActiveTrueOrderByLineCodeAscStationOrderAsc()
-                .stream()
+        List<LineStation> activeLineStations = lineStationRepository
+                .findAllByActiveTrueOrderByLineCodeAscStationOrderAsc();
+        Map<Long, List<LineOperationStationResponse>> stationsByLine = activeLineStations.stream()
                 .collect(Collectors.groupingBy(
                         lineStation -> lineStation.getLine().getId(),
                         Collectors.mapping(this::toStationResponse, Collectors.toList())
                 ));
+        Map<Long, List<LineStation>> routesByLine = activeLineStations.stream()
+                .collect(Collectors.groupingBy(lineStation -> lineStation.getLine().getId()));
         Map<Long, List<SimulatedTrainState>> trainsByLine = simulation.trains().stream()
                 .filter(train -> train.status() == TrainStatus.IN_SERVICE)
                 .collect(Collectors.groupingBy(SimulatedTrainState::currentLineId));
@@ -87,6 +96,7 @@ public class LineOperationsQueryService {
                         line,
                         requiredLineDetails(line, lineDetails),
                         stationsByLine.getOrDefault(line.operation().lineId(), List.of()),
+                        routesByLine.getOrDefault(line.operation().lineId(), List.of()),
                         trainsByLine.getOrDefault(line.operation().lineId(), List.of()),
                         depotsByLine.getOrDefault(line.operation().lineId(), List.of()),
                         fleetByLineAndDepot,
@@ -107,6 +117,7 @@ public class LineOperationsQueryService {
             SimulatedLineState lineState,
             TransportLine line,
             List<LineOperationStationResponse> stations,
+            List<LineStation> route,
             List<SimulatedTrainState> trains,
             List<LineDepot> lineDepots,
             Map<LineDepotFleetKey, List<Train>> fleetByLineAndDepot,
@@ -115,6 +126,11 @@ public class LineOperationsQueryService {
         if (stations.size() < 2) {
             throw new ServiceConfigurationException(
                     "Line " + line.getCode() + " requires at least two active stations"
+            );
+        }
+        if (route.size() != stations.size()) {
+            throw new ServiceConfigurationException(
+                    "Line " + line.getCode() + " has inconsistent route details"
             );
         }
         LineDutyPlan dutyPlan = lineState.dutyPlan().orElse(null);
@@ -158,8 +174,69 @@ public class LineOperationsQueryService {
                                 simulatedTrainsById
                         ))
                         .toList(),
+                calculateNextArrivals(route, trains, simulation.evaluatedAt()),
                 List.copyOf(stations),
                 trainResponses
+        );
+    }
+
+    private List<LineOperationArrivalResponse> calculateNextArrivals(
+            List<LineStation> route,
+            List<SimulatedTrainState> trains,
+            ZonedDateTime evaluatedAt
+    ) {
+        return route.stream()
+                .flatMap(station -> Arrays.stream(ServiceDirection.values())
+                        .map(direction -> nextArrival(station, direction, route, trains, evaluatedAt))
+                        .flatMap(Optional::stream))
+                .toList();
+    }
+
+    private Optional<LineOperationArrivalResponse> nextArrival(
+            LineStation station,
+            ServiceDirection direction,
+            List<LineStation> route,
+            List<SimulatedTrainState> trains,
+            ZonedDateTime evaluatedAt
+    ) {
+        return trains.stream()
+                .map(train -> toArrivalResponse(
+                        station,
+                        route,
+                        train,
+                        TrainArrivalEstimator.estimate(station.getStation().getId(), route, train),
+                        evaluatedAt
+                ))
+                .filter(arrival -> arrival.direction() == direction)
+                .min(Comparator.comparingLong(LineOperationArrivalResponse::secondsUntilArrival)
+                        .thenComparing(LineOperationArrivalResponse::trainCode));
+    }
+
+    private LineOperationArrivalResponse toArrivalResponse(
+            LineStation station,
+            List<LineStation> route,
+            SimulatedTrainState train,
+            TrainArrivalEstimate estimate,
+            ZonedDateTime evaluatedAt
+    ) {
+        LineStation destination = estimate.direction() == ServiceDirection.OUTBOUND
+                ? route.getLast()
+                : route.getFirst();
+        return new LineOperationArrivalResponse(
+                station.getStation().getId(),
+                station.getStation().getCode(),
+                station.getStation().getName(),
+                train.trainId(),
+                train.trainCode(),
+                train.trainSeries(),
+                estimate.direction(),
+                destination.getStation().getId(),
+                destination.getStation().getCode(),
+                destination.getStation().getName(),
+                estimate.stationsAway(),
+                estimate.secondsUntilArrival(),
+                evaluatedAt.plusSeconds(estimate.secondsUntilArrival()),
+                estimate.secondsUntilArrival() == 0
         );
     }
 
