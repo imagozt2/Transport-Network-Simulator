@@ -1,10 +1,6 @@
 :host { display: block; }
 .lines-page { display: flex; flex-direction: column; gap: 24px; }
-.page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
-.eyebrow { margin: 0 0 6px; color: #6b7280; font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 .page-header h1 { margin: 0; color: #111827; font-size: 34px; line-height: 1.1; }
-.page-description { margin: 10px 0 0; color: #6b7280; font-size: 15px; }
-.last-update { margin: 10px 0 0; color: #4b5563; font-size: 13px; font-weight: 800; }
 .header-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; }
 .refresh-button, .error-card button { padding: 12px 18px; border: 0; border-radius: 14px; color: #fff; background: #111827; box-shadow: 0 10px 22px rgba(17, 24, 39, .18); font-weight: 800; cursor: pointer; }
 .refresh-button:hover:not(:disabled), .error-card button:hover { background: #1f2937; }
@@ -76,5 +72,5 @@
 .transfer-list { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 4px; }
 .transfer-badge { padding: 4px 7px; border-radius: 999px; color: #fff; background: #475569; box-shadow: 0 2px 5px rgba(15, 23, 42, .16); font-size: 10px; font-weight: 900; }
 @media (max-width: 1200px) { .line-operational-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto; } .stations-panel { grid-column: 1 / -1; grid-row: auto; } .mini-thermometer { max-height: 520px; flex: none; } .train-circulation-panel { grid-column: 1 / -1; grid-row: auto; } }
-@media (max-width: 900px) { .page-header { flex-direction: column; } .header-actions { justify-content: flex-start; } .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .line-operational-grid { grid-template-columns: 1fr; } .stations-panel, .train-circulation-panel { grid-column: auto; } }
+@media (max-width: 900px) { .header-actions { justify-content: flex-start; } .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .line-operational-grid { grid-template-columns: 1fr; } .stations-panel, .train-circulation-panel { grid-column: auto; } }
 @media (max-width: 640px) { .summary-grid, .direction-summary-grid { grid-template-columns: 1fr; } .line-card-header { grid-template-columns: 58px 1fr 32px; gap: 12px; padding: 16px; } .line-badge { width: 50px; height: 38px; } .line-title-row { align-items: flex-start; flex-direction: column; } .mini-station-content { align-items: flex-start; flex-direction: column; } .transfer-list { justify-content: flex-start; } }

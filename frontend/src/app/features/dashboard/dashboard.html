@@ -1,6 +1,8 @@
 <section class="dashboard-page">
-  <div class="page-header">
-    <div><h1>Panel General</h1><p>Estado operativo actual de la Red de Metro de Macegocia.</p></div>
+  <header class="page-header">
+    <h1>Panel General</h1>
+  </header>
+  <div class="page-actions">
     <button class="refresh-button" type="button" [disabled]="loading" (click)="loadSummary()">{{ loading ? 'Actualizando…' : 'Actualizar' }}</button>
   </div>
 

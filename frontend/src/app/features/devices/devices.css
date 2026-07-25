@@ -1,9 +1,5 @@
 .devices-page { display: flex; flex-direction: column; gap: 22px; }
-.page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
-.eyebrow { margin: 0 0 6px; color: #64748b; font-size: 12px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; }
 .page-header h1 { margin: 0; color: #111827; font-size: 34px; line-height: 1.1; }
-.page-description { margin: 10px 0 0; color: #64748b; font-size: 15px; }
-.last-update { margin: 8px 0 0; color: #64748b; font-size: 12px; font-weight: 700; }
 .header-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
 .refresh-button { border: 0; border-radius: 14px; padding: 12px 18px; color: #fff; background: #111827; box-shadow: 0 10px 22px rgba(17, 24, 39, 0.18); cursor: pointer; font-weight: 850; }
 .refresh-button.secondary { color: #111827; background: #fff; border: 1px solid #dbe1e8; box-shadow: none; }
@@ -41,7 +37,6 @@
 }
 
 @media (max-width: 900px) {
-  .page-header { flex-direction: column; }
   .header-actions { justify-content: flex-start; }
   .summary-grid, .type-overview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

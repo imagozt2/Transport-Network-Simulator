@@ -15,7 +15,7 @@ import {
   deviceTypeShortLabel
 } from '../../core/utils/operation-labels';
 import { PeriodicRefresh } from '../../core/utils/periodic-refresh';
-import { formatDateTime, formatTime } from '../../core/utils/temporal-formatters';
+import { formatDateTime } from '../../core/utils/temporal-formatters';
 
 type TypeFilter = DeviceType | 'ALL';
 type StatusFilter = DeviceStatus | 'ALL';
@@ -175,10 +175,6 @@ export class Devices implements OnInit, OnDestroy {
 
   formatDateTime(value: string | null): string {
     return formatDateTime(value, 'Sin conexión registrada');
-  }
-
-  formatEvaluatedAt(value: string): string {
-    return formatTime(value, true);
   }
 
   trackDevice(_: number, device: DeviceOperation): number {

@@ -1,32 +1,20 @@
 <section class="devices-page">
   <header class="page-header">
-    <div>
-      <p class="eyebrow">Operación de dispositivos</p>
-      <h1>Máquinas</h1>
-      <p class="page-description">
-        Consulta las máquinas de billetes y los validadores instalados en cada estación.
-      </p>
-      @if (operations) {
-        <p class="last-update">
-          Última actualización: {{ formatEvaluatedAt(operations.evaluatedAt) }}
-        </p>
-      }
-    </div>
-
-    <div class="header-actions">
-      <button class="refresh-button secondary" type="button" (click)="toggleAutoRefresh()">
-        {{ autoRefreshEnabled ? 'Pausar autoactualización' : 'Activar autoactualización' }}
-      </button>
-      <button
-        class="refresh-button"
-        type="button"
-        [disabled]="refreshing"
-        (click)="loadOperations()"
-      >
-        {{ refreshing ? 'Actualizando…' : 'Actualizar' }}
-      </button>
-    </div>
+    <h1>Máquinas</h1>
   </header>
+  <div class="header-actions">
+    <button class="refresh-button secondary" type="button" (click)="toggleAutoRefresh()">
+      {{ autoRefreshEnabled ? 'Pausar autoactualización' : 'Activar autoactualización' }}
+    </button>
+    <button
+      class="refresh-button"
+      type="button"
+      [disabled]="refreshing"
+      (click)="loadOperations()"
+    >
+      {{ refreshing ? 'Actualizando…' : 'Actualizar' }}
+    </button>
+  </div>
 
   @if (loading) {
     <div class="state-card" role="status">Cargando estado operativo de las máquinas…</div>

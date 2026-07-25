@@ -157,10 +157,6 @@ export class Lines implements OnInit, OnDestroy {
     return formatTime(value);
   }
 
-  formatEvaluatedAt(value: string): string {
-    return formatTime(value, true);
-  }
-
   phaseLabel(phase: ServiceOperationPhase): string {
     return servicePhaseLabel(phase);
   }

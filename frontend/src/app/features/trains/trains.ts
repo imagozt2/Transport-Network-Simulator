@@ -12,7 +12,7 @@ import { depotShortCode } from '../../core/utils/depot-visuals';
 import { contrastingTextColor, lineColor } from '../../core/utils/line-visuals';
 import { fleetRoleLabel, trainStatusLabel } from '../../core/utils/operation-labels';
 import { PeriodicRefresh } from '../../core/utils/periodic-refresh';
-import { formatCountdown, formatTime } from '../../core/utils/temporal-formatters';
+import { formatCountdown } from '../../core/utils/temporal-formatters';
 
 type StatusFilter = TrainStatus | 'ALL';
 type RoleFilter = FleetRole | 'ALL';
@@ -194,10 +194,6 @@ export class Trains implements OnInit, OnDestroy {
 
   getLineColor(line: TrainOperationLine): string { return lineColor(line.code, line.color); }
   getLineTextColor(color: string): string { return contrastingTextColor(color); }
-
-  formatEvaluatedAt(value: string): string {
-    return formatTime(value, true);
-  }
 
   trackTrain(_: number, train: TrainOperation): number { return train.id; }
 

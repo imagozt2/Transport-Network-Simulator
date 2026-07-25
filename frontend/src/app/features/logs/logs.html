@@ -1,16 +1,12 @@
 <section class="logs-page">
   <header class="page-header">
-    <div>
-      <p class="eyebrow">Supervisión técnica</p>
-      <h1>Logs</h1>
-      <p class="page-description">
-        Consulta los eventos operativos emitidos automáticamente por las máquinas de la red.
-      </p>
-    </div>
+    <h1>Logs</h1>
+  </header>
+  <div class="page-actions">
     <button class="refresh-button" type="button" [disabled]="loading" (click)="loadLogs()">
       {{ loading ? 'Actualizando…' : 'Actualizar' }}
     </button>
-  </header>
+  </div>
 
   <section class="summary-grid" aria-label="Resumen de logs">
     <article class="summary-card"><span>Logs encontrados</span><strong>{{ totalElements }}</strong></article>

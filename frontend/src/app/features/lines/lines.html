@@ -1,20 +1,15 @@
 <section class="lines-page">
   <header class="page-header">
-    <div>
-      <p class="eyebrow">Operación de red</p>
-      <h1>Líneas</h1>
-      <p class="page-description">Estado del servicio, frecuencias, trenes activos y recorrido de cada línea.</p>
-      @if (operations) { <p class="last-update">Última actualización: {{ formatEvaluatedAt(operations.evaluatedAt) }}</p> }
-    </div>
-    <div class="header-actions">
-      <button class="refresh-button secondary" type="button" (click)="toggleAutoRefresh()">
-        {{ autoRefreshEnabled ? 'Pausar autoactualización' : 'Activar autoactualización' }}
-      </button>
-      <button class="refresh-button" type="button" [disabled]="refreshing" (click)="loadOperations()">
-        {{ refreshing ? 'Actualizando…' : 'Actualizar' }}
-      </button>
-    </div>
+    <h1>Líneas</h1>
   </header>
+  <div class="header-actions">
+    <button class="refresh-button secondary" type="button" (click)="toggleAutoRefresh()">
+      {{ autoRefreshEnabled ? 'Pausar autoactualización' : 'Activar autoactualización' }}
+    </button>
+    <button class="refresh-button" type="button" [disabled]="refreshing" (click)="loadOperations()">
+      {{ refreshing ? 'Actualizando…' : 'Actualizar' }}
+    </button>
+  </div>
 
   @if (loading) {
     <div class="state-card" role="status">Cargando estado operativo de líneas…</div>

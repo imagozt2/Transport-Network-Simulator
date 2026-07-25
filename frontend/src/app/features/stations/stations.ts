@@ -11,7 +11,7 @@ import { StationOperationsService } from '../../core/services/station-operations
 import { contrastingTextColor, lineColor } from '../../core/utils/line-visuals';
 import { stationStatusLabel } from '../../core/utils/operation-labels';
 import { PeriodicRefresh } from '../../core/utils/periodic-refresh';
-import { formatCountdown, formatTime } from '../../core/utils/temporal-formatters';
+import { formatCountdown } from '../../core/utils/temporal-formatters';
 
 type StatusFilter = StationOperationStatus | 'ALL';
 type StationTypeFilter = 'ALL' | 'TRANSFER' | 'SIMPLE';
@@ -166,10 +166,6 @@ export class Stations implements OnInit, OnDestroy {
       return membership ? Math.max(maximum, membership.stationOrder) : maximum;
     }, 0) ?? 0;
     return stationCount <= 1 ? 0 : (line.stationOrder - 1) * 100 / (stationCount - 1);
-  }
-
-  formatEvaluatedAt(value: string): string {
-    return formatTime(value, true);
   }
 
   trackStation(_: number, station: StationOperation): number { return station.id; }
