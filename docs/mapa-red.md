@@ -22,20 +22,25 @@ La pantalla contiene dos zonas:
 
 ## Interacciones
 
-Las líneas se pueden activar desde su trazado en el SVG o desde el panel lateral. Al activar una
-línea:
+Las líneas se pueden seleccionar desde su trazado, sus etiquetas de extremo, cualquiera de sus
+estaciones o el panel lateral. Al seleccionar una línea:
 
 - su trazado y sus estaciones quedan resaltados;
 - el resto de la red se atenúa;
 - se abre su termómetro de estaciones ordenadas;
 - se muestran las correspondencias disponibles en cada parada.
 
-Activar nuevamente la misma línea elimina el filtro. En el SVG también se puede utilizar `Enter` o la
-barra espaciadora para activar una línea mediante el teclado.
+Pulsar nuevamente un tramo, una etiqueta o una estación de la misma línea elimina la selección.
+También se puede deseleccionar pulsando una zona vacía del fondo del SVG. Los clics procedentes de
+elementos de la red no se confunden con pulsaciones del fondo.
 
-Las estaciones son elementos informativos. El cursor puede situarse sobre ellas para facilitar su
-localización, pero no son botones, no reciben foco y pulsarlas no crea una selección ni desencadena
-ninguna acción.
+Las estaciones y los tramos se comportan como partes de una misma línea: al pasar el cursor se
+resalta el conjunto completo y al pulsar se actualiza la selección y el acordeón lateral. La estación
+no conserva un estado independiente ni queda visualmente pulsada.
+
+Cuando una estación pertenece a varias líneas, el mapa utiliza como contexto la línea resaltada desde
+la que se alcanzó la estación. Así se puede seleccionar desde un transbordo una línea distinta de la
+que aparece primero en la respuesta de la API.
 
 ## Endpoint del mapa
 
@@ -144,5 +149,8 @@ Las pruebas cubren:
 - la agrupación y el orden de estaciones en el backend;
 - la integridad de los 50 códigos visuales y los seis trazados;
 - la unión entre API y geometría por código;
-- el resaltado, la navegación con teclado y la desactivación de líneas;
-- la ausencia de selección al pulsar una estación.
+- el resaltado conjunto de tramos, etiquetas y estaciones;
+- la selección, sustitución y deselección desde estaciones;
+- la resolución contextual de estaciones de transbordo;
+- la deselección desde el fondo vacío;
+- la protección frente a falsas deselecciones por propagación de eventos.

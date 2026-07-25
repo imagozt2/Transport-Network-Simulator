@@ -12,7 +12,7 @@ continua.
 
 La aplicación incluye actualmente:
 
-- un Panel General con indicadores de estaciones, líneas, trenes, dispositivos y cocheras;
+- un Panel General en vivo con indicadores y paneles operativos de la red;
 - un mapa SVG interactivo con las seis líneas y las 50 estaciones de Macegocia;
 - una sección operativa de líneas con frecuencias, termómetros y trenes en movimiento;
 - una sección de estaciones con estados, dispositivos y próximas llegadas en formato `mm:ss`;
@@ -151,7 +151,7 @@ La aplicación estará disponible en `http://localhost:4200`. La ruta inicial re
 | Método | Ruta | Descripción |
 | --- | --- | --- |
 | `GET` | `/api/health` | Comprueba el estado del backend y de MySQL. |
-| `GET` | `/api/dashboard/summary` | Devuelve el resumen agregado del Panel General. |
+| `GET` | `/api/dashboard/summary` | Devuelve el resumen persistido legado; el Panel General utiliza las consultas operativas. |
 | `GET` | `/api/network-map` | Devuelve las líneas activas y sus estaciones ordenadas. |
 | `GET` | `/api/lines/operations` | Devuelve el estado operativo, recorridos y trenes de cada línea. |
 | `GET` | `/api/stations/operations` | Devuelve el estado, líneas, dispositivos y próximas llegadas de cada estación. |
@@ -185,7 +185,7 @@ y en cada actualización de esa rama.
 
 - [Navegación y estructura de la aplicación web](docs/navegacion-aplicacion.md)
 - [Visión transversal de la operación simulada](docs/operacion-simulada.md)
-- [Panel General y endpoint de resumen](docs/panel-general.md)
+- [Panel General y agregación de datos operativos](docs/panel-general.md)
 - [Mapa de red y endpoint del mapa](docs/mapa-red.md)
 - [Sección de Líneas y endpoint operativo](docs/lineas.md)
 - [Sección de Estaciones y próximas llegadas](docs/estaciones.md)
