@@ -40,8 +40,9 @@
 .status-closed { color: #4b5563; background: #e5e7eb; }
 .expand-icon { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 12px; color: #111827; background: #f3f4f6; font-size: 20px; font-weight: 900; }
 .station-card-body { padding: 20px; border-top: 1px solid #e5e7eb; background: #f9fafb; }
-.station-operational-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 430px; gap: 18px; align-items: start; }
-.metric-panel, .arrivals-panel { padding: 18px; border: 1px solid #e5e7eb; border-radius: 18px; background: #fff; }
+.station-operational-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 430px; gap: 18px; align-items: stretch; }
+.metric-panel, .arrivals-panel { height: 100%; box-sizing: border-box; padding: 18px; border: 1px solid #e5e7eb; border-radius: 18px; background: #fff; }
+.devices-panel, .service-panel, .arrivals-panel { display: flex; flex-direction: column; }
 .metric-panel h2, .arrivals-panel h2 { margin: 0 0 16px; color: #111827; font-size: 16px; }
 .large-metric { display: flex; align-items: baseline; gap: 10px; margin-bottom: 18px; }
 .large-metric strong { color: #111827; font-size: 36px; line-height: 1; }

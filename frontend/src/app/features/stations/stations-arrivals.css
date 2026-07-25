@@ -6,11 +6,11 @@
 .mini-stats div { padding: 12px; border: 1px solid #e5e7eb; border-radius: 14px; background: #f9fafb; }
 .mini-stats span { display: block; margin-bottom: 4px; color: #6b7280; font-size: 12px; font-weight: 700; }
 .mini-stats strong { color: #111827; font-size: 19px; }
-.station-context-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.station-context-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 14px; }
 .station-context-actions a { flex: 1 1 130px; padding: 10px 13px; border: 1px solid #d1d5db; border-radius: 12px; color: #111827; background: #fff; font-size: 12px; font-weight: 900; text-align: center; text-decoration: none; transition: border-color .15s ease, background .15s ease; }
 .station-context-actions a:hover { border-color: #111827; background: #f8fafc; }
 .station-context-actions a:focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
-.line-list { display: flex; flex-direction: column; gap: 10px; }
+.line-list { flex: 1; display: flex; flex-direction: column; gap: 10px; }
 .station-line { --line-color: #64748b; padding: 11px; border: 1px solid #e5e7eb; border-radius: 14px; background: #f8fafc; }
 .station-line.closed { opacity: .55; }
 .station-line-heading { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; }
@@ -38,7 +38,7 @@
 .arrivals-panel > header h2 { margin: 0; }
 .arrivals-panel > header span { color: #6b7280; font-size: 13px; font-weight: 800; }
 .empty-arrivals { padding: 14px; border: 1px solid #e5e7eb; border-radius: 14px; color: #6b7280; background: #f9fafb; font-size: 13px; font-weight: 800; }
-.arrival-list { max-height: 420px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; }
+.arrival-list { flex: 1; max-height: 420px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; }
 .arrival-card { --line-color: #64748b; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 12px; border: 1px solid #e5e7eb; border-left: 4px solid var(--line-color); border-radius: 16px; background: #f8fafc; }
 .arrival-info { min-width: 0; }
 .arrival-info strong, .arrival-info small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
