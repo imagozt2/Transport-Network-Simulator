@@ -153,7 +153,7 @@ La aplicación estará disponible en `http://localhost:4200`. La ruta inicial re
 | `GET` | `/api/health` | Comprueba el estado del backend y de MySQL. |
 | `GET` | `/api/dashboard/summary` | Devuelve el resumen persistido legado; el Panel General utiliza las consultas operativas. |
 | `GET` | `/api/network-map` | Devuelve las líneas activas y sus estaciones ordenadas. |
-| `GET` | `/api/lines/operations` | Devuelve el estado operativo, recorridos y trenes de cada línea. |
+| `GET` | `/api/lines/operations` | Devuelve frecuencias, cocheras, próximas llegadas, recorridos y trenes de cada línea. |
 | `GET` | `/api/stations/operations` | Devuelve el estado, líneas, dispositivos y próximas llegadas de cada estación. |
 | `GET` | `/api/trains/operations` | Devuelve la flota, su clasificación y la ubicación operativa de cada tren. |
 | `GET` | `/api/depots/operations` | Devuelve capacidad, ocupación, distribución y movimientos de las cocheras. |
