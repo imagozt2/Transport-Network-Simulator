@@ -45,7 +45,7 @@ export class NetworkMap implements OnInit {
 
   selectStationLine(code: string): void {
     const line = this.resolveStationLine(code);
-    if (line) { this.expandedLineCode = line.code; }
+    if (line) { this.toggleExpandedLine(line.code); }
   }
 
   isLineExpanded(code: string): boolean { return this.expandedLineCode === code; }

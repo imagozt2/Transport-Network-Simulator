@@ -21,7 +21,10 @@ const response: NetworkMapResponse = {
       code: 'L2',
       name: 'Línea 2',
       color: 'Verde',
-      stations: [{ id: 43, code: 'ST043', name: 'Cuatro Caminos', stationOrder: 1 }]
+      stations: [
+        { id: 43, code: 'ST043', name: 'Cuatro Caminos', stationOrder: 1 },
+        { id: 20, code: 'ST020', name: 'La Galería', stationOrder: 2 }
+      ]
     }
   ]
 };
@@ -124,7 +127,7 @@ describe('NetworkMap', () => {
     expect(compiled.querySelector('.line-accordion-body')?.textContent).toContain('Los Molinos');
   });
 
-  it('should select the station line without leaving the station pressed', async () => {
+  it('should toggle the line from one of its stations without selecting the station itself', async () => {
     await TestBed.configureTestingModule({
       imports: [NetworkMap],
       providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }]
@@ -133,14 +136,43 @@ describe('NetworkMap', () => {
     const fixture = TestBed.createComponent(NetworkMap);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    const station = compiled.querySelectorAll('.station-node').item(44);
+    const station = compiled.querySelector<SVGGElement>('[data-station-code="ST045"]');
 
-    station.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    station?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     fixture.detectChanges();
 
-    expect(station.classList.contains('selected-station')).toBe(false);
+    expect(station?.classList.contains('selected-station')).toBe(false);
     expect(compiled.querySelectorAll('.metro-line.highlighted-line')).toHaveLength(1);
     expect(compiled.querySelector('.line-accordion-body')?.textContent).toContain('Los Molinos');
+
+    station?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(compiled.querySelector('.metro-line.highlighted-line')).toBeNull();
+    expect(compiled.querySelector('.metro-line.dimmed-line')).toBeNull();
+    expect(compiled.querySelector('.line-accordion-body')).toBeNull();
+  });
+
+  it('should replace the selected line when clicking a station from another line', async () => {
+    await TestBed.configureTestingModule({
+      imports: [NetworkMap],
+      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }]
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(NetworkMap);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const firstLineStation = compiled.querySelector<SVGGElement>('[data-station-code="ST045"]');
+    const secondLineStation = compiled.querySelector<SVGGElement>('[data-station-code="ST020"]');
+
+    firstLineStation?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+    secondLineStation?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(compiled.querySelectorAll('.metro-line.highlighted-line')).toHaveLength(1);
+    expect(compiled.querySelectorAll('.metro-line').item(1).classList.contains('highlighted-line')).toBe(true);
+    expect(compiled.querySelector('.line-accordion-body')?.textContent).toContain('La Galería');
   });
 
   it('should show an error and retry action when the API fails', async () => {
