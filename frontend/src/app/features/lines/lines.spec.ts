@@ -62,6 +62,13 @@ describe('Lines', () => {
     expect(compiled.querySelector('.summary-grid small')).toBeNull();
     expect(compiled.querySelector('.summary-grid')?.textContent).not.toContain('Líneas abiertas');
     expect(compiled.querySelector('.summary-grid')?.textContent).not.toContain('Actualización');
+    expect(compiled.querySelectorAll('.line-title-row .phase-pill')).toHaveLength(2);
+    expect(compiled.querySelector('.line-title-row .service-pill')).toBeNull();
+    expect(compiled.querySelector('.metric-panel .large-metric strong')?.textContent?.trim()).toBe('~ 4 min');
+    expect(compiled.querySelector('.help-tooltip [role="tooltip"]')?.textContent).toContain('inicio progresivo');
+    expect(Array.from(compiled.querySelectorAll('.direction-stats span')).map((label) => label.textContent?.trim())).toEqual(['Ida', 'Vuelta']);
+    expect(compiled.querySelector('.direction-stats')?.textContent).not.toContain('Serie');
+    expect(compiled.querySelector('.direction-stats')?.textContent).not.toContain('Estado');
     expect(compiled.querySelector('.line-badge')?.getAttribute('style')).toContain('color: rgb(17, 24, 39)');
     expect(compiled.querySelectorAll('.horizontal-route')).toHaveLength(2);
     expect(compiled.querySelectorAll('.horizontal-station-label')).toHaveLength(4);

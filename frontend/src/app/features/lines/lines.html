@@ -25,7 +25,6 @@
             <span class="line-main-info">
               <span class="line-title-row">
                 <strong>{{ line.name }}</strong>
-                <span class="service-pill" [class.service-open]="line.serviceOpen" [class.service-closed]="!line.serviceOpen">{{ line.serviceOpen ? 'Servicio abierto' : 'Servicio cerrado' }}</span>
                 <span class="phase-pill phase-{{ line.phase.toLowerCase() }}">{{ phaseLabel(line.phase) }}</span>
               </span>
               <small>{{ line.stationCount }} estaciones · {{ line.firstTerminal.name }} — {{ line.lastTerminal.name }} · {{ line.activeTrainCount }} trenes</small>
@@ -38,9 +37,21 @@
               <div class="line-operational-grid">
                 <section class="metric-panel">
                   <h2>Servicio</h2>
-                  <div class="large-metric"><strong>{{ line.headwaySeconds ? formatDuration(line.headwaySeconds) : '—' }}</strong><span>frecuencia actual</span></div>
+                  <div class="large-metric">
+                    <strong>{{ line.headwaySeconds ? '~ ' + formatDuration(line.headwaySeconds) : '—' }}</strong>
+                    <span>frecuencia actual</span>
+                  </div>
                   <dl class="detail-list">
-                    <div><dt>Franja</dt><dd>{{ periodLabel(line.currentPeriodType) }}</dd></div>
+                    <div>
+                      <dt class="detail-label-with-help">
+                        Franja
+                        <span class="help-tooltip" tabindex="0" aria-label="Información sobre las franjas del servicio">
+                          ?
+                          <span role="tooltip">El servicio pasa por inicio progresivo, valle, punta, servicio regular y retirada progresiva según el horario del día.</span>
+                        </span>
+                      </dt>
+                      <dd>{{ periodLabel(line.currentPeriodType) }}</dd>
+                    </div>
                     <div><dt>Horario</dt><dd>{{ formatTime(line.serviceStartsAt) }} — {{ formatTime(line.serviceEndsAt) }}</dd></div>
                     <div><dt>Trayecto</dt><dd>{{ formatDuration(line.estimatedOneWayDurationSeconds) }}</dd></div>
                   </dl>
@@ -49,11 +60,9 @@
                 <section class="metric-panel">
                   <h2>Circulación</h2>
                   <div class="large-metric"><strong>{{ line.activeTrainCount }}</strong><span>trenes en servicio</span></div>
-                  <div class="mini-stats">
+                  <div class="direction-stats">
                     <div><span>Ida</span><strong>{{ lineTrainsInDirection(line, 'OUTBOUND') }}</strong></div>
                     <div><span>Vuelta</span><strong>{{ lineTrainsInDirection(line, 'INBOUND') }}</strong></div>
-                    <div><span>Serie</span><strong>9000</strong></div>
-                    <div><span>Estado</span><strong>{{ line.serviceOpen ? 'Normal' : 'Cerrado' }}</strong></div>
                   </div>
                 </section>
 
