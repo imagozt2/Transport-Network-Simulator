@@ -6,9 +6,9 @@
       <stop offset="1" stop-color="#2563eb"/>
     </linearGradient>
   </defs>
-  <rect width="64" height="64" rx="17" fill="#0f172a"/>
-  <path d="M15 46V20c0-3 2-5 5-5h4l8 13 8-13h4c3 0 5 2 5 5v26h-8V28l-9 14-9-14v18z"
-        fill="url(#background)"/>
-  <circle cx="19" cy="49" r="4" fill="#f8fafc"/>
-  <circle cx="45" cy="49" r="4" fill="#f8fafc"/>
+  <rect width="64" height="64" rx="17" fill="url(#background)"/>
+  <path
+    d="M13 48V18c0-2.2 1.8-4 4-4h5.2L32 29.5 41.8 14H47c2.2 0 4 1.8 4 4v30h-9V29.4L32 45 22 29.4V48z"
+    fill="#fff"
+  />
 </svg>
