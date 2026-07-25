@@ -22,7 +22,12 @@ interface PeriodicallyRefreshedComponent {
 const evaluatedAt = '2026-07-23T08:00:00+02:00';
 const lineResponse = { evaluatedAt, phase: 'CLOSED', activeLineCount: 0, lines: [] };
 const stationResponse = {
-  evaluatedAt, phase: 'CLOSED', stationCount: 0, activeStationCount: 0, stations: []
+  evaluatedAt, phase: 'CLOSED', stationCount: 0, activeStationCount: 0,
+  summary: {
+    stationCount: 0, activeStationCount: 0, transferStationCount: 0,
+    ticketMachineCount: 0, entryValidatorCount: 0, exitValidatorCount: 0
+  },
+  stations: []
 };
 const trainResponse = {
   evaluatedAt,

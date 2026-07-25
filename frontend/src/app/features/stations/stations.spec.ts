@@ -10,6 +10,14 @@ const response: StationOperationsResponse = {
   phase: 'OPERATING',
   stationCount: 1,
   activeStationCount: 1,
+  summary: {
+    stationCount: 1,
+    activeStationCount: 1,
+    transferStationCount: 0,
+    ticketMachineCount: 1,
+    entryValidatorCount: 1,
+    exitValidatorCount: 1
+  },
   stations: [{
     id: 2,
     code: 'STB',
@@ -27,7 +35,19 @@ const response: StationOperationsResponse = {
       id: 10, code: 'L3', name: 'Línea 3', color: 'Amarilla', stationOrder: 2,
       phase: 'OPERATING', serviceOpen: true, activeTrainCount: 4,
       firstTerminal: { id: 1, code: 'STA', name: 'Estación A' },
-      lastTerminal: { id: 3, code: 'STC', name: 'Estación C' }
+      lastTerminal: { id: 3, code: 'STC', name: 'Estación C' },
+      directions: [
+        {
+          direction: 'OUTBOUND',
+          destination: { id: 3, code: 'STC', name: 'Estación C' },
+          activeTrainCount: 3
+        },
+        {
+          direction: 'INBOUND',
+          destination: { id: 1, code: 'STA', name: 'Estación A' },
+          activeTrainCount: 1
+        }
+      ]
     }],
     nextArrivals: [{
       trainId: 90, trainCode: 'T-9001', trainSeries: '9000',
@@ -50,6 +70,17 @@ describe('Stations', () => {
     let compiled = fixture.nativeElement as HTMLElement;
 
     expect(compiled.querySelectorAll('.station-card')).toHaveLength(1);
+    const summaryCards = Array.from(compiled.querySelectorAll<HTMLElement>('.summary-card'));
+    expect(summaryCards.map((card) => card.querySelector('span')?.textContent?.trim())).toEqual([
+      'Estaciones',
+      'Transbordos',
+      'Máquinas de billetes',
+      'Validadores de entrada',
+      'Validadores de salida'
+    ]);
+    expect(summaryCards.map((card) => card.querySelector('strong')?.textContent?.trim()))
+      .toEqual(['1', '0', '1', '1', '1']);
+    expect(compiled.querySelector('.summary-grid small')).toBeNull();
     expect(compiled.querySelector('.status-pill')?.textContent).toContain('Normal');
     expect(compiled.querySelector('.line-badge')?.getAttribute('style')).toContain('rgb(251, 192, 45)');
     expect(compiled.querySelector('.line-thermometer')).not.toBeNull();

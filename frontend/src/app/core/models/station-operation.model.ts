@@ -7,7 +7,17 @@ export interface StationOperationsResponse {
   phase: ServiceOperationPhase;
   stationCount: number;
   activeStationCount: number;
+  summary: StationOperationsSummary;
   stations: StationOperation[];
+}
+
+export interface StationOperationsSummary {
+  stationCount: number;
+  activeStationCount: number;
+  transferStationCount: number;
+  ticketMachineCount: number;
+  entryValidatorCount: number;
+  exitValidatorCount: number;
 }
 
 export interface StationOperation {
@@ -52,6 +62,13 @@ export interface StationOperationLine {
   activeTrainCount: number;
   firstTerminal: StationOperationTerminal;
   lastTerminal: StationOperationTerminal;
+  directions: StationOperationDirection[];
+}
+
+export interface StationOperationDirection {
+  direction: ServiceDirection;
+  destination: StationOperationTerminal;
+  activeTrainCount: number;
 }
 
 export interface StationArrival {

@@ -16,7 +16,12 @@ describe('StationOperationsService', () => {
     expect(request.request.method).toBe('GET');
     request.flush({
       evaluatedAt: '2026-07-22T08:30:00+02:00', phase: 'OPERATING',
-      stationCount: 0, activeStationCount: 0, stations: []
+      stationCount: 0, activeStationCount: 0,
+      summary: {
+        stationCount: 0, activeStationCount: 0, transferStationCount: 0,
+        ticketMachineCount: 0, entryValidatorCount: 0, exitValidatorCount: 0
+      },
+      stations: []
     });
     http.verify();
   });
