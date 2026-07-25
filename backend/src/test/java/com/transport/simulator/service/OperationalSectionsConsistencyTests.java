@@ -19,6 +19,7 @@ import com.transport.simulator.enums.TrainPositionState;
 import com.transport.simulator.enums.TrainStatus;
 import com.transport.simulator.repository.DepotRepository;
 import com.transport.simulator.repository.DeviceRepository;
+import com.transport.simulator.repository.LineDepotRepository;
 import com.transport.simulator.repository.LineStationRepository;
 import com.transport.simulator.repository.StationRepository;
 import com.transport.simulator.repository.TrainRepository;
@@ -51,6 +52,7 @@ class OperationalSectionsConsistencyTests {
     @Mock private TransportLineRepository transportLineRepository;
     @Mock private StationRepository stationRepository;
     @Mock private LineStationRepository lineStationRepository;
+    @Mock private LineDepotRepository lineDepotRepository;
     @Mock private TrainRepository trainRepository;
     @Mock private DepotRepository depotRepository;
     @Mock private DeviceRepository deviceRepository;
@@ -63,7 +65,11 @@ class OperationalSectionsConsistencyTests {
     @BeforeEach
     void setUp() {
         lineQueryService = new LineOperationsQueryService(
-                simulationStateService, transportLineRepository, lineStationRepository
+                simulationStateService,
+                transportLineRepository,
+                lineStationRepository,
+                lineDepotRepository,
+                trainRepository
         );
         stationQueryService = new StationOperationsQueryService(
                 simulationStateService, stationRepository, lineStationRepository, deviceRepository

@@ -6,6 +6,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.transport.simulator.dto.response.lineoperation.LineOperationDepotResponse;
+import com.transport.simulator.dto.response.lineoperation.LineOperationDepotStationResponse;
 import com.transport.simulator.dto.response.lineoperation.LineOperationResponse;
 import com.transport.simulator.dto.response.lineoperation.LineOperationStationResponse;
 import com.transport.simulator.dto.response.lineoperation.LineOperationTrainResponse;
@@ -49,10 +51,23 @@ class LineOperationsControllerTests {
                 ServiceDirection.OUTBOUND, null, null, 1L, "ST001", 2L, "ST002",
                 40, 72L, evaluatedAt.plusSeconds(72)
         );
+        LineOperationDepotResponse depot = new LineOperationDepotResponse(
+                10L,
+                "DEP-A",
+                "Cochera de Aeropuerto",
+                new LineOperationDepotStationResponse(1L, "ST001", "Aeropuerto"),
+                new LineOperationDepotStationResponse(2L, "ST002", "Centro"),
+                1,
+                true,
+                true,
+                8,
+                5,
+                3
+        );
         LineOperationResponse line = new LineOperationResponse(
                 4L, "L4", "Línea 4", "Lila", ServiceOperationPhase.OPERATING, true,
                 evaluatedAt.minusHours(2), evaluatedAt.plusHours(14), "PEAK_MORNING", ServicePeriodType.PEAK,
-                240, 1_200L, 2, first, last, 1, List.of(first, last), List.of(train)
+                240, 1_200L, 2, first, last, 1, List.of(depot), List.of(first, last), List.of(train)
         );
         when(queryService.getOperations()).thenReturn(new LineOperationsResponse(
                 evaluatedAt, ServiceOperationPhase.OPERATING, 1, List.of(line)
@@ -67,6 +82,11 @@ class LineOperationsControllerTests {
                 .andExpect(jsonPath("$.lines[0].stationCount").value(2))
                 .andExpect(jsonPath("$.lines[0].stations[0].code").value("ST001"))
                 .andExpect(jsonPath("$.lines[0].activeTrainCount").value(1))
+                .andExpect(jsonPath("$.lines[0].depots[0].code").value("DEP-A"))
+                .andExpect(jsonPath("$.lines[0].depots[0].dispatchTerminal.code").value("ST002"))
+                .andExpect(jsonPath("$.lines[0].depots[0].assignedTrainCount").value(8))
+                .andExpect(jsonPath("$.lines[0].depots[0].trainsInService").value(5))
+                .andExpect(jsonPath("$.lines[0].depots[0].availableTrainCount").value(3))
                 .andExpect(jsonPath("$.lines[0].trains[0].code").value("T-9001"))
                 .andExpect(jsonPath("$.lines[0].trains[0].progressPercentage").value(40))
                 .andExpect(jsonPath("$.lines[0].trains[0].direction").value("OUTBOUND"));

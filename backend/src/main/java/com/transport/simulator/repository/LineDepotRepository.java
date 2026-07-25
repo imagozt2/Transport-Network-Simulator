@@ -7,6 +7,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface LineDepotRepository extends JpaRepository<LineDepot, Long> {
 
+    @EntityGraph(attributePaths = {"line", "depot", "depot.station", "dispatchTerminalStation"})
+    List<LineDepot> findAllByActiveTrueAndLineActiveTrueOrderByLineCodeAscDispatchPriorityAsc();
+
     @EntityGraph(attributePaths = {"depot", "depot.station", "dispatchTerminalStation"})
     List<LineDepot> findAllByLineIdAndActiveTrueOrderByDispatchPriorityAsc(Long lineId);
 }
