@@ -143,6 +143,67 @@ describe('Lines', () => {
     fixture.destroy();
   });
 
+  it('should select the closest arrival for each station and direction', async () => {
+    const laterArrival = {
+      ...firstLine.nextArrivals[0],
+      trainId: 92,
+      trainCode: 'T-9003',
+      secondsUntilArrival: 180,
+      estimatedArrivalAt: '2026-07-21T08:33:00+02:00'
+    };
+    const earlierArrival = {
+      ...firstLine.nextArrivals[0],
+      trainId: 93,
+      trainCode: 'T-9004',
+      secondsUntilArrival: 20,
+      estimatedArrivalAt: '2026-07-21T08:30:20+02:00'
+    };
+    const lineWithSeveralArrivals = {
+      ...firstLine,
+      nextArrivals: [laterArrival, firstLine.nextArrivals[0], earlierArrival]
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [Lines],
+      providers: [{
+        provide: LineOperationsService,
+        useValue: { getOperations: () => of({ ...response, lines: [lineWithSeveralArrivals] }) }
+      }]
+    }).compileComponents();
+    const fixture = TestBed.createComponent(Lines);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.nextArrival(lineWithSeveralArrivals, 1, 'OUTBOUND')?.trainCode).toBe('T-9004');
+    expect(fixture.nativeElement.querySelector('.station-arrival-tooltip')?.textContent).toContain('0:20');
+    fixture.destroy();
+  });
+
+  it('should render safe fallbacks without frequency, depots or scheduled arrivals', async () => {
+    const lineWithoutOperationalDetails: LineOperation = {
+      ...firstLine,
+      headwaySeconds: null,
+      depots: [],
+      nextArrivals: []
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [Lines],
+      providers: [{
+        provide: LineOperationsService,
+        useValue: { getOperations: () => of({ ...response, lines: [lineWithoutOperationalDetails] }) }
+      }]
+    }).compileComponents();
+    const fixture = TestBed.createComponent(Lines);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.querySelector('.metric-panel .large-metric strong')?.textContent?.trim()).toBe('—');
+    expect(compiled.querySelector('.depots-panel')?.textContent).toContain('0 asociadas');
+    expect(compiled.querySelector('.empty-depots')?.textContent).toContain('No hay cocheras operativas asociadas');
+    expect(compiled.querySelector('.station-arrival-tooltip')?.textContent).toContain('Sin próximas llegadas');
+    fixture.destroy();
+  });
+
   it('should expose a retry action when the operational API fails', async () => {
     await TestBed.configureTestingModule({
       imports: [Lines],

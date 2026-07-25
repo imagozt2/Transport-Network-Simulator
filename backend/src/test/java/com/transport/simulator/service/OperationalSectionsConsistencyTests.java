@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.transport.simulator.entity.Depot;
+import com.transport.simulator.entity.LineDepot;
 import com.transport.simulator.entity.LineStation;
 import com.transport.simulator.entity.Station;
 import com.transport.simulator.entity.Train;
@@ -88,6 +89,7 @@ class OperationalSectionsConsistencyTests {
         Station origin = station(10L, "ST010", "Plaza de la Mina");
         Station destination = station(11L, "ST011", "Los Molinos");
         Depot depot = depot(20L, "DEP-CM", "Cochera de Cuatro Caminos", origin);
+        LineDepot lineDepot = lineDepot(line, depot, destination);
         Train circulatingTrain = train(
                 100L, "RMM-L1-9000-001", "9000", FleetRole.REGULAR_SERVICE, line, depot, 1
         );
@@ -110,6 +112,8 @@ class OperationalSectionsConsistencyTests {
                 .thenReturn(List.of(origin, destination));
         when(lineStationRepository.findAllByActiveTrueOrderByLineCodeAscStationOrderAsc())
                 .thenReturn(route);
+        when(lineDepotRepository.findAllByActiveTrueAndLineActiveTrueOrderByLineCodeAscDispatchPriorityAsc())
+                .thenReturn(List.of(lineDepot));
         when(trainRepository.findAllByActiveTrueOrderByCodeAsc())
                 .thenReturn(List.of(circulatingTrain, storedTrain));
         when(depotRepository.findAllByActiveTrueOrderByCodeAsc()).thenReturn(List.of(depot));
@@ -137,6 +141,15 @@ class OperationalSectionsConsistencyTests {
         assertThat(lineResponse.stationCount()).isEqualTo(stationOperations.stationCount());
         assertThat(lineResponse.stations()).extracting("code")
                 .containsExactly("ST010", "ST011");
+        assertThat(lineResponse.currentPeriodType()).isEqualTo(ServicePeriodType.REGULAR);
+        assertThat(lineResponse.headwaySeconds()).isEqualTo(300);
+        assertThat(lineResponse.depots()).singleElement().satisfies(lineDepotResponse -> {
+            assertThat(lineDepotResponse.code()).isEqualTo(depot.getCode());
+            assertThat(lineDepotResponse.dispatchTerminal().code()).isEqualTo(destination.getCode());
+            assertThat(lineDepotResponse.assignedTrainCount()).isEqualTo(2);
+            assertThat(lineDepotResponse.trainsInService()).isEqualTo(1);
+            assertThat(lineDepotResponse.availableTrainCount()).isZero();
+        });
         assertThat(lineResponse.activeTrainCount())
                 .isEqualTo(trainOperations.summary().trainsInService())
                 .isEqualTo(depotOperations.summary().trainsInService());
@@ -165,6 +178,16 @@ class OperationalSectionsConsistencyTests {
                 .isEqualTo(circulatingTrain.getCode());
         assertThat(destinationResponse.nextArrivals().getFirst().secondsUntilArrival())
                 .isEqualTo(lineTrain.secondsUntilNextStation());
+        assertThat(lineResponse.nextArrivals())
+                .filteredOn(arrival -> arrival.stationCode().equals(destination.getCode()))
+                .filteredOn(arrival -> arrival.direction() == ServiceDirection.OUTBOUND)
+                .singleElement()
+                .satisfies(arrival -> {
+                    assertThat(arrival.trainCode()).isEqualTo(circulatingTrain.getCode());
+                    assertThat(arrival.secondsUntilArrival()).isEqualTo(lineTrain.secondsUntilNextStation());
+                    assertThat(arrival.estimatedArrivalAt())
+                            .isEqualTo(EVALUATED_AT.plusSeconds(lineTrain.secondsUntilNextStation()));
+                });
 
         assertThat(trainOperations.summary().trainsInDepots())
                 .isEqualTo(depotOperations.summary().occupiedSpaces());
@@ -291,6 +314,17 @@ class OperationalSectionsConsistencyTests {
         when(depot.getTrackCount()).thenReturn(2);
         when(depot.getTrainsPerTrack()).thenReturn(2);
         return depot;
+    }
+
+    private LineDepot lineDepot(TransportLine line, Depot depot, Station dispatchTerminal) {
+        LineDepot lineDepot = mock(LineDepot.class);
+        when(lineDepot.getLine()).thenReturn(line);
+        when(lineDepot.getDepot()).thenReturn(depot);
+        when(lineDepot.getDispatchTerminalStation()).thenReturn(dispatchTerminal);
+        when(lineDepot.getDispatchPriority()).thenReturn(1);
+        when(lineDepot.isDispatchEnabled()).thenReturn(true);
+        when(lineDepot.isReceptionEnabled()).thenReturn(true);
+        return lineDepot;
     }
 
     private LineStation stop(
