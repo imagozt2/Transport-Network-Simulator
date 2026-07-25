@@ -84,11 +84,22 @@ class StationOperationsQueryServiceTests {
                 ServiceDirection.OUTBOUND, stationB, stationB, stationC, 140
         );
         StationDeviceSummaryProjection failedDevice = mock(StationDeviceSummaryProjection.class);
+        StationDeviceSummaryProjection entryValidator = mock(StationDeviceSummaryProjection.class);
+        StationDeviceSummaryProjection exitValidator = mock(StationDeviceSummaryProjection.class);
         Long stationAId = stationA.getId();
+        Long stationBId = stationB.getId();
         when(failedDevice.getStationId()).thenReturn(stationAId);
         when(failedDevice.getType()).thenReturn(DeviceType.TICKET_MACHINE);
         when(failedDevice.getStatus()).thenReturn(DeviceStatus.ERROR);
         when(failedDevice.getTotal()).thenReturn(1L);
+        when(entryValidator.getStationId()).thenReturn(stationBId);
+        when(entryValidator.getType()).thenReturn(DeviceType.ENTRY_VALIDATOR);
+        when(entryValidator.getStatus()).thenReturn(DeviceStatus.ONLINE);
+        when(entryValidator.getTotal()).thenReturn(2L);
+        when(exitValidator.getStationId()).thenReturn(stationBId);
+        when(exitValidator.getType()).thenReturn(DeviceType.EXIT_VALIDATOR);
+        when(exitValidator.getStatus()).thenReturn(DeviceStatus.ONLINE);
+        when(exitValidator.getTotal()).thenReturn(3L);
 
         RailwaySimulationState simulation = simulation(
                 line,
@@ -99,16 +110,31 @@ class StationOperationsQueryServiceTests {
                 .thenReturn(List.of(stationA, stationB, stationC));
         when(lineStationRepository.findAllByActiveTrueOrderByLineCodeAscStationOrderAsc())
                 .thenReturn(route);
-        when(deviceRepository.summarizeActiveDevicesByStation()).thenReturn(List.of(failedDevice));
+        when(deviceRepository.summarizeActiveDevicesByStation())
+                .thenReturn(List.of(failedDevice, entryValidator, exitValidator));
 
         var response = queryService.getOperations();
 
         assertThat(response.stationCount()).isEqualTo(3);
         assertThat(response.activeStationCount()).isEqualTo(3);
+        assertThat(response.summary()).satisfies(summary -> {
+            assertThat(summary.stationCount()).isEqualTo(3);
+            assertThat(summary.activeStationCount()).isEqualTo(3);
+            assertThat(summary.transferStationCount()).isZero();
+            assertThat(summary.ticketMachineCount()).isEqualTo(1);
+            assertThat(summary.entryValidatorCount()).isEqualTo(2);
+            assertThat(summary.exitValidatorCount()).isEqualTo(3);
+        });
         assertThat(response.stations().getFirst().status()).isEqualTo(StationOperationStatus.CRITICAL);
 
         var stationBResponse = response.stations().get(1);
         assertThat(stationBResponse.status()).isEqualTo(StationOperationStatus.NORMAL);
+        assertThat(stationBResponse.lines().getFirst().directions()).extracting(
+                "direction", "activeTrainCount", "destination.code"
+        ).containsExactly(
+                org.assertj.core.groups.Tuple.tuple(ServiceDirection.OUTBOUND, 2, "STC"),
+                org.assertj.core.groups.Tuple.tuple(ServiceDirection.INBOUND, 0, "STA")
+        );
         assertThat(stationBResponse.nextArrivals()).extracting(
                 "trainCode", "secondsUntilArrival", "stationsAway", "direction", "atStation"
         ).containsExactly(

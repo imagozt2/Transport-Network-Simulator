@@ -1,9 +1,11 @@
 package com.transport.simulator.service;
 
 import com.transport.simulator.dto.response.stationoperation.StationOperationDevicesResponse;
+import com.transport.simulator.dto.response.stationoperation.StationOperationDirectionResponse;
 import com.transport.simulator.dto.response.stationoperation.StationOperationLineResponse;
 import com.transport.simulator.dto.response.stationoperation.StationOperationResponse;
 import com.transport.simulator.dto.response.stationoperation.StationOperationsResponse;
+import com.transport.simulator.dto.response.stationoperation.StationOperationsSummaryResponse;
 import com.transport.simulator.dto.response.stationoperation.StationOperationTerminalResponse;
 import com.transport.simulator.dto.response.stationoperation.StationArrivalResponse;
 import com.transport.simulator.entity.LineStation;
@@ -90,12 +92,35 @@ public class StationOperationsQueryService {
         int activeStationCount = Math.toIntExact(responses.stream()
                 .filter(station -> station.activeLineCount() > 0)
                 .count());
+        int transferStationCount = Math.toIntExact(responses.stream()
+                .filter(StationOperationResponse::transferStation)
+                .count());
+        long ticketMachineCount = responses.stream()
+                .map(StationOperationResponse::devices)
+                .mapToLong(StationOperationDevicesResponse::ticketMachines)
+                .sum();
+        long entryValidatorCount = responses.stream()
+                .map(StationOperationResponse::devices)
+                .mapToLong(StationOperationDevicesResponse::entryValidators)
+                .sum();
+        long exitValidatorCount = responses.stream()
+                .map(StationOperationResponse::devices)
+                .mapToLong(StationOperationDevicesResponse::exitValidators)
+                .sum();
 
         return new StationOperationsResponse(
                 simulation.evaluatedAt(),
                 simulation.phase(),
                 responses.size(),
                 activeStationCount,
+                new StationOperationsSummaryResponse(
+                        responses.size(),
+                        activeStationCount,
+                        transferStationCount,
+                        ticketMachineCount,
+                        entryValidatorCount,
+                        exitValidatorCount
+                ),
                 responses
         );
     }
@@ -114,7 +139,7 @@ public class StationOperationsQueryService {
                         membership,
                         requiredRoute(membership, routesByLine),
                         requiredSimulationLine(membership, simulatedLinesById),
-                        activeTrainsByLine.getOrDefault(membership.getLine().getId(), List.of()).size()
+                        activeTrainsByLine.getOrDefault(membership.getLine().getId(), List.of())
                 ))
                 .toList();
         int activeLineCount = Math.toIntExact(lines.stream()
@@ -213,8 +238,10 @@ public class StationOperationsQueryService {
             LineStation membership,
             List<LineStation> route,
             SimulatedLineState simulatedLine,
-            long activeTrainCount
+            List<SimulatedTrainState> activeTrains
     ) {
+        StationOperationTerminalResponse firstTerminal = toTerminal(route.getFirst());
+        StationOperationTerminalResponse lastTerminal = toTerminal(route.getLast());
         return new StationOperationLineResponse(
                 membership.getLine().getId(),
                 membership.getLine().getCode(),
@@ -223,10 +250,25 @@ public class StationOperationsQueryService {
                 membership.getStationOrder(),
                 simulatedLine.operation().phase(),
                 simulatedLine.operation().serviceOpen(),
-                Math.toIntExact(activeTrainCount),
-                toTerminal(route.getFirst()),
-                toTerminal(route.getLast())
+                activeTrains.size(),
+                firstTerminal,
+                lastTerminal,
+                List.of(
+                        toDirectionResponse(ServiceDirection.OUTBOUND, lastTerminal, activeTrains),
+                        toDirectionResponse(ServiceDirection.INBOUND, firstTerminal, activeTrains)
+                )
         );
+    }
+
+    private StationOperationDirectionResponse toDirectionResponse(
+            ServiceDirection direction,
+            StationOperationTerminalResponse destination,
+            List<SimulatedTrainState> activeTrains
+    ) {
+        int activeTrainCount = Math.toIntExact(activeTrains.stream()
+                .filter(train -> train.direction() == direction)
+                .count());
+        return new StationOperationDirectionResponse(direction, destination, activeTrainCount);
     }
 
     private StationOperationTerminalResponse toTerminal(LineStation lineStation) {

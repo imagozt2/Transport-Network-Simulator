@@ -8,9 +8,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.transport.simulator.dto.response.stationoperation.StationArrivalResponse;
 import com.transport.simulator.dto.response.stationoperation.StationOperationDevicesResponse;
+import com.transport.simulator.dto.response.stationoperation.StationOperationDirectionResponse;
 import com.transport.simulator.dto.response.stationoperation.StationOperationLineResponse;
 import com.transport.simulator.dto.response.stationoperation.StationOperationResponse;
 import com.transport.simulator.dto.response.stationoperation.StationOperationsResponse;
+import com.transport.simulator.dto.response.stationoperation.StationOperationsSummaryResponse;
 import com.transport.simulator.dto.response.stationoperation.StationOperationTerminalResponse;
 import com.transport.simulator.enums.ServiceDirection;
 import com.transport.simulator.enums.ServiceOperationPhase;
@@ -49,7 +51,11 @@ class StationOperationsControllerTests {
         StationOperationTerminalResponse last = new StationOperationTerminalResponse(3L, "STC", "Estación C");
         StationOperationLineResponse line = new StationOperationLineResponse(
                 10L, "L3", "Línea 3", "Amarilla", 2,
-                ServiceOperationPhase.OPERATING, true, 4, first, last
+                ServiceOperationPhase.OPERATING, true, 4, first, last,
+                List.of(
+                        new StationOperationDirectionResponse(ServiceDirection.OUTBOUND, last, 3),
+                        new StationOperationDirectionResponse(ServiceDirection.INBOUND, first, 1)
+                )
         );
         StationArrivalResponse arrival = new StationArrivalResponse(
                 90L, "T-9001", "9000", 10L, "L3", "Línea 3", "Amarilla",
@@ -62,16 +68,27 @@ class StationOperationsControllerTests {
                 List.of(line), List.of(arrival)
         );
         when(queryService.getOperations()).thenReturn(new StationOperationsResponse(
-                evaluatedAt, ServiceOperationPhase.OPERATING, 1, 1, List.of(station)
+                evaluatedAt, ServiceOperationPhase.OPERATING, 1, 1,
+                new StationOperationsSummaryResponse(1, 1, 0, 1, 1, 1),
+                List.of(station)
         ));
 
         mockMvc.perform(get("/api/stations/operations"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.phase").value("OPERATING"))
                 .andExpect(jsonPath("$.activeStationCount").value(1))
+                .andExpect(jsonPath("$.summary.stationCount").value(1))
+                .andExpect(jsonPath("$.summary.transferStationCount").value(0))
+                .andExpect(jsonPath("$.summary.ticketMachineCount").value(1))
+                .andExpect(jsonPath("$.summary.entryValidatorCount").value(1))
+                .andExpect(jsonPath("$.summary.exitValidatorCount").value(1))
                 .andExpect(jsonPath("$.stations[0].code").value("STB"))
                 .andExpect(jsonPath("$.stations[0].status").value("NORMAL"))
                 .andExpect(jsonPath("$.stations[0].lines[0].color").value("Amarilla"))
+                .andExpect(jsonPath("$.stations[0].lines[0].directions[0].direction").value("OUTBOUND"))
+                .andExpect(jsonPath("$.stations[0].lines[0].directions[0].destination.code").value("STC"))
+                .andExpect(jsonPath("$.stations[0].lines[0].directions[0].activeTrainCount").value(3))
+                .andExpect(jsonPath("$.stations[0].lines[0].directions[1].activeTrainCount").value(1))
                 .andExpect(jsonPath("$.stations[0].nextArrivals[0].trainCode").value("T-9001"))
                 .andExpect(jsonPath("$.stations[0].nextArrivals[0].secondsUntilArrival").value(45))
                 .andExpect(jsonPath("$.stations[0].nextArrivals[0].direction").value("OUTBOUND"))

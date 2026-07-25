@@ -9,6 +9,7 @@ public record StationOperationsResponse(
         ServiceOperationPhase phase,
         int stationCount,
         int activeStationCount,
+        StationOperationsSummaryResponse summary,
         List<StationOperationResponse> stations
 ) {
     public StationOperationsResponse {
