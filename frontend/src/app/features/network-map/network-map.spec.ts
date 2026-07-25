@@ -175,6 +175,53 @@ describe('NetworkMap', () => {
     expect(compiled.querySelector('.line-accordion-body')?.textContent).toContain('La Galería');
   });
 
+  it('should select the hovered line when clicking a transfer station shared by several lines', async () => {
+    await TestBed.configureTestingModule({
+      imports: [NetworkMap],
+      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }]
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(NetworkMap);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const secondMapLine = compiled.querySelectorAll<SVGPolylineElement>('.metro-line').item(1);
+    const transferStation = compiled.querySelector<SVGGElement>('[data-station-code="ST043"]');
+
+    secondMapLine.dispatchEvent(new MouseEvent('mouseenter'));
+    fixture.detectChanges();
+    secondMapLine.dispatchEvent(new MouseEvent('mouseleave'));
+    transferStation?.dispatchEvent(new MouseEvent('mouseenter'));
+    fixture.detectChanges();
+
+    expect(secondMapLine.classList.contains('highlighted-line')).toBe(true);
+
+    transferStation?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(secondMapLine.classList.contains('highlighted-line')).toBe(true);
+    expect(compiled.querySelectorAll('.metro-line.dimmed-line')).toHaveLength(5);
+    expect(compiled.querySelector('.line-accordion-body')?.textContent).toContain('La Galería');
+  });
+
+  it('should keep a station selection after its click bubbles through the map', async () => {
+    await TestBed.configureTestingModule({
+      imports: [NetworkMap],
+      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }]
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(NetworkMap);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const station = compiled.querySelector<SVGGElement>('[data-station-code="ST045"]');
+
+    station?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(compiled.querySelectorAll('.metro-line.highlighted-line')).toHaveLength(1);
+    expect(compiled.querySelectorAll('.metro-line.dimmed-line')).toHaveLength(5);
+    expect(compiled.querySelector('.line-accordion-body')?.textContent).toContain('Los Molinos');
+  });
+
   it('should clear the selected line when clicking the empty map background', async () => {
     await TestBed.configureTestingModule({
       imports: [NetworkMap],
