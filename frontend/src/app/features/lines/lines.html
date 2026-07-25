@@ -66,6 +66,33 @@
                   </div>
                 </section>
 
+                <section class="depots-panel">
+                  <div class="panel-header">
+                    <h2>Cocheras</h2>
+                    <span>{{ line.depots.length }} asociadas</span>
+                  </div>
+                  <div class="line-depots-list">
+                    @for (depot of line.depots; track depot.id) {
+                      <article class="line-depot">
+                        <div class="line-depot-heading">
+                          <span class="depot-badge" aria-hidden="true">CO</span>
+                          <span>
+                            <strong>{{ depot.name }}</strong>
+                            <small>Salida por {{ depot.dispatchTerminal.name }}</small>
+                          </span>
+                        </div>
+                        <dl>
+                          <div><dt>En servicio</dt><dd>{{ depot.trainsInService }}</dd></div>
+                          <div><dt>Disponibles</dt><dd>{{ depot.availableTrainCount }}</dd></div>
+                          <div><dt>Flota asignada</dt><dd>{{ depot.assignedTrainCount }}</dd></div>
+                        </dl>
+                      </article>
+                    } @empty {
+                      <p class="empty-depots">No hay cocheras operativas asociadas.</p>
+                    }
+                  </div>
+                </section>
+
                 <section class="train-circulation-panel">
                   <div class="panel-header">
                     <h2>Posición de los trenes</h2>

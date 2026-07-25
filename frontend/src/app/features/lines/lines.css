@@ -28,11 +28,11 @@
 .phase-ending { color: #92400e; background: #fef3c7; }
 .expand-icon { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 12px; color: #111827; background: #f3f4f6; font-size: 20px; font-weight: 900; }
 .line-card-body { padding: 20px; border-top: 1px solid #e5e7eb; background: #f9fafb; }
-.line-operational-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 420px; grid-template-rows: auto minmax(0, 1fr); align-items: stretch; gap: 18px; }
-.metric-panel, .stations-panel, .train-circulation-panel { padding: 18px; border: 1px solid #e5e7eb; border-radius: 18px; background: #fff; }
-.metric-panel h2, .stations-panel h2, .train-circulation-panel h2 { margin: 0 0 16px; color: #111827; font-size: 16px; }
-.stations-panel { min-height: 0; display: flex; flex-direction: column; grid-column: 3; grid-row: 1 / span 2; }
-.train-circulation-panel { grid-column: 1 / span 2; grid-row: 2; }
+.line-operational-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) 420px; grid-template-rows: auto minmax(0, 1fr); align-items: stretch; gap: 18px; }
+.metric-panel, .depots-panel, .stations-panel, .train-circulation-panel { padding: 18px; border: 1px solid #e5e7eb; border-radius: 18px; background: #fff; }
+.metric-panel h2, .depots-panel h2, .stations-panel h2, .train-circulation-panel h2 { margin: 0 0 16px; color: #111827; font-size: 16px; }
+.stations-panel { min-height: 0; display: flex; flex-direction: column; grid-column: 4; grid-row: 1 / span 2; }
+.train-circulation-panel { grid-column: 1 / span 3; grid-row: 2; }
 .large-metric { display: flex; align-items: baseline; gap: 10px; margin-bottom: 18px; }
 .large-metric strong { color: #111827; font-size: 34px; line-height: 1; }
 .large-metric span { color: #6b7280; font-size: 13px; font-weight: 700; }
@@ -67,6 +67,7 @@
 .mini-station-content small { margin-top: 2px; color: #6b7280; font-size: 11px; font-weight: 700; }
 .transfer-list { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 4px; }
 .transfer-badge { padding: 4px 7px; border-radius: 999px; color: #fff; background: #475569; box-shadow: 0 2px 5px rgba(15, 23, 42, .16); font-size: 10px; font-weight: 900; }
-@media (max-width: 1200px) { .summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .line-operational-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto; } .stations-panel { grid-column: 1 / -1; grid-row: auto; } .mini-thermometer { max-height: 520px; flex: none; } .train-circulation-panel { grid-column: 1 / -1; grid-row: auto; } }
+@media (max-width: 1450px) { .line-operational-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto; } .stations-panel { grid-column: 1 / -1; grid-row: auto; } .mini-thermometer { max-height: 520px; flex: none; } .train-circulation-panel { grid-column: 1 / -1; grid-row: auto; } }
+@media (max-width: 1200px) { .summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 900px) { .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .line-operational-grid { grid-template-columns: 1fr; } .stations-panel, .train-circulation-panel { grid-column: auto; } }
 @media (max-width: 640px) { .summary-grid { grid-template-columns: 1fr; } .line-card-header { grid-template-columns: 58px 1fr 32px; gap: 12px; padding: 16px; } .line-badge { width: 50px; height: 38px; } .line-title-row { align-items: flex-start; flex-direction: column; } .mini-station-content { align-items: flex-start; flex-direction: column; } .transfer-list { justify-content: flex-start; } }

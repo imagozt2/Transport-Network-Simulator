@@ -1,0 +1,101 @@
+.depots-panel {
+  min-width: 0;
+}
+
+.line-depots-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.line-depot {
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: #f9fafb;
+}
+
+.line-depot-heading {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.depot-badge {
+  width: 34px;
+  height: 28px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  color: #fff;
+  background: #111827;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.line-depot-heading > span:last-child {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.line-depot-heading strong {
+  overflow: hidden;
+  color: #111827;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.line-depot-heading small {
+  margin-top: 3px;
+  overflow: hidden;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.line-depot dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 12px 0 0;
+}
+
+.line-depot dl div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.line-depot dt {
+  overflow: hidden;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.line-depot dd {
+  margin: 0;
+  color: #111827;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.empty-depots {
+  margin: 0;
+  padding: 16px;
+  border-radius: 12px;
+  color: #64748b;
+  background: #f8fafc;
+  font-size: 12px;
+  text-align: center;
+}

@@ -14,7 +14,11 @@ import { servicePeriodLabel, servicePhaseLabel } from '../../core/utils/operatio
 import { PeriodicRefresh } from '../../core/utils/periodic-refresh';
 import { formatDuration, formatTime } from '../../core/utils/temporal-formatters';
 
-@Component({ selector: 'app-lines', templateUrl: './lines.html', styleUrls: ['./lines.css', './lines-circulation.css'] })
+@Component({
+  selector: 'app-lines',
+  templateUrl: './lines.html',
+  styleUrls: ['./lines.css', './lines-circulation.css', './lines-depots.css']
+})
 export class Lines implements OnInit, OnDestroy {
   private readonly lineOperationsService = inject(LineOperationsService);
   private readonly periodicRefresh = new PeriodicRefresh(5_000, () => this.loadOperations());

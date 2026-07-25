@@ -11,7 +11,22 @@ const firstLine: LineOperation = {
   estimatedOneWayDurationSeconds: 600, stationCount: 2,
   firstTerminal: { id: 1, code: 'ST001', name: 'Aeropuerto', stationOrder: 1 },
   lastTerminal: { id: 2, code: 'ST002', name: 'Centro', stationOrder: 2 }, activeTrainCount: 2,
-  depots: [],
+  depots: [
+    {
+      id: 10, code: 'DEP-AIR', name: 'Cochera de Aeropuerto',
+      station: { id: 1, code: 'ST001', name: 'Aeropuerto' },
+      dispatchTerminal: { id: 2, code: 'ST002', name: 'Centro' },
+      dispatchPriority: 1, dispatchEnabled: true, receptionEnabled: true,
+      assignedTrainCount: 8, trainsInService: 5, availableTrainCount: 3
+    },
+    {
+      id: 11, code: 'DEP-CEN', name: 'Cochera de Centro',
+      station: { id: 2, code: 'ST002', name: 'Centro' },
+      dispatchTerminal: { id: 1, code: 'ST001', name: 'Aeropuerto' },
+      dispatchPriority: 2, dispatchEnabled: true, receptionEnabled: true,
+      assignedTrainCount: 6, trainsInService: 4, availableTrainCount: 2
+    }
+  ],
   nextArrivals: [],
   stations: [
     { id: 1, code: 'ST001', name: 'Aeropuerto', stationOrder: 1 },
@@ -69,6 +84,12 @@ describe('Lines', () => {
     expect(Array.from(compiled.querySelectorAll('.direction-stats span')).map((label) => label.textContent?.trim())).toEqual(['Ida', 'Vuelta']);
     expect(compiled.querySelector('.direction-stats')?.textContent).not.toContain('Serie');
     expect(compiled.querySelector('.direction-stats')?.textContent).not.toContain('Estado');
+    const depotsPanel = compiled.querySelector('.depots-panel');
+    expect(depotsPanel?.textContent).toContain('2 asociadas');
+    expect(depotsPanel?.textContent).toContain('Cochera de Aeropuerto');
+    expect(depotsPanel?.textContent).toContain('Salida por Centro');
+    expect(depotsPanel?.textContent).toContain('Flota asignada');
+    expect(depotsPanel?.querySelectorAll('.line-depot')).toHaveLength(2);
     expect(compiled.querySelector('.line-badge')?.getAttribute('style')).toContain('color: rgb(17, 24, 39)');
     expect(compiled.querySelectorAll('.horizontal-route')).toHaveLength(2);
     expect(compiled.querySelectorAll('.horizontal-station-label')).toHaveLength(4);
