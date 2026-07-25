@@ -11,7 +11,7 @@
     <section class="map-layout">
       <article class="map-card">
         <div class="map-scroll">
-          <svg class="network-svg" [attr.viewBox]="'0 0 ' + mapViewBox.width + ' ' + mapViewBox.height" [attr.width]="mapViewBox.width" [attr.height]="mapViewBox.height" aria-label="Mapa de la red de metro de Macegocia" role="img">
+          <svg class="network-svg" [attr.viewBox]="'0 0 ' + mapViewBox.width + ' ' + mapViewBox.height" [attr.width]="mapViewBox.width" [attr.height]="mapViewBox.height" aria-label="Mapa de la red de metro de Macegocia" role="img" (click)="clearLineSelectionFromBackground($event)">
             <g class="metro-lines">
               @for (line of mapLines; track line.code) {
                 <polyline class="metro-line" [class.dimmed-line]="isMapLineDimmed(line.code)" [class.highlighted-line]="isMapLineHighlighted(line.code)" [attr.points]="getLinePoints(line)" [attr.stroke]="line.color" (mouseenter)="hoverLine(line.code)" (mouseleave)="clearHoveredLine()" (click)="toggleExpandedLine(line.code)"><title>{{ line.code }}</title></polyline>

@@ -175,6 +175,49 @@ describe('NetworkMap', () => {
     expect(compiled.querySelector('.line-accordion-body')?.textContent).toContain('La Galería');
   });
 
+  it('should clear the selected line when clicking the empty map background', async () => {
+    await TestBed.configureTestingModule({
+      imports: [NetworkMap],
+      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }]
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(NetworkMap);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const mapLine = compiled.querySelectorAll<SVGPolylineElement>('.metro-line').item(0);
+    const mapBackground = compiled.querySelector<SVGSVGElement>('.network-svg');
+
+    mapLine.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+    expect(mapLine.classList.contains('highlighted-line')).toBe(true);
+
+    mapBackground?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(compiled.querySelector('.metro-line.highlighted-line')).toBeNull();
+    expect(compiled.querySelector('.metro-line.dimmed-line')).toBeNull();
+    expect(compiled.querySelector('.station-node.dimmed-station')).toBeNull();
+    expect(compiled.querySelector('.line-accordion-body')).toBeNull();
+  });
+
+  it('should not clear the selection when the map click comes from a line element', async () => {
+    await TestBed.configureTestingModule({
+      imports: [NetworkMap],
+      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }]
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(NetworkMap);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const mapLine = compiled.querySelectorAll<SVGPolylineElement>('.metro-line').item(0);
+
+    mapLine.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(mapLine.classList.contains('highlighted-line')).toBe(true);
+    expect(compiled.querySelectorAll('.metro-line.dimmed-line')).toHaveLength(5);
+  });
+
   it('should show an error and retry action when the API fails', async () => {
     await TestBed.configureTestingModule({
       imports: [NetworkMap],

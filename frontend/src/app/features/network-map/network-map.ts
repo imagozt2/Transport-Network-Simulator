@@ -48,6 +48,12 @@ export class NetworkMap implements OnInit {
     if (line) { this.toggleExpandedLine(line.code); }
   }
 
+  clearLineSelectionFromBackground(event: MouseEvent): void {
+    if (event.target === event.currentTarget) {
+      this.expandedLineCode = null;
+    }
+  }
+
   isLineExpanded(code: string): boolean { return this.expandedLineCode === code; }
   isMapLineDimmed(code: string): boolean { return this.expandedLineCode !== null && this.expandedLineCode !== code; }
   isMapLineHighlighted(code: string): boolean { return this.activeLineCode === code; }
