@@ -6,22 +6,41 @@ import { DashboardService } from '../../core/services/dashboard.service';
 import { Dashboard } from './dashboard';
 
 const summary: DashboardResponse = {
-  network: { activeStations: 24, activeLines: 6 },
-  fleet: { activeTrains: 18, byStatus: { IN_SERVICE: 12, DEPOT: 6 } },
-  devices: {
-    activeDevices: 30,
-    byStatus: { ONLINE: 28, MAINTENANCE: 2 },
-    byType: { TICKET_MACHINE: 10, ENTRY_VALIDATOR: 10, EXIT_VALIDATOR: 10 }
+  lineCount: 6,
+  stationCount: 50,
+  totalFleet: 242,
+  trainsInService: 84,
+  deviceCount: 622,
+  depotCount: 6,
+  depotOccupancyPercentage: 65,
+  trainStatusCounts: {
+    IN_SERVICE: 84,
+    DEPOT: 150,
+    MAINTENANCE: 4,
+    STOPPED: 2,
+    OUT_OF_SERVICE: 2
   },
-  depots: {
-    activeDepots: 1,
-    totalCapacity: 20,
-    assignedTrains: 6,
-    freeSlots: 14,
-    occupationPercentage: 30,
-    items: [{ id: 1, code: 'DEP-01', name: 'Cochera Central', capacity: 20, assignedTrains: 6, freeSlots: 14 }]
-  },
-  lines: [{ id: 1, code: 'L1', name: 'Línea Central', color: 'Roja' }]
+  deviceStatusCounts: { ONLINE: 622, OFFLINE: 0, MAINTENANCE: 0, ERROR: 0 },
+  deviceTypeCounts: { TICKET_MACHINE: 126, ENTRY_VALIDATOR: 248, EXIT_VALIDATOR: 248 },
+  depotCapacity: 300,
+  occupiedDepotSpaces: 195,
+  availableDepotSpaces: 105,
+  depots: [{
+    id: 1,
+    code: 'CC',
+    name: 'Cochera de Cuatro Caminos',
+    capacity: 50,
+    occupiedSpaces: 32,
+    availableSpaces: 18
+  }],
+  lines: [{
+    id: 1,
+    code: 'L1',
+    name: 'Línea 1',
+    color: 'Roja',
+    serviceOpen: true,
+    activeTrainCount: 14
+  }]
 };
 
 describe('Dashboard', () => {
@@ -33,12 +52,28 @@ describe('Dashboard', () => {
 
     const fixture = TestBed.createComponent(Dashboard);
     fixture.detectChanges();
-    const content = fixture.nativeElement.textContent as string;
+    const compiled = fixture.nativeElement as HTMLElement;
+    const cards = Array.from(compiled.querySelectorAll<HTMLElement>('.summary-card'));
 
-    expect(content).toContain('Panel General');
-    expect(content).toContain('24');
-    expect(content).toContain('Cochera Central');
-    expect(content).toContain('Línea Central');
+    expect(compiled.textContent).toContain('Panel General');
+    expect(cards).toHaveLength(7);
+    expect(cards.map((card) => card.querySelector('span')?.textContent?.trim())).toEqual([
+      'Líneas de la red',
+      'Número de estaciones',
+      'Flota total',
+      'Trenes en servicio',
+      'Cantidad de máquinas',
+      'Cocheras',
+      'Ocupación de las cocheras'
+    ]);
+    expect(cards.map((card) => card.querySelector('strong')?.textContent?.trim())).toEqual([
+      '6', '50', '242', '84', '622', '6', '65%'
+    ]);
+    expect(compiled.querySelector('.summary-card small')).toBeNull();
+    expect(compiled.textContent).toContain('Estado de trenes');
+    expect(compiled.textContent).toContain('Estado de máquinas');
+    expect(compiled.textContent).toContain('Cochera de Cuatro Caminos');
+    expect(compiled.textContent).toContain('14 trenes en servicio');
   });
 
   it('should show a retry action when loading fails', async () => {
