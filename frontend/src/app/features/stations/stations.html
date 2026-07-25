@@ -34,11 +34,12 @@
         </div>
       </div>
       <div class="filter-group">
-        <strong>Tipo</strong>
+        <strong>Número de líneas</strong>
         <div class="filter-buttons">
-          <button type="button" [class.active]="selectedType === 'ALL'" (click)="setTypeFilter('ALL')">Todas</button>
-          <button type="button" [class.active]="selectedType === 'TRANSFER'" (click)="setTypeFilter('TRANSFER')">Transbordo</button>
-          <button type="button" [class.active]="selectedType === 'SIMPLE'" (click)="setTypeFilter('SIMPLE')">Simples</button>
+          <button type="button" [class.active]="selectedLineCount === 'ALL'" (click)="setLineCountFilter('ALL')">Todas</button>
+          <button type="button" [class.active]="selectedLineCount === '1'" (click)="setLineCountFilter('1')">1 línea</button>
+          <button type="button" [class.active]="selectedLineCount === '2'" (click)="setLineCountFilter('2')">2 líneas</button>
+          <button type="button" [class.active]="selectedLineCount === '3_PLUS'" (click)="setLineCountFilter('3_PLUS')">3 o más</button>
         </div>
       </div>
     </section>

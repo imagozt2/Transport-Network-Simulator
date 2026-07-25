@@ -81,6 +81,10 @@ describe('Stations', () => {
     expect(summaryCards.map((card) => card.querySelector('strong')?.textContent?.trim()))
       .toEqual(['1', '0', '1', '1', '1']);
     expect(compiled.querySelector('.summary-grid small')).toBeNull();
+    const filterGroups = compiled.querySelectorAll('.filter-group');
+    expect(filterGroups.item(1).querySelector('strong')?.textContent?.trim()).toBe('Número de líneas');
+    expect(Array.from(filterGroups.item(1).querySelectorAll('button')).map((button) => button.textContent?.trim()))
+      .toEqual(['Todas', '1 línea', '2 líneas', '3 o más']);
     expect(compiled.querySelector('.status-pill')?.textContent).toContain('Normal');
     expect(compiled.querySelector('.line-badge')?.getAttribute('style')).toContain('rgb(251, 192, 45)');
     expect(compiled.querySelector('.line-thermometer')).not.toBeNull();
@@ -102,13 +106,43 @@ describe('Stations', () => {
     const fixture = TestBed.createComponent(Stations);
     fixture.detectChanges();
     const component = fixture.componentInstance;
+    const oneLineStation = response.stations[0];
+    const twoLineStation = {
+      ...oneLineStation,
+      id: 3,
+      code: 'STC',
+      name: 'Estación C',
+      transferStation: true,
+      lineCount: 2
+    };
+    const threeLineStation = {
+      ...oneLineStation,
+      id: 4,
+      code: 'STD',
+      name: 'Estación D',
+      transferStation: true,
+      lineCount: 3
+    };
+    component.operations = {
+      ...response,
+      stations: [oneLineStation, twoLineStation, threeLineStation]
+    };
 
     component.setSearchText('inexistente');
     expect(component.filteredStations()).toHaveLength(0);
+    component.setSearchText('');
+    component.setLineCountFilter('1');
+    expect(component.filteredStations().map((station) => station.code)).toEqual(['STB']);
+    component.setLineCountFilter('2');
+    expect(component.filteredStations().map((station) => station.code)).toEqual(['STC']);
+    component.setLineCountFilter('3_PLUS');
+    expect(component.filteredStations().map((station) => station.code)).toEqual(['STD']);
     component.setStatusFilter('CRITICAL');
+    expect(component.filteredStations()).toHaveLength(0);
     expect(component.hasActiveFilters()).toBe(true);
     component.clearFilters();
-    expect(component.filteredStations()).toHaveLength(1);
+    expect(component.filteredStations()).toHaveLength(3);
+    expect(component.selectedLineCount).toBe('ALL');
     fixture.destroy();
   });
 

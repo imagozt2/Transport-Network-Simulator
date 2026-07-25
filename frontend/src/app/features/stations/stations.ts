@@ -14,7 +14,7 @@ import { PeriodicRefresh } from '../../core/utils/periodic-refresh';
 import { formatCountdown } from '../../core/utils/temporal-formatters';
 
 type StatusFilter = StationOperationStatus | 'ALL';
-type StationTypeFilter = 'ALL' | 'TRANSFER' | 'SIMPLE';
+type LineCountFilter = 'ALL' | '1' | '2' | '3_PLUS';
 
 @Component({ selector: 'app-stations', templateUrl: './stations.html', styleUrls: ['./stations.css', './stations-arrivals.css'] })
 export class Stations implements OnInit, OnDestroy {
@@ -29,7 +29,7 @@ export class Stations implements OnInit, OnDestroy {
   loading = true;
   errorMessage = '';
   selectedStatus: StatusFilter = 'ALL';
-  selectedType: StationTypeFilter = 'ALL';
+  selectedLineCount: LineCountFilter = 'ALL';
   searchText = '';
   countdownNowMs = Date.now();
 
@@ -70,16 +70,18 @@ export class Stations implements OnInit, OnDestroy {
 
   setSearchText(value: string): void { this.searchText = value; }
   setStatusFilter(status: StatusFilter): void { this.selectedStatus = status; }
-  setTypeFilter(type: StationTypeFilter): void { this.selectedType = type; }
+  setLineCountFilter(lineCount: LineCountFilter): void { this.selectedLineCount = lineCount; }
 
   clearFilters(): void {
     this.searchText = '';
     this.selectedStatus = 'ALL';
-    this.selectedType = 'ALL';
+    this.selectedLineCount = 'ALL';
   }
 
   hasActiveFilters(): boolean {
-    return this.searchText.trim().length > 0 || this.selectedStatus !== 'ALL' || this.selectedType !== 'ALL';
+    return this.searchText.trim().length > 0
+      || this.selectedStatus !== 'ALL'
+      || this.selectedLineCount !== 'ALL';
   }
 
   filteredStations(): StationOperation[] {
@@ -89,10 +91,11 @@ export class Stations implements OnInit, OnDestroy {
         || station.name.toLocaleLowerCase('es').includes(search)
         || station.code.toLocaleLowerCase('es').includes(search);
       const matchesStatus = this.selectedStatus === 'ALL' || station.status === this.selectedStatus;
-      const matchesType = this.selectedType === 'ALL'
-        || (this.selectedType === 'TRANSFER' && station.transferStation)
-        || (this.selectedType === 'SIMPLE' && !station.transferStation);
-      return matchesSearch && matchesStatus && matchesType;
+      const matchesLineCount = this.selectedLineCount === 'ALL'
+        || (this.selectedLineCount === '1' && station.lineCount === 1)
+        || (this.selectedLineCount === '2' && station.lineCount === 2)
+        || (this.selectedLineCount === '3_PLUS' && station.lineCount >= 3);
+      return matchesSearch && matchesStatus && matchesLineCount;
     });
   }
 
@@ -102,18 +105,6 @@ export class Stations implements OnInit, OnDestroy {
   }
 
   isExpanded(stationId: number): boolean { return this.expandedStationIds.has(stationId); }
-
-  transferStationCount(): number {
-    return this.operations?.stations.filter((station) => station.transferStation).length ?? 0;
-  }
-
-  totalDevices(): number {
-    return this.operations?.stations.reduce((total, station) => total + station.devices.total, 0) ?? 0;
-  }
-
-  onlineDevices(): number {
-    return this.operations?.stations.reduce((total, station) => total + station.devices.online, 0) ?? 0;
-  }
 
   deviceAvailability(station: StationOperation): number {
     return station.devices.total === 0 ? 0 : Math.round(station.devices.online * 100 / station.devices.total);
