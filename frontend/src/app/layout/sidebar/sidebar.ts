@@ -24,26 +24,36 @@ export class Sidebar {
 
   protected readonly sections: SidebarSection[] = [
     {
-      title: 'Principal',
+      title: 'Vista general',
       items: [
         { label: 'Panel General', route: '/dashboard', icon: '📊' },
         { label: 'Mapa de red', route: '/network-map', icon: '🗺️' }
       ]
     },
     {
-      title: 'Infraestructura',
+      title: 'Red ferroviaria',
       items: [
-        { label: 'Líneas', route: '/lines', icon: 'LI' },
-        { label: 'Estaciones', route: '/stations', icon: 'ES' },
-        { label: 'Trenes', route: '/trains', icon: 'TR' },
-        { label: 'Cocheras', route: '/depots', icon: 'CO' },
-        { label: 'Máquinas', route: '/devices', icon: 'MA' }
+        { label: 'Líneas', route: '/lines', icon: '🚇' },
+        { label: 'Estaciones', route: '/stations', icon: '🚉' }
       ]
     },
     {
-      title: 'Operación',
+      title: 'Material móvil',
       items: [
-        { label: 'Logs', route: '/logs', icon: 'LG' }
+        { label: 'Trenes', route: '/trains', icon: '🚆' },
+        { label: 'Cocheras', route: '/depots', icon: '🏭' }
+      ]
+    },
+    {
+      title: 'Equipamiento',
+      items: [
+        { label: 'Máquinas', route: '/devices', icon: '🖥️' }
+      ]
+    },
+    {
+      title: 'Supervisión',
+      items: [
+        { label: 'Logs', route: '/logs', icon: '📋' }
       ]
     }
   ];
