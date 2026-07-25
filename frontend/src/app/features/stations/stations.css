@@ -32,8 +32,7 @@
 .station-title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 6px; }
 .station-title-row > strong { color: #111827; font-size: 20px; }
 .station-main-info > small { color: #6b7280; font-size: 14px; }
-.status-pill, .type-pill { padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 900; }
-.type-pill { color: #1d4ed8; background: #eff6ff; }
+.status-pill { padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 900; }
 .status-normal { color: #166534; background: #dcfce7; }
 .status-degraded { color: #92400e; background: #fef3c7; }
 .status-critical { color: #991b1b; background: #fee2e2; }

@@ -57,7 +57,6 @@
               <span class="station-title-row">
                 <strong>{{ station.name }}</strong>
                 <span class="status-pill status-{{ station.status.toLowerCase().replace('_', '-') }}">{{ statusLabel(station.status) }}</span>
-                <span class="type-pill">{{ stationTypeLabel(station) }}</span>
               </span>
               <small>{{ station.lineCount }} líneas · {{ station.devices.total }} dispositivos · {{ station.nextArrivals.length }} próximas llegadas</small>
             </span>

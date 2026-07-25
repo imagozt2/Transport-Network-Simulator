@@ -110,10 +110,6 @@ export class Stations implements OnInit, OnDestroy {
     return station.devices.total === 0 ? 0 : Math.round(station.devices.online * 100 / station.devices.total);
   }
 
-  stationTypeLabel(station: StationOperation): string {
-    return station.transferStation ? 'Estación de transbordo' : 'Estación simple';
-  }
-
   statusLabel(status: StationOperationStatus): string {
     return stationStatusLabel(status);
   }

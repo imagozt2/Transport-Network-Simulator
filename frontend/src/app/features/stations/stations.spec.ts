@@ -70,6 +70,10 @@ describe('Stations', () => {
     let compiled = fixture.nativeElement as HTMLElement;
 
     expect(compiled.querySelectorAll('.station-card')).toHaveLength(1);
+    expect(compiled.querySelectorAll('.station-title-row .status-pill')).toHaveLength(1);
+    expect(compiled.querySelector('.station-title-row .type-pill')).toBeNull();
+    expect(compiled.querySelector('.station-title-row')?.textContent).not.toContain('Estación simple');
+    expect(compiled.querySelector('.station-title-row')?.textContent).not.toContain('Estación de transbordo');
     const summaryCards = Array.from(compiled.querySelectorAll<HTMLElement>('.summary-card'));
     expect(summaryCards.map((card) => card.querySelector('span')?.textContent?.trim())).toEqual([
       'Estaciones',
