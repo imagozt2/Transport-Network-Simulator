@@ -187,6 +187,55 @@ describe('Logs URL filters', () => {
     });
     fixture.destroy();
   });
+
+  it('should combine filters, return to the first page and clear every criterion', async () => {
+    const pagedResponse: OperationalLogPage = {
+      ...logsPage,
+      currentPage: 4,
+      totalElements: 150,
+      totalPages: 6,
+      first: false,
+      last: false
+    };
+    const getLogs = vi.fn().mockReturnValue(of(pagedResponse));
+    await configure({}, getLogs);
+    const fixture = TestBed.createComponent(Logs);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+
+    component.selectedDeviceType = 'EXIT_VALIDATOR';
+    component.selectedSeverity = 'WARNING';
+    component.selectedStationCode = 'ST001';
+    component.applyFilters();
+
+    expect(component.hasActiveFilters()).toBe(true);
+    expect(getLogs).toHaveBeenLastCalledWith(0, 25, {
+      deviceCode: undefined,
+      deviceType: 'EXIT_VALIDATOR',
+      severity: 'WARNING',
+      origin: undefined,
+      eventType: undefined,
+      stationCode: 'ST001',
+      occurredFrom: undefined,
+      occurredTo: undefined
+    });
+
+    component.clearFilters();
+
+    expect(component.hasActiveFilters()).toBe(false);
+    expect(component.selectedDeviceType).toBe('ALL');
+    expect(getLogs).toHaveBeenLastCalledWith(0, 25, {
+      deviceCode: undefined,
+      deviceType: undefined,
+      severity: undefined,
+      origin: undefined,
+      eventType: undefined,
+      stationCode: undefined,
+      occurredFrom: undefined,
+      occurredTo: undefined
+    });
+    fixture.destroy();
+  });
 });
 
 async function configure(
