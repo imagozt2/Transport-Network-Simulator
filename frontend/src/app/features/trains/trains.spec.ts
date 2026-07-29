@@ -55,7 +55,19 @@ describe('Trains', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
     expect(compiled.querySelectorAll('.train-card')).toHaveLength(3);
-    expect(compiled.querySelectorAll('.fleet-role-card')).toHaveLength(3);
+    const summaryCards = Array.from(compiled.querySelectorAll<HTMLElement>('.summary-card'));
+    expect(summaryCards.map((card) => card.querySelector('span')?.textContent?.trim())).toEqual([
+      'Flota total',
+      'Trenes en servicio',
+      'Trenes en cocheras',
+      'Servicio regular',
+      'Reserva',
+      'Históricos'
+    ]);
+    expect(summaryCards.map((card) => card.querySelector('strong')?.textContent?.trim()))
+      .toEqual(['3', '1', '2', '1', '1', '1']);
+    expect(compiled.querySelector('.summary-grid small')).toBeNull();
+    expect(compiled.querySelector('.fleet-role-summary')).toBeNull();
     expect(compiled.querySelector('.train-card.role-regular')).not.toBeNull();
     expect(compiled.querySelector('.train-card.role-reserve')).not.toBeNull();
     expect(compiled.querySelector('.train-card.role-historic')).not.toBeNull();

@@ -10,23 +10,12 @@
     @if (errorMessage) { <div class="refresh-warning">{{ errorMessage }} Se conservan los últimos datos disponibles.</div> }
 
     <section class="summary-grid" aria-label="Resumen operativo de la flota">
-      <article class="summary-card"><span>Flota activa</span><strong>{{ data.summary.activeFleet }}</strong><small>Unidades registradas</small></article>
-      <article class="summary-card"><span>En servicio</span><strong>{{ data.summary.trainsInService }}</strong><small>Circulando por la red</small></article>
-      <article class="summary-card"><span>En cocheras</span><strong>{{ data.summary.trainsInDepots }}</strong><small>Unidades guardadas</small></article>
-      <article class="summary-card"><span>Resultados</span><strong>{{ filteredTrains().length }}</strong><small>Según los filtros</small></article>
-    </section>
-
-    <section class="fleet-role-summary" aria-label="Composición de la flota por función">
-      @for (role of roles; track role) {
-        <article class="fleet-role-card"
-          [class.role-regular]="role === 'REGULAR_SERVICE'"
-          [class.role-reserve]="role === 'RESERVE'"
-          [class.role-historic]="role === 'HISTORIC'">
-          <span class="role-symbol" aria-hidden="true">{{ role === 'REGULAR_SERVICE' ? 'OP' : role === 'RESERVE' ? 'RV' : 'HI' }}</span>
-          <span class="role-summary-copy"><strong>{{ roleLabel(role) }}</strong><small>{{ roleDescription(role) }}</small></span>
-          <strong class="role-total">{{ data.summary.byRole[role] }}</strong>
-        </article>
-      }
+      <article class="summary-card"><span>Flota total</span><strong>{{ data.summary.activeFleet }}</strong></article>
+      <article class="summary-card"><span>Trenes en servicio</span><strong>{{ data.summary.trainsInService }}</strong></article>
+      <article class="summary-card"><span>Trenes en cocheras</span><strong>{{ data.summary.trainsInDepots }}</strong></article>
+      <article class="summary-card"><span>Servicio regular</span><strong>{{ data.summary.byRole.REGULAR_SERVICE }}</strong></article>
+      <article class="summary-card"><span>Reserva</span><strong>{{ data.summary.byRole.RESERVE }}</strong></article>
+      <article class="summary-card"><span>Históricos</span><strong>{{ data.summary.byRole.HISTORIC }}</strong></article>
     </section>
 
     <section class="filters-panel" aria-label="Filtros de trenes">
