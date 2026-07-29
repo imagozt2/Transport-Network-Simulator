@@ -94,7 +94,10 @@ describe('Logs URL filters', () => {
     expect(deviceFilter.selectedOptions[0]?.textContent).toContain('Máquina de billetes 1');
     expect(fixture.nativeElement.querySelector('.logs-table tbody tr')).not.toBeNull();
     expect(fixture.nativeElement.querySelectorAll('.pagination-panel.bottom button'))
-      .toHaveLength(4);
+      .toHaveLength(5);
+    expect(fixture.nativeElement.querySelector(
+      '.pagination-panel.bottom .page-number[aria-current="page"]'
+    )?.textContent?.trim()).toBe('1');
   });
 
   it('should ignore invalid enumerations and malformed dates from the URL', async () => {
@@ -143,6 +146,45 @@ describe('Logs URL filters', () => {
     ) as HTMLSelectElement;
     expect(stationFilter.value).toBe('ST001');
     expect(stationFilter.selectedOptions[0]?.textContent).toContain('Los Molinos');
+    fixture.destroy();
+  });
+
+  it('should expose nearby pages and request a selected page directly', async () => {
+    const pagedResponse: OperationalLogPage = {
+      ...logsPage,
+      currentPage: 3,
+      totalElements: 200,
+      totalPages: 8,
+      first: false,
+      last: false
+    };
+    const getLogs = vi.fn().mockReturnValue(of(pagedResponse));
+    await configure({}, getLogs);
+
+    const fixture = TestBed.createComponent(Logs);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const topPageButtons = Array.from(
+      compiled.querySelectorAll<HTMLButtonElement>(
+        '.pagination-panel:not(.bottom) .page-number'
+      )
+    );
+
+    expect(topPageButtons.map((button) => button.textContent?.trim()))
+      .toEqual(['2', '3', '4', '5', '6']);
+    expect(topPageButtons[2].getAttribute('aria-current')).toBe('page');
+    topPageButtons[4].click();
+
+    expect(getLogs).toHaveBeenLastCalledWith(5, 25, {
+      deviceCode: undefined,
+      deviceType: undefined,
+      severity: undefined,
+      origin: undefined,
+      eventType: undefined,
+      stationCode: undefined,
+      occurredFrom: undefined,
+      occurredTo: undefined
+    });
     fixture.destroy();
   });
 });

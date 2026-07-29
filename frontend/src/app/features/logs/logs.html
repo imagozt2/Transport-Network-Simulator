@@ -57,10 +57,23 @@
       <nav class="pagination-panel" aria-label="Paginación superior">
         <div><strong>{{ pageLabel() }}</strong><span>{{ paginationRangeLabel() }}</span></div>
         <div class="pagination-actions">
-          <button class="pagination-button" type="button" [disabled]="firstPage" (click)="goToFirstPage()">Primera</button>
-          <button class="pagination-button" type="button" [disabled]="firstPage" (click)="goToPreviousPage()">Anterior</button>
-          <button class="pagination-button" type="button" [disabled]="lastPage" (click)="goToNextPage()">Siguiente</button>
-          <button class="pagination-button" type="button" [disabled]="lastPage" (click)="goToLastPage()">Última</button>
+          <button class="pagination-button" type="button" [disabled]="firstPage || loading" (click)="goToFirstPage()">Primera</button>
+          <button class="pagination-button" type="button" [disabled]="firstPage || loading" (click)="goToPreviousPage()">Anterior</button>
+          <span class="page-numbers" aria-label="Páginas disponibles">
+            @for (page of visiblePageNumbers(); track page) {
+              <button
+                class="pagination-button page-number"
+                type="button"
+                [class.active]="page === currentPage"
+                [disabled]="page === currentPage || loading"
+                [attr.aria-current]="page === currentPage ? 'page' : null"
+                [attr.aria-label]="'Ir a la página ' + (page + 1)"
+                (click)="goToPage(page)"
+              >{{ page + 1 }}</button>
+            }
+          </span>
+          <button class="pagination-button" type="button" [disabled]="lastPage || loading" (click)="goToNextPage()">Siguiente</button>
+          <button class="pagination-button" type="button" [disabled]="lastPage || loading" (click)="goToLastPage()">Última</button>
         </div>
       </nav>
 
@@ -94,10 +107,23 @@
         <nav class="pagination-panel bottom" aria-label="Paginación inferior">
           <div><strong>{{ pageLabel() }}</strong><span>{{ paginationRangeLabel() }}</span></div>
           <div class="pagination-actions">
-            <button class="pagination-button" type="button" [disabled]="firstPage" (click)="goToFirstPage()">Primera</button>
-            <button class="pagination-button" type="button" [disabled]="firstPage" (click)="goToPreviousPage()">Anterior</button>
-            <button class="pagination-button" type="button" [disabled]="lastPage" (click)="goToNextPage()">Siguiente</button>
-            <button class="pagination-button" type="button" [disabled]="lastPage" (click)="goToLastPage()">Última</button>
+            <button class="pagination-button" type="button" [disabled]="firstPage || loading" (click)="goToFirstPage()">Primera</button>
+            <button class="pagination-button" type="button" [disabled]="firstPage || loading" (click)="goToPreviousPage()">Anterior</button>
+            <span class="page-numbers" aria-label="Páginas disponibles">
+              @for (page of visiblePageNumbers(); track page) {
+                <button
+                  class="pagination-button page-number"
+                  type="button"
+                  [class.active]="page === currentPage"
+                  [disabled]="page === currentPage || loading"
+                  [attr.aria-current]="page === currentPage ? 'page' : null"
+                  [attr.aria-label]="'Ir a la página ' + (page + 1)"
+                  (click)="goToPage(page)"
+                >{{ page + 1 }}</button>
+              }
+            </span>
+            <button class="pagination-button" type="button" [disabled]="lastPage || loading" (click)="goToNextPage()">Siguiente</button>
+            <button class="pagination-button" type="button" [disabled]="lastPage || loading" (click)="goToLastPage()">Última</button>
           </div>
         </nav>
       }

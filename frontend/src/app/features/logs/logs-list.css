@@ -12,9 +12,12 @@
 .pagination-panel strong { color: #111827; font-size: 14px; font-weight: 900; }
 .pagination-panel span { margin-top: 4px; color: #6b7280; font-size: 12px; font-weight: 800; }
 .pagination-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.pagination-panel .page-numbers { display: inline-flex; align-items: center; gap: 6px; margin: 0; }
 .pagination-button { border: 0; border-radius: 12px; padding: 9px 12px; color: #fff; background: #111827; cursor: pointer; font-size: 12px; font-weight: 900; white-space: nowrap; }
 .pagination-button:hover { background: #1f2937; }
 .pagination-button:disabled { color: #9ca3af; background: #e5e7eb; cursor: not-allowed; }
+.pagination-button.page-number { min-width: 34px; padding-inline: 9px; }
+.pagination-button.page-number.active { color: #fff; background: #2563eb; }
 .logs-table-wrapper { overflow-x: auto; border: 1px solid #e5e7eb; border-radius: 18px; }
 .logs-table { width: 100%; min-width: 1120px; border-collapse: collapse; background: #fff; }
 .logs-table thead { color: #fff; background: #111827; }
@@ -35,6 +38,8 @@
 @media (max-width: 700px) {
   .results-header, .pagination-panel { align-items: stretch; flex-direction: column; }
   .pagination-size select { width: 100%; }
-  .pagination-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .pagination-button { width: 100%; }
+  .pagination-actions { justify-content: center; }
+  .pagination-actions > .pagination-button:not(.page-number) { flex: 1 1 calc(50% - 8px); }
+  .pagination-panel .page-numbers { width: 100%; justify-content: center; order: 1; }
+  .pagination-actions > .pagination-button:nth-last-child(-n + 2) { order: 2; }
 }

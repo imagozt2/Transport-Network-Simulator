@@ -165,6 +165,26 @@ export class Logs implements OnInit {
     }
   }
 
+  goToPage(page: number): void {
+    if (page >= 0 && page < this.totalPages && page !== this.currentPage) {
+      this.loadLogs(page);
+    }
+  }
+
+  visiblePageNumbers(): number[] {
+    const visiblePageCount = Math.min(5, this.totalPages);
+    if (visiblePageCount === 0) {
+      return [];
+    }
+
+    const maximumStart = this.totalPages - visiblePageCount;
+    const start = Math.min(
+      Math.max(this.currentPage - Math.floor(visiblePageCount / 2), 0),
+      maximumStart
+    );
+    return Array.from({ length: visiblePageCount }, (_, index) => start + index);
+  }
+
   setPageSize(value: string): void {
     this.pageSize = Number(value);
     this.loadLogs(0);
