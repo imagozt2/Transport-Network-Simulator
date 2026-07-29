@@ -75,6 +75,12 @@ describe('Trains', () => {
     expect(compiled.querySelector('.train-card.role-reserve .depot-badge')?.textContent).toContain('LF');
     expect(compiled.querySelector('.train-card.role-reserve .depot-badge')?.getAttribute('title'))
       .toContain('Cochera de Las Fuentes');
+    expect(compiled.querySelector('.train-card.role-regular .train-code')?.getAttribute('title'))
+      .toBe('T-9001');
+    expect(compiled.querySelector('.train-card.role-regular .train-summary')?.textContent?.trim())
+      .toBe('Serie 9000 · Entre Plaza de la Mina y Las Fuentes');
+    expect(compiled.querySelector('.train-card.role-regular .train-summary')?.textContent)
+      .not.toContain('Línea 1');
     expect(compiled.querySelector('.live-location')?.textContent).toContain('Las Fuentes');
     expect(compiled.querySelector('.countdown')?.textContent).toContain('1:05');
 

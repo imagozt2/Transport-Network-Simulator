@@ -18,7 +18,7 @@
 .filter-field input:focus, .filter-field select:focus { border-color: #111827; background: #fff; }
 .filter-notice { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 18px; border: 1px solid #bfdbfe; border-radius: 16px; color: #1e40af; background: #eff6ff; font-size: 13px; font-weight: 800; }
 .filter-notice button { padding: 8px 13px; border: 0; border-radius: 999px; color: #fff; background: #1d4ed8; font-weight: 900; cursor: pointer; }
-.trains-list { display: flex; flex-direction: column; gap: 16px; }
+.trains-list { display: flex; flex-direction: column; gap: 10px; }
 @media (max-width: 1250px) { .summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .filters-panel { grid-template-columns: repeat(2, minmax(0, 1fr)); } .search-field { grid-column: 1 / -1; } }
 @media (max-width: 900px) { .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 640px) { .summary-grid, .filters-panel { grid-template-columns: 1fr; } .search-field { grid-column: auto; } .filter-notice { align-items: flex-start; flex-direction: column; } }

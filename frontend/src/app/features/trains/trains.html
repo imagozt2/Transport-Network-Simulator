@@ -38,10 +38,10 @@
           [class.role-reserve]="train.fleetRole === 'RESERVE'"
           [class.role-historic]="train.fleetRole === 'HISTORIC'">
           <button class="train-card-header" type="button" (click)="toggleTrain(train.id)" [attr.aria-expanded]="isExpanded(train.id)">
-            <span class="train-code">{{ train.code }}</span>
+            <span class="train-code" [attr.title]="train.code">{{ train.code }}</span>
             <span class="train-main-info">
               <span class="train-title-row"><strong>{{ train.manufacturer }} {{ train.model }}</strong><span class="status-pill status-{{ train.status.toLowerCase().replace('_', '-') }}">{{ statusLabel(train.status) }}</span><span class="role-pill">{{ roleLabel(train.fleetRole) }}</span></span>
-              <small>Serie {{ train.series }} · {{ train.assignedLine.name }} · {{ situationLabel(train) }}</small>
+              <small class="train-summary">Serie {{ train.series }} · {{ situationLabel(train) }}</small>
             </span>
             @if (train.serviceLocation; as location) {
               <span class="location-badge line-badge"
