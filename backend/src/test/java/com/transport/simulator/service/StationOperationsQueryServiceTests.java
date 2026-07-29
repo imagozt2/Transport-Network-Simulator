@@ -129,6 +129,13 @@ class StationOperationsQueryServiceTests {
 
         var stationBResponse = response.stations().get(1);
         assertThat(stationBResponse.status()).isEqualTo(StationOperationStatus.NORMAL);
+        assertThat(stationBResponse.activeLineCount()).isEqualTo(1);
+        assertThat(stationBResponse.activeTrainCount()).isEqualTo(2);
+        assertThat(stationBResponse.lines()).hasSize(1);
+        assertThat(stationBResponse.lines().getFirst().activeTrainCount()).isEqualTo(2);
+        assertThat(stationBResponse.lines().getFirst().directions().stream()
+                .mapToInt(direction -> direction.activeTrainCount())
+                .sum()).isEqualTo(stationBResponse.lines().getFirst().activeTrainCount());
         assertThat(stationBResponse.lines().getFirst().directions()).extracting(
                 "direction", "activeTrainCount", "destination.code"
         ).containsExactly(

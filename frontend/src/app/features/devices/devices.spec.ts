@@ -10,20 +10,31 @@ import { Devices } from './devices';
 const response: DeviceOperationsResponse = {
   evaluatedAt: '2026-07-23T12:00:00+02:00',
   summary: {
-    totalDevices: 1,
-    filteredDevices: 1,
-    byType: { TICKET_MACHINE: 1, ENTRY_VALIDATOR: 0, EXIT_VALIDATOR: 0 },
-    byStatus: { ONLINE: 1, OFFLINE: 0, MAINTENANCE: 0, ERROR: 0 }
+    totalDevices: 2,
+    filteredDevices: 2,
+    byType: { TICKET_MACHINE: 2, ENTRY_VALIDATOR: 0, EXIT_VALIDATOR: 0 },
+    byStatus: { ONLINE: 2, OFFLINE: 0, MAINTENANCE: 0, ERROR: 0 }
   },
-  devices: [{
-    id: 10,
-    code: 'RMM-MB-ST001-001',
-    name: 'Máquina de billetes 1',
-    type: 'TICKET_MACHINE',
-    status: 'ONLINE',
-    lastConnectionAt: '2026-07-23T11:59:55+02:00',
-    station: { id: 1, code: 'ST001', name: 'Los Molinos' }
-  }]
+  devices: [
+    {
+      id: 10,
+      code: 'RMM-MB-ST001-001',
+      name: 'Máquina de billetes 1',
+      type: 'TICKET_MACHINE',
+      status: 'ONLINE',
+      lastConnectionAt: '2026-07-23T11:59:55+02:00',
+      station: { id: 1, code: 'ST001', name: 'Los Molinos' }
+    },
+    {
+      id: 11,
+      code: 'RMM-MB-ST002-001',
+      name: 'Máquina de billetes 2',
+      type: 'TICKET_MACHINE',
+      status: 'ONLINE',
+      lastConnectionAt: '2026-07-23T11:59:55+02:00',
+      station: { id: 2, code: 'ST002', name: 'Cuatro Caminos' }
+    }
+  ]
 };
 
 describe('Devices log navigation', () => {
@@ -52,6 +63,8 @@ describe('Devices log navigation', () => {
     expect(link.getAttribute('aria-label')).toContain('RMM-MB-ST001-001');
     expect(fixture.componentInstance.selectedStationCode).toBe('ST001');
     expect(fixture.componentInstance.filteredDevices()).toHaveLength(1);
+    expect(fixture.componentInstance.filteredDevices()[0].station.code).toBe('ST001');
+    expect(fixture.nativeElement.textContent).not.toContain('RMM-MB-ST002-001');
     fixture.destroy();
   });
 

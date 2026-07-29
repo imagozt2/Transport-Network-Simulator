@@ -110,6 +110,31 @@ describe('Logs URL filters', () => {
       occurredTo: undefined
     });
   });
+
+  it('should preserve the station context received from a station card', async () => {
+    const getLogs = vi.fn().mockReturnValue(of(logsPage));
+    await configure({ stationCode: 'ST001' }, getLogs);
+
+    const fixture = TestBed.createComponent(Logs);
+    fixture.detectChanges();
+
+    expect(getLogs).toHaveBeenCalledWith(0, 25, {
+      deviceCode: undefined,
+      severity: undefined,
+      origin: undefined,
+      eventType: undefined,
+      stationCode: 'ST001',
+      occurredFrom: undefined,
+      occurredTo: undefined
+    });
+    expect(fixture.componentInstance.selectedStationCode).toBe('ST001');
+    const stationFilter = fixture.nativeElement.querySelector(
+      '.filters-grid label:nth-of-type(5) select'
+    ) as HTMLSelectElement;
+    expect(stationFilter.value).toBe('ST001');
+    expect(stationFilter.selectedOptions[0]?.textContent).toContain('Los Molinos');
+    fixture.destroy();
+  });
 });
 
 async function configure(

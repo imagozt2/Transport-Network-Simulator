@@ -95,6 +95,8 @@ describe('Stations', () => {
       .toEqual(['Todas', '1 línea', '2 líneas', '3 o más']);
     expect(compiled.querySelector('.status-pill')?.textContent).toContain('Normal');
     expect(compiled.querySelector('.line-badge')?.getAttribute('style')).toContain('rgb(251, 192, 45)');
+    expect(compiled.querySelector('.service-panel .large-metric strong')?.textContent?.trim()).toBe('4');
+    expect(compiled.querySelector('.station-line-heading em')?.textContent?.trim()).toBe('4 trenes');
     expect(compiled.querySelector('.line-thermometer')).not.toBeNull();
     const directions = compiled.querySelectorAll<HTMLElement>('.line-direction');
     expect(directions).toHaveLength(2);
@@ -135,6 +137,7 @@ describe('Stations', () => {
       id: 3,
       code: 'STC',
       name: 'Estación C',
+      status: 'DEGRADED' as const,
       transferStation: true,
       lineCount: 2
     };
@@ -143,6 +146,7 @@ describe('Stations', () => {
       id: 4,
       code: 'STD',
       name: 'Estación D',
+      status: 'CLOSED' as const,
       transferStation: true,
       lineCount: 3
     };
@@ -151,16 +155,23 @@ describe('Stations', () => {
       stations: [oneLineStation, twoLineStation, threeLineStation]
     };
 
+    component.setSearchText('estación c');
+    expect(component.filteredStations().map((station) => station.code)).toEqual(['STC']);
+    component.setSearchText('std');
+    expect(component.filteredStations().map((station) => station.code)).toEqual(['STD']);
     component.setSearchText('inexistente');
     expect(component.filteredStations()).toHaveLength(0);
     component.setSearchText('');
+    component.setStatusFilter('DEGRADED');
+    expect(component.filteredStations().map((station) => station.code)).toEqual(['STC']);
+    component.setStatusFilter('ALL');
     component.setLineCountFilter('1');
     expect(component.filteredStations().map((station) => station.code)).toEqual(['STB']);
     component.setLineCountFilter('2');
     expect(component.filteredStations().map((station) => station.code)).toEqual(['STC']);
     component.setLineCountFilter('3_PLUS');
     expect(component.filteredStations().map((station) => station.code)).toEqual(['STD']);
-    component.setStatusFilter('CRITICAL');
+    component.setStatusFilter('NORMAL');
     expect(component.filteredStations()).toHaveLength(0);
     expect(component.hasActiveFilters()).toBe(true);
     component.clearFilters();
