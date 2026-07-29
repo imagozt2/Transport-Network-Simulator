@@ -174,9 +174,17 @@ AAAA-MM-DDTHH:mm
 ### Paginación
 
 La pantalla permite solicitar 25, 50 o 100 resultados. Tanto encima como debajo de la tabla aparecen
-los controles Primera, Anterior, Siguiente y Última, acompañados de hasta cinco páginas cercanas.
-La ventana se centra alrededor de la página actual cuando es posible y se ajusta al inicio o al final
-del resultado. La página activa se identifica visualmente y mediante `aria-current="page"`.
+los controles Primera, Anterior, Siguiente y Última junto con una paginación segmentada:
+
+- al inicio se muestran las tres primeras y las tres últimas páginas;
+- en una posición intermedia se muestran las dos primeras, la página anterior, la actual, la
+  siguiente y las dos últimas;
+- los saltos entre segmentos se representan mediante puntos suspensivos.
+
+Los puntos suspensivos son interactivos. Al pulsarlos se abre un selector en el que se puede
+introducir cualquier número comprendido entre `1` y `totalPages`. Esto permite saltar directamente
+a páginas alejadas sin recorrerlas de una en una. La página activa se identifica visualmente y
+mediante `aria-current="page"`.
 
 Todos los controles quedan deshabilitados mientras se resuelve una petición. Aplicar filtros,
 limpiarlos o cambiar el tamaño de página reinicia la consulta en la primera página.

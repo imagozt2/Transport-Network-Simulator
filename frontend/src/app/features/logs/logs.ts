@@ -20,6 +20,10 @@ type OptionalSeverity = LogSeverity | 'ALL';
 type OptionalOrigin = LogOrigin | 'ALL';
 type OptionalEventType = DeviceEventType | 'ALL';
 type OptionalDeviceType = DeviceType | 'ALL';
+type PaginationLocation = 'top' | 'bottom';
+type PaginationItem =
+  | { type: 'page'; page: number; key: string }
+  | { type: 'gap'; key: string };
 
 @Component({
   selector: 'app-logs',
@@ -41,6 +45,8 @@ export class Logs implements OnInit {
   totalPages = 0;
   firstPage = true;
   lastPage = true;
+  openPageJump: PaginationLocation | null = null;
+  pageJumpValue = '';
 
   selectedSeverity: OptionalSeverity = 'ALL';
   selectedOrigin: OptionalOrigin = 'ALL';
@@ -167,22 +173,79 @@ export class Logs implements OnInit {
 
   goToPage(page: number): void {
     if (page >= 0 && page < this.totalPages && page !== this.currentPage) {
+      this.closePageJump();
       this.loadLogs(page);
     }
   }
 
-  visiblePageNumbers(): number[] {
-    const visiblePageCount = Math.min(5, this.totalPages);
-    if (visiblePageCount === 0) {
+  paginationItems(): PaginationItem[] {
+    if (this.totalPages === 0) {
       return [];
     }
+    if (this.totalPages <= 7) {
+      return Array.from({ length: this.totalPages }, (_, page) => ({
+        type: 'page' as const,
+        page,
+        key: `page-${page}`
+      }));
+    }
 
-    const maximumStart = this.totalPages - visiblePageCount;
-    const start = Math.min(
-      Math.max(this.currentPage - Math.floor(visiblePageCount / 2), 0),
-      maximumStart
-    );
-    return Array.from({ length: visiblePageCount }, (_, index) => start + index);
+    const pages = this.currentPage <= 2 || this.currentPage >= this.totalPages - 3
+      ? [0, 1, 2, this.totalPages - 3, this.totalPages - 2, this.totalPages - 1]
+      : [
+          0,
+          1,
+          this.currentPage - 1,
+          this.currentPage,
+          this.currentPage + 1,
+          this.totalPages - 2,
+          this.totalPages - 1
+        ];
+    const uniquePages = [...new Set(pages)].sort((first, second) => first - second);
+    const items: PaginationItem[] = [];
+
+    uniquePages.forEach((page, index) => {
+      const previousPage = uniquePages[index - 1];
+      if (index > 0 && page - previousPage > 1) {
+        items.push({ type: 'gap', key: `gap-${previousPage}-${page}` });
+      }
+      items.push({ type: 'page', page, key: `page-${page}` });
+    });
+    return items;
+  }
+
+  showPageJump(location: PaginationLocation): void {
+    this.openPageJump = location;
+    this.pageJumpValue = '';
+  }
+
+  closePageJump(): void {
+    this.openPageJump = null;
+    this.pageJumpValue = '';
+  }
+
+  setPageJumpValue(value: string): void {
+    this.pageJumpValue = value;
+  }
+
+  isPageJumpValid(): boolean {
+    if (!/^\d+$/.test(this.pageJumpValue.trim())) {
+      return false;
+    }
+    const page = Number(this.pageJumpValue);
+    return page >= 1 && page <= this.totalPages;
+  }
+
+  submitPageJump(): void {
+    if (!this.isPageJumpValid()) {
+      return;
+    }
+    const targetPage = Number(this.pageJumpValue) - 1;
+    if (targetPage === this.currentPage) {
+      this.closePageJump();
+      return;
+    }
+    this.goToPage(targetPage);
   }
 
   setPageSize(value: string): void {

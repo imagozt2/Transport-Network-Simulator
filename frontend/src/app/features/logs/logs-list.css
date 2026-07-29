@@ -6,7 +6,7 @@
 .pagination-size span { color: #374151; font-size: 12px; font-weight: 900; }
 .pagination-size select { min-width: 120px; border: 1px solid #d1d5db; border-radius: 14px; padding: 10px 12px; color: #111827; background: #f9fafb; font: inherit; font-size: 13px; font-weight: 800; outline: none; }
 .pagination-size select:focus { border-color: #111827; background: #fff; box-shadow: 0 0 0 3px rgba(17, 24, 39, .08); }
-.pagination-panel { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; border: 1px solid #e5e7eb; border-radius: 18px; padding: 14px 16px; background: #f9fafb; }
+.pagination-panel { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; border: 1px solid #e5e7eb; border-radius: 18px; padding: 14px 16px; background: #f9fafb; }
 .pagination-panel.bottom { margin: 16px 0 0; }
 .pagination-panel strong, .pagination-panel span { display: block; }
 .pagination-panel strong { color: #111827; font-size: 14px; font-weight: 900; }
@@ -18,6 +18,15 @@
 .pagination-button:disabled { color: #9ca3af; background: #e5e7eb; cursor: not-allowed; }
 .pagination-button.page-number { min-width: 34px; padding-inline: 9px; }
 .pagination-button.page-number.active { color: #fff; background: #2563eb; }
+.pagination-gap { min-width: 34px; border: 1px dashed #94a3b8; border-radius: 12px; padding: 7px 9px; color: #334155; background: #fff; cursor: pointer; font-size: 16px; font-weight: 900; }
+.pagination-gap:hover { border-color: #111827; background: #f1f5f9; }
+.page-jump { position: absolute; z-index: 5; right: 16px; top: calc(100% - 7px); display: flex; align-items: flex-end; gap: 8px; border: 1px solid #cbd5e1; border-radius: 14px; padding: 12px; background: #fff; box-shadow: 0 16px 34px rgba(15, 23, 42, .18); }
+.page-jump label { display: flex; flex-direction: column; gap: 5px; }
+.page-jump label span { margin: 0; color: #475569; font-size: 11px; font-weight: 850; }
+.page-jump input { width: 120px; min-height: 38px; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 10px; padding: 0 10px; font: inherit; font-size: 13px; font-weight: 800; }
+.page-jump button { min-height: 38px; border: 0; border-radius: 10px; padding: 0 13px; color: #fff; background: #111827; cursor: pointer; font-weight: 900; }
+.page-jump button:disabled { color: #94a3b8; background: #e2e8f0; }
+.page-jump .close-jump { padding: 0 11px; color: #334155; background: #e2e8f0; font-size: 18px; }
 .logs-table-wrapper { overflow-x: auto; border: 1px solid #e5e7eb; border-radius: 18px; }
 .logs-table { width: 100%; min-width: 1120px; border-collapse: collapse; background: #fff; }
 .logs-table thead { color: #fff; background: #111827; }
@@ -42,4 +51,7 @@
   .pagination-actions > .pagination-button:not(.page-number) { flex: 1 1 calc(50% - 8px); }
   .pagination-panel .page-numbers { width: 100%; justify-content: center; order: 1; }
   .pagination-actions > .pagination-button:nth-last-child(-n + 2) { order: 2; }
+  .page-jump { right: 12px; left: 12px; align-items: stretch; flex-wrap: wrap; }
+  .page-jump label { flex: 1 1 150px; }
+  .page-jump input { width: 100%; }
 }

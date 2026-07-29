@@ -152,9 +152,9 @@ describe('Logs URL filters', () => {
   it('should expose nearby pages and request a selected page directly', async () => {
     const pagedResponse: OperationalLogPage = {
       ...logsPage,
-      currentPage: 3,
-      totalElements: 200,
-      totalPages: 8,
+      currentPage: 69,
+      totalElements: 9_425,
+      totalPages: 377,
       first: false,
       last: false
     };
@@ -171,11 +171,11 @@ describe('Logs URL filters', () => {
     );
 
     expect(topPageButtons.map((button) => button.textContent?.trim()))
-      .toEqual(['2', '3', '4', '5', '6']);
-    expect(topPageButtons[2].getAttribute('aria-current')).toBe('page');
+      .toEqual(['1', '2', '69', '70', '71', '376', '377']);
+    expect(topPageButtons[3].getAttribute('aria-current')).toBe('page');
     topPageButtons[4].click();
 
-    expect(getLogs).toHaveBeenLastCalledWith(5, 25, {
+    expect(getLogs).toHaveBeenLastCalledWith(70, 25, {
       deviceCode: undefined,
       deviceType: undefined,
       severity: undefined,
@@ -185,6 +185,58 @@ describe('Logs URL filters', () => {
       occurredFrom: undefined,
       occurredTo: undefined
     });
+    fixture.destroy();
+  });
+
+  it('should open the ellipsis selector and jump to any valid page', async () => {
+    const firstResponse: OperationalLogPage = {
+      ...logsPage,
+      totalElements: 9_425,
+      totalPages: 377,
+      first: true,
+      last: false
+    };
+    const getLogs = vi.fn().mockReturnValue(of(firstResponse));
+    await configure({}, getLogs);
+    const fixture = TestBed.createComponent(Logs);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const topPageButtons = Array.from(
+      compiled.querySelectorAll<HTMLButtonElement>(
+        '.pagination-panel:not(.bottom) .page-number'
+      )
+    );
+
+    expect(topPageButtons.map((button) => button.textContent?.trim()))
+      .toEqual(['1', '2', '3', '375', '376', '377']);
+    const gapButton = compiled.querySelector<HTMLButtonElement>(
+      '.pagination-panel:not(.bottom) .pagination-gap'
+    )!;
+    gapButton.click();
+    fixture.detectChanges();
+
+    const jumpInput = compiled.querySelector<HTMLInputElement>(
+      '.pagination-panel:not(.bottom) .page-jump input'
+    )!;
+    const jumpForm = compiled.querySelector<HTMLFormElement>(
+      '.pagination-panel:not(.bottom) .page-jump'
+    )!;
+    jumpInput.value = '70';
+    jumpInput.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    jumpForm.dispatchEvent(new Event('submit'));
+
+    expect(getLogs).toHaveBeenLastCalledWith(69, 25, {
+      deviceCode: undefined,
+      deviceType: undefined,
+      severity: undefined,
+      origin: undefined,
+      eventType: undefined,
+      stationCode: undefined,
+      occurredFrom: undefined,
+      occurredTo: undefined
+    });
+    expect(componentPageJumpState(fixture.componentInstance)).toEqual([null, '']);
     fixture.destroy();
   });
 
@@ -256,4 +308,8 @@ async function configure(
       }
     ]
   }).compileComponents();
+}
+
+function componentPageJumpState(component: Logs): [string | null, string] {
+  return [component.openPageJump, component.pageJumpValue];
 }
