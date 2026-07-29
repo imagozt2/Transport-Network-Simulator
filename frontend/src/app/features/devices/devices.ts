@@ -38,6 +38,7 @@ export class Devices implements OnInit, OnDestroy {
   selectedType: TypeFilter = 'ALL';
   selectedStatus: StatusFilter = 'ALL';
   selectedStationCode = 'ALL';
+  readonly expandedDeviceIds = new Set<number>();
 
   readonly types: readonly DeviceType[] = [
     'TICKET_MACHINE',
@@ -109,6 +110,18 @@ export class Devices implements OnInit, OnDestroy {
       || this.selectedType !== 'ALL'
       || this.selectedStatus !== 'ALL'
       || this.selectedStationCode !== 'ALL';
+  }
+
+  toggleDevice(deviceId: number): void {
+    if (this.expandedDeviceIds.has(deviceId)) {
+      this.expandedDeviceIds.delete(deviceId);
+      return;
+    }
+    this.expandedDeviceIds.add(deviceId);
+  }
+
+  isExpanded(deviceId: number): boolean {
+    return this.expandedDeviceIds.has(deviceId);
   }
 
   filteredDevices(): DeviceOperation[] {

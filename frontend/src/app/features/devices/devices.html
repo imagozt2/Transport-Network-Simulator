@@ -102,53 +102,62 @@
 
     <div class="devices-grid">
       @for (device of filteredDevices(); track trackDevice($index, device)) {
-        <article class="device-card status-border-{{ device.status.toLowerCase() }}">
-          <header class="device-card-header">
+        <article
+          class="device-card status-border-{{ device.status.toLowerCase() }}"
+          [class.expanded]="isExpanded(device.id)"
+        >
+          <button
+            class="device-card-header"
+            type="button"
+            (click)="toggleDevice(device.id)"
+            [attr.aria-expanded]="isExpanded(device.id)"
+          >
             <span class="device-icon type-{{ device.type.toLowerCase().replace('_', '-') }}">
               {{ typeShortLabel(device.type) }}
             </span>
             <span class="device-heading">
-              <span class="device-code">{{ device.code }}</span>
-              <strong>{{ device.name }}</strong>
-              <small>{{ typeLabel(device.type) }}</small>
+              <span class="device-title-row">
+                <strong>{{ device.name }}</strong>
+                <span class="device-code">{{ device.code }}</span>
+                <span class="type-pill">{{ typeLabel(device.type) }}</span>
+                <span class="status-pill status-{{ device.status.toLowerCase() }}">
+                  {{ statusLabel(device.status) }}
+                </span>
+              </span>
+              <small>{{ device.station.name }} · {{ device.station.code }}</small>
             </span>
-            <span class="status-pill status-{{ device.status.toLowerCase() }}">
-              {{ statusLabel(device.status) }}
+            <span class="expand-symbol" aria-hidden="true">
+              {{ isExpanded(device.id) ? '−' : '+' }}
             </span>
-          </header>
+          </button>
 
-          <section class="device-location">
-            <span>Estación</span>
-            <strong>{{ device.station.name }}</strong>
-            <small>{{ device.station.code }}</small>
-          </section>
+          @if (isExpanded(device.id)) {
+            <div class="device-card-body">
+              <dl class="device-details">
+                <div>
+                  <dt>Estación</dt>
+                  <dd>{{ device.station.name }}</dd>
+                  <small>{{ device.station.code }}</small>
+                </div>
+                <div>
+                  <dt>Última conexión</dt>
+                  <dd>{{ formatDateTime(device.lastConnectionAt) }}</dd>
+                </div>
+              </dl>
 
-          <dl class="device-details">
-            <div>
-              <dt>Tipo</dt>
-              <dd>{{ typeLabel(device.type) }}</dd>
+              <footer class="device-actions">
+                <a
+                  class="logs-link"
+                  [routerLink]="['/logs']"
+                  [queryParams]="{ deviceCode: device.code }"
+                  [attr.aria-label]="'Ver logs de ' + device.name + ' (' + device.code + ')'"
+                >
+                  Ver logs
+                  <span aria-hidden="true">→</span>
+                </a>
+              </footer>
             </div>
-            <div>
-              <dt>Estado operativo</dt>
-              <dd>{{ statusLabel(device.status) }}</dd>
-            </div>
-            <div class="connection-detail">
-              <dt>Última conexión</dt>
-              <dd>{{ formatDateTime(device.lastConnectionAt) }}</dd>
-            </div>
-          </dl>
-
-          <footer class="device-actions">
-            <a
-              class="logs-link"
-              [routerLink]="['/logs']"
-              [queryParams]="{ deviceCode: device.code }"
-              [attr.aria-label]="'Ver logs de ' + device.name + ' (' + device.code + ')'"
-            >
-              Ver logs
-              <span aria-hidden="true">→</span>
-            </a>
-          </footer>
+          }
         </article>
       } @empty {
         <div class="state-card empty-card">

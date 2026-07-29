@@ -57,11 +57,20 @@ describe('Devices log navigation', () => {
     const fixture = TestBed.createComponent(Devices);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    const link = compiled.querySelector('.logs-link') as HTMLAnchorElement;
+    const cardHeader = compiled.querySelector('.device-card-header') as HTMLButtonElement;
 
-    expect(link).not.toBeNull();
+    expect(cardHeader.getAttribute('aria-expanded')).toBe('false');
+    expect(compiled.querySelector('.logs-link')).toBeNull();
+    expect(compiled.querySelector('.device-heading')?.textContent).toContain('Los Molinos');
+    cardHeader.click();
+    fixture.detectChanges();
+
+    const link = compiled.querySelector('.logs-link') as HTMLAnchorElement;
+    expect(cardHeader.getAttribute('aria-expanded')).toBe('true');
     expect(link.getAttribute('href')).toBe('/logs?deviceCode=RMM-MB-ST001-001');
     expect(link.getAttribute('aria-label')).toContain('RMM-MB-ST001-001');
+    expect(compiled.querySelector('.device-details')?.textContent).toContain('Última conexión');
+    expect(compiled.querySelector('.device-details')?.textContent).not.toContain('Estado operativo');
     expect(fixture.componentInstance.selectedStationCode).toBe('ST001');
     expect(fixture.componentInstance.filteredDevices()).toHaveLength(1);
     expect(fixture.componentInstance.filteredDevices()[0].station.code).toBe('ST001');
