@@ -16,9 +16,9 @@ Con el backend y el frontend en ejecución, la pantalla está disponible en:
 http://localhost:4200/trains
 ```
 
-La primera consulta se realiza al abrir la sección. Después, el frontend solicita una instantánea
-nueva cada 15 segundos. La actualización automática se puede pausar y también existe una acción
-manual. Las peticiones no se solapan.
+La primera consulta se realiza al abrir la sección. Después, el frontend solicita automáticamente
+una instantánea nueva cada 15 segundos. Las peticiones no se solapan y la pantalla no expone
+controles manuales de actualización.
 
 La cuenta atrás hacia la próxima estación avanza localmente cada segundo y se sincroniza con cada
 respuesta del backend. De esta forma se presenta precisión `mm:ss` sin realizar una petición HTTP
@@ -32,19 +32,31 @@ La cabecera muestra:
 - unidades activas registradas;
 - trenes actualmente en servicio;
 - trenes almacenados en cocheras;
-- resultados visibles después de aplicar los filtros;
-- composición de la flota por función.
+- unidades de servicio regular;
+- unidades de reserva;
+- material histórico.
 
 La lista admite filtros combinables por:
 
 - código, fabricante, modelo o serie mediante búsqueda de texto;
 - estado operativo;
 - línea asignada;
+- cochera base o cochera en la que se encuentra actualmente la unidad;
 - serie;
 - función dentro de la flota.
 
 Los filtros se aplican en el navegador sobre la última instantánea recibida. El endpoint devuelve la
 flota activa completa y actualmente no dispone de parámetros de consulta.
+
+El filtro de cochera también se puede inicializar mediante `depotCode`:
+
+```text
+http://localhost:4200/trains?depotCode=DEP-CC-A
+```
+
+Esta navegación se utiliza desde el botón **Ver trenes** de cada cochera. El filtro incluye tanto
+las unidades que tienen esa instalación como cochera base como las que se encuentran físicamente
+en ella en la instantánea actual.
 
 ## Función de la flota y estado operativo
 
@@ -71,7 +83,12 @@ asignado estructuralmente a una línea no significa que esté circulando por ell
 
 ## Situación en tiempo real
 
-Cada tarjeta desplegable presenta los datos técnicos, la línea asignada, la cochera base y la
+Las tarjetas utilizan una cabecera compacta con la identidad, el estado, la función de flota y un
+icono que representa la ubicación actual. Si el tren circula, se muestra el código y color de su
+línea actual; si está guardado, se muestra una sigla negra de dos caracteres para su cochera.
+El icono no representa necesariamente la línea estructuralmente asignada.
+
+Al desplegar una tarjeta se presentan los datos técnicos, la línea asignada, la cochera base y la
 situación operativa. Para un tren en servicio se muestran:
 
 - número de turno;
@@ -83,8 +100,9 @@ situación operativa. Para un tren en servicio se muestran:
 - próxima estación y tiempo restante en formato `mm:ss`.
 
 La barra de progreso representa únicamente el tramo actual. No es un termómetro de la línea
-completa. Cuando el tren está parado en una estación, la pantalla lo indica explícitamente y
-mantiene la información de su próxima parada según el estado calculado por el motor.
+completa. Debajo aparecen dos bloques verticales diferenciados para la próxima estación y la llegada
+en formato `mm:ss`. Cuando el tren está parado en una estación, la pantalla lo indica explícitamente
+y mantiene la información de su próxima parada según el estado calculado por el motor.
 
 Para un tren en estado `DEPOT`, `serviceLocation` es `null` y se muestra `currentDepot`. Estas dos
 ubicaciones son excluyentes: una unidad en circulación no puede estar simultáneamente en cocheras.
@@ -219,8 +237,9 @@ identidad de la estación asociada.
 - `TrainOperationsQueryService` combina entidades persistidas y estado ferroviario simulado.
 - `RailwaySimulationStateService` proporciona la instantánea coherente de red.
 - `TrainOperationsService` realiza la consulta desde Angular.
-- `Trains` gestiona actualización, filtros, tarjetas y cuenta atrás.
+- `Trains` gestiona actualización, filtros, navegación contextual, tarjetas y cuenta atrás.
 - `line-visuals.ts` aplica los colores canónicos de línea.
+- `depot-visuals.ts` centraliza las siglas de cochera compartidas con la sección de Cocheras.
 
 La generación de turnos, posiciones y movimientos de cocheras se describe en
 [Motor de simulación ferroviaria](motor-simulacion-ferroviaria.md). La representación completa de
@@ -236,6 +255,8 @@ Las pruebas automatizadas cubren:
 - URL y método utilizados por Angular;
 - clasificación visual de flota regular, reserva e histórica;
 - combinación y limpieza de filtros;
+- inicialización del filtro de cochera desde la URL;
+- inclusión de trenes asignados o presentes en la cochera seleccionada;
 - error de carga y acción de reintento.
 
 Para ejecutarlas:

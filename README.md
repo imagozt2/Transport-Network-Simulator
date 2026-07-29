@@ -17,8 +17,10 @@ La aplicación incluye actualmente:
 - una sección operativa de líneas con frecuencias, termómetros y trenes en movimiento;
 - una sección de estaciones con filtros, máquinas, circulación por sentido, próximas llegadas en
   formato `mm:ss` y navegación contextual;
-- una sección de trenes con filtros, clasificación de la flota y situación operativa en tiempo real;
-- una sección de cocheras con ocupación, distribución de flota y movimientos de entrada y salida;
+- una sección de trenes con filtros combinables —incluida la cochera—, clasificación de la flota y
+  situación operativa en tiempo real;
+- una sección de cocheras con ocupación, distribución de flota, navegación contextual a sus trenes
+  y ventanas de doce horas para movimientos de entrada y salida;
 - una sección de máquinas con estado operativo, ubicación, filtros y acceso contextual a sus logs;
 - una pantalla global de logs con filtros combinables y paginación;
 - recorridos ordenados y correspondencias entre líneas;

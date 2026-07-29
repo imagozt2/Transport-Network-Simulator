@@ -16,9 +16,9 @@ Con el backend y el frontend en ejecución, la pantalla está disponible en:
 http://localhost:4200/depots
 ```
 
-El frontend consulta el backend al abrir la sección y actualiza la instantánea cada 15 segundos. La
-actualización automática se puede pausar y también se puede solicitar una actualización manual. Las
-peticiones no se solapan.
+El frontend consulta el backend al abrir la sección y actualiza automáticamente la instantánea cada
+15 segundos. Las peticiones no se solapan y la pantalla no expone controles manuales de
+actualización.
 
 Si una actualización falla, se conservan los últimos datos válidos. Si no se puede completar la
 carga inicial, se muestra una acción para reintentarla.
@@ -56,13 +56,21 @@ El backend calcula el estado exclusivamente a partir de la capacidad y la ocupac
 El porcentaje se redondea al entero más próximo. Una cochera sobreocupada devuelve cero plazas
 disponibles, aunque el porcentaje pueda superar el 100 %.
 
-## Distribución operativa
+## Presentación compacta y distribución operativa
 
-Cada tarjeta desplegable muestra la flota asignada agrupada por:
+Cada cochera se presenta mediante una tarjeta compacta. Su cabecera reúne la identidad, la estación,
+la ocupación y el estado. Al desplegarla, la infraestructura y la distribución operativa comparten
+una misma fila en pantallas amplias para reducir la altura ocupada.
 
-- estado: en servicio, en cochera, mantenimiento, detenida o fuera de servicio;
+El bloque de infraestructura muestra la estación, el número de vías, los trenes admitidos por vía y
+la capacidad. El bloque de flota asignada agrupa las unidades por:
+
 - función: servicio regular, reserva o histórica;
-- serie ferroviaria.
+- serie ferroviaria;
+- situación actual: en cochera o en servicio.
+
+El botón **Ver trenes** abre `/trains` con el parámetro `depotCode` de la instalación. La sección de
+Trenes recibe ese parámetro y activa automáticamente el filtro correspondiente.
 
 La interfaz utiliza una escala neutral para las funciones de flota:
 
@@ -98,9 +106,17 @@ Una entrada o una salida se modela como un evento instantáneo, no como un inter
 existe un estado intermedio `IN_PROGRESS`. La posición posterior del tren se refleja en su estado
 simulado.
 
-El endpoint devuelve todos los movimientos disponibles en la instantánea. Para mantener las
-tarjetas legibles, el frontend presenta como máximo los cinco próximos y los cinco completados más
-recientes de cada cochera.
+El endpoint devuelve todos los movimientos disponibles en la instantánea. El frontend construye dos
+ventanas de doce horas alrededor de `evaluatedAt`:
+
+- **Próximos movimientos**: eventos `SCHEDULED` comprendidos entre el instante evaluado y las doce
+  horas posteriores, ordenados de menor a mayor fecha;
+- **Movimientos recientes**: eventos `COMPLETED` comprendidos entre las doce horas anteriores y el
+  instante evaluado, ordenados de mayor a menor fecha.
+
+Los límites exactos de ambas ventanas están incluidos. Cada lista reserva visualmente espacio para
+cinco movimientos y permite consultar el resto mediante desplazamiento vertical; los elementos
+adicionales no se eliminan del resultado.
 
 ### Alcance temporal actual
 
@@ -118,7 +134,7 @@ El resumen general incluye:
 - capacidad, ocupación y plazas libres de toda la red;
 - porcentaje global de ocupación;
 - flota asignada y trenes en servicio;
-- entradas, salidas y movimientos completados o pendientes.
+- próximas entradas y salidas comprendidas en la ventana futura de doce horas.
 
 La búsqueda acepta nombre o código de cochera y nombre o código de su estación. También se puede
 filtrar por estado de ocupación. Los filtros se aplican en el navegador sobre la última instantánea
@@ -283,7 +299,8 @@ El resumen de movimientos contiene `total`, `exits`, `entries`, `completed`, `sc
 - `RailwaySimulationStateService` proporciona trenes y movimientos de la instantánea actual.
 - `TrainDutyPlanningService` genera las salidas y entradas de cada turno.
 - `DepotOperationsService` realiza la petición desde Angular.
-- `Depots` gestiona filtros, actualización y tarjetas desplegables.
+- `Depots` gestiona filtros, actualización, ventanas temporales, tarjetas desplegables y navegación
+  contextual hacia Trenes.
 - `depot-visuals.ts` centraliza las siglas utilizadas por Cocheras y Trenes.
 
 La planificación de turnos y el cálculo horario se explican en
@@ -301,7 +318,10 @@ Las pruebas automatizadas cubren:
 - serialización de `GET /api/depots/operations`;
 - URL utilizada por el servicio Angular;
 - representación de capacidad, distribución y movimientos;
-- filtros combinados, limpieza y error de carga.
+- filtros combinados, limpieza y error de carga;
+- navegación hacia Trenes con el código de cochera;
+- límites inclusivos y orden de las ventanas de doce horas;
+- conservación de más de cinco movimientos para su consulta mediante desplazamiento.
 
 Para ejecutarlas:
 
