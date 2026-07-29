@@ -81,6 +81,13 @@ describe('Trains', () => {
       .toBe('Serie 9000 · Entre Plaza de la Mina y Las Fuentes');
     expect(compiled.querySelector('.train-card.role-regular .train-summary')?.textContent)
       .not.toContain('Línea 1');
+    expect(compiled.querySelector('.service-context')?.textContent).toContain('Línea 1');
+    expect(compiled.querySelector('.service-context')?.textContent).toContain('Dirección Las Fuentes');
+    expect(compiled.querySelector('.situation-title')?.textContent?.trim())
+      .toBe('Entre Plaza de la Mina y Las Fuentes');
+    expect(compiled.querySelector('.live-location-heading')?.textContent)
+      .toContain('Progreso hacia Las Fuentes');
+    expect(compiled.querySelector('.live-location-heading')?.textContent).toContain('40%');
     expect(compiled.querySelector('.live-location')?.textContent).toContain('Las Fuentes');
     expect(compiled.querySelector('.countdown')?.textContent).toContain('1:05');
 

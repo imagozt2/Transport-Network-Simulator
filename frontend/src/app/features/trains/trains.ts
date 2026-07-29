@@ -176,14 +176,6 @@ export class Trains implements OnInit, OnDestroy {
     return train.serviceLocation ? `Dirección ${train.serviceLocation.destination.name}` : 'Sin servicio asignado';
   }
 
-  positionLabel(train: TrainOperation): string {
-    const location = train.serviceLocation;
-    if (!location) { return train.currentDepot?.name ?? 'Ubicación no disponible'; }
-    return location.positionState === 'AT_STATION'
-      ? `Parado en ${location.currentStation?.name ?? location.nextStation.name}`
-      : `${location.previousStation.name} — ${location.nextStation.name}`;
-  }
-
   nextArrivalLabel(train: TrainOperation): string {
     const location = train.serviceLocation;
     if (!location) { return '—'; }

@@ -60,12 +60,20 @@
           @if (isExpanded(train.id)) {
             <div class="train-card-body">
               <section class="situation-panel" [class.in-service]="train.serviceLocation">
-                <span>Situación operativa</span><strong>{{ situationLabel(train) }}</strong>
                 @if (train.serviceLocation; as location) {
-                  <small>{{ directionLabel(train) }}</small>
+                  <div class="service-context">
+                    <span class="service-line-badge"
+                      [style.background-color]="getLineColor(location.currentLine)"
+                      [style.color]="getLineTextColor(getLineColor(location.currentLine))">{{ location.currentLine.code }}</span>
+                    <span class="service-context-copy">
+                      <strong>{{ location.currentLine.name }}</strong>
+                      <small>{{ directionLabel(train) }}</small>
+                    </span>
+                  </div>
+                  <strong class="situation-title">{{ situationLabel(train) }}</strong>
                   <div class="live-location">
                     <div class="live-location-heading">
-                      <span>{{ positionLabel(train) }}</span>
+                      <span>Progreso hacia {{ location.nextStation.name }}</span>
                       <strong>{{ location.positionState === 'AT_STATION' ? 'En estación' : progressValue(train) + '%' }}</strong>
                     </div>
                     <div class="progress-track" [style.--line-color]="getLineColor(location.currentLine)">
@@ -84,6 +92,7 @@
                     </div>
                   </div>
                 } @else {
+                  <span>Situación operativa</span><strong>{{ situationLabel(train) }}</strong>
                   <small>Unidad fuera de circulación</small>
                   @if (train.currentDepot) {
                     <div class="depot-location"><span>Cochera actual</span><strong>{{ train.currentDepot.name }}</strong><small>{{ train.currentDepot.stationName }}</small></div>
