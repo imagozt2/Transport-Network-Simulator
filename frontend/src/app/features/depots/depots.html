@@ -67,7 +67,16 @@
               </section>
 
               <section class="fleet-distribution-panel">
-                <header class="section-heading"><div><span class="panel-label">Distribución operativa</span><h2>Flota asignada</h2></div><strong>{{ depot.fleet.assignedTrainCount }} trenes</strong></header>
+                <header class="section-heading">
+                  <div><span class="panel-label">Distribución operativa</span><h2>Flota asignada</h2></div>
+                  <div class="section-heading-actions">
+                    <strong>{{ depot.fleet.assignedTrainCount }} trenes</strong>
+                    <a class="trains-link"
+                      [routerLink]="['/trains']"
+                      [queryParams]="{ depotCode: depot.code }"
+                      [attr.aria-label]="'Ver trenes de ' + depot.name">Ver trenes</a>
+                  </div>
+                </header>
                 <div class="fleet-distribution-grid">
                   <div class="role-distribution">
                     <h3>Función en la flota</h3>
@@ -100,7 +109,7 @@
               </section>
 
               <section class="movements-panel">
-                <header class="section-heading"><div><span class="panel-label">Agenda ferroviaria</span><h2>Entradas y salidas</h2></div><strong>{{ depot.movementsSummary.scheduled }} pendientes</strong></header>
+                <header class="section-heading"><div><span class="panel-label">Agenda ferroviaria</span><h2>Entradas y salidas</h2></div><strong class="heading-total">{{ depot.movementsSummary.scheduled }} pendientes</strong></header>
                 <div class="movement-columns">
                   <div class="movement-group">
                     <h3>Próximos movimientos</h3>

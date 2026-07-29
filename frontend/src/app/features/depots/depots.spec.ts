@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
 
 import { DepotOperation, DepotOperationsResponse } from '../../core/models/depot-operation.model';
@@ -84,6 +85,9 @@ describe('Depots', () => {
     expect(compiled.querySelector('.occupancy-panel')).toBeNull();
     expect(compiled.querySelector('.operation-panel')).toBeNull();
     expect(compiled.querySelector('.infrastructure-panel')?.textContent).toContain('20 plazas');
+    const trainsLink = compiled.querySelector<HTMLAnchorElement>('.trains-link');
+    expect(trainsLink?.getAttribute('href')).toBe('/trains?depotCode=DEP-LF-A');
+    expect(trainsLink?.getAttribute('aria-label')).toContain('Cochera de Las Fuentes');
     expect(compiled.querySelectorAll('.role-row')).toHaveLength(3);
     expect(compiled.querySelector('.role-regular-service')?.textContent).toContain('12');
     expect(compiled.querySelectorAll('.series-row')).toHaveLength(3);
@@ -125,6 +129,9 @@ describe('Depots', () => {
 async function configureWith(getOperations: () => Observable<DepotOperationsResponse>) {
   await TestBed.configureTestingModule({
     imports: [Depots],
-    providers: [{ provide: DepotOperationsService, useValue: { getOperations } }]
+    providers: [
+      provideRouter([]),
+      { provide: DepotOperationsService, useValue: { getOperations } }
+    ]
   }).compileComponents();
 }

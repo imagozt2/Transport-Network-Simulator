@@ -1,4 +1,5 @@
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 import {
   DepotMovement,
@@ -19,6 +20,7 @@ type StatusFilter = DepotOperationStatus | 'ALL';
 
 @Component({
   selector: 'app-depots',
+  imports: [RouterLink],
   templateUrl: './depots.html',
   styleUrls: ['./depots.css', './depots-cards.css', './depots-fleet.css']
 })
