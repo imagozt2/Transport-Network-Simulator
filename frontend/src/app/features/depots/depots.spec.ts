@@ -178,6 +178,45 @@ describe('Depots', () => {
     fixture.destroy();
   });
 
+  it('should retain more than five movements in each window for scroll navigation', async () => {
+    const completedTemplate = lasFuentes.movements[0];
+    const scheduledTemplate = lasFuentes.movements[1];
+    const scheduledMovements = Array.from({ length: 7 }, (_, index) => ({
+      ...scheduledTemplate,
+      dutyNumber: index + 10,
+      scheduledAt: `2026-07-22T${String(9 + index).padStart(2, '0')}:00:00+02:00`,
+      train: { ...scheduledTemplate.train, code: `T-FUTURE-${index + 1}` }
+    }));
+    const completedMovements = Array.from({ length: 7 }, (_, index) => ({
+      ...completedTemplate,
+      dutyNumber: index + 20,
+      scheduledAt: `2026-07-22T${String(8 - index).padStart(2, '0')}:00:00+02:00`,
+      train: { ...completedTemplate.train, code: `T-RECENT-${index + 1}` }
+    }));
+    const depotWithScrollableMovements: DepotOperation = {
+      ...lasFuentes,
+      movements: [...scheduledMovements, ...completedMovements]
+    };
+    const scrollableResponse: DepotOperationsResponse = {
+      ...response,
+      depots: [depotWithScrollableMovements]
+    };
+    await configureWith(() => of(scrollableResponse));
+    const fixture = TestBed.createComponent(Depots);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const movementLists = compiled.querySelectorAll('.movement-list');
+
+    expect(fixture.componentInstance.upcomingMovements(depotWithScrollableMovements)).toHaveLength(7);
+    expect(fixture.componentInstance.recentMovements(depotWithScrollableMovements)).toHaveLength(7);
+    expect(movementLists).toHaveLength(2);
+    expect(movementLists[0].querySelectorAll('.movement-card')).toHaveLength(7);
+    expect(movementLists[1].querySelectorAll('.movement-card')).toHaveLength(7);
+    expect(movementLists[0].textContent).toContain('T-FUTURE-7');
+    expect(movementLists[1].textContent).toContain('T-RECENT-7');
+    fixture.destroy();
+  });
+
   it('should expose a retry action when the depot query fails', async () => {
     await configureWith(() => throwError(() => new Error('API error')));
     const fixture = TestBed.createComponent(Depots);

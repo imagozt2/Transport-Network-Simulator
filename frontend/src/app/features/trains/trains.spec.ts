@@ -137,6 +137,27 @@ describe('Trains', () => {
     fixture.destroy();
   });
 
+  it('should include trains currently located at the selected depot even when it is not their home depot', async () => {
+    const visitingTrain: TrainOperation = {
+      ...reserveTrain,
+      id: 103,
+      code: 'T-7002',
+      homeDepot: historicDepot,
+      currentDepot: depot
+    };
+    const responseWithVisitingTrain: TrainOperationsResponse = {
+      ...response,
+      trains: [...response.trains, visitingTrain]
+    };
+    await configureWith(() => of(responseWithVisitingTrain), { depotCode: 'DEP-LF-A' });
+    const fixture = TestBed.createComponent(Trains);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.filteredTrains().map((train) => train.code))
+      .toEqual(['T-9001', 'T-7001', 'T-7002']);
+    fixture.destroy();
+  });
+
   it('should expose a retry action when the fleet query fails', async () => {
     await configureWith(() => throwError(() => new Error('API error')));
     const fixture = TestBed.createComponent(Trains);
