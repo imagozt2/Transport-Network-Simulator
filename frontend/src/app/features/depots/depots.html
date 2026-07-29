@@ -60,8 +60,8 @@
                 <span class="panel-label">Infraestructura</span>
                 <dl>
                   <div><dt>Estación</dt><dd>{{ depot.station.name }}</dd><small>{{ depot.station.code }}</small></div>
-                  <div><dt>Vías</dt><dd>{{ depot.trackCount }}</dd><small>Vías de estacionamiento</small></div>
-                  <div><dt>Trenes por vía</dt><dd>{{ depot.trainsPerTrack }}</dd><small>Capacidad configurada</small></div>
+                  <div><dt>Vías</dt><dd>{{ depot.trackCount }}</dd></div>
+                  <div><dt>Trenes por vía</dt><dd>{{ depot.trainsPerTrack }}</dd></div>
                   <div><dt>Capacidad</dt><dd>{{ depot.capacity }} plazas</dd><small>{{ depot.availableSpaces }} disponibles</small></div>
                 </dl>
               </section>
@@ -103,7 +103,6 @@
                         <div><span>{{ trainStatusLabel(entry.status) }}</span><strong>{{ entry.count }}</strong></div>
                       }
                     </div>
-                    <p><strong>{{ depot.occupiedSpaces }}</strong> unidades presentes y <strong>{{ depot.fleet.assignedTrainsInService }}</strong> circulando.</p>
                   </div>
                 </div>
               </section>

@@ -1,37 +1,40 @@
-.fleet-distribution-panel, .movements-panel { grid-column: 1 / -1; min-width: 0; padding: 18px; border: 1px solid #e5e7eb; border-radius: 18px; background: #fff; }
-.section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.fleet-distribution-panel, .movements-panel { min-width: 0; padding: 14px; border: 1px solid #e5e7eb; border-radius: 15px; background: #fff; }
+.movements-panel { grid-column: 1 / -1; }
+.section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 11px; }
 .section-heading .panel-label { margin-bottom: 4px; }
-.section-heading h2 { margin: 0; color: #111827; font-size: 17px; }
+.section-heading h2 { margin: 0; color: #111827; font-size: 15px; }
 .section-heading-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .section-heading-actions > strong, .section-heading > .heading-total { padding: 7px 10px; border-radius: 999px; color: #374151; background: #f3f4f6; font-size: 11px; }
 .trains-link { padding: 8px 12px; border-radius: 10px; color: #fff; background: #111827; font-size: 11px; font-weight: 900; text-decoration: none; }
 .trains-link:hover { background: #374151; }
 .trains-link:focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
-.fleet-distribution-grid { display: grid; grid-template-columns: .8fr 1.3fr 1fr; gap: 14px; }
-.fleet-distribution-grid > div, .movement-group { min-width: 0; padding: 14px; border: 1px solid #e5e7eb; border-radius: 14px; background: #f9fafb; }
-.fleet-distribution-grid h3, .movement-group h3 { margin: 0 0 12px; color: #374151; font-size: 12px; }
-.role-distribution { display: flex; flex-direction: column; gap: 8px; }
-.role-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 11px; font-size: 11px; font-weight: 900; }
+.fleet-distribution-grid { display: grid; grid-template-columns: .75fr 1.25fr .9fr; gap: 9px; }
+.fleet-distribution-grid > div, .movement-group { min-width: 0; padding: 10px; border: 1px solid #e5e7eb; border-radius: 12px; background: #f9fafb; }
+.fleet-distribution-grid h3, .movement-group h3 { margin: 0 0 8px; color: #374151; font-size: 11px; }
+.role-distribution { display: flex; flex-direction: column; gap: 6px; }
+.role-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 9px; border-radius: 9px; font-size: 10px; font-weight: 900; }
 .role-regular-service { color: #111827; background: #e5e7eb; }
 .role-reserve { color: #fff; background: #4b5563; }
 .role-historic { color: #fff; background: #000; }
-.series-distribution { display: flex; flex-direction: column; gap: 10px; }
-.series-row { display: grid; grid-template-columns: 115px minmax(70px, 1fr) 38px; align-items: center; gap: 10px; }
+.series-distribution { display: flex; flex-direction: column; gap: 7px; }
+.series-row { display: grid; grid-template-columns: 105px minmax(60px, 1fr) 34px; align-items: center; gap: 8px; }
 .series-copy { min-width: 0; display: flex; flex-direction: column; }
 .series-copy strong { overflow: hidden; color: #111827; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .series-copy small { color: #6b7280; font-size: 10px; }
 .series-track { height: 7px; overflow: hidden; border-radius: 999px; background: #e5e7eb; }
 .series-track i { display: block; height: 100%; border-radius: inherit; background: #111827; }
 .series-row > strong { color: #374151; font-size: 10px; text-align: right; }
-.status-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.status-grid div { padding: 10px; border-radius: 11px; background: #fff; }
-.status-grid span { display: block; color: #6b7280; font-size: 10px; }
-.status-grid strong { display: block; margin-top: 4px; color: #111827; font-size: 18px; }
-.status-distribution p { margin: 12px 0 0; color: #6b7280; font-size: 11px; }
-.status-distribution p strong { color: #111827; }
-.movement-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.movement-list { display: flex; flex-direction: column; gap: 7px; }
-.movement-card { display: grid; grid-template-columns: 58px minmax(0, 1fr) 38px 48px; align-items: center; gap: 9px; padding: 9px; border: 1px solid #e5e7eb; border-radius: 11px; background: #fff; }
+.status-distribution { display: flex; flex-direction: column; }
+.status-grid { flex: 1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.status-grid div { min-height: 68px; display: flex; flex-direction: column; justify-content: center; padding: 9px; border-radius: 9px; background: #fff; }
+.status-grid span { display: block; color: #6b7280; font-size: 11px; }
+.status-grid strong { display: block; margin-top: 5px; color: #111827; font-size: 24px; line-height: 1; }
+.movement-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.movement-list { max-height: 258px; overflow-y: auto; overscroll-behavior: contain; scrollbar-color: #9ca3af #e5e7eb; scrollbar-gutter: stable; scrollbar-width: thin; display: flex; flex-direction: column; gap: 7px; padding-right: 4px; }
+.movement-list::-webkit-scrollbar { width: 8px; }
+.movement-list::-webkit-scrollbar-track { border-radius: 999px; background: #e5e7eb; }
+.movement-list::-webkit-scrollbar-thumb { border-radius: 999px; background: #9ca3af; }
+.movement-card { min-height: 46px; box-sizing: border-box; display: grid; grid-template-columns: 58px minmax(0, 1fr) 38px 48px; align-items: center; gap: 8px; padding: 7px 8px; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; }
 .movement-card.completed { opacity: .7; }
 .movement-type { padding: 6px 5px; border-radius: 8px; font-size: 9px; font-weight: 900; text-align: center; text-transform: uppercase; }
 .type-exit { color: #1e3a8a; background: #dbeafe; }
@@ -43,6 +46,7 @@
 .movement-line { height: 27px; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-size: 9px; font-weight: 900; }
 .movement-card time { color: #111827; font-size: 11px; font-weight: 900; text-align: right; }
 .empty-detail { margin: 0; padding: 12px; border-radius: 10px; color: #6b7280; background: #fff; font-size: 11px; }
+@media (max-width: 1200px) { .fleet-distribution-panel { grid-column: 1 / -1; } }
 @media (max-width: 1100px) { .fleet-distribution-grid { grid-template-columns: 1fr 1fr; } .status-distribution { grid-column: 1 / -1; } }
 @media (max-width: 850px) { .movement-columns, .fleet-distribution-grid { grid-template-columns: 1fr; } .status-distribution { grid-column: auto; } }
 @media (max-width: 520px) { .section-heading { flex-direction: column; } .movement-card { grid-template-columns: 54px minmax(0, 1fr) 38px; } .movement-card time { grid-column: 2 / -1; text-align: left; } .series-row { grid-template-columns: 95px minmax(60px, 1fr) 34px; } }

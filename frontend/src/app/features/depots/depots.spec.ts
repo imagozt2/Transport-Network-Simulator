@@ -85,6 +85,11 @@ describe('Depots', () => {
     expect(compiled.querySelector('.occupancy-panel')).toBeNull();
     expect(compiled.querySelector('.operation-panel')).toBeNull();
     expect(compiled.querySelector('.infrastructure-panel')?.textContent).toContain('20 plazas');
+    expect(compiled.querySelector('.infrastructure-panel')?.textContent)
+      .not.toContain('Vías de estacionamiento');
+    expect(compiled.querySelector('.infrastructure-panel')?.textContent)
+      .not.toContain('Capacidad configurada');
+    expect(compiled.querySelector('.status-distribution p')).toBeNull();
     const trainsLink = compiled.querySelector<HTMLAnchorElement>('.trains-link');
     expect(trainsLink?.getAttribute('href')).toBe('/trains?depotCode=DEP-LF-A');
     expect(trainsLink?.getAttribute('aria-label')).toContain('Cochera de Las Fuentes');
