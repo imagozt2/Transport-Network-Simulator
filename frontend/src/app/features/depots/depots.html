@@ -109,7 +109,7 @@
               </section>
 
               <section class="movements-panel">
-                <header class="section-heading"><div><span class="panel-label">Agenda ferroviaria</span><h2>Entradas y salidas</h2></div><strong class="heading-total">{{ depot.movementsSummary.scheduled }} pendientes</strong></header>
+                <header class="section-heading"><div><span class="panel-label">Agenda ferroviaria</span><h2>Entradas y salidas</h2></div><strong class="heading-total">{{ upcomingMovements(depot).length }} en las próximas 12 h</strong></header>
                 <div class="movement-columns">
                   <div class="movement-group">
                     <h3>Próximos movimientos</h3>

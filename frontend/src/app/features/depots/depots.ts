@@ -17,6 +17,7 @@ import { PeriodicRefresh } from '../../core/utils/periodic-refresh';
 import { formatTime } from '../../core/utils/temporal-formatters';
 
 type StatusFilter = DepotOperationStatus | 'ALL';
+const AGENDA_WINDOW_MS = 12 * 60 * 60 * 1_000;
 
 @Component({
   selector: 'app-depots',
@@ -122,11 +123,27 @@ export class Depots implements OnInit, OnDestroy {
   }
 
   upcomingMovements(depot: DepotOperation): DepotMovement[] {
-    return depot.movements.filter((movement) => movement.status === 'SCHEDULED').slice(0, 5);
+    const evaluatedAt = this.evaluatedAtTimestamp();
+    return depot.movements
+      .filter((movement) => {
+        const scheduledAt = Date.parse(movement.scheduledAt);
+        return movement.status === 'SCHEDULED'
+          && scheduledAt >= evaluatedAt
+          && scheduledAt <= evaluatedAt + AGENDA_WINDOW_MS;
+      })
+      .sort((first, second) => Date.parse(first.scheduledAt) - Date.parse(second.scheduledAt));
   }
 
   recentMovements(depot: DepotOperation): DepotMovement[] {
-    return depot.movements.filter((movement) => movement.status === 'COMPLETED').slice(-5).reverse();
+    const evaluatedAt = this.evaluatedAtTimestamp();
+    return depot.movements
+      .filter((movement) => {
+        const scheduledAt = Date.parse(movement.scheduledAt);
+        return movement.status === 'COMPLETED'
+          && scheduledAt >= evaluatedAt - AGENDA_WINDOW_MS
+          && scheduledAt <= evaluatedAt;
+      })
+      .sort((first, second) => Date.parse(second.scheduledAt) - Date.parse(first.scheduledAt));
   }
 
   movementTypeLabel(movement: DepotMovement): string {
@@ -135,9 +152,8 @@ export class Depots implements OnInit, OnDestroy {
 
   scheduledMovementCount(type: DepotMovementType): number {
     return this.operations?.depots.reduce((total, depot) =>
-      total + depot.movements.filter((movement) =>
-        movement.status === 'SCHEDULED' && movement.type === type
-      ).length, 0) ?? 0;
+      total + this.upcomingMovements(depot).filter((movement) => movement.type === type).length,
+    0) ?? 0;
   }
 
   movementTimeLabel(movement: DepotMovement): string { return formatTime(movement.scheduledAt); }
@@ -145,5 +161,10 @@ export class Depots implements OnInit, OnDestroy {
   getLineTextColor(color: string): string { return contrastingTextColor(color); }
 
   trackDepot(_: number, depot: DepotOperation): number { return depot.id; }
+
+  private evaluatedAtTimestamp(): number {
+    const evaluatedAt = Date.parse(this.operations?.evaluatedAt ?? '');
+    return Number.isNaN(evaluatedAt) ? Date.now() : evaluatedAt;
+  }
 
 }

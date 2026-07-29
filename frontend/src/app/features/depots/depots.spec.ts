@@ -114,6 +114,65 @@ describe('Depots', () => {
     fixture.destroy();
   });
 
+  it('should limit and order the railway agenda around the evaluated instant', async () => {
+    const completedTemplate = lasFuentes.movements[0];
+    const scheduledTemplate = lasFuentes.movements[1];
+    const depotWithWindowedMovements: DepotOperation = {
+      ...lasFuentes,
+      movements: [
+        completedTemplate,
+        scheduledTemplate,
+        {
+          ...scheduledTemplate,
+          dutyNumber: 2,
+          type: 'EXIT',
+          scheduledAt: '2026-07-22T20:30:00+02:00',
+          secondsUntilMovement: 43_200,
+          train: { ...scheduledTemplate.train, code: 'T-FUTURE-BOUNDARY' }
+        },
+        {
+          ...scheduledTemplate,
+          dutyNumber: 3,
+          scheduledAt: '2026-07-22T20:31:00+02:00',
+          secondsUntilMovement: 43_260,
+          train: { ...scheduledTemplate.train, code: 'T-OUTSIDE-FUTURE' }
+        },
+        {
+          ...completedTemplate,
+          dutyNumber: 4,
+          scheduledAt: '2026-07-21T20:30:00+02:00',
+          train: { ...completedTemplate.train, code: 'T-RECENT-BOUNDARY' }
+        },
+        {
+          ...completedTemplate,
+          dutyNumber: 5,
+          scheduledAt: '2026-07-21T20:29:00+02:00',
+          train: { ...completedTemplate.train, code: 'T-OUTSIDE-PAST' }
+        }
+      ]
+    };
+    const windowedResponse: DepotOperationsResponse = {
+      ...response,
+      depots: [depotWithWindowedMovements]
+    };
+    await configureWith(() => of(windowedResponse));
+    const fixture = TestBed.createComponent(Depots);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+
+    expect(component.upcomingMovements(depotWithWindowedMovements).map((movement) => movement.train.code))
+      .toEqual(['T-9001', 'T-FUTURE-BOUNDARY']);
+    expect(component.recentMovements(depotWithWindowedMovements).map((movement) => movement.train.code))
+      .toEqual(['T-9001', 'T-RECENT-BOUNDARY']);
+    expect(component.scheduledMovementCount('EXIT')).toBe(1);
+    expect(component.scheduledMovementCount('ENTRY')).toBe(1);
+    expect(fixture.nativeElement.querySelector('.heading-total')?.textContent)
+      .toContain('2 en las próximas 12 h');
+    expect(fixture.nativeElement.textContent).not.toContain('T-OUTSIDE-FUTURE');
+    expect(fixture.nativeElement.textContent).not.toContain('T-OUTSIDE-PAST');
+    fixture.destroy();
+  });
+
   it('should expose a retry action when the depot query fails', async () => {
     await configureWith(() => throwError(() => new Error('API error')));
     const fixture = TestBed.createComponent(Depots);
