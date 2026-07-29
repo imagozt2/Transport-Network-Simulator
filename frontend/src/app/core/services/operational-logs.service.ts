@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
+import { DeviceType } from '../models/device-operation.model';
 import { OperationalLogPage } from '../models/operational-log.model';
 import {
   DeviceEventType,
@@ -13,6 +14,7 @@ export interface OperationalLogFilters {
   origin?: LogOrigin;
   severity?: LogSeverity;
   eventType?: DeviceEventType;
+  deviceType?: DeviceType;
   deviceCode?: string;
   stationCode?: string;
   occurredFrom?: string;

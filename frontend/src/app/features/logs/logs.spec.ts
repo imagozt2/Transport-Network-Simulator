@@ -61,6 +61,7 @@ describe('Logs URL filters', () => {
       severity: 'INFO',
       origin: 'DEVICE_SIMULATION',
       eventType: 'DEVICE_ONLINE',
+      deviceType: 'TICKET_MACHINE',
       stationCode: 'ST001',
       occurredFrom: '2026-07-23T10:00',
       occurredTo: '2026-07-23T12:00'
@@ -74,13 +75,20 @@ describe('Logs URL filters', () => {
       severity: 'INFO',
       origin: 'DEVICE_SIMULATION',
       eventType: 'DEVICE_ONLINE',
+      deviceType: 'TICKET_MACHINE',
       stationCode: 'ST001',
       occurredFrom: '2026-07-23T10:00',
       occurredTo: '2026-07-23T12:00'
     });
     expect(fixture.componentInstance.selectedDeviceCode).toBe('RMM-MB-ST001-001');
-    const deviceFilter = fixture.nativeElement.querySelector(
+    expect(fixture.componentInstance.selectedDeviceType).toBe('TICKET_MACHINE');
+    const deviceTypeFilter = fixture.nativeElement.querySelector(
       '.filters-grid label:nth-of-type(4) select'
+    ) as HTMLSelectElement;
+    expect(deviceTypeFilter.value).toBe('TICKET_MACHINE');
+    expect(deviceTypeFilter.selectedOptions[0]?.textContent).toContain('Máquina de billetes');
+    const deviceFilter = fixture.nativeElement.querySelector(
+      '.filters-grid label:nth-of-type(5) select'
     ) as HTMLSelectElement;
     expect(deviceFilter.value).toBe('RMM-MB-ST001-001');
     expect(deviceFilter.selectedOptions[0]?.textContent).toContain('Máquina de billetes 1');
@@ -105,6 +113,7 @@ describe('Logs URL filters', () => {
       severity: undefined,
       origin: undefined,
       eventType: undefined,
+      deviceType: undefined,
       stationCode: undefined,
       occurredFrom: undefined,
       occurredTo: undefined
@@ -123,13 +132,14 @@ describe('Logs URL filters', () => {
       severity: undefined,
       origin: undefined,
       eventType: undefined,
+      deviceType: undefined,
       stationCode: 'ST001',
       occurredFrom: undefined,
       occurredTo: undefined
     });
     expect(fixture.componentInstance.selectedStationCode).toBe('ST001');
     const stationFilter = fixture.nativeElement.querySelector(
-      '.filters-grid label:nth-of-type(5) select'
+      '.filters-grid label:nth-of-type(6) select'
     ) as HTMLSelectElement;
     expect(stationFilter.value).toBe('ST001');
     expect(stationFilter.selectedOptions[0]?.textContent).toContain('Los Molinos');

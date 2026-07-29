@@ -14,6 +14,7 @@ describe('OperationalLogsService', () => {
 
     service.getLogs(2, 50, {
       deviceCode: 'RMM-MB-ST001-001',
+      deviceType: 'TICKET_MACHINE',
       severity: 'ERROR',
       stationCode: 'ST001'
     }).subscribe();
@@ -25,6 +26,7 @@ describe('OperationalLogsService', () => {
     expect(request.request.params.get('page')).toBe('2');
     expect(request.request.params.get('size')).toBe('50');
     expect(request.request.params.get('deviceCode')).toBe('RMM-MB-ST001-001');
+    expect(request.request.params.get('deviceType')).toBe('TICKET_MACHINE');
     expect(request.request.params.get('severity')).toBe('ERROR');
     expect(request.request.params.get('stationCode')).toBe('ST001');
     expect(request.request.params.has('origin')).toBe(false);

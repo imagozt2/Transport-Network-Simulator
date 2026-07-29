@@ -1,7 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute, ParamMap } from '@angular/router';
 
-import { DeviceOperation } from '../../core/models/device-operation.model';
+import { DeviceOperation, DeviceType } from '../../core/models/device-operation.model';
 import { OperationalLog } from '../../core/models/operational-log.model';
 import {
   DeviceEventType,
@@ -14,10 +14,12 @@ import {
   OperationalLogsService
 } from '../../core/services/operational-logs.service';
 import { formatDateTime } from '../../core/utils/temporal-formatters';
+import { deviceTypeLabel } from '../../core/utils/operation-labels';
 
 type OptionalSeverity = LogSeverity | 'ALL';
 type OptionalOrigin = LogOrigin | 'ALL';
 type OptionalEventType = DeviceEventType | 'ALL';
+type OptionalDeviceType = DeviceType | 'ALL';
 
 @Component({
   selector: 'app-logs',
@@ -43,6 +45,7 @@ export class Logs implements OnInit {
   selectedSeverity: OptionalSeverity = 'ALL';
   selectedOrigin: OptionalOrigin = 'ALL';
   selectedEventType: OptionalEventType = 'ALL';
+  selectedDeviceType: OptionalDeviceType = 'ALL';
   selectedDeviceCode = 'ALL';
   selectedStationCode = 'ALL';
   occurredFrom = '';
@@ -51,6 +54,11 @@ export class Logs implements OnInit {
   readonly pageSizes = [25, 50, 100];
   readonly severities: readonly LogSeverity[] = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'];
   readonly origins: readonly LogOrigin[] = ['DEVICE_SIMULATION', 'MQTT'];
+  readonly deviceTypes: readonly DeviceType[] = [
+    'TICKET_MACHINE',
+    'ENTRY_VALIDATOR',
+    'EXIT_VALIDATOR'
+  ];
   readonly eventTypes: readonly DeviceEventType[] = [
     'DEVICE_ONLINE',
     'DEVICE_OFFLINE',
@@ -106,6 +114,7 @@ export class Logs implements OnInit {
     this.selectedSeverity = 'ALL';
     this.selectedOrigin = 'ALL';
     this.selectedEventType = 'ALL';
+    this.selectedDeviceType = 'ALL';
     this.selectedDeviceCode = 'ALL';
     this.selectedStationCode = 'ALL';
     this.occurredFrom = '';
@@ -117,6 +126,7 @@ export class Logs implements OnInit {
     return this.selectedSeverity !== 'ALL'
       || this.selectedOrigin !== 'ALL'
       || this.selectedEventType !== 'ALL'
+      || this.selectedDeviceType !== 'ALL'
       || this.selectedDeviceCode !== 'ALL'
       || this.selectedStationCode !== 'ALL'
       || this.occurredFrom !== ''
@@ -220,6 +230,10 @@ export class Logs implements OnInit {
     return labels[type];
   }
 
+  deviceTypeLabel(type: DeviceType): string {
+    return deviceTypeLabel(type);
+  }
+
   formatDateTime(value: string): string {
     return formatDateTime(value);
   }
@@ -233,6 +247,7 @@ export class Logs implements OnInit {
       origin: this.selectedOrigin === 'ALL' ? undefined : this.selectedOrigin,
       severity: this.selectedSeverity === 'ALL' ? undefined : this.selectedSeverity,
       eventType: this.selectedEventType === 'ALL' ? undefined : this.selectedEventType,
+      deviceType: this.selectedDeviceType === 'ALL' ? undefined : this.selectedDeviceType,
       deviceCode: this.selectedDeviceCode === 'ALL' ? undefined : this.selectedDeviceCode,
       stationCode: this.selectedStationCode === 'ALL' ? undefined : this.selectedStationCode,
       occurredFrom: this.occurredFrom || undefined,
@@ -255,6 +270,11 @@ export class Logs implements OnInit {
       queryParams,
       'eventType',
       this.eventTypes
+    ) ?? 'ALL';
+    this.selectedDeviceType = this.readEnumQueryParam(
+      queryParams,
+      'deviceType',
+      this.deviceTypes
     ) ?? 'ALL';
     this.selectedDeviceCode = this.readTextQueryParam(queryParams, 'deviceCode') ?? 'ALL';
     this.selectedStationCode = this.readTextQueryParam(queryParams, 'stationCode') ?? 'ALL';
