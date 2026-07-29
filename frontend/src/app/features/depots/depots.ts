@@ -2,6 +2,7 @@ import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 
 import {
   DepotMovement,
+  DepotMovementType,
   DepotOperation,
   DepotOperationStatus,
   DepotOperationsResponse
@@ -133,6 +134,13 @@ export class Depots implements OnInit, OnDestroy {
 
   movementTypeLabel(movement: DepotMovement): string {
     return movement.type === 'EXIT' ? 'Salida' : 'Entrada';
+  }
+
+  scheduledMovementCount(type: DepotMovementType): number {
+    return this.operations?.depots.reduce((total, depot) =>
+      total + depot.movements.filter((movement) =>
+        movement.status === 'SCHEDULED' && movement.type === type
+      ).length, 0) ?? 0;
   }
 
   movementTimeLabel(movement: DepotMovement): string { return formatTime(movement.scheduledAt); }

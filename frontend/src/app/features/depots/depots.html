@@ -10,10 +10,15 @@
     @if (errorMessage) { <div class="refresh-warning" role="status">{{ errorMessage }} Se conservan los últimos datos disponibles.</div> }
 
     <section class="summary-grid" aria-label="Resumen operativo de cocheras">
-      <article class="summary-card"><span>Cocheras</span><strong>{{ data.summary.depotCount }}</strong><small>Instalaciones activas</small></article>
-      <article class="summary-card"><span>Ocupación</span><strong>{{ data.summary.occupiedSpaces }}/{{ data.summary.totalCapacity }}</strong><small>{{ data.summary.occupancyPercentage }}% de las plazas</small></article>
-      <article class="summary-card"><span>Plazas disponibles</span><strong>{{ data.summary.availableSpaces }}</strong><small>Capacidad libre actual</small></article>
-      <article class="summary-card"><span>Flota asignada</span><strong>{{ data.summary.assignedFleet }}</strong><small>{{ data.summary.trainsInService }} trenes en servicio</small></article>
+      <article class="summary-card"><span>Cocheras</span><strong>{{ data.summary.depotCount }}</strong></article>
+      <article class="summary-card"><span>Capacidad total</span><strong>{{ data.summary.totalCapacity }}</strong></article>
+      <article class="summary-card"><span>Plazas ocupadas</span><strong>{{ data.summary.occupiedSpaces }}</strong></article>
+      <article class="summary-card"><span>Plazas disponibles</span><strong>{{ data.summary.availableSpaces }}</strong></article>
+      <article class="summary-card"><span>Ocupación</span><strong>{{ data.summary.occupancyPercentage }}%</strong></article>
+      <article class="summary-card"><span>Flota asignada</span><strong>{{ data.summary.assignedFleet }}</strong></article>
+      <article class="summary-card"><span>Trenes en servicio</span><strong>{{ data.summary.trainsInService }}</strong></article>
+      <article class="summary-card"><span>Próximas salidas</span><strong>{{ scheduledMovementCount('EXIT') }}</strong></article>
+      <article class="summary-card"><span>Próximas entradas</span><strong>{{ scheduledMovementCount('ENTRY') }}</strong></article>
     </section>
 
     <section class="filters-panel" aria-label="Filtros de cocheras">

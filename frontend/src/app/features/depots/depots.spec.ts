@@ -62,6 +62,21 @@ describe('Depots', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
     expect(compiled.querySelectorAll('.depot-card')).toHaveLength(2);
+    const summaryCards = Array.from(compiled.querySelectorAll<HTMLElement>('.summary-card'));
+    expect(summaryCards.map((card) => card.querySelector('span')?.textContent?.trim())).toEqual([
+      'Cocheras',
+      'Capacidad total',
+      'Plazas ocupadas',
+      'Plazas disponibles',
+      'Ocupación',
+      'Flota asignada',
+      'Trenes en servicio',
+      'Próximas salidas',
+      'Próximas entradas'
+    ]);
+    expect(summaryCards.map((card) => card.querySelector('strong')?.textContent?.trim()))
+      .toEqual(['2', '40', '32', '8', '80%', '28', '4', '0', '1']);
+    expect(compiled.querySelector('.summary-grid small')).toBeNull();
     expect(compiled.querySelector('.depot-code')?.textContent).toContain('LF');
     expect(compiled.querySelector('.occupancy-panel')?.textContent).toContain('12');
     expect(compiled.querySelectorAll('.role-row')).toHaveLength(3);
