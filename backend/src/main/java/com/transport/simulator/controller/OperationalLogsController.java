@@ -2,6 +2,7 @@ package com.transport.simulator.controller;
 
 import com.transport.simulator.dto.response.operationallog.OperationalLogsPageResponse;
 import com.transport.simulator.enums.DeviceEventType;
+import com.transport.simulator.enums.DeviceType;
 import com.transport.simulator.enums.LogOrigin;
 import com.transport.simulator.enums.LogSeverity;
 import com.transport.simulator.service.OperationalLogsQueryService;
@@ -29,6 +30,7 @@ public class OperationalLogsController {
             @RequestParam(required = false) LogOrigin origin,
             @RequestParam(required = false) LogSeverity severity,
             @RequestParam(required = false) DeviceEventType eventType,
+            @RequestParam(required = false) DeviceType deviceType,
             @RequestParam(required = false) String deviceCode,
             @RequestParam(required = false) String stationCode,
             @RequestParam(required = false)
@@ -44,6 +46,7 @@ public class OperationalLogsController {
                 origin,
                 severity,
                 eventType,
+                deviceType,
                 deviceCode,
                 stationCode,
                 occurredFrom,

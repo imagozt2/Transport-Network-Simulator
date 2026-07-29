@@ -2,6 +2,7 @@ package com.transport.simulator.repository;
 
 import com.transport.simulator.entity.DeviceEventLog;
 import com.transport.simulator.enums.DeviceEventType;
+import com.transport.simulator.enums.DeviceType;
 import com.transport.simulator.enums.LogOrigin;
 import com.transport.simulator.enums.LogSeverity;
 import java.time.LocalDateTime;
@@ -50,6 +51,7 @@ public interface DeviceEventLogRepository extends JpaRepository<DeviceEventLog, 
                     WHERE (:origin IS NULL OR eventLog.origin = :origin)
                       AND (:severity IS NULL OR eventLog.severity = :severity)
                       AND (:eventType IS NULL OR eventLog.eventType = :eventType)
+                      AND (:deviceType IS NULL OR device.type = :deviceType)
                       AND (:deviceCode IS NULL OR LOWER(device.code) = LOWER(:deviceCode))
                       AND (:stationCode IS NULL OR LOWER(station.code) = LOWER(:stationCode))
                       AND (:occurredFrom IS NULL OR eventLog.occurredAt >= :occurredFrom)
@@ -63,6 +65,7 @@ public interface DeviceEventLogRepository extends JpaRepository<DeviceEventLog, 
                     WHERE (:origin IS NULL OR eventLog.origin = :origin)
                       AND (:severity IS NULL OR eventLog.severity = :severity)
                       AND (:eventType IS NULL OR eventLog.eventType = :eventType)
+                      AND (:deviceType IS NULL OR device.type = :deviceType)
                       AND (:deviceCode IS NULL OR LOWER(device.code) = LOWER(:deviceCode))
                       AND (:stationCode IS NULL OR LOWER(station.code) = LOWER(:stationCode))
                       AND (:occurredFrom IS NULL OR eventLog.occurredAt >= :occurredFrom)
@@ -73,6 +76,7 @@ public interface DeviceEventLogRepository extends JpaRepository<DeviceEventLog, 
             @Param("origin") LogOrigin origin,
             @Param("severity") LogSeverity severity,
             @Param("eventType") DeviceEventType eventType,
+            @Param("deviceType") DeviceType deviceType,
             @Param("deviceCode") String deviceCode,
             @Param("stationCode") String stationCode,
             @Param("occurredFrom") LocalDateTime occurredFrom,

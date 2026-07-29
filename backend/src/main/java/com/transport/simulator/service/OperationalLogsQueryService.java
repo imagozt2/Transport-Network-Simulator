@@ -4,6 +4,7 @@ import com.transport.simulator.dto.response.operationallog.OperationalLogRespons
 import com.transport.simulator.dto.response.operationallog.OperationalLogsPageResponse;
 import com.transport.simulator.entity.DeviceEventLog;
 import com.transport.simulator.enums.DeviceEventType;
+import com.transport.simulator.enums.DeviceType;
 import com.transport.simulator.enums.LogOrigin;
 import com.transport.simulator.enums.LogSeverity;
 import com.transport.simulator.repository.DeviceEventLogRepository;
@@ -35,6 +36,7 @@ public class OperationalLogsQueryService {
             LogOrigin origin,
             LogSeverity severity,
             DeviceEventType eventType,
+            DeviceType deviceType,
             String deviceCode,
             String stationCode,
             LocalDateTime occurredFrom,
@@ -56,6 +58,7 @@ public class OperationalLogsQueryService {
                 origin,
                 severity,
                 eventType,
+                deviceType,
                 normalize(deviceCode),
                 normalize(stationCode),
                 occurredFrom,
