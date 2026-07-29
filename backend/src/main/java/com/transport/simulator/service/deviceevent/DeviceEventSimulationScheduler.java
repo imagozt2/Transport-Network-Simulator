@@ -2,7 +2,6 @@ package com.transport.simulator.service.deviceevent;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -20,23 +19,18 @@ class DeviceEventSimulationScheduler {
             LoggerFactory.getLogger(DeviceEventSimulationScheduler.class);
 
     private final DeviceEventSimulationService simulationService;
-    private final int eventsPerCycle;
 
-    public DeviceEventSimulationScheduler(
-            DeviceEventSimulationService simulationService,
-            @Value("${app.device-event-simulation.events-per-cycle:5}") int eventsPerCycle
-    ) {
+    public DeviceEventSimulationScheduler(DeviceEventSimulationService simulationService) {
         this.simulationService = simulationService;
-        this.eventsPerCycle = eventsPerCycle;
     }
 
     @Scheduled(
-            fixedDelayString = "${app.device-event-simulation.interval-ms:60000}",
-            initialDelayString = "${app.device-event-simulation.initial-delay-ms:10000}"
+            fixedRateString = "${app.device-event-simulation.interval-ms:1000}",
+            initialDelayString = "${app.device-event-simulation.initial-delay-ms:1000}"
     )
     public void generateDeviceEvents() {
         try {
-            int generatedEvents = simulationService.runCycle(eventsPerCycle);
+            int generatedEvents = simulationService.runCycle();
             LOGGER.debug(
                     "Automatic device event simulation cycle completed: {} events generated",
                     generatedEvents

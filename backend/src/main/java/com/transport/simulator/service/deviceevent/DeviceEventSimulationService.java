@@ -12,8 +12,6 @@ import org.springframework.stereotype.Service;
 @Service
 class DeviceEventSimulationService {
 
-    private static final int MAX_EVENTS_PER_CYCLE = 100;
-
     private final DeviceRepository deviceRepository;
     private final SimulatedDeviceEventGenerator eventGenerator;
     private final DeviceEventRegistrationService eventRegistrationService;
@@ -31,21 +29,13 @@ class DeviceEventSimulationService {
         this.serviceOperationStateService = serviceOperationStateService;
     }
 
-    private List<DeviceEvent> generateOperationalEvents(
-            List<Device> activeDevices,
-            int requestedEventCount
-    ) {
-        int eventCount = Math.clamp(requestedEventCount, 1, MAX_EVENTS_PER_CYCLE);
+    private DeviceEvent generateOperationalEvent(List<Device> activeDevices) {
         List<Device> shuffledDevices = new ArrayList<>(activeDevices);
         Collections.shuffle(shuffledDevices);
-
-        return shuffledDevices.stream()
-                .limit(Math.min(eventCount, shuffledDevices.size()))
-                .map(eventGenerator::generateOperationalActivity)
-                .toList();
+        return eventGenerator.generateOperationalActivity(shuffledDevices.getFirst());
     }
 
-    public int runCycle(int requestedEventCount) {
+    public int runCycle() {
         List<Device> activeDevices = deviceRepository.findAllByActiveTrueOrderByCodeAsc();
         if (activeDevices.isEmpty()) {
             return 0;
@@ -61,7 +51,7 @@ class DeviceEventSimulationService {
                 .forEach(events::add);
 
         if (serviceOpen) {
-            events.addAll(generateOperationalEvents(activeDevices, requestedEventCount));
+            events.add(generateOperationalEvent(activeDevices));
         }
 
         events.forEach(eventRegistrationService::register);

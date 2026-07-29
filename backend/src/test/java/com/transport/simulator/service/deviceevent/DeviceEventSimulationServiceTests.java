@@ -51,7 +51,7 @@ class DeviceEventSimulationServiceTests {
     }
 
     @Test
-    void shouldGenerateAndRegisterDistinctEventsUpToTheConfiguredAmount() {
+    void shouldGenerateAndRegisterOneOperationalEventPerCycle() {
         Device first = device("DEV-001");
         Device second = device("DEV-002");
         Device third = device("DEV-003");
@@ -62,37 +62,21 @@ class DeviceEventSimulationServiceTests {
                 .thenAnswer(invocation -> event(invocation.getArgument(0)));
         ArgumentCaptor<DeviceEvent> captor = ArgumentCaptor.forClass(DeviceEvent.class);
 
-        int generated = simulationService.runCycle(2);
+        int generated = simulationService.runCycle();
 
-        assertThat(generated).isEqualTo(2);
-        verify(registrationService, times(2)).register(captor.capture());
-        assertThat(captor.getAllValues())
-                .extracting(DeviceEvent::deviceCode)
-                .doesNotHaveDuplicates()
-                .allMatch(code -> code.startsWith("DEV-"));
+        assertThat(generated).isEqualTo(1);
+        verify(registrationService).register(captor.capture());
+        assertThat(captor.getValue().deviceCode()).startsWith("DEV-");
     }
 
     @Test
     void shouldNotRegisterAnythingWhenThereAreNoActiveDevices() {
         when(deviceRepository.findAllByActiveTrueOrderByCodeAsc()).thenReturn(List.of());
 
-        assertThat(simulationService.runCycle(5)).isZero();
+        assertThat(simulationService.runCycle()).isZero();
 
         verify(eventGenerator, never()).generateOperationalActivity(any());
         verify(registrationService, never()).register(any());
-    }
-
-    @Test
-    void shouldClampAZeroConfigurationToOneEvent() {
-        Device device = device("DEV-001");
-        DeviceEvent generatedEvent = event(device);
-        when(deviceRepository.findAllByActiveTrueOrderByCodeAsc())
-                .thenReturn(List.of(device));
-        serviceOpen(true);
-        when(eventGenerator.generateOperationalActivity(device)).thenReturn(generatedEvent);
-
-        assertThat(simulationService.runCycle(0)).isEqualTo(1);
-        verify(registrationService).register(any());
     }
 
     @Test
@@ -106,7 +90,7 @@ class DeviceEventSimulationServiceTests {
         when(eventGenerator.generateOperationalActivity(any(Device.class)))
                 .thenAnswer(invocation -> event(invocation.getArgument(0)));
 
-        int generated = simulationService.runCycle(1);
+        int generated = simulationService.runCycle();
 
         assertThat(generated).isEqualTo(3);
         verify(eventGenerator, times(2)).generateServiceState(any(Device.class), org.mockito.ArgumentMatchers.eq(true));
@@ -122,7 +106,7 @@ class DeviceEventSimulationServiceTests {
         when(eventGenerator.generateServiceState(any(Device.class), org.mockito.ArgumentMatchers.eq(false)))
                 .thenAnswer(invocation -> event(invocation.getArgument(0)));
 
-        assertThat(simulationService.runCycle(5)).isEqualTo(2);
+        assertThat(simulationService.runCycle()).isEqualTo(2);
         verify(eventGenerator, times(2)).generateServiceState(any(Device.class), org.mockito.ArgumentMatchers.eq(false));
         verify(eventGenerator, never()).generateOperationalActivity(any());
     }
