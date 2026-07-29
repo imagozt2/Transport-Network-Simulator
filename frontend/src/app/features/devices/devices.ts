@@ -140,19 +140,6 @@ export class Devices implements OnInit, OnDestroy {
       .sort((first, second) => first.name.localeCompare(second.name, 'es'));
   }
 
-  availabilityPercentage(): number {
-    const summary = this.operations?.summary;
-    if (!summary || summary.totalDevices === 0) {
-      return 0;
-    }
-    return Math.round((summary.byStatus.ONLINE / summary.totalDevices) * 100);
-  }
-
-  attentionCount(): number {
-    const byStatus = this.operations?.summary.byStatus;
-    return byStatus ? byStatus.MAINTENANCE + byStatus.ERROR : 0;
-  }
-
   typeLabel(type: DeviceType): string {
     return deviceTypeLabel(type);
   }

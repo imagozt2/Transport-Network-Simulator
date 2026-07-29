@@ -18,37 +18,37 @@
 
     <section class="summary-grid" aria-label="Resumen operativo de máquinas">
       <article class="summary-card">
-        <span>Máquinas activas</span>
+        <span>Total de máquinas</span>
         <strong>{{ data.summary.totalDevices }}</strong>
-        <small>Dispositivos registrados</small>
-      </article>
-      <article class="summary-card online">
-        <span>Online</span>
-        <strong>{{ data.summary.byStatus.ONLINE }}</strong>
-        <small>{{ availabilityPercentage() }}% de disponibilidad</small>
-      </article>
-      <article class="summary-card attention">
-        <span>Requieren atención</span>
-        <strong>{{ attentionCount() }}</strong>
-        <small>Mantenimiento o error</small>
       </article>
       <article class="summary-card">
-        <span>Resultados</span>
-        <strong>{{ filteredDevices().length }}</strong>
-        <small>Según los filtros actuales</small>
+        <span>Online</span>
+        <strong>{{ data.summary.byStatus.ONLINE }}</strong>
       </article>
-    </section>
-
-    <section class="type-overview" aria-label="Distribución por tipo">
-      @for (type of types; track type) {
-        <article class="type-card type-{{ type.toLowerCase().replace('_', '-') }}">
-          <span class="type-symbol" aria-hidden="true">{{ typeShortLabel(type) }}</span>
-          <span>
-            <strong>{{ typeLabel(type) }}</strong>
-            <small>{{ data.summary.byType[type] }} dispositivos</small>
-          </span>
-        </article>
-      }
+      <article class="summary-card">
+        <span>Offline</span>
+        <strong>{{ data.summary.byStatus.OFFLINE }}</strong>
+      </article>
+      <article class="summary-card">
+        <span>En mantenimiento</span>
+        <strong>{{ data.summary.byStatus.MAINTENANCE }}</strong>
+      </article>
+      <article class="summary-card">
+        <span>Con error</span>
+        <strong>{{ data.summary.byStatus.ERROR }}</strong>
+      </article>
+      <article class="summary-card">
+        <span>Máquinas de billetes</span>
+        <strong>{{ data.summary.byType.TICKET_MACHINE }}</strong>
+      </article>
+      <article class="summary-card">
+        <span>Validadores de entrada</span>
+        <strong>{{ data.summary.byType.ENTRY_VALIDATOR }}</strong>
+      </article>
+      <article class="summary-card">
+        <span>Validadores de salida</span>
+        <strong>{{ data.summary.byType.EXIT_VALIDATOR }}</strong>
+      </article>
     </section>
 
     <section class="filters-panel" aria-label="Filtros de máquinas">

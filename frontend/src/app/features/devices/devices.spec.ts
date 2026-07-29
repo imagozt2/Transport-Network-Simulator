@@ -56,7 +56,8 @@ describe('Devices log navigation', () => {
 
     const fixture = TestBed.createComponent(Devices);
     fixture.detectChanges();
-    const link = fixture.nativeElement.querySelector('.logs-link') as HTMLAnchorElement;
+    const compiled = fixture.nativeElement as HTMLElement;
+    const link = compiled.querySelector('.logs-link') as HTMLAnchorElement;
 
     expect(link).not.toBeNull();
     expect(link.getAttribute('href')).toBe('/logs?deviceCode=RMM-MB-ST001-001');
@@ -64,7 +65,22 @@ describe('Devices log navigation', () => {
     expect(fixture.componentInstance.selectedStationCode).toBe('ST001');
     expect(fixture.componentInstance.filteredDevices()).toHaveLength(1);
     expect(fixture.componentInstance.filteredDevices()[0].station.code).toBe('ST001');
-    expect(fixture.nativeElement.textContent).not.toContain('RMM-MB-ST002-001');
+    expect(compiled.textContent).not.toContain('RMM-MB-ST002-001');
+    const summaryCards = Array.from(compiled.querySelectorAll<HTMLElement>('.summary-card'));
+    expect(summaryCards.map((card) => card.querySelector('span')?.textContent?.trim())).toEqual([
+      'Total de máquinas',
+      'Online',
+      'Offline',
+      'En mantenimiento',
+      'Con error',
+      'Máquinas de billetes',
+      'Validadores de entrada',
+      'Validadores de salida'
+    ]);
+    expect(summaryCards.map((card) => card.querySelector('strong')?.textContent?.trim()))
+      .toEqual(['2', '2', '0', '0', '0', '2', '0', '0']);
+    expect(compiled.querySelector('.type-overview')).toBeNull();
+    expect(compiled.querySelector('.summary-card small')).toBeNull();
     fixture.destroy();
   });
 
