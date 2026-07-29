@@ -109,8 +109,9 @@ debe reutilizar una instantánea potencialmente obsoleta.
 ## Máquinas y logs
 
 Cuando el servicio abre, todas las máquinas activas pasan a `ONLINE`; al cerrar pasan a `OFFLINE`.
-Durante el servicio se generan eventos ordinarios de compra y validación. El simulador no produce
-averías, fallos ni mantenimientos artificiales.
+Durante el servicio se genera un evento ordinario de compra o validación por segundo para una
+máquina seleccionada en cada ciclo. El simulador no produce averías, fallos ni mantenimientos
+artificiales.
 
 Solo las máquinas generan logs simulados. Líneas, estaciones, trenes y cocheras no emiten registros
 operativos. La transición de estado y la persistencia del evento comparten una transacción.

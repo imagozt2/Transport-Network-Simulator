@@ -41,17 +41,18 @@ La ruta del frontend es:
 /devices
 ```
 
-La cabecera muestra el instante de evaluación y permite actualizar manualmente la consulta o pausar
-la actualización automática, que se ejecuta cada 15 segundos.
+La sección solicita una instantánea nueva cada 15 segundos. Las peticiones no se solapan y no
+existen controles manuales de actualización en su cabecera.
 
-La pantalla contiene:
+Los indicadores generales muestran únicamente títulos y valores numéricos:
 
-- total de máquinas activas;
-- dispositivos online y porcentaje de disponibilidad;
-- máquinas en mantenimiento o error;
-- distribución por tipo;
-- número de resultados que cumplen los filtros;
-- tarjetas con código, nombre, tipo, estado, estación y última conexión.
+- total de máquinas;
+- máquinas `ONLINE`, `OFFLINE`, en mantenimiento y con error;
+- máquinas de billetes, validadores de entrada y validadores de salida.
+
+Las tarjetas forman una lista compacta y desplegable. Su cabecera presenta nombre, código, tipo,
+estado y estación. Al desplegar una máquina aparecen su ubicación, la última conexión y la acción
+**Ver logs**. El tipo y el estado no se repiten dentro del detalle.
 
 Los filtros se aplican localmente sobre la instantánea recibida y pueden combinarse:
 
@@ -149,6 +150,7 @@ Se pueden combinar los siguientes criterios:
 | Severidad | `severity` | `DEBUG`, `INFO`, `WARNING`, `ERROR` o `CRITICAL`. |
 | Origen | `origin` | `DEVICE_SIMULATION` o `MQTT`. |
 | Evento | `eventType` | Tipo concreto de evento de la máquina. |
+| Tipo de máquina | `deviceType` | `TICKET_MACHINE`, `ENTRY_VALIDATOR` o `EXIT_VALIDATOR`. |
 | Máquina | `deviceCode` | Código estable del dispositivo. |
 | Estación | `stationCode` | Código estable de la estación. |
 | Desde | `occurredFrom` | Inicio inclusivo del intervalo temporal. |
@@ -160,7 +162,7 @@ formato incorrecto se ignoran, evitando que un enlace mal formado rompa la consu
 Ejemplo de enlace filtrado:
 
 ```text
-/logs?deviceCode=RMM-MB-ST001-001&severity=ERROR&occurredFrom=2026-07-23T08:00
+/logs?deviceType=TICKET_MACHINE&deviceCode=RMM-MB-ST001-001&occurredFrom=2026-07-23T08:00
 ```
 
 Los filtros temporales utilizan el formato empleado por `datetime-local`:
@@ -171,9 +173,13 @@ AAAA-MM-DDTHH:mm
 
 ### Paginación
 
-La pantalla permite solicitar 25, 50 o 100 resultados. Los controles Primera, Anterior, Siguiente y
-Última aparecen tanto encima como debajo de la tabla y se habilitan según los campos `first` y
-`last` de la respuesta.
+La pantalla permite solicitar 25, 50 o 100 resultados. Tanto encima como debajo de la tabla aparecen
+los controles Primera, Anterior, Siguiente y Última, acompañados de hasta cinco páginas cercanas.
+La ventana se centra alrededor de la página actual cuando es posible y se ajusta al inicio o al final
+del resultado. La página activa se identifica visualmente y mediante `aria-current="page"`.
+
+Todos los controles quedan deshabilitados mientras se resuelve una petición. Aplicar filtros,
+limpiarlos o cambiar el tamaño de página reinicia la consulta en la primera página.
 
 El backend limita cualquier tamaño superior a 100 para evitar consultas excesivas. Los resultados
 se ordenan por `occurredAt` descendente y, cuando varios eventos comparten el mismo instante, por
@@ -194,6 +200,7 @@ Parámetros:
 | `origin` | No | Sin filtro |
 | `severity` | No | Sin filtro |
 | `eventType` | No | Sin filtro |
+| `deviceType` | No | Sin filtro |
 | `deviceCode` | No | Sin filtro |
 | `stationCode` | No | Sin filtro |
 | `occurredFrom` | No | Sin límite inferior |
@@ -202,7 +209,7 @@ Parámetros:
 Ejemplo:
 
 ```http
-GET /api/logs?page=0&size=25&deviceCode=RMM-MB-ST001-001&severity=WARNING
+GET /api/logs?page=0&size=25&deviceType=ENTRY_VALIDATOR&severity=WARNING
 ```
 
 La respuesta paginada tiene esta estructura:
@@ -289,6 +296,10 @@ La cobertura incluye:
 - inicialización de filtros desde parámetros de URL;
 - rechazo de enumeraciones y fechas incorrectas;
 - conversión de paginación y filtros a parámetros HTTP;
+- combinación y limpieza del filtro por tipo de máquina;
+- normalización de página y tamaño máximo en el backend;
+- navegación directa mediante páginas cercanas;
+- rechazo de intervalos temporales invertidos antes de consultar el repositorio;
 - representación de resultados en la pantalla de Logs.
 
 Las pruebas de la generación, registro y persistencia de eventos se describen en

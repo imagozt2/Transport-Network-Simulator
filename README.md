@@ -21,8 +21,10 @@ La aplicación incluye actualmente:
   situación operativa en tiempo real;
 - una sección de cocheras con ocupación, distribución de flota, navegación contextual a sus trenes
   y ventanas de doce horas para movimientos de entrada y salida;
-- una sección de máquinas con estado operativo, ubicación, filtros y acceso contextual a sus logs;
-- una pantalla global de logs con filtros combinables y paginación;
+- una sección de máquinas con indicadores por estado y tipo, tarjetas compactas, filtros y acceso
+  contextual a sus logs;
+- una pantalla global de logs con filtros combinables —incluido el tipo de máquina— y navegación
+  directa entre páginas;
 - recorridos ordenados y correspondencias entre líneas;
 - calendarios, franjas horarias, frecuencias y tiempos de recorrido configurables;
 - flota regular, de reserva e histórica diferenciada;
@@ -107,9 +109,8 @@ La conexión a MySQL utiliza variables de entorno:
 | `FRONTEND_URL` | No | Origen permitido por CORS; por defecto, `http://localhost:4200`. |
 | `SERVICE_TIME_ZONE` | No | Zona horaria operativa; por defecto, `Europe/Madrid`. |
 | `DEVICE_EVENT_SIMULATION_ENABLED` | No | Activa la simulación automática; por defecto, `true`. |
-| `DEVICE_EVENT_SIMULATION_INITIAL_DELAY_MS` | No | Retraso inicial en milisegundos; por defecto, `10000`. |
-| `DEVICE_EVENT_SIMULATION_INTERVAL_MS` | No | Retardo entre ciclos; por defecto, `60000`. |
-| `DEVICE_EVENTS_PER_CYCLE` | No | Eventos generados por ciclo; por defecto, `5`. |
+| `DEVICE_EVENT_SIMULATION_INITIAL_DELAY_MS` | No | Retraso inicial en milisegundos; por defecto, `1000`. |
+| `DEVICE_EVENT_SIMULATION_INTERVAL_MS` | No | Frecuencia fija entre ciclos; por defecto, `1000`. |
 
 El archivo [`backend/.env.example`](backend/.env.example) sirve como referencia. Los archivos `.env`
 están ignorados por Git y Spring Boot no los carga automáticamente.

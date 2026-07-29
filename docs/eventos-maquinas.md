@@ -37,27 +37,28 @@ No existe ningún endpoint HTTP para generar logs manualmente.
 
 ## Simulación automática
 
-El scheduler espera un tiempo inicial y después ejecuta ciclos con retardo fijo. En cada ciclo:
+El scheduler espera un segundo y después ejecuta un ciclo con frecuencia fija de un segundo. En
+cada ciclo:
 
 1. consulta las máquinas activas;
 2. consulta si el servicio ferroviario se encuentra abierto;
 3. conecta todas las máquinas si el servicio está abierto o las desconecta cuando está cerrado;
 4. durante el servicio, mezcla la lista para repartir la actividad ordinaria;
-5. selecciona máquinas diferentes hasta alcanzar el límite configurado;
-6. genera y registra eventos operativos sin simular averías.
+5. selecciona una máquina;
+6. genera y registra un único evento operativo sin simular averías.
 
-Un ciclo sin máquinas activas termina sin generar registros. El número solicitado se limita al
-intervalo de 1 a 100 eventos ordinarios. Las conexiones o desconexiones necesarias para sincronizar
-el estado de toda la red no están sujetas a ese límite.
+Un ciclo sin máquinas activas termina sin generar registros. Durante el horario de servicio se
+produce, por tanto, un evento ordinario por segundo. Las conexiones o desconexiones necesarias para
+sincronizar el estado de toda la red son excepcionales y adicionales: al abrir o cerrar pueden
+registrarse varias en el mismo ciclo.
 
 ### Configuración
 
 | Variable de entorno | Valor predeterminado | Descripción |
 | --- | ---: | --- |
 | `DEVICE_EVENT_SIMULATION_ENABLED` | `true` | Activa o desactiva el scheduler. |
-| `DEVICE_EVENT_SIMULATION_INITIAL_DELAY_MS` | `10000` | Espera antes del primer ciclo. |
-| `DEVICE_EVENT_SIMULATION_INTERVAL_MS` | `60000` | Retardo entre el final de un ciclo y el siguiente. |
-| `DEVICE_EVENTS_PER_CYCLE` | `5` | Cantidad de máquinas seleccionadas por ciclo. |
+| `DEVICE_EVENT_SIMULATION_INITIAL_DELAY_MS` | `1000` | Espera antes del primer ciclo. |
+| `DEVICE_EVENT_SIMULATION_INTERVAL_MS` | `1000` | Frecuencia fija entre ciclos. |
 
 Para desactivar la simulación durante una ejecución:
 
@@ -194,7 +195,8 @@ Máquinas y Logs. Su funcionamiento y los endpoints de lectura se documentan en
 La suite de `service/deviceevent` cubre:
 
 - generación según tipo y estado;
-- selección y límite por ciclo;
+- selección de una sola máquina por ciclo;
+- frecuencia fija predeterminada de 1000 ms;
 - ausencia de máquinas activas;
 - asociación entre log, máquina y estación;
 - cambios de estado y última conexión;
