@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
 
 import { TrainOperation, TrainOperationsResponse } from '../../core/models/train-operation.model';
@@ -9,6 +10,10 @@ const line = { id: 1, code: 'L1', name: 'Línea 1', color: 'Roja' };
 const depot = {
   id: 20, code: 'DEP-LF-A', name: 'Cochera de Las Fuentes - Sector A',
   stationId: 10, stationCode: 'ST010', stationName: 'Plaza de la Mina'
+};
+const historicDepot = {
+  id: 21, code: 'DEP-CC-B', name: 'Cochera de Cuatro Caminos - Sector B',
+  stationId: 11, stationCode: 'ST011', stationName: 'Cuatro Caminos'
 };
 const regularTrain: TrainOperation = {
   id: 100, code: 'T-9001', manufacturer: 'Macegocia Rail', model: 'MR9', series: '9000',
@@ -29,7 +34,7 @@ const reserveTrain: TrainOperation = {
 const historicTrain: TrainOperation = {
   ...regularTrain, id: 102, code: 'T-1001', manufacturer: 'Clásicos Macegocia', model: 'CM1',
   series: '1000', fleetRole: 'HISTORIC', status: 'DEPOT', dispatchOrder: null,
-  currentDepot: depot, serviceLocation: null
+  homeDepot: historicDepot, currentDepot: historicDepot, serviceLocation: null
 };
 const response: TrainOperationsResponse = {
   evaluatedAt: '2026-07-22T08:30:00+02:00', phase: 'OPERATING',
@@ -66,7 +71,7 @@ describe('Trains', () => {
     fixture.destroy();
   });
 
-  it('should combine search, status, line, series and fleet-role filters and clear them', async () => {
+  it('should combine search, status, line, depot, series and fleet-role filters and clear them', async () => {
     await configureWith(() => of(response));
     const fixture = TestBed.createComponent(Trains);
     fixture.detectChanges();
@@ -75,6 +80,7 @@ describe('Trains', () => {
     component.setSearchText('7001');
     component.setStatusFilter('DEPOT');
     component.setLineFilter('L1');
+    component.setDepotFilter('DEP-LF-A');
     component.setSeriesFilter('7000');
     component.setRoleFilter('RESERVE');
     expect(component.hasActiveFilters()).toBe(true);
@@ -85,7 +91,24 @@ describe('Trains', () => {
     component.clearFilters();
     expect(component.filteredTrains()).toHaveLength(3);
     expect(component.lineOptions().map((option) => option.code)).toEqual(['L1']);
+    expect(component.depotOptions().map((option) => option.code)).toEqual(['DEP-CC-B', 'DEP-LF-A']);
     expect(component.seriesOptions()).toEqual(['1000', '7000', '9000']);
+    fixture.destroy();
+  });
+
+  it('should initialize the depot filter from the URL and include its circulating trains', async () => {
+    await configureWith(() => of(response), { depotCode: 'DEP-LF-A' });
+    const fixture = TestBed.createComponent(Trains);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.selectedDepotCode).toBe('DEP-LF-A');
+    expect(fixture.componentInstance.filteredTrains().map((train) => train.code))
+      .toEqual(['T-9001', 'T-7001']);
+    const depotFilter = fixture.nativeElement.querySelector(
+      '.filters-panel label:nth-of-type(4) select'
+    ) as HTMLSelectElement;
+    expect(depotFilter.value).toBe('DEP-LF-A');
+    expect(depotFilter.selectedOptions[0]?.textContent).toContain('Las Fuentes');
     fixture.destroy();
   });
 
@@ -101,9 +124,18 @@ describe('Trains', () => {
   });
 });
 
-async function configureWith(getOperations: () => Observable<TrainOperationsResponse>) {
+async function configureWith(
+  getOperations: () => Observable<TrainOperationsResponse>,
+  queryParams: Record<string, string> = {}
+) {
   await TestBed.configureTestingModule({
     imports: [Trains],
-    providers: [{ provide: TrainOperationsService, useValue: { getOperations } }]
+    providers: [
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { queryParamMap: convertToParamMap(queryParams) } }
+      },
+      { provide: TrainOperationsService, useValue: { getOperations } }
+    ]
   }).compileComponents();
 }

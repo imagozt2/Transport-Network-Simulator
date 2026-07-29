@@ -1,8 +1,10 @@
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 
 import {
   FleetRole,
   TrainOperation,
+  TrainOperationDepot,
   TrainOperationLine,
   TrainOperationsResponse,
   TrainStatus
@@ -24,6 +26,7 @@ type RoleFilter = FleetRole | 'ALL';
 })
 export class Trains implements OnInit, OnDestroy {
   private readonly trainOperationsService = inject(TrainOperationsService);
+  private readonly route = inject(ActivatedRoute);
   private readonly periodicRefresh = new PeriodicRefresh(15_000, () => this.loadOperations());
   private readonly expandedTrainIds = new Set<number>();
   private countdownIntervalId: number | null = null;
@@ -38,12 +41,14 @@ export class Trains implements OnInit, OnDestroy {
   selectedStatus: StatusFilter = 'ALL';
   selectedRole: RoleFilter = 'ALL';
   selectedLineCode = 'ALL';
+  selectedDepotCode = 'ALL';
   selectedSeries = 'ALL';
 
   readonly statuses: readonly TrainStatus[] = ['IN_SERVICE', 'DEPOT', 'MAINTENANCE', 'STOPPED', 'OUT_OF_SERVICE'];
   readonly roles: readonly FleetRole[] = ['REGULAR_SERVICE', 'RESERVE', 'HISTORIC'];
 
   ngOnInit(): void {
+    this.selectedDepotCode = this.route.snapshot.queryParamMap.get('depotCode')?.trim() || 'ALL';
     this.loadOperations(true);
     this.periodicRefresh.start();
     this.startCountdown();
@@ -81,6 +86,7 @@ export class Trains implements OnInit, OnDestroy {
   setStatusFilter(value: string): void { this.selectedStatus = value as StatusFilter; }
   setRoleFilter(value: string): void { this.selectedRole = value as RoleFilter; }
   setLineFilter(value: string): void { this.selectedLineCode = value; }
+  setDepotFilter(value: string): void { this.selectedDepotCode = value; }
   setSeriesFilter(value: string): void { this.selectedSeries = value; }
 
   clearFilters(): void {
@@ -88,12 +94,14 @@ export class Trains implements OnInit, OnDestroy {
     this.selectedStatus = 'ALL';
     this.selectedRole = 'ALL';
     this.selectedLineCode = 'ALL';
+    this.selectedDepotCode = 'ALL';
     this.selectedSeries = 'ALL';
   }
 
   hasActiveFilters(): boolean {
     return this.searchText.trim().length > 0 || this.selectedStatus !== 'ALL'
-      || this.selectedRole !== 'ALL' || this.selectedLineCode !== 'ALL' || this.selectedSeries !== 'ALL';
+      || this.selectedRole !== 'ALL' || this.selectedLineCode !== 'ALL'
+      || this.selectedDepotCode !== 'ALL' || this.selectedSeries !== 'ALL';
   }
 
   filteredTrains(): TrainOperation[] {
@@ -105,6 +113,9 @@ export class Trains implements OnInit, OnDestroy {
         && (this.selectedStatus === 'ALL' || train.status === this.selectedStatus)
         && (this.selectedRole === 'ALL' || train.fleetRole === this.selectedRole)
         && (this.selectedLineCode === 'ALL' || train.assignedLine.code === this.selectedLineCode)
+        && (this.selectedDepotCode === 'ALL'
+          || train.homeDepot.code === this.selectedDepotCode
+          || train.currentDepot?.code === this.selectedDepotCode)
         && (this.selectedSeries === 'ALL' || train.series === this.selectedSeries);
     });
   }
@@ -113,6 +124,17 @@ export class Trains implements OnInit, OnDestroy {
     const options = new Map<string, TrainOperationLine>();
     this.operations?.trains.forEach((train) => options.set(train.assignedLine.code, train.assignedLine));
     return [...options.values()].sort((first, second) => first.code.localeCompare(second.code));
+  }
+
+  depotOptions(): TrainOperationDepot[] {
+    const options = new Map<string, TrainOperationDepot>();
+    this.operations?.trains.forEach((train) => {
+      options.set(train.homeDepot.code, train.homeDepot);
+      if (train.currentDepot) { options.set(train.currentDepot.code, train.currentDepot); }
+    });
+    return [...options.values()].sort((first, second) =>
+      first.name.localeCompare(second.name, 'es')
+    );
   }
 
   seriesOptions(): string[] {
