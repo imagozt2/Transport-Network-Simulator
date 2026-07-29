@@ -14,8 +14,7 @@ http://localhost:4200/stations
 ```
 
 El frontend obtiene una instantánea al abrir la página y vuelve a consultar el backend cada 15
-segundos. La actualización automática se puede pausar y también existe una acción manual. Las
-peticiones no se solapan.
+segundos. La actualización es automática, no presenta controles manuales y evita solapar peticiones.
 
 Entre dos consultas, la cuenta atrás de cada llegada se actualiza localmente una vez por segundo.
 Esto permite mostrar `mm:ss` sin realizar una petición HTTP cada segundo. Una respuesta nueva
@@ -26,25 +25,45 @@ válidos; si falla la carga inicial, se ofrece una acción para reintentarla.
 
 La cabecera muestra:
 
-- estaciones totales y estaciones con alguna línea abierta;
+- estaciones totales;
 - estaciones de transbordo;
-- dispositivos activos registrados;
-- dispositivos actualmente online.
+- máquinas de billetes;
+- validadores de entrada;
+- validadores de salida.
 
-La lista se puede filtrar por nombre o código, tipo de estación y estado operativo. Una estación se
+La lista se puede filtrar por nombre o código, estado operativo y número de líneas: una, dos, o tres
+o más. Los criterios se pueden combinar y restablecer mediante **Limpiar filtros**. Una estación se
 considera de transbordo cuando pertenece a más de una línea activa en la infraestructura, aunque
 alguna de ellas se encuentre temporalmente cerrada.
 
 Cada tarjeta desplegable contiene:
 
-- código, nombre, tipo y estado de la estación;
-- disponibilidad de máquinas de venta y validadores;
+- código, nombre y estado operativo de la estación;
+- disponibilidad y distribución de máquinas de billetes y validadores;
 - líneas que prestan servicio, terminales y trenes activos;
+- distribución de los trenes de cada línea por sentido y terminal de destino;
 - posición de la estación dentro del termómetro de cada línea;
-- próximas llegadas, sentido, terminal de destino y estaciones restantes.
+- próximas llegadas, sentido, terminal de destino y estaciones restantes;
+- accesos contextuales a las máquinas y logs de la estación.
 
 `activeTrainCount` representa los trenes que circulan por las líneas que sirven la estación. No es
 el número de trenes que están físicamente dentro de ella ni el número de llegadas mostradas.
+Dentro de cada línea, la suma de `directions[].activeTrainCount` coincide con el total de trenes
+activos de esa línea.
+
+## Navegación contextual
+
+El panel **Máquinas** de cada estación ofrece dos accesos:
+
+```text
+/devices?stationCode=ST045
+/logs?stationCode=ST045
+```
+
+**Ver máquinas** abre el inventario con la estación seleccionada y oculta las máquinas de otras
+paradas. **Ver logs** abre el registro global aplicando el mismo código al filtro de estación. Se usa
+`stationCode`, y no el identificador numérico, porque es estable, legible y no depende de los valores
+autoincrementales de una instalación concreta.
 
 ## Estados operativos
 
@@ -76,6 +95,10 @@ posición = (orden - 1) / (número de estaciones - 1) × 100
 
 Las etiquetas calculan automáticamente un color de texto con contraste suficiente. Por ejemplo, la
 L3 utiliza texto oscuro sobre su fondo amarillo.
+
+Cada bloque de línea presenta además la circulación en ambos sentidos. Para cada sentido se muestra
+la terminal que le da nombre y el número de trenes activos obtenido de la misma instantánea
+ferroviaria. El frontend no deduce estos recuentos a partir de las próximas llegadas.
 
 ## Cálculo de próximas llegadas
 
@@ -134,6 +157,14 @@ Una respuesta correcta devuelve `200 OK`. Este ejemplo está abreviado:
   "phase": "OPERATING",
   "stationCount": 50,
   "activeStationCount": 50,
+  "summary": {
+    "stationCount": 50,
+    "activeStationCount": 50,
+    "transferStationCount": 18,
+    "ticketMachineCount": 50,
+    "entryValidatorCount": 100,
+    "exitValidatorCount": 100
+  },
   "stations": [
     {
       "id": 2,
@@ -165,7 +196,19 @@ Una respuesta correcta devuelve `200 OK`. Este ejemplo está abreviado:
           "serviceOpen": true,
           "activeTrainCount": 4,
           "firstTerminal": { "id": 1, "code": "STA", "name": "Estación A" },
-          "lastTerminal": { "id": 3, "code": "STC", "name": "Estación C" }
+          "lastTerminal": { "id": 3, "code": "STC", "name": "Estación C" },
+          "directions": [
+            {
+              "direction": "OUTBOUND",
+              "destination": { "id": 3, "code": "STC", "name": "Estación C" },
+              "activeTrainCount": 3
+            },
+            {
+              "direction": "INBOUND",
+              "destination": { "id": 1, "code": "STA", "name": "Estación A" },
+              "activeTrainCount": 1
+            }
+          ]
         }
       ],
       "nextArrivals": [
@@ -200,7 +243,11 @@ Una respuesta correcta devuelve `200 OK`. Este ejemplo está abreviado:
 | `phase` | texto | `CLOSED`, `STARTING`, `OPERATING` o `ENDING`. |
 | `stationCount` | número | Estaciones activas incluidas en la respuesta. |
 | `activeStationCount` | número | Estaciones con al menos una línea abierta. |
+| `summary` | objeto | Recuentos generales de estaciones, transbordos y máquinas por tipo. |
 | `stations` | lista | Resúmenes operativos ordenados por nombre. |
+
+El objeto `summary` contiene `stationCount`, `activeStationCount`, `transferStationCount`,
+`ticketMachineCount`, `entryValidatorCount` y `exitValidatorCount`.
 
 ### Estación
 
@@ -214,6 +261,19 @@ Una respuesta correcta devuelve `200 OK`. Este ejemplo está abreviado:
 | `devices` | objeto | Recuento de dispositivos por tipo y estado. |
 | `lines` | lista | Pertenencia, terminales y estado de cada línea. |
 | `nextArrivals` | lista | Próximas llegadas ordenadas. |
+
+### Línea de una estación
+
+| Campo | Tipo | Descripción |
+| --- | --- | --- |
+| `id`, `code`, `name`, `color` | varios | Identidad y presentación canónica de la línea. |
+| `stationOrder` | número | Posición de la estación dentro del recorrido. |
+| `phase`, `serviceOpen` | varios | Fase operativa y disponibilidad del servicio. |
+| `activeTrainCount` | número | Trenes activos en la línea. |
+| `firstTerminal`, `lastTerminal` | objeto | Terminales del recorrido. |
+| `directions` | lista | Recuento de trenes por sentido y terminal de destino. |
+
+Cada elemento de `directions` contiene `direction`, `destination` y `activeTrainCount`.
 
 ### Llegada
 
@@ -236,6 +296,7 @@ Una respuesta correcta devuelve `200 OK`. Este ejemplo está abreviado:
 - `StationOperationsService` realiza la consulta desde Angular.
 - `Stations` gestiona filtros, actualización y cuenta atrás.
 - `line-visuals.ts` comparte colores y contraste con el resto de la red.
+- Las rutas `/devices` y `/logs` consumen `stationCode` para conservar el contexto de navegación.
 
 El origen de las posiciones y los tiempos se explica en
 [Motor de simulación ferroviaria](motor-simulacion-ferroviaria.md). El detalle visual de los
@@ -251,7 +312,9 @@ Las pruebas automatizadas cubren:
 - paradas intermedias y cambios de sentido en terminales;
 - precisión de segundos y hora estimada;
 - URL utilizada por Angular;
-- colores, termómetros, filtros y errores de carga;
+- colores, termómetros, filtros combinados y errores de carga;
+- navegación contextual y aplicación del filtro de estación en Máquinas y Logs;
+- coherencia entre los totales ferroviarios y su distribución por sentido;
 - formato y descenso de la cuenta atrás `mm:ss`.
 
 Para ejecutarlas:

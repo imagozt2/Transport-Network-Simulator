@@ -15,7 +15,8 @@ La aplicación incluye actualmente:
 - un Panel General en vivo con indicadores y paneles operativos de la red;
 - un mapa SVG interactivo con las seis líneas y las 50 estaciones de Macegocia;
 - una sección operativa de líneas con frecuencias, termómetros y trenes en movimiento;
-- una sección de estaciones con estados, dispositivos y próximas llegadas en formato `mm:ss`;
+- una sección de estaciones con filtros, máquinas, circulación por sentido, próximas llegadas en
+  formato `mm:ss` y navegación contextual;
 - una sección de trenes con filtros, clasificación de la flota y situación operativa en tiempo real;
 - una sección de cocheras con ocupación, distribución de flota y movimientos de entrada y salida;
 - una sección de máquinas con estado operativo, ubicación, filtros y acceso contextual a sus logs;

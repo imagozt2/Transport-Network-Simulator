@@ -60,6 +60,10 @@ Los filtros se aplican localmente sobre la instantánea recibida y pueden combin
 - estado operativo;
 - estación.
 
+La sección de Estaciones puede abrir esta pantalla mediante
+`/devices?stationCode=ST045`. En ese caso el filtro de estación se inicializa antes de presentar las
+tarjetas, de modo que solo aparecen las máquinas de la parada seleccionada.
+
 ### Acceso contextual a Logs
 
 Cada tarjeta contiene la acción **Ver logs**. La navegación utiliza el código estable de la máquina:
@@ -70,6 +74,10 @@ Cada tarjeta contiene la acción **Ver logs**. La navegación utiliza el código
 
 El código se utiliza en lugar del identificador numérico para que el enlace sea legible, estable
 entre instalaciones de la base de datos y adecuado para compartir o guardar.
+
+También se puede acceder desde una tarjeta de estación mediante
+`/logs?stationCode=ST045`. La pantalla de Logs conserva ese contexto seleccionando la estación en su
+filtro y enviando `stationCode` en la primera consulta.
 
 ## Endpoint operativo de Máquinas
 
