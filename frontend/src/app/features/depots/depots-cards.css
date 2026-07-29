@@ -1,40 +1,26 @@
-.depot-card { overflow: hidden; border-radius: 22px; }
+.depot-card { overflow: hidden; border-radius: 18px; }
 .depot-card.expanded { border-color: #d1d5db; }
-.depot-card-header { width: 100%; display: grid; grid-template-columns: 62px minmax(0, 1fr) 58px 36px; align-items: center; gap: 16px; padding: 20px; border: 0; background: #fff; text-align: left; cursor: pointer; }
+.depot-card-header { width: 100%; display: grid; grid-template-columns: 48px minmax(0, 1fr) 52px 30px; align-items: center; gap: 12px; padding: 13px 16px; border: 0; background: #fff; text-align: left; cursor: pointer; }
 .depot-card-header:hover { background: #f9fafb; }
-.depot-code { width: 46px; height: 42px; display: inline-flex; align-items: center; justify-content: center; border-radius: 14px; color: #fff; background: #000; box-shadow: 0 8px 18px rgba(15, 23, 42, .2); font-size: 13px; font-weight: 900; }
+.depot-code { width: 40px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border-radius: 11px; color: #fff; background: #000; box-shadow: 0 6px 14px rgba(15, 23, 42, .18); font-size: 11px; font-weight: 900; }
 .depot-main-info { min-width: 0; }
-.depot-title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 6px; }
-.depot-title-row > strong { color: #111827; font-size: 19px; }
-.depot-main-info > small { color: #6b7280; font-size: 13px; }
-.status-pill { padding: 5px 10px; border-radius: 999px; font-size: 11px; font-weight: 900; }
+.depot-title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin-bottom: 3px; }
+.depot-title-row > strong { color: #111827; font-size: 16px; }
+.depot-main-info > small { display: block; overflow: hidden; color: #6b7280; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.status-pill { padding: 4px 8px; border-radius: 999px; font-size: 10px; font-weight: 900; }
 .status-empty { color: #475569; background: #e2e8f0; }
 .status-available { color: #166534; background: #dcfce7; }
 .status-high-occupancy { color: #92400e; background: #fef3c7; }
 .status-full, .status-over-capacity { color: #991b1b; background: #fee2e2; }
-.occupancy-badge { min-width: 50px; padding: 9px 4px; border-radius: 12px; color: #111827; background: #f3f4f6; font-size: 13px; font-weight: 900; text-align: center; }
-.expand-icon { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 12px; color: #111827; background: #f3f4f6; font-size: 20px; font-weight: 900; }
-.depot-card-body { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding: 20px; border-top: 1px solid #e5e7eb; background: #f9fafb; }
-.occupancy-panel, .infrastructure-panel, .operation-panel { min-width: 0; padding: 18px; border: 1px solid #e5e7eb; border-radius: 18px; background: #fff; }
+.occupancy-badge { min-width: 46px; padding: 7px 3px; border-radius: 10px; color: #111827; background: #f3f4f6; font-size: 12px; font-weight: 900; text-align: center; }
+.expand-icon { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 10px; color: #111827; background: #f3f4f6; font-size: 17px; font-weight: 900; }
+.depot-card-body { display: grid; grid-template-columns: 1fr; gap: 14px; padding: 16px; border-top: 1px solid #e5e7eb; background: #f9fafb; }
+.infrastructure-panel { min-width: 0; padding: 16px; border: 1px solid #e5e7eb; border-radius: 16px; background: #fff; }
 .panel-label { display: block; margin-bottom: 16px; color: #6b7280; font-size: 11px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
-.large-metric { display: flex; align-items: baseline; gap: 9px; margin-bottom: 18px; }
-.large-metric strong { color: #111827; font-size: 34px; line-height: 1; }
-.large-metric span { color: #6b7280; font-size: 12px; font-weight: 700; }
-.occupancy-track { height: 9px; overflow: hidden; border-radius: 999px; background: #e5e7eb; }
-.occupancy-track i { display: block; height: 100%; border-radius: inherit; background: #111827; }
-.occupancy-footer { display: flex; justify-content: space-between; gap: 12px; margin-top: 10px; color: #6b7280; font-size: 11px; }
-.occupancy-footer strong { color: #111827; }
-.infrastructure-panel dl { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.infrastructure-panel dl { margin: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }
 .infrastructure-panel dl div { min-width: 0; padding: 11px; border-radius: 12px; background: #f9fafb; }
 .infrastructure-panel dt { color: #6b7280; font-size: 10px; font-weight: 800; }
 .infrastructure-panel dd { margin: 5px 0 2px; overflow: hidden; color: #111827; font-size: 13px; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
 .infrastructure-panel small { color: #6b7280; font-size: 10px; }
-.operation-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.operation-metrics div { padding: 12px 8px; border-radius: 12px; background: #f3f4f6; text-align: center; }
-.operation-metrics span { display: block; min-height: 30px; color: #6b7280; font-size: 10px; font-weight: 800; }
-.operation-metrics strong { color: #111827; font-size: 20px; }
-.next-movement { display: flex; justify-content: space-between; gap: 12px; margin-top: 14px; padding-top: 14px; border-top: 1px solid #e5e7eb; font-size: 11px; }
-.next-movement span { color: #6b7280; }
-.next-movement strong { color: #111827; text-align: right; }
-@media (max-width: 1100px) { .depot-card-body { grid-template-columns: 1fr 1fr; } .operation-panel { grid-column: 1 / -1; } }
-@media (max-width: 700px) { .depot-card-header { grid-template-columns: 52px minmax(0, 1fr) 32px; gap: 10px; padding: 16px; } .occupancy-badge { display: none; } .depot-card-body { grid-template-columns: 1fr; } .operation-panel { grid-column: auto; } .depot-title-row { align-items: flex-start; flex-direction: column; } }
+@media (max-width: 900px) { .infrastructure-panel dl { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 700px) { .depot-card-header { grid-template-columns: 44px minmax(0, 1fr) 28px; gap: 9px; padding: 12px; } .occupancy-badge { display: none; } .infrastructure-panel dl { grid-template-columns: 1fr; } }

@@ -98,11 +98,6 @@ export class Depots implements OnInit, OnDestroy {
     return depotStatusLabel(status);
   }
 
-  nextMovementLabel(depot: DepotOperation): string {
-    const value = depot.movementsSummary.nextMovementAt;
-    return formatTime(value, false, 'Sin movimientos pendientes');
-  }
-
   roleLabel(role: FleetRole): string {
     return fleetRoleLabel(role);
   }

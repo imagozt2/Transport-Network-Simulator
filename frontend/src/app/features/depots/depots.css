@@ -22,7 +22,7 @@
 .filter-buttons button.active { border-color: #111827; color: #fff; background: #111827; }
 .filter-notice { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 18px; border: 1px solid #d1d5db; border-radius: 16px; color: #374151; background: #f9fafb; font-size: 13px; font-weight: 800; }
 .filter-notice button { padding: 8px 13px; border: 0; border-radius: 999px; color: #fff; background: #111827; font-weight: 900; cursor: pointer; }
-.depots-list { display: flex; flex-direction: column; gap: 16px; }
+.depots-list { display: flex; flex-direction: column; gap: 10px; }
 @media (max-width: 1000px) { .filters-panel { grid-template-columns: 1fr; } }
 @media (max-width: 1250px) { .summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 900px) { .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

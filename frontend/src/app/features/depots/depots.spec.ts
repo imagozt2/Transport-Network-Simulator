@@ -78,7 +78,12 @@ describe('Depots', () => {
       .toEqual(['2', '40', '32', '8', '80%', '28', '4', '0', '1']);
     expect(compiled.querySelector('.summary-grid small')).toBeNull();
     expect(compiled.querySelector('.depot-code')?.textContent).toContain('LF');
-    expect(compiled.querySelector('.occupancy-panel')?.textContent).toContain('12');
+    expect(compiled.querySelector('.depot-summary')?.textContent?.trim())
+      .toBe('DEP-LF-A · Las Fuentes · 12/20 plazas');
+    expect(compiled.querySelector('.occupancy-badge')?.textContent?.trim()).toBe('60%');
+    expect(compiled.querySelector('.occupancy-panel')).toBeNull();
+    expect(compiled.querySelector('.operation-panel')).toBeNull();
+    expect(compiled.querySelector('.infrastructure-panel')?.textContent).toContain('20 plazas');
     expect(compiled.querySelectorAll('.role-row')).toHaveLength(3);
     expect(compiled.querySelector('.role-regular-service')?.textContent).toContain('12');
     expect(compiled.querySelectorAll('.series-row')).toHaveLength(3);

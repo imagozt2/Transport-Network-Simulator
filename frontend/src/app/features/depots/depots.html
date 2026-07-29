@@ -48,7 +48,7 @@
             <span class="depot-code">{{ shortCode(depot) }}</span>
             <span class="depot-main-info">
               <span class="depot-title-row"><strong>{{ depot.name }}</strong><span class="status-pill status-{{ depot.status.toLowerCase().replace('_', '-') }}">{{ statusLabel(depot.status) }}</span></span>
-              <small>{{ depot.code }} · {{ depot.station.name }} · {{ depot.occupiedSpaces }} de {{ depot.capacity }} plazas ocupadas</small>
+              <small class="depot-summary">{{ depot.code }} · {{ depot.station.name }} · {{ depot.occupiedSpaces }}/{{ depot.capacity }} plazas</small>
             </span>
             <span class="occupancy-badge">{{ depot.occupancyPercentage }}%</span>
             <span class="expand-icon" aria-hidden="true">{{ isExpanded(depot.id) ? '−' : '+' }}</span>
@@ -56,31 +56,14 @@
 
           @if (isExpanded(depot.id)) {
             <div class="depot-card-body">
-              <section class="occupancy-panel">
-                <span class="panel-label">Ocupación actual</span>
-                <div class="large-metric"><strong>{{ depot.occupiedSpaces }}</strong><span>trenes de {{ depot.capacity }} plazas</span></div>
-                <div class="occupancy-track"><i [style.width.%]="depot.occupancyPercentage"></i></div>
-                <div class="occupancy-footer"><span>{{ depot.occupancyPercentage }}% ocupado</span><strong>{{ depot.availableSpaces }} plazas libres</strong></div>
-              </section>
-
               <section class="infrastructure-panel">
                 <span class="panel-label">Infraestructura</span>
                 <dl>
                   <div><dt>Estación</dt><dd>{{ depot.station.name }}</dd><small>{{ depot.station.code }}</small></div>
                   <div><dt>Vías</dt><dd>{{ depot.trackCount }}</dd><small>Vías de estacionamiento</small></div>
                   <div><dt>Trenes por vía</dt><dd>{{ depot.trainsPerTrack }}</dd><small>Capacidad configurada</small></div>
-                  <div><dt>Código</dt><dd>{{ depot.code }}</dd><small>Identificador estable</small></div>
+                  <div><dt>Capacidad</dt><dd>{{ depot.capacity }} plazas</dd><small>{{ depot.availableSpaces }} disponibles</small></div>
                 </dl>
-              </section>
-
-              <section class="operation-panel">
-                <span class="panel-label">Situación operativa</span>
-                <div class="operation-metrics">
-                  <div><span>Flota asignada</span><strong>{{ depot.fleet.assignedTrainCount }}</strong></div>
-                  <div><span>En servicio</span><strong>{{ depot.fleet.assignedTrainsInService }}</strong></div>
-                  <div><span>Movimientos pendientes</span><strong>{{ depot.movementsSummary.scheduled }}</strong></div>
-                </div>
-                <div class="next-movement"><span>Próximo movimiento</span><strong>{{ nextMovementLabel(depot) }}</strong></div>
               </section>
 
               <section class="fleet-distribution-panel">
