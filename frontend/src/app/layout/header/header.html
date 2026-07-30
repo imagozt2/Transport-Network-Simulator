@@ -17,8 +17,55 @@
     </div>
   </div>
 
-  <div class="status" aria-label="Estado de la red: servicio normal">
-    <span class="status-dot" aria-hidden="true"></span>
-    <span>Servicio normal</span>
-  </div>
+  @if (operator(); as account) {
+    <div class="user-access" (click)="keepUserMenuOpen($event)">
+      <button
+        class="user-button"
+        type="button"
+        aria-haspopup="menu"
+        [attr.aria-expanded]="userMenuOpen()"
+        (click)="toggleUserMenu($event)"
+      >
+        <span class="user-avatar" aria-hidden="true">
+          {{ initials(account.firstName, account.lastName) }}
+        </span>
+        <span class="user-identity">
+          <strong>{{ account.firstName }} {{ account.lastName }}</strong>
+          <small>{{ account.role === 'ADMINISTRATOR' ? 'Administrador' : 'Operador' }}</small>
+        </span>
+        <span class="menu-chevron" [class.open]="userMenuOpen()" aria-hidden="true">⌄</span>
+      </button>
+
+      @if (userMenuOpen()) {
+        <div class="user-menu" role="menu">
+          <header>
+            <strong>{{ account.username }}</strong>
+            <span>{{ account.email }}</span>
+          </header>
+
+          <nav aria-label="Opciones del operador">
+            <a routerLink="/account" role="menuitem" (click)="closeUserMenu()">
+              <span aria-hidden="true">👤</span>
+              Mi cuenta
+            </a>
+            <a routerLink="/settings" role="menuitem" (click)="closeUserMenu()">
+              <span aria-hidden="true">⚙️</span>
+              Configuración
+            </a>
+          </nav>
+
+          <button
+            class="logout-button"
+            type="button"
+            role="menuitem"
+            [disabled]="loggingOut()"
+            (click)="logout()"
+          >
+            <span aria-hidden="true">↪</span>
+            {{ loggingOut() ? 'Cerrando sesión…' : 'Cerrar sesión' }}
+          </button>
+        </div>
+      }
+    </div>
+  }
 </header>
