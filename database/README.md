@@ -16,6 +16,8 @@ El esquema incluye `operator_accounts` para las cuentas del centro de control. E
 únicamente el hash de la contraseña junto con la identidad, el rol, el estado y los datos de
 seguridad de la cuenta. Los scripts SQL no crean operadores ni contienen credenciales iniciales.
 El primer operador se aprovisionará desde el backend mediante variables de entorno.
+El procedimiento y el modelo de seguridad se describen en
+[`docs/acceso-operadores.md`](../docs/acceso-operadores.md).
 
 ## Orden de instalación
 

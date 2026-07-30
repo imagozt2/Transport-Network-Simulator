@@ -27,6 +27,9 @@ La aplicación incluye actualmente:
   directa entre páginas;
 - una sección de títulos de transporte con el catálogo tarifario, sus reglas de uso y filtros por
   producto y estado;
+- autenticación de operadores mediante sesiones protegidas, rutas privadas y bloqueo temporal ante
+  intentos fallidos;
+- pantallas personales de cuenta y configuración accesibles desde la cabecera;
 - recorridos ordenados y correspondencias entre líneas;
 - calendarios, franjas horarias, frecuencias y tiempos de recorrido configurables;
 - flota regular, de reserva e histórica diferenciada;
@@ -113,6 +116,13 @@ La conexión a MySQL utiliza variables de entorno:
 | `DEVICE_EVENT_SIMULATION_ENABLED` | No | Activa la simulación automática; por defecto, `true`. |
 | `DEVICE_EVENT_SIMULATION_INITIAL_DELAY_MS` | No | Retraso inicial en milisegundos; por defecto, `1000`. |
 | `DEVICE_EVENT_SIMULATION_INTERVAL_MS` | No | Frecuencia fija entre ciclos; por defecto, `1000`. |
+| `OPERATOR_USERNAME` | Primera ejecución | Usuario del administrador inicial. |
+| `OPERATOR_EMAIL` | Primera ejecución | Correo del administrador inicial. |
+| `OPERATOR_PASSWORD` | Primera ejecución | Contraseña inicial, con un mínimo de 12 caracteres. |
+| `OPERATOR_FIRST_NAME` | Primera ejecución | Nombre del administrador inicial. |
+| `OPERATOR_LAST_NAME` | Primera ejecución | Apellidos del administrador inicial. |
+| `SESSION_COOKIE_SECURE` | No | Exige HTTPS para la cookie; por defecto, `false` en local. |
+| `OPERATOR_SESSION_TIMEOUT` | No | Duración de la sesión inactiva; por defecto, `30m`. |
 
 El archivo [`backend/.env.example`](backend/.env.example) sirve como referencia. Los archivos `.env`
 están ignorados por Git y Spring Boot no los carga automáticamente.
@@ -123,9 +133,17 @@ Ejemplo para PowerShell:
 $env:DB_USERNAME = "usuario_local"
 $env:DB_PASSWORD = "contraseña_local"
 $env:DB_URL = "jdbc:mysql://localhost:3306/transport_simulator_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+
+$env:OPERATOR_USERNAME = "administrador_local"
+$env:OPERATOR_EMAIL = "administrador@example.local"
+$env:OPERATOR_PASSWORD = "contraseña-local-de-12-caracteres"
+$env:OPERATOR_FIRST_NAME = "Nombre"
+$env:OPERATOR_LAST_NAME = "Apellidos"
 ```
 
 No deben añadirse usuarios, contraseñas ni archivos `.env` al repositorio.
+Las cinco variables `OPERATOR_*` solo se utilizan para aprovisionar el primer administrador cuando
+`operator_accounts` está vacía. No modifican una cuenta ya creada.
 
 ## Ejecución local
 
@@ -150,13 +168,18 @@ npm install
 npm start
 ```
 
-La aplicación estará disponible en `http://localhost:4200`. La ruta inicial redirige al Panel General.
+La aplicación estará disponible en `http://localhost:4200`. Las rutas operativas requieren iniciar
+sesión y una autenticación correcta abre siempre el Panel General.
 
 ## Endpoints disponibles
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
 | `GET` | `/api/health` | Comprueba el estado del backend y de MySQL. |
+| `GET` | `/api/auth/csrf` | Entrega el token CSRF necesario para operaciones de autenticación. |
+| `POST` | `/api/auth/login` | Autentica al operador y crea su sesión. |
+| `GET` | `/api/auth/me` | Devuelve la cuenta asociada a la sesión actual. |
+| `POST` | `/api/auth/logout` | Invalida la sesión del operador. |
 | `GET` | `/api/dashboard/summary` | Devuelve el resumen persistido legado; el Panel General utiliza las consultas operativas. |
 | `GET` | `/api/network-map` | Devuelve las líneas activas y sus estaciones ordenadas. |
 | `GET` | `/api/lines/operations` | Devuelve frecuencias, cocheras, próximas llegadas, recorridos y trenes de cada línea. |
@@ -192,6 +215,7 @@ y en cada actualización de esa rama.
 
 ## Documentación
 
+- [Acceso y cuentas de operador](docs/acceso-operadores.md)
 - [Navegación y estructura de la aplicación web](docs/navegacion-aplicacion.md)
 - [Visión transversal de la operación simulada](docs/operacion-simulada.md)
 - [Panel General y agregación de datos operativos](docs/panel-general.md)

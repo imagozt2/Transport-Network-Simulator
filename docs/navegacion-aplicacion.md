@@ -4,13 +4,17 @@
 
 La aplicación web representa el centro de control de la Red de Metro de Macegocia. Su estructura
 principal mantiene accesibles las secciones operativas desde un menú lateral común y reserva la
-cabecera superior para la identidad general de la plataforma.
+cabecera superior para la identidad general de la plataforma y la sesión del operador.
 
 Todas las vistas funcionales se renderizan dentro de `MainLayout`, compuesto por:
 
 - una cabecera superior;
 - un menú lateral de navegación;
 - el área central en la que Angular carga la ruta seleccionada.
+
+La cabecera muestra la identidad y el rol del operador autenticado. Su menú permite abrir
+`/account`, abrir `/settings` o cerrar la sesión. Estas pantallas personales no forman parte del
+menú lateral porque no representan áreas operativas de la red.
 
 ## Organización del menú lateral
 
@@ -34,7 +38,9 @@ nombre textual de cada opción es el que identifica de forma accesible su destin
 ## Comportamiento de las rutas
 
 La ruta raíz, `/`, redirige a `/dashboard`. Las direcciones que no correspondan con una sección
-registrada también redirigen al Panel General.
+registrada también redirigen al Panel General. Todas las rutas incluidas en `MainLayout` requieren
+una sesión de operador válida; un acceso anónimo redirige a `/login`. Después de autenticarse se
+abre siempre el Panel General, sin restaurar la sección utilizada en una sesión anterior.
 
 Angular aplica la clase `active` exclusivamente al enlace cuya ruta coincide exactamente con la URL
 actual. De esta manera, el menú indica siempre la sección que está abierta.
