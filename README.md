@@ -25,6 +25,8 @@ La aplicación incluye actualmente:
   contextual a sus logs;
 - una pantalla global de logs con filtros combinables —incluido el tipo de máquina— y navegación
   directa entre páginas;
+- una sección de títulos de transporte con el catálogo tarifario, sus reglas de uso y filtros por
+  producto y estado;
 - recorridos ordenados y correspondencias entre líneas;
 - calendarios, franjas horarias, frecuencias y tiempos de recorrido configurables;
 - flota regular, de reserva e histórica diferenciada;
@@ -163,6 +165,9 @@ La aplicación estará disponible en `http://localhost:4200`. La ruta inicial re
 | `GET` | `/api/depots/operations` | Devuelve capacidad, ocupación, distribución y movimientos de las cocheras. |
 | `GET` | `/api/devices/operations` | Devuelve el inventario y estado operativo de las máquinas. |
 | `GET` | `/api/logs` | Devuelve los eventos de máquinas filtrados y paginados. |
+| `GET` | `/api/transport-titles` | Devuelve el catálogo de títulos y admite filtros combinables. |
+| `GET` | `/api/transport-titles/{titleId}` | Consulta un título por su identificador. |
+| `GET` | `/api/transport-titles/code/{code}` | Consulta un título por su código estable. |
 
 ## Pruebas y compilación
 
@@ -196,6 +201,7 @@ y en cada actualización de esa rama.
 - [Sección de Trenes y situación operativa](docs/trenes.md)
 - [Sección de Cocheras y movimientos de flota](docs/cocheras.md)
 - [Secciones de Máquinas y Logs](docs/maquinas-y-logs.md)
+- [Sección de Títulos de transporte](docs/titulos-transporte.md)
 - [Modelo de operación ferroviaria](docs/modelo-operacion-ferroviaria.md)
 - [Motor de simulación ferroviaria](docs/motor-simulacion-ferroviaria.md)
 - [Ciclo de eventos de las máquinas](docs/eventos-maquinas.md)

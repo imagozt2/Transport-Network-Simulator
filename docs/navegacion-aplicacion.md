@@ -24,6 +24,7 @@ Las opciones se agrupan por su función dentro del centro de control:
 | Red ferroviaria | Estaciones | `/stations` | Muestra estaciones, máquinas y próximas llegadas. |
 | Material móvil | Trenes | `/trains` | Permite consultar la flota y su situación operativa. |
 | Material móvil | Cocheras | `/depots` | Presenta la distribución y los movimientos de la flota. |
+| Billetaje | Títulos de transporte | `/transport-titles` | Presenta los productos tarifarios y sus reglas de uso. |
 | Equipamiento | Máquinas | `/devices` | Permite consultar las máquinas instaladas en las estaciones. |
 | Supervisión | Logs | `/logs` | Permite filtrar y revisar los eventos emitidos por las máquinas. |
 
