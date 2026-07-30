@@ -1,0 +1,83 @@
+<main class="login-page">
+  <section class="identity-panel" aria-labelledby="network-name">
+    <div class="identity-content">
+      <span class="network-mark" aria-hidden="true">M</span>
+      <p class="identity-kicker">Red de Metro de Macegocia</p>
+      <h1 id="network-name">Centro de Control Operativo</h1>
+      <p class="identity-description">
+        Supervisión de la red, la flota y el equipamiento desde una única plataforma.
+      </p>
+    </div>
+    <p class="identity-footer">Acceso exclusivo para personal autorizado</p>
+  </section>
+
+  <section class="login-panel" aria-labelledby="login-title">
+    <div class="login-card">
+      <header>
+        <span class="mobile-mark" aria-hidden="true">M</span>
+        <p>Área de operadores</p>
+        <h2 id="login-title">Iniciar sesión</h2>
+        <span>Introduce las credenciales de tu cuenta para continuar.</span>
+      </header>
+
+      <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <label class="form-field">
+          <span>Usuario o correo electrónico</span>
+          <input
+            type="text"
+            formControlName="identifier"
+            autocomplete="username"
+            placeholder="operador"
+            [attr.aria-invalid]="form.controls.identifier.invalid && form.controls.identifier.touched"
+          />
+          @if (form.controls.identifier.invalid && form.controls.identifier.touched) {
+            <small>Introduce tu usuario o correo electrónico.</small>
+          }
+        </label>
+
+        <label class="form-field">
+          <span>Contraseña</span>
+          <span class="password-control">
+            <input
+              [type]="passwordVisible ? 'text' : 'password'"
+              formControlName="password"
+              autocomplete="current-password"
+              placeholder="Contraseña"
+              [attr.aria-invalid]="form.controls.password.invalid && form.controls.password.touched"
+            />
+            <button
+              type="button"
+              class="visibility-button"
+              (click)="togglePasswordVisibility()"
+              [attr.aria-label]="passwordVisible ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+              [attr.aria-pressed]="passwordVisible"
+            >
+              {{ passwordVisible ? 'Ocultar' : 'Mostrar' }}
+            </button>
+          </span>
+          @if (form.controls.password.invalid && form.controls.password.touched) {
+            <small>Introduce tu contraseña.</small>
+          }
+        </label>
+
+        @if (errorMessage) {
+          <div class="login-error" role="alert">{{ errorMessage }}</div>
+        }
+
+        <button class="submit-button" type="submit" [disabled]="submitting">
+          @if (submitting) {
+            <span class="spinner" aria-hidden="true"></span>
+            Accediendo…
+          } @else {
+            Acceder al centro de control
+          }
+        </button>
+      </form>
+
+      <footer>
+        Las credenciales se transmiten mediante una conexión protegida y no se almacenan en el
+        navegador.
+      </footer>
+    </div>
+  </section>
+</main>

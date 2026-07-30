@@ -13,6 +13,10 @@ import { MainLayout } from './layout/main-layout/main-layout';
 
 export const routes: Routes = [
   {
+    path: 'login',
+    loadComponent: () => import('./features/login/login').then((module) => module.Login)
+  },
+  {
     path: '',
     component: MainLayout,
     children: [
