@@ -1,13 +1,15 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, switchMap } from 'rxjs';
 
 import {
+  PassengerAccount,
   PassengerAccountSort,
   PassengerAccountStatus,
   PassengerAccountsPage,
   SortDirection
 } from '../models/passenger-account.model';
+import { CsrfTokenResponse } from '../models/operator-auth.model';
 
 export interface PassengerAccountFilters {
   search?: string;
@@ -21,6 +23,7 @@ export interface PassengerAccountFilters {
 export class PassengerAccountsService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = 'http://localhost:8080/api/admin/passenger-users';
+  private readonly csrfUrl = 'http://localhost:8080/api/auth/csrf';
 
   getAccounts(
     page: number,
@@ -44,5 +47,30 @@ export class PassengerAccountsService {
     }
 
     return this.http.get<PassengerAccountsPage>(this.apiUrl, { params });
+  }
+
+  getAccount(publicId: string): Observable<PassengerAccount> {
+    return this.http.get<PassengerAccount>(
+      `${this.apiUrl}/${encodeURIComponent(publicId)}`
+    );
+  }
+
+  updateStatus(
+    publicId: string,
+    status: PassengerAccountStatus,
+    reason?: string
+  ): Observable<PassengerAccount> {
+    return this.http.get<CsrfTokenResponse>(this.csrfUrl, {
+      withCredentials: true
+    }).pipe(
+      switchMap((csrf) => this.http.patch<PassengerAccount>(
+        `${this.apiUrl}/${encodeURIComponent(publicId)}/status`,
+        { status, reason: reason?.trim() || null },
+        {
+          headers: new HttpHeaders().set(csrf.headerName, csrf.token),
+          withCredentials: true
+        }
+      ))
+    );
   }
 }

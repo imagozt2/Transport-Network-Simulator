@@ -1,0 +1,40 @@
+.detail-backdrop { position: fixed; inset: 0; z-index: 80; display: flex; justify-content: flex-end; background: rgba(15, 23, 42, 0.42); }
+.detail-panel { width: min(520px, 100%); height: 100%; overflow-y: auto; padding: 22px; background: #fff; box-shadow: -18px 0 45px rgba(15, 23, 42, 0.18); }
+.detail-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; border-bottom: 1px solid #e2e8f0; padding-bottom: 16px; }
+.detail-heading span { color: #0284c7; font-size: 9px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; }
+.detail-heading h2 { margin: 3px 0 0; color: #111827; font-size: 22px; }
+.detail-heading button { width: 34px; height: 34px; border: 0; border-radius: 10px; color: #334155; background: #f1f5f9; cursor: pointer; font-size: 20px; }
+.detail-state { margin-top: 18px; border-radius: 13px; padding: 18px; color: #475569; background: #f8fafc; font-size: 12px; }
+.account-identity { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; margin-top: 20px; border-radius: 16px; padding: 15px; background: #0f172a; }
+.account-avatar { width: 42px; height: 42px; display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; color: #fff; background: #38bdf8; font-size: 12px; font-weight: 950; text-transform: uppercase; }
+.account-identity > div { min-width: 0; }
+.account-identity strong, .account-identity small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-identity strong { color: #fff; font-size: 12px; }
+.account-identity small { margin-top: 3px; color: #94a3b8; font-size: 9px; }
+.account-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin: 16px 0 0; }
+.account-details div { min-width: 0; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; background: #f8fafc; }
+.account-details dt { color: #64748b; font-size: 9px; font-weight: 800; }
+.account-details dd { overflow-wrap: anywhere; margin: 4px 0 0; color: #111827; font-size: 11px; font-weight: 750; }
+.management-section { border-top: 1px solid #e2e8f0; margin-top: 20px; padding-top: 18px; }
+.management-section h3 { margin: 0; color: #111827; font-size: 15px; }
+.management-section header p { margin: 3px 0 0; color: #64748b; font-size: 10px; }
+.management-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.management-actions button, .confirmation-panel button { border: 0; border-radius: 9px; padding: 8px 11px; cursor: pointer; font-size: 10px; font-weight: 850; }
+.manage-active { color: #166534; background: #dcfce7; }
+.manage-blocked { color: #92400e; background: #fef3c7; }
+.manage-disabled { color: #991b1b; background: #fee2e2; }
+.confirmation-panel { margin-top: 14px; border: 1px solid #cbd5e1; border-radius: 14px; padding: 14px; background: #f8fafc; }
+.confirmation-panel > strong { color: #111827; font-size: 12px; }
+.confirmation-panel > p { margin: 4px 0 12px; color: #64748b; font-size: 10px; }
+.confirmation-panel label { display: flex; flex-direction: column; gap: 5px; color: #475569; font-size: 10px; font-weight: 800; }
+.confirmation-panel textarea { min-height: 82px; resize: vertical; border: 1px solid #cbd5e1; border-radius: 9px; padding: 9px; font-size: 11px; }
+.confirmation-panel > div { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+.confirmation-panel button { color: #334155; background: #e2e8f0; }
+.confirmation-panel .confirm-button { color: #fff; background: #0f172a; }
+.management-error { color: #b91c1c !important; }
+.read-only-notice { border-radius: 11px; padding: 11px; color: #475569; background: #f1f5f9; font-size: 10px; line-height: 1.5; }
+
+@media (max-width: 650px) {
+  .detail-panel { padding: 16px; }
+  .account-details { grid-template-columns: 1fr; }
+}

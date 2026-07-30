@@ -7,6 +7,7 @@ import {
   PassengerAccountSummary,
   SortDirection
 } from '../../core/models/passenger-account.model';
+import { OperatorAuthService } from '../../core/services/operator-auth.service';
 import { PassengerAccountsService } from '../../core/services/passenger-accounts.service';
 import { formatDateTime } from '../../core/utils/temporal-formatters';
 
@@ -16,10 +17,11 @@ type VerificationFilter = 'ALL' | 'VERIFIED' | 'PENDING';
 @Component({
   selector: 'app-passenger-users',
   templateUrl: './passenger-users.html',
-  styleUrl: './passenger-users.css'
+  styleUrls: ['./passenger-users.css', './passenger-user-detail.css']
 })
 export class PassengerUsers implements OnInit {
   private readonly passengerAccountsService = inject(PassengerAccountsService);
+  private readonly operatorAuthService = inject(OperatorAuthService);
 
   users: PassengerAccount[] = [];
   summary: PassengerAccountSummary = {
@@ -37,6 +39,15 @@ export class PassengerUsers implements OnInit {
   totalPages = 0;
   firstPage = true;
   lastPage = true;
+  selectedUser: PassengerAccount | null = null;
+  detailLoading = false;
+  detailError = '';
+  pendingStatus: PassengerAccountStatus | null = null;
+  statusReason = '';
+  statusSubmitting = false;
+  statusError = '';
+
+  readonly operator = this.operatorAuthService.currentOperator;
 
   search = '';
   selectedStatus: OptionalStatus = 'ALL';
@@ -114,6 +125,103 @@ export class PassengerUsers implements OnInit {
     if (page >= 0 && page < this.totalPages && page !== this.currentPage) {
       this.loadUsers(page);
     }
+  }
+
+  openDetail(user: PassengerAccount): void {
+    this.selectedUser = user;
+    this.detailLoading = true;
+    this.detailError = '';
+    this.cancelStatusChange();
+    this.passengerAccountsService.getAccount(user.publicId).subscribe({
+      next: (account) => {
+        this.selectedUser = account;
+        this.detailLoading = false;
+      },
+      error: () => {
+        this.detailError = 'No se ha podido cargar el detalle de la cuenta.';
+        this.detailLoading = false;
+      }
+    });
+  }
+
+  closeDetail(): void {
+    if (this.statusSubmitting) {
+      return;
+    }
+    this.selectedUser = null;
+    this.detailError = '';
+    this.cancelStatusChange();
+  }
+
+  canManageAccounts(): boolean {
+    return this.operator()?.role === 'ADMINISTRATOR';
+  }
+
+  availableStatuses(user: PassengerAccount): PassengerAccountStatus[] {
+    if (user.status === 'ACTIVE') {
+      return ['BLOCKED', 'DISABLED'];
+    }
+    if (user.status === 'BLOCKED') {
+      return ['ACTIVE', 'DISABLED'];
+    }
+    return ['ACTIVE'];
+  }
+
+  beginStatusChange(status: PassengerAccountStatus): void {
+    this.pendingStatus = status;
+    this.statusReason = '';
+    this.statusError = '';
+  }
+
+  cancelStatusChange(): void {
+    this.pendingStatus = null;
+    this.statusReason = '';
+    this.statusError = '';
+  }
+
+  statusChangeRequiresReason(): boolean {
+    return this.pendingStatus === 'BLOCKED' || this.pendingStatus === 'DISABLED';
+  }
+
+  canConfirmStatusChange(): boolean {
+    return this.pendingStatus !== null
+      && !this.statusSubmitting
+      && (!this.statusChangeRequiresReason() || this.statusReason.trim() !== '');
+  }
+
+  confirmStatusChange(): void {
+    if (!this.selectedUser || !this.pendingStatus || !this.canConfirmStatusChange()) {
+      return;
+    }
+    this.statusSubmitting = true;
+    this.statusError = '';
+    this.passengerAccountsService.updateStatus(
+      this.selectedUser.publicId,
+      this.pendingStatus,
+      this.statusReason
+    ).subscribe({
+      next: (account) => {
+        this.selectedUser = account;
+        this.users = this.users.map((user) =>
+          user.publicId === account.publicId ? account : user
+        );
+        this.statusSubmitting = false;
+        this.cancelStatusChange();
+        this.loadUsers(this.currentPage);
+      },
+      error: () => {
+        this.statusError = 'No se ha podido cambiar el estado de la cuenta.';
+        this.statusSubmitting = false;
+      }
+    });
+  }
+
+  statusActionLabel(status: PassengerAccountStatus): string {
+    return {
+      ACTIVE: 'Activar cuenta',
+      BLOCKED: 'Bloquear cuenta',
+      DISABLED: 'Desactivar cuenta'
+    }[status];
   }
 
   statusLabel(status: PassengerAccountStatus): string {

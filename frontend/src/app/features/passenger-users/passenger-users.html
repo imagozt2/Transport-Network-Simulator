@@ -119,6 +119,7 @@
                 <th>Verificación</th>
                 <th>Registro</th>
                 <th>Último acceso</th>
+                <th><span class="visually-hidden">Acciones</span></th>
               </tr>
             </thead>
             <tbody>
@@ -133,6 +134,7 @@
                   <td><span class="verification" [class.pending]="!user.emailVerified">{{ user.emailVerified ? 'Verificado' : 'Pendiente' }}</span></td>
                   <td>{{ formatDate(user.registeredAt, 'Sin fecha') }}</td>
                   <td>{{ formatDate(user.lastLoginAt) }}</td>
+                  <td><button class="detail-button" type="button" (click)="openDetail(user)">Ver detalle</button></td>
                 </tr>
               }
             </tbody>
@@ -150,5 +152,102 @@
         </nav>
       }
     </section>
+  }
+
+  @if (selectedUser; as user) {
+    <div class="detail-backdrop" (click)="closeDetail()">
+      <aside
+        class="detail-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="passenger-detail-title"
+        (click)="$event.stopPropagation()"
+      >
+        <header class="detail-heading">
+          <div>
+            <span>Usuario de RMM App</span>
+            <h2 id="passenger-detail-title">{{ user.firstName }} {{ user.lastName }}</h2>
+          </div>
+          <button type="button" aria-label="Cerrar detalle" [disabled]="statusSubmitting" (click)="closeDetail()">×</button>
+        </header>
+
+        @if (detailLoading) {
+          <div class="detail-state" role="status">Cargando información de la cuenta…</div>
+        } @else if (detailError) {
+          <div class="detail-state error-state" role="alert">
+            <span>{{ detailError }}</span>
+            <button type="button" (click)="openDetail(user)">Reintentar</button>
+          </div>
+        } @else {
+          <section class="account-identity">
+            <span class="account-avatar" aria-hidden="true">{{ user.firstName.charAt(0) }}{{ user.lastName.charAt(0) }}</span>
+            <div>
+              <strong>{{ user.email }}</strong>
+              <small>{{ user.publicId }}</small>
+            </div>
+            <span class="status status-{{ user.status.toLowerCase() }}">{{ statusLabel(user.status) }}</span>
+          </section>
+
+          <dl class="account-details">
+            <div><dt>Correo electrónico</dt><dd>{{ user.email }}</dd></div>
+            <div><dt>Verificación</dt><dd>{{ user.emailVerified ? 'Correo verificado' : 'Pendiente de verificación' }}</dd></div>
+            <div><dt>Fecha de registro</dt><dd>{{ formatDate(user.registeredAt, 'Sin fecha') }}</dd></div>
+            <div><dt>Último acceso</dt><dd>{{ formatDate(user.lastLoginAt) }}</dd></div>
+            <div><dt>Última modificación</dt><dd>{{ formatDate(user.updatedAt, 'Sin fecha') }}</dd></div>
+          </dl>
+
+          <section class="management-section">
+            <header>
+              <h3>Gestión de la cuenta</h3>
+              <p>Los cambios administrativos quedan asociados al operador responsable.</p>
+            </header>
+
+            @if (canManageAccounts()) {
+              <div class="management-actions">
+                @for (status of availableStatuses(user); track status) {
+                  <button
+                    type="button"
+                    class="manage-{{ status.toLowerCase() }}"
+                    [disabled]="statusSubmitting"
+                    (click)="beginStatusChange(status)"
+                  >{{ statusActionLabel(status) }}</button>
+                }
+              </div>
+
+              @if (pendingStatus; as targetStatus) {
+                <div class="confirmation-panel">
+                  <strong>Confirmar: {{ statusActionLabel(targetStatus).toLowerCase() }}</strong>
+                  <p>La cuenta pasará de {{ statusLabel(user.status) }} a {{ statusLabel(targetStatus) }}.</p>
+                  @if (statusChangeRequiresReason()) {
+                    <label>
+                      <span>Motivo administrativo</span>
+                      <textarea
+                        maxlength="500"
+                        placeholder="Explica el motivo del cambio"
+                        [value]="statusReason"
+                        (input)="statusReason = $any($event.target).value"
+                      ></textarea>
+                    </label>
+                  }
+                  @if (statusError) {
+                    <p class="management-error" role="alert">{{ statusError }}</p>
+                  }
+                  <div>
+                    <button type="button" [disabled]="statusSubmitting" (click)="cancelStatusChange()">Cancelar</button>
+                    <button class="confirm-button" type="button" [disabled]="!canConfirmStatusChange()" (click)="confirmStatusChange()">
+                      {{ statusSubmitting ? 'Guardando…' : 'Confirmar cambio' }}
+                    </button>
+                  </div>
+                </div>
+              }
+            } @else {
+              <p class="read-only-notice">
+                Tu cuenta puede consultar los usuarios, pero solo un administrador puede cambiar su estado.
+              </p>
+            }
+          </section>
+        }
+      </aside>
+    </div>
   }
 </section>
