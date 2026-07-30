@@ -45,7 +45,9 @@ describe('Devices log navigation', () => {
         provideRouter([]),
         {
           provide: ActivatedRoute,
-          useValue: { snapshot: { queryParamMap: convertToParamMap({ stationCode: 'ST001' }) } }
+          useValue: {
+            snapshot: { queryParamMap: convertToParamMap({ stationCode: '  ST001  ' }) }
+          }
         },
         {
           provide: DeviceOperationsService,
@@ -74,6 +76,11 @@ describe('Devices log navigation', () => {
     expect(fixture.componentInstance.selectedStationCode).toBe('ST001');
     expect(fixture.componentInstance.filteredDevices()).toHaveLength(1);
     expect(fixture.componentInstance.filteredDevices()[0].station.code).toBe('ST001');
+    const stationFilter = compiled.querySelector(
+      '.filters-panel label:nth-of-type(4) select'
+    ) as HTMLSelectElement;
+    expect(stationFilter.value).toBe('ST001');
+    expect(stationFilter.selectedOptions[0]?.textContent).toContain('Los Molinos');
     expect(compiled.textContent).not.toContain('RMM-MB-ST002-001');
     const summaryCards = Array.from(compiled.querySelectorAll<HTMLElement>('.summary-card'));
     expect(summaryCards.map((card) => card.querySelector('span')?.textContent?.trim())).toEqual([
@@ -90,6 +97,36 @@ describe('Devices log navigation', () => {
       .toEqual(['2', '2', '0', '0', '0', '2', '0', '0']);
     expect(compiled.querySelector('.type-overview')).toBeNull();
     expect(compiled.querySelector('.summary-card small')).toBeNull();
+    fixture.destroy();
+  });
+
+  it('should treat an empty station URL parameter as no contextual filter', async () => {
+    await TestBed.configureTestingModule({
+      imports: [Devices],
+      providers: [
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: { queryParamMap: convertToParamMap({ stationCode: '   ' }) }
+          }
+        },
+        {
+          provide: DeviceOperationsService,
+          useValue: { getOperations: () => of(response) }
+        }
+      ]
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(Devices);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.selectedStationCode).toBe('ALL');
+    expect(fixture.componentInstance.filteredDevices()).toHaveLength(2);
+    const stationFilter = fixture.nativeElement.querySelector(
+      '.filters-panel label:nth-of-type(4) select'
+    ) as HTMLSelectElement;
+    expect(stationFilter.value).toBe('ALL');
     fixture.destroy();
   });
 

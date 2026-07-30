@@ -57,12 +57,12 @@ describe('Logs URL filters', () => {
   it('should initialize filters before requesting logs', async () => {
     const getLogs = vi.fn().mockReturnValue(of(logsPage));
     await configure({
-      deviceCode: 'RMM-MB-ST001-001',
+      deviceCode: '  RMM-MB-ST001-001  ',
       severity: 'INFO',
       origin: 'DEVICE_SIMULATION',
       eventType: 'DEVICE_ONLINE',
       deviceType: 'TICKET_MACHINE',
-      stationCode: 'ST001',
+      stationCode: '  ST001  ',
       occurredFrom: '2026-07-23T10:00',
       occurredTo: '2026-07-23T12:00'
     }, getLogs);

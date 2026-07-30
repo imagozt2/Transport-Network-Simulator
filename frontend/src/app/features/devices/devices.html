@@ -87,7 +87,12 @@
         >
           <option value="ALL">Todas</option>
           @for (station of stationOptions(); track station.code) {
-            <option [value]="station.code">{{ station.name }} · {{ station.code }}</option>
+            <option
+              [value]="station.code"
+              [selected]="station.code === selectedStationCode"
+            >
+              {{ station.name }} · {{ station.code }}
+            </option>
           }
         </select>
       </label>

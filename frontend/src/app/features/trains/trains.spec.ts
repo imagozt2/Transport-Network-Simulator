@@ -122,7 +122,7 @@ describe('Trains', () => {
   });
 
   it('should initialize the depot filter from the URL and include its circulating trains', async () => {
-    await configureWith(() => of(response), { depotCode: 'DEP-LF-A' });
+    await configureWith(() => of(response), { depotCode: '  DEP-LF-A  ' });
     const fixture = TestBed.createComponent(Trains);
     fixture.detectChanges();
 
@@ -134,6 +134,20 @@ describe('Trains', () => {
     ) as HTMLSelectElement;
     expect(depotFilter.value).toBe('DEP-LF-A');
     expect(depotFilter.selectedOptions[0]?.textContent).toContain('Las Fuentes');
+    fixture.destroy();
+  });
+
+  it('should treat an empty depot URL parameter as no contextual filter', async () => {
+    await configureWith(() => of(response), { depotCode: '   ' });
+    const fixture = TestBed.createComponent(Trains);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.selectedDepotCode).toBe('ALL');
+    expect(fixture.componentInstance.filteredTrains()).toHaveLength(3);
+    const depotFilter = fixture.nativeElement.querySelector(
+      '.filters-panel label:nth-of-type(4) select'
+    ) as HTMLSelectElement;
+    expect(depotFilter.value).toBe('ALL');
     fixture.destroy();
   });
 
