@@ -45,6 +45,12 @@ export class Sidebar {
       ]
     },
     {
+      title: 'Billetaje',
+      items: [
+        { label: 'Títulos de transporte', route: '/transport-titles', icon: '🎫' }
+      ]
+    },
+    {
       title: 'Equipamiento',
       items: [
         { label: 'Máquinas', route: '/devices', icon: '🖥️' }

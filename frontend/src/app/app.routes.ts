@@ -8,6 +8,7 @@ import { Logs } from './features/logs/logs';
 import { NetworkMap } from './features/network-map/network-map';
 import { Stations } from './features/stations/stations';
 import { Trains } from './features/trains/trains';
+import { TransportTitles } from './features/transport-titles/transport-titles';
 import { MainLayout } from './layout/main-layout/main-layout';
 
 export const routes: Routes = [
@@ -43,6 +44,10 @@ export const routes: Routes = [
       {
         path: 'depots',
         component: Depots
+      },
+      {
+        path: 'transport-titles',
+        component: TransportTitles
       },
       {
         path: 'devices',

@@ -35,6 +35,7 @@ describe('MainLayout', () => {
       'Vista general',
       'Red ferroviaria',
       'Material móvil',
+      'Billetaje',
       'Equipamiento',
       'Supervisión'
     ]);

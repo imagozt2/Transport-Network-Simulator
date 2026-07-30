@@ -14,6 +14,7 @@ describe('Sidebar', () => {
           { path: 'stations', children: [] },
           { path: 'trains', children: [] },
           { path: 'depots', children: [] },
+          { path: 'transport-titles', children: [] },
           { path: 'devices', children: [] },
           { path: 'logs', children: [] }
         ])
@@ -34,6 +35,7 @@ describe('Sidebar', () => {
       'Estaciones',
       'Trenes',
       'Cocheras',
+      'Títulos de transporte',
       'Máquinas',
       'Logs'
     ]);
@@ -44,6 +46,7 @@ describe('Sidebar', () => {
       '/stations',
       '/trains',
       '/depots',
+      '/transport-titles',
       '/devices',
       '/logs'
     ]);
