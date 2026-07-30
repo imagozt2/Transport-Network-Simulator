@@ -1,4 +1,8 @@
 import { routes } from './app.routes';
+import {
+  guestOperatorGuard,
+  operatorAuthGuard
+} from './core/guards/operator-auth.guard';
 import { MainLayout } from './layout/main-layout/main-layout';
 
 describe('Application routes', () => {
@@ -33,5 +37,14 @@ describe('Application routes', () => {
       redirectTo: 'dashboard'
     }));
     expect(wildcardRedirect?.redirectTo).toBe('dashboard');
+  });
+
+  it('should keep login public and protect the complete application shell', () => {
+    const loginRoute = routes.find((route) => route.path === 'login');
+    const shellRoute = routes.find((route) => route.path === '');
+
+    expect(loginRoute?.canActivate).toEqual([guestOperatorGuard]);
+    expect(shellRoute?.canActivate).toEqual([operatorAuthGuard]);
+    expect(shellRoute?.children?.every((route) => route.canActivate === undefined)).toBe(true);
   });
 });
