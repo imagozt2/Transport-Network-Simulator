@@ -1,0 +1,110 @@
+<section class="transport-titles-page">
+  <header class="page-header">
+    <h1>Títulos de transporte</h1>
+  </header>
+
+  @if (loading) {
+    <div class="state-card" role="status">Cargando títulos de transporte…</div>
+  } @else if (errorMessage || !catalog) {
+    <div class="state-card error-card" role="alert">
+      <span>{{ errorMessage }}</span>
+      <button type="button" (click)="loadTitles()">Reintentar</button>
+    </div>
+  } @else {
+    <section class="summary-grid" aria-label="Resumen de títulos de transporte">
+      <article class="summary-card">
+        <span>Tipos de títulos</span>
+        <strong>{{ catalog.summary.totalTitles }}</strong>
+      </article>
+      <article class="summary-card">
+        <span>Activos</span>
+        <strong>{{ catalog.summary.activeTitles }}</strong>
+      </article>
+      <article class="summary-card">
+        <span>Inactivos</span>
+        <strong>{{ catalog.summary.inactiveTitles }}</strong>
+      </article>
+      <article class="summary-card">
+        <span>Recargables</span>
+        <strong>{{ rechargeableTitleCount() }}</strong>
+      </article>
+    </section>
+
+    <section class="filters-panel" aria-label="Filtros de títulos de transporte">
+      <label class="filter-field search-field">
+        <span>Buscar título</span>
+        <input
+          type="search"
+          [value]="searchText"
+          placeholder="Código, nombre o descripción"
+          (input)="setSearchText($any($event.target).value)"
+        />
+      </label>
+      <label class="filter-field">
+        <span>Tipo</span>
+        <select [value]="selectedType" (change)="setTypeFilter($any($event.target).value)">
+          <option value="ALL">Todos</option>
+          @for (type of types; track type) {
+            <option [value]="type">{{ typeLabel(type) }}</option>
+          }
+        </select>
+      </label>
+      <label class="filter-field">
+        <span>Estado</span>
+        <select [value]="selectedStatus" (change)="setStatusFilter($any($event.target).value)">
+          <option value="ALL">Todos</option>
+          <option value="ACTIVE">Activos</option>
+          <option value="INACTIVE">Inactivos</option>
+        </select>
+      </label>
+    </section>
+
+    @if (hasActiveFilters()) {
+      <div class="filter-notice">
+        <span>{{ filteredTitles().length }} títulos coinciden con los filtros.</span>
+        <button type="button" (click)="clearFilters()">Limpiar filtros</button>
+      </div>
+    }
+
+    <section class="titles-grid" aria-label="Catálogo de títulos de transporte">
+      @for (title of filteredTitles(); track trackTitle($index, title)) {
+        <article class="title-card type-{{ title.type.toLowerCase().replace('_', '-') }}">
+          <header class="title-card-header">
+            <span class="title-icon">{{ typeCode(title.type) }}</span>
+            <span class="title-heading">
+              <span class="title-heading-row">
+                <strong>{{ title.name }}</strong>
+                <span class="title-code">{{ title.code }}</span>
+              </span>
+              <small>{{ typeLabel(title.type) }}</small>
+            </span>
+            <span class="status-pill" [class.inactive]="!title.active">
+              {{ title.active ? 'Activo' : 'Inactivo' }}
+            </span>
+          </header>
+
+          <p class="title-description">{{ title.description || 'Sin descripción.' }}</p>
+
+          <dl class="title-details">
+            <div>
+              <dt>Tarifa</dt>
+              <dd>{{ priceLabel(title) }}</dd>
+            </div>
+            <div>
+              <dt>Condiciones</dt>
+              <dd>{{ rangeLabel(title) }}</dd>
+            </div>
+            <div>
+              <dt>Recarga</dt>
+              <dd>{{ title.rechargeable ? 'Permitida' : 'No disponible' }}</dd>
+            </div>
+          </dl>
+        </article>
+      } @empty {
+        <div class="state-card empty-card">
+          No hay títulos que coincidan con los filtros seleccionados.
+        </div>
+      }
+    </section>
+  }
+</section>
