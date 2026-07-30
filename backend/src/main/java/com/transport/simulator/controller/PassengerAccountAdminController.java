@@ -1,0 +1,50 @@
+package com.transport.simulator.controller;
+
+import com.transport.simulator.dto.response.passenger.PassengerAccountResponse;
+import com.transport.simulator.dto.response.passenger.PassengerAccountsPageResponse;
+import com.transport.simulator.enums.PassengerAccountStatus;
+import com.transport.simulator.service.PassengerAccountQueryService;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/admin/passenger-users")
+public class PassengerAccountAdminController {
+
+    private final PassengerAccountQueryService passengerAccountQueryService;
+
+    public PassengerAccountAdminController(
+            PassengerAccountQueryService passengerAccountQueryService
+    ) {
+        this.passengerAccountQueryService = passengerAccountQueryService;
+    }
+
+    @GetMapping
+    public PassengerAccountsPageResponse getAccounts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) PassengerAccountStatus status,
+            @RequestParam(required = false) Boolean emailVerified,
+            @RequestParam(defaultValue = "registeredAt") String sortBy,
+            @RequestParam(defaultValue = "DESC") String direction
+    ) {
+        return passengerAccountQueryService.getAccounts(
+                page,
+                size,
+                search,
+                status,
+                emailVerified,
+                sortBy,
+                direction
+        );
+    }
+
+    @GetMapping("/{publicId}")
+    public PassengerAccountResponse getAccount(@PathVariable String publicId) {
+        return passengerAccountQueryService.getAccount(publicId);
+    }
+}
