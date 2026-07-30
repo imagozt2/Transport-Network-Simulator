@@ -1,0 +1,154 @@
+<section class="users-page">
+  <header class="page-header">
+    <h1>Usuarios</h1>
+  </header>
+
+  <section class="summary-grid" aria-label="Resumen de usuarios de RMM App">
+    <article><span>Total usuarios</span><strong>{{ summary.totalAccounts }}</strong></article>
+    <article><span>Cuentas activas</span><strong>{{ summary.activeAccounts }}</strong></article>
+    <article><span>Cuentas bloqueadas</span><strong>{{ summary.blockedAccounts }}</strong></article>
+    <article><span>Cuentas desactivadas</span><strong>{{ summary.disabledAccounts }}</strong></article>
+    <article><span>Verificación pendiente</span><strong>{{ summary.pendingVerificationAccounts }}</strong></article>
+  </section>
+
+  <section class="filters-panel" aria-label="Filtros de usuarios">
+    <div class="filters-heading">
+      <div>
+        <h2>Buscar usuarios</h2>
+        <p>Consulta las cuentas registradas mediante RMM App.</p>
+      </div>
+      <div class="filter-actions">
+        @if (hasActiveFilters()) {
+          <button class="secondary-button" type="button" (click)="clearFilters()">Limpiar</button>
+        }
+        <button class="primary-button" type="button" [disabled]="loading" (click)="applyFilters()">
+          Aplicar filtros
+        </button>
+      </div>
+    </div>
+
+    <div class="filters-grid">
+      <label class="search-field">
+        <span>Nombre, correo o identificador</span>
+        <input
+          type="search"
+          placeholder="Buscar usuario"
+          [value]="search"
+          (input)="search = $any($event.target).value"
+          (keydown.enter)="applyFilters()"
+        />
+      </label>
+      <label>
+        <span>Estado</span>
+        <select [value]="selectedStatus" (change)="selectedStatus = $any($event.target).value">
+          <option value="ALL">Todos</option>
+          @for (status of statuses; track status) {
+            <option [value]="status">{{ statusLabel(status) }}</option>
+          }
+        </select>
+      </label>
+      <label>
+        <span>Correo</span>
+        <select [value]="selectedVerification" (change)="selectedVerification = $any($event.target).value">
+          <option value="ALL">Todos</option>
+          <option value="VERIFIED">Verificado</option>
+          <option value="PENDING">Pendiente</option>
+        </select>
+      </label>
+      <label>
+        <span>Ordenar por</span>
+        <select [value]="selectedSort" (change)="selectedSort = $any($event.target).value">
+          <option value="registeredAt">Fecha de registro</option>
+          <option value="name">Nombre</option>
+          <option value="email">Correo</option>
+          <option value="status">Estado</option>
+          <option value="lastLoginAt">Último acceso</option>
+        </select>
+      </label>
+      <label>
+        <span>Dirección</span>
+        <select [value]="selectedDirection" (change)="selectedDirection = $any($event.target).value">
+          <option value="DESC">Descendente</option>
+          <option value="ASC">Ascendente</option>
+        </select>
+      </label>
+    </div>
+  </section>
+
+  @if (loading) {
+    <div class="state-card" role="status">Cargando usuarios de RMM App…</div>
+  } @else if (errorMessage) {
+    <div class="state-card error-state" role="alert">
+      <span>{{ errorMessage }}</span>
+      <button type="button" (click)="loadUsers(0)">Reintentar</button>
+    </div>
+  } @else {
+    <section class="results-panel" aria-label="Usuarios registrados">
+      <header class="results-heading">
+        <div>
+          <h2>Cuentas de pasajeros</h2>
+          <p>{{ totalElements }} {{ totalElements === 1 ? 'resultado' : 'resultados' }}</p>
+        </div>
+        <label>
+          <span>Usuarios por página</span>
+          <select [value]="pageSize" (change)="setPageSize($any($event.target).value)">
+            @for (size of pageSizes; track size) {
+              <option [value]="size">{{ size }}</option>
+            }
+          </select>
+        </label>
+      </header>
+
+      @if (users.length === 0) {
+        <div class="empty-state">
+          <strong>No hay usuarios disponibles</strong>
+          <span>
+            {{ hasActiveFilters()
+              ? 'No existen cuentas que coincidan con los filtros.'
+              : 'RMM App todavía no ha registrado ninguna cuenta de pasajero.' }}
+          </span>
+        </div>
+      } @else {
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Usuario</th>
+                <th>Correo</th>
+                <th>Estado</th>
+                <th>Verificación</th>
+                <th>Registro</th>
+                <th>Último acceso</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (user of users; track user.publicId) {
+                <tr>
+                  <td>
+                    <strong>{{ user.firstName }} {{ user.lastName }}</strong>
+                    <small [title]="user.publicId">{{ user.publicId }}</small>
+                  </td>
+                  <td>{{ user.email }}</td>
+                  <td><span class="status status-{{ user.status.toLowerCase() }}">{{ statusLabel(user.status) }}</span></td>
+                  <td><span class="verification" [class.pending]="!user.emailVerified">{{ user.emailVerified ? 'Verificado' : 'Pendiente' }}</span></td>
+                  <td>{{ formatDate(user.registeredAt, 'Sin fecha') }}</td>
+                  <td>{{ formatDate(user.lastLoginAt) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      @if (totalPages > 1) {
+        <nav class="pagination" aria-label="Paginación de usuarios">
+          <button type="button" [disabled]="firstPage" (click)="goToPage(0)">Primera</button>
+          <button type="button" [disabled]="firstPage" (click)="goToPage(currentPage - 1)">Anterior</button>
+          <span>Página <strong>{{ currentPage + 1 }}</strong> de <strong>{{ totalPages }}</strong></span>
+          <button type="button" [disabled]="lastPage" (click)="goToPage(currentPage + 1)">Siguiente</button>
+          <button type="button" [disabled]="lastPage" (click)="goToPage(totalPages - 1)">Última</button>
+        </nav>
+      }
+    </section>
+  }
+</section>

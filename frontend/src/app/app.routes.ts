@@ -74,6 +74,13 @@ export const routes: Routes = [
         component: TransportTitles
       },
       {
+        path: 'users',
+        loadComponent: () =>
+          import('./features/passenger-users/passenger-users').then(
+            (module) => module.PassengerUsers
+          )
+      },
+      {
         path: 'devices',
         component: Devices
       },

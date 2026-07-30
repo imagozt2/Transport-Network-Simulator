@@ -17,6 +17,7 @@ describe('Application routes', () => {
       'trains',
       'depots',
       'transport-titles',
+      'users',
       'devices',
       'logs'
     ]);
