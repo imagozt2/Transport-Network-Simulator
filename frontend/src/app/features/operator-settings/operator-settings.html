@@ -1,0 +1,76 @@
+<section class="settings-page">
+  <header class="page-header">
+    <div>
+      <p>Área personal</p>
+      <h1>Configuración</h1>
+    </div>
+    <a routerLink="/dashboard">Volver al Panel General</a>
+  </header>
+
+  <div class="settings-layout">
+    <article class="settings-card">
+      <header class="card-heading">
+        <span class="section-icon" aria-hidden="true">AP</span>
+        <div>
+          <h2>Aplicación</h2>
+          <p>Parámetros comunes del Centro de Control Operativo.</p>
+        </div>
+      </header>
+
+      <dl class="fixed-settings">
+        <div>
+          <dt>Idioma</dt>
+          <dd>Español</dd>
+        </div>
+        <div>
+          <dt>Zona horaria</dt>
+          <dd>Europe/Madrid</dd>
+        </div>
+        <div>
+          <dt>Actualización de datos</dt>
+          <dd>Automática</dd>
+        </div>
+      </dl>
+
+      <p class="settings-note">
+        Estos valores forman parte de la configuración operativa de la aplicación y no pueden
+        modificarse desde una cuenta de operador.
+      </p>
+    </article>
+
+    <article class="settings-card">
+      <header class="card-heading">
+        <span class="section-icon" aria-hidden="true">AC</span>
+        <div>
+          <h2>Accesibilidad</h2>
+          <p>Preferencias guardadas únicamente en este navegador.</p>
+        </div>
+      </header>
+
+      <label class="preference-row">
+        <span>
+          <strong>Reducir animaciones</strong>
+          <small>Minimiza transiciones y movimientos de la interfaz.</small>
+        </span>
+        <input
+          type="checkbox"
+          [checked]="reduceMotion"
+          (change)="reduceMotion = !reduceMotion; markAsPending()"
+        />
+      </label>
+
+      <footer class="settings-actions">
+        <button class="secondary-button" type="button" (click)="resetPreferences()">
+          Restablecer
+        </button>
+        <button class="primary-button" type="button" (click)="savePreferences()">
+          Guardar preferencias
+        </button>
+      </footer>
+
+      @if (saved) {
+        <p class="saved-message" role="status">Las preferencias se han guardado correctamente.</p>
+      }
+    </article>
+  </div>
+</section>

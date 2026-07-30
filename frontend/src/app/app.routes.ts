@@ -43,6 +43,13 @@ export const routes: Routes = [
           )
       },
       {
+        path: 'settings',
+        loadComponent: () =>
+          import('./features/operator-settings/operator-settings').then(
+            (module) => module.OperatorSettingsPage
+          )
+      },
+      {
         path: 'network-map',
         component: NetworkMap
       },

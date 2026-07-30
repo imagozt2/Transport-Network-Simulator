@@ -10,6 +10,7 @@ describe('Application routes', () => {
       '',
       'dashboard',
       'account',
+      'settings',
       'network-map',
       'lines',
       'stations',
