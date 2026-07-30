@@ -40,6 +40,8 @@ La aplicación incluye actualmente:
 - una API REST conectada a MySQL;
 - datos iniciales reproducibles para la red, operaciones y productos de transporte;
 - pruebas unitarias del backend y del frontend;
+- escenarios integrados de operación, administración, sesión y navegación contextual;
+- controles de accesibilidad, diseño adaptable y suspensión de consultas en pestañas ocultas;
 - compilación automática de ambas aplicaciones mediante GitHub Actions.
 
 El proyecto continúa en desarrollo. En fases posteriores se incorporarán nuevas funciones al centro
@@ -220,6 +222,7 @@ y en cada actualización de esa rama.
 
 ## Documentación
 
+- [Integración final de la aplicación web](docs/integracion-aplicacion-web.md)
 - [Acceso y cuentas de operador](docs/acceso-operadores.md)
 - [Administración de usuarios de RMM App](docs/usuarios-rmm-app.md)
 - [Navegación y estructura de la aplicación web](docs/navegacion-aplicacion.md)

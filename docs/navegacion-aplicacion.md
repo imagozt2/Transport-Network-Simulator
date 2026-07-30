@@ -61,12 +61,20 @@ En ventanas de hasta 900 píxeles:
 - el botón de la cabecera permite abrirlo;
 - aparece un fondo superpuesto sobre el resto de la aplicación;
 - seleccionar una opción o pulsar el fondo cierra el menú;
+- pulsar `Escape` cierra el menú;
+- el botón comunica mediante `aria-expanded` si la navegación está abierta;
 - la vista seleccionada ocupa todo el ancho disponible.
+
+Un enlace visible al recibir el foco permite saltar el menú y acceder directamente a
+`#main-content`. El botón adaptable está relacionado con la navegación mediante `aria-controls`.
 
 ## Actualización de la información
 
 Las secciones operativas actualizan sus datos periódicamente sin controles manuales en la cabecera.
 Los botones de reintento solo aparecen cuando una petición falla.
+
+Las actualizaciones se suspenden mientras la pestaña está oculta. Al recuperar la visibilidad se
+solicita una instantánea nueva y se reanuda el intervalo correspondiente.
 
 Logs conserva el botón `Actualizar`, porque se trata de una consulta filtrada y paginada que el
 operador puede volver a ejecutar de forma explícita.

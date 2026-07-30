@@ -1,59 +1,105 @@
-# Frontend
+# Aplicación web del Centro de Control RMM
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.19.
+Frontend Angular del centro de control de la Red de Metro de Macegocia. La aplicación presenta una
+vista unificada de la simulación ferroviaria, las máquinas, los logs, los títulos de transporte y
+la administración de usuarios de RMM App.
 
-## Development server
+## Requisitos
 
-To start a local development server, run:
+- Node.js 20 o posterior;
+- npm 10 o una versión compatible con `package-lock.json`;
+- backend disponible en `http://localhost:8080`.
 
-```bash
-ng serve
+## Puesta en marcha
+
+Desde `frontend/`:
+
+```powershell
+npm install
+npm start
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+La aplicación queda disponible en `http://localhost:4200`. Si PowerShell impide ejecutar
+`npm.ps1`, se pueden usar los comandos equivalentes `npm.cmd install` y `npm.cmd start`.
 
-## Code scaffolding
+Todas las secciones, excepto `/login`, requieren una sesión válida de operador. Después de iniciar
+sesión se abre siempre `/dashboard`.
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## Secciones
 
-```bash
-ng generate component component-name
+| Ruta | Contenido |
+| --- | --- |
+| `/dashboard` | Indicadores y resúmenes vivos de la red. |
+| `/network-map` | Mapa SVG interactivo de líneas y estaciones. |
+| `/lines` | Frecuencias, cocheras, recorridos y circulación por sentido. |
+| `/stations` | Estado, máquinas, circulación y próximas llegadas. |
+| `/trains` | Flota, filtros y ubicación operativa de cada tren. |
+| `/depots` | Ocupación, distribución de flota y agenda de movimientos. |
+| `/transport-titles` | Catálogo y reglas de los productos tarifarios. |
+| `/users` | Consulta y gestión administrativa de pasajeros. |
+| `/devices` | Inventario y estado operativo de las máquinas. |
+| `/logs` | Consulta filtrada y paginada de eventos de máquinas. |
+| `/account` | Datos de la cuenta del operador autenticado. |
+| `/settings` | Preferencias locales de accesibilidad. |
+
+## Navegación contextual
+
+Algunas pantallas enlazan con otras conservando el contexto mediante parámetros de consulta:
+
+```text
+/stations -> /devices?stationCode=ST001
+/stations -> /logs?stationCode=ST001
+/devices  -> /logs?deviceCode=RMM-MB-ST001-001
+/depots   -> /trains?depotCode=DEP-AIR-A
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+Las pantallas receptoras normalizan los códigos, inicializan el control visible y aplican el mismo
+valor a los resultados o a la petición del backend. Un parámetro vacío equivale a no filtrar.
 
-```bash
-ng generate --help
+## Actualización y renderizado
+
+`PeriodicRefresh` centraliza las actualizaciones periódicas:
+
+- evita solicitudes solapadas;
+- detiene los temporizadores al abandonar una sección;
+- suspende las consultas cuando la pestaña está oculta;
+- actualiza inmediatamente al recuperar la visibilidad.
+
+Las listas utilizan identificadores estables en los bloques `@for`, de modo que Angular conserva los
+nodos existentes cuando recibe una nueva instantánea. Las tarjetas de indicadores comunes de
+Líneas, Estaciones, Trenes y Cocheras utilizan `SummaryCard`.
+
+## Accesibilidad y diseño adaptable
+
+- El documento y los controles están etiquetados en español.
+- Existe un enlace para saltar directamente al contenido principal.
+- El menú móvil comunica su estado mediante `aria-expanded` y puede cerrarse con `Escape`.
+- Los iconos decorativos se ocultan a las tecnologías de asistencia.
+- Las tablas identifican semánticamente sus cabeceras de columna.
+- La preferencia «Reducir animaciones» se guarda únicamente en el navegador.
+- El sidebar pasa a modo superpuesto hasta 900 píxeles y las cuadrículas reducen progresivamente sus
+  columnas en pantallas estrechas.
+
+## Pruebas y compilación
+
+```powershell
+npm test -- --watch=false
+npm run build -- --configuration production
 ```
 
-## Building
+La cobertura incluye servicios HTTP, sesión y guards, rutas, navegación contextual, filtros
+inicializados desde la URL, refresco periódico, presentación operativa, accesibilidad y layout
+adaptable.
 
-To build the project run:
+## Organización principal
 
-```bash
-ng build
+```text
+src/app/
+├── core/       # Modelos, servicios, guards, interceptor y utilidades
+├── features/   # Pantallas funcionales y sus pruebas
+├── layout/     # Cabecera, sidebar y layout protegido
+└── shared/     # Componentes visuales reutilizables
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+La documentación transversal de la aplicación se encuentra en
+[`../docs/integracion-aplicacion-web.md`](../docs/integracion-aplicacion-web.md).

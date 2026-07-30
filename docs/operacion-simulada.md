@@ -80,8 +80,9 @@ Las secciones operativas consultan periódicamente sus endpoints:
 | Máquinas | 15 segundos |
 
 `PeriodicRefresh` centraliza el temporizador, la pausa y reanudación, la cancelación al abandonar la
-pantalla y el bloqueo de solicitudes solapadas. Un fallo durante una actualización conserva la última
-respuesta válida y permite que el siguiente ciclo vuelva a intentarlo.
+pantalla y el bloqueo de solicitudes solapadas. También detiene las consultas cuando la pestaña no
+es visible y solicita una actualización inmediata al recuperarla. Un fallo durante una actualización
+conserva la última respuesta válida y permite que el siguiente ciclo vuelva a intentarlo.
 
 Estaciones y Trenes mantienen además una cuenta atrás local de un segundo. Esa cuenta atrás no
 inventa posiciones nuevas: descuenta segundos desde la última instantánea recibida y se resincroniza
@@ -90,6 +91,10 @@ con la siguiente respuesta.
 Los colores de línea, las etiquetas de estado y los formatos temporales también se resuelven mediante
 utilidades compartidas para que una misma situación tenga la misma representación en todas las
 pantallas.
+
+Las listas de entidades usan sus identificadores persistentes como claves de renderizado. Angular
+puede así conservar los nodos cuando cambia la instantánea. Los indicadores comunes de Líneas,
+Estaciones, Trenes y Cocheras utilizan el componente compartido `SummaryCard`.
 
 ## Consultas operativas
 
