@@ -169,8 +169,4 @@ export class Devices implements OnInit, OnDestroy {
     return formatDateTime(value, 'Sin conexión registrada');
   }
 
-  trackDevice(_: number, device: DeviceOperation): number {
-    return device.id;
-  }
-
 }

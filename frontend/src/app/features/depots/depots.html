@@ -42,7 +42,7 @@
     }
 
     <div class="depots-list">
-      @for (depot of filteredDepots(); track trackDepot($index, depot)) {
+      @for (depot of filteredDepots(); track depot.id) {
         <article class="depot-card" [class.expanded]="isExpanded(depot.id)">
           <button class="depot-card-header" type="button" (click)="toggleDepot(depot.id)" [attr.aria-expanded]="isExpanded(depot.id)">
             <span class="depot-code">{{ shortCode(depot) }}</span>

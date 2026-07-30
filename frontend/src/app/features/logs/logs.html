@@ -100,7 +100,7 @@
               </tr>
             </thead>
             <tbody>
-              @for (log of logs; track trackLog($index, log)) {
+              @for (log of logs; track log.id) {
                 <tr>
                   <td class="date-cell"><time [attr.datetime]="log.occurredAt">{{ formatDateTime(log.occurredAt) }}</time></td>
                   <td><span class="severity-pill severity-{{ log.severity.toLowerCase() }}">{{ severityLabel(log.severity) }}</span></td>

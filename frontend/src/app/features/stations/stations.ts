@@ -154,9 +154,6 @@ export class Stations implements OnInit, OnDestroy {
     return stationCount <= 1 ? 0 : (line.stationOrder - 1) * 100 / (stationCount - 1);
   }
 
-  trackStation(_: number, station: StationOperation): number { return station.id; }
-  trackArrival(_: number, arrival: StationArrival): number { return arrival.trainId; }
-
   private startCountdown(): void {
     this.stopCountdown();
     this.countdownIntervalId = window.setInterval(() => {

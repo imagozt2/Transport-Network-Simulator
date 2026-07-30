@@ -161,8 +161,6 @@ export class Depots implements OnInit, OnDestroy {
   getLineColor(movement: DepotMovement): string { return lineColor(movement.line.code, movement.line.color); }
   getLineTextColor(color: string): string { return contrastingTextColor(color); }
 
-  trackDepot(_: number, depot: DepotOperation): number { return depot.id; }
-
   private evaluatedAtTimestamp(): number {
     const evaluatedAt = Date.parse(this.operations?.evaluatedAt ?? '');
     return Number.isNaN(evaluatedAt) ? Date.now() : evaluatedAt;

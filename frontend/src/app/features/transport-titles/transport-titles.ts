@@ -152,7 +152,4 @@ export class TransportTitles implements OnInit {
     }).format(value);
   }
 
-  trackTitle(_: number, title: TransportTitle): number {
-    return title.id;
-  }
 }

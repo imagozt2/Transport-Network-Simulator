@@ -31,6 +31,7 @@ describe('PeriodicRefresh', () => {
     periodicRefresh.toggle();
     vi.advanceTimersByTime(5_000);
     expect(refresh).toHaveBeenCalledOnce();
+    periodicRefresh.destroy();
   });
 
   it('should reject overlapping requests and unlock after completion', () => {
@@ -44,5 +45,31 @@ describe('PeriodicRefresh', () => {
     const nextRequest = periodicRefresh.request(() => of(3));
     expect(nextRequest).not.toBeNull();
     nextRequest?.subscribe();
+  });
+
+  it('should pause while the tab is hidden and refresh when it becomes visible', () => {
+    let visibilityState: DocumentVisibilityState = 'visible';
+    const visibilitySpy = vi.spyOn(document, 'visibilityState', 'get')
+      .mockImplementation(() => visibilityState);
+    const refresh = vi.fn();
+    const periodicRefresh = new PeriodicRefresh(5_000, refresh);
+
+    periodicRefresh.start();
+    vi.advanceTimersByTime(5_000);
+    expect(refresh).toHaveBeenCalledOnce();
+
+    visibilityState = 'hidden';
+    document.dispatchEvent(new Event('visibilitychange'));
+    vi.advanceTimersByTime(10_000);
+    expect(refresh).toHaveBeenCalledOnce();
+
+    visibilityState = 'visible';
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(refresh).toHaveBeenCalledTimes(2);
+    vi.advanceTimersByTime(5_000);
+    expect(refresh).toHaveBeenCalledTimes(3);
+
+    periodicRefresh.destroy();
+    visibilitySpy.mockRestore();
   });
 });

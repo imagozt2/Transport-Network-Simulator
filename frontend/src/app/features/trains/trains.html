@@ -32,7 +32,7 @@
     }
 
     <div class="trains-list">
-      @for (train of filteredTrains(); track trackTrain($index, train)) {
+      @for (train of filteredTrains(); track train.id) {
         <article class="train-card" [class.expanded]="isExpanded(train.id)"
           [class.role-regular]="train.fleetRole === 'REGULAR_SERVICE'"
           [class.role-reserve]="train.fleetRole === 'RESERVE'"

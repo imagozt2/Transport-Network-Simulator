@@ -18,7 +18,7 @@
     </section>
 
     <div class="lines-list">
-      @for (line of data.lines; track trackLine($index, line)) {
+      @for (line of data.lines; track line.id) {
         <article class="line-card" [class.expanded]="isExpanded(line.id)" [style.--line-color]="getLineColor(line)">
           <button class="line-card-header" type="button" (click)="toggleLine(line.id)" [attr.aria-expanded]="isExpanded(line.id)">
             <span class="line-badge" [style.color]="getLineTextColor(getLineColor(line))">{{ line.code }}</span>
@@ -135,7 +135,7 @@
                               [attr.title]="station.name"
                             >{{ station.name }}</span>
                           }
-                          @for (train of trainsForDirection(line, direction); track trackTrain($index, train)) {
+                          @for (train of trainsForDirection(line, direction); track train.id) {
                             <span
                               class="horizontal-train-marker"
                               [style.left.%]="getTrainPositionPercentage(line, train)"

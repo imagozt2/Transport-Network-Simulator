@@ -106,7 +106,7 @@
     }
 
     <div class="devices-grid">
-      @for (device of filteredDevices(); track trackDevice($index, device)) {
+      @for (device of filteredDevices(); track device.id) {
         <article
           class="device-card status-border-{{ device.status.toLowerCase() }}"
           [class.expanded]="isExpanded(device.id)"

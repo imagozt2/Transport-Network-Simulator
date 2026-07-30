@@ -203,8 +203,6 @@ export class Trains implements OnInit, OnDestroy {
   getLineColor(line: TrainOperationLine): string { return lineColor(line.code, line.color); }
   getLineTextColor(color: string): string { return contrastingTextColor(color); }
 
-  trackTrain(_: number, train: TrainOperation): number { return train.id; }
-
   private startCountdown(): void {
     this.stopCountdown();
     this.countdownIntervalId = window.setInterval(() => { this.countdownNowMs = Date.now(); }, 1_000);

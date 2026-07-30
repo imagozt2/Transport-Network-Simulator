@@ -67,7 +67,7 @@
     }
 
     <section class="titles-grid" aria-label="Catálogo de títulos de transporte">
-      @for (title of filteredTitles(); track trackTitle($index, title)) {
+      @for (title of filteredTitles(); track title.id) {
         <article class="title-card type-{{ title.type.toLowerCase().replace('_', '-') }}">
           <header class="title-card-header">
             <span class="title-icon">{{ typeCode(title.type) }}</span>

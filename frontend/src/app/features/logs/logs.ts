@@ -321,10 +321,6 @@ export class Logs implements OnInit {
     return formatDateTime(value);
   }
 
-  trackLog(_: number, log: OperationalLog): number {
-    return log.id;
-  }
-
   private buildFilters(): OperationalLogFilters {
     return {
       origin: this.selectedOrigin === 'ALL' ? undefined : this.selectedOrigin,

@@ -157,10 +157,6 @@ export class Lines implements OnInit, OnDestroy {
     return stationCount <= 1 ? 0 : index * 100 / (stationCount - 1);
   }
 
-  trackTrain(_: number, train: LineOperationTrain): number {
-    return train.id;
-  }
-
   directionLabel(direction: ServiceDirection): string {
     return direction === 'OUTBOUND' ? 'Ida' : 'Vuelta';
   }
@@ -181,7 +177,5 @@ export class Lines implements OnInit, OnDestroy {
     if (!period) { return 'Fuera de servicio'; }
     return servicePeriodLabel(period);
   }
-
-  trackLine(_: number, line: LineOperation): number { return line.id; }
 
 }

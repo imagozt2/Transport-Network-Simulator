@@ -3,6 +3,16 @@ import { defer, finalize, Observable } from 'rxjs';
 export class PeriodicRefresh {
   private intervalId: number | null = null;
   private requestInFlight = false;
+  private listeningForVisibility = false;
+  private readonly handleVisibilityChange = () => {
+    if (!this.enabled) { return; }
+    if (document.visibilityState === 'hidden') {
+      this.stopTimer();
+      return;
+    }
+    this.refresh();
+    this.scheduleTimer();
+  };
 
   enabled = true;
 
@@ -14,7 +24,10 @@ export class PeriodicRefresh {
   start(): void {
     this.stopTimer();
     if (!this.enabled) { return; }
-    this.intervalId = window.setInterval(() => this.refresh(), this.intervalMs);
+    this.listenForVisibility();
+    if (document.visibilityState !== 'hidden') {
+      this.scheduleTimer();
+    }
   }
 
   toggle(): void {
@@ -30,6 +43,21 @@ export class PeriodicRefresh {
 
   destroy(): void {
     this.stopTimer();
+    if (this.listeningForVisibility) {
+      document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+      this.listeningForVisibility = false;
+    }
+  }
+
+  private listenForVisibility(): void {
+    if (this.listeningForVisibility) { return; }
+    document.addEventListener('visibilitychange', this.handleVisibilityChange);
+    this.listeningForVisibility = true;
+  }
+
+  private scheduleTimer(): void {
+    this.stopTimer();
+    this.intervalId = window.setInterval(() => this.refresh(), this.intervalMs);
   }
 
   private stopTimer(): void {
