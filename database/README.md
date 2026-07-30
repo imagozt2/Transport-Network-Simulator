@@ -12,6 +12,11 @@ Definición de MySQL 8 y datos iniciales de la red de transporte de Macegocia.
 - `data/04_service_configuration.sql`: calendarios, franjas, frecuencias, tiempos y cocheras por línea.
 - `verification/verify_database.sql`: recuentos esperados y comprobaciones de integridad.
 
+El esquema incluye `operator_accounts` para las cuentas del centro de control. Esta tabla almacena
+únicamente el hash de la contraseña junto con la identidad, el rol, el estado y los datos de
+seguridad de la cuenta. Los scripts SQL no crean operadores ni contienen credenciales iniciales.
+El primer operador se aprovisionará desde el backend mediante variables de entorno.
+
 ## Orden de instalación
 
 Los archivos deben ejecutarse en el orden anterior. Desde PowerShell se puede pasar cada archivo al
@@ -36,4 +41,4 @@ registros mantenidos sin duplicarlos.
 La configuración ferroviaria se explica en
 [`docs/modelo-operacion-ferroviaria.md`](../docs/modelo-operacion-ferroviaria.md).
 
-Este directorio no contiene credenciales.
+Este directorio no contiene credenciales ni contraseñas en texto plano.

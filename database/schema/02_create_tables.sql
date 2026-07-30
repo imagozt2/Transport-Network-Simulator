@@ -1,5 +1,39 @@
 USE transport_simulator_db;
 
+CREATE TABLE operator_accounts (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) NOT NULL,
+    email VARCHAR(254) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(150) NOT NULL,
+    operator_role VARCHAR(30) NOT NULL DEFAULT 'OPERATOR',
+    account_status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE',
+    failed_login_attempts INT NOT NULL DEFAULT 0,
+    locked_until DATETIME NULL,
+    last_login_at DATETIME NULL,
+    password_changed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_operator_accounts_username UNIQUE (username),
+    CONSTRAINT uk_operator_accounts_email UNIQUE (email),
+    CONSTRAINT chk_operator_accounts_username CHECK (CHAR_LENGTH(TRIM(username)) >= 3),
+    CONSTRAINT chk_operator_accounts_email CHECK (email LIKE '%_@_%._%'),
+    CONSTRAINT chk_operator_accounts_password_hash CHECK (CHAR_LENGTH(password_hash) >= 20),
+    CONSTRAINT chk_operator_accounts_role CHECK (
+        operator_role IN ('OPERATOR', 'ADMINISTRATOR')
+    ),
+    CONSTRAINT chk_operator_accounts_status CHECK (
+        account_status IN ('ACTIVE', 'DISABLED', 'LOCKED')
+    ),
+    CONSTRAINT chk_operator_accounts_failed_attempts CHECK (failed_login_attempts >= 0)
+);
+
+CREATE INDEX idx_operator_accounts_role_status
+    ON operator_accounts (operator_role, account_status);
+CREATE INDEX idx_operator_accounts_locked_until
+    ON operator_accounts (locked_until);
+
 CREATE TABLE stations (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     code VARCHAR(20) NOT NULL,
@@ -580,6 +614,8 @@ CREATE TABLE operational_logs (
     CONSTRAINT fk_operational_logs_purchase FOREIGN KEY (purchase_id) REFERENCES purchases (id)
         ON UPDATE CASCADE ON DELETE SET NULL,
     CONSTRAINT fk_operational_logs_validation FOREIGN KEY (validation_id) REFERENCES ticket_validations (id)
+        ON UPDATE CASCADE ON DELETE SET NULL,
+    CONSTRAINT fk_operational_logs_operator FOREIGN KEY (staff_user_id) REFERENCES operator_accounts (id)
         ON UPDATE CASCADE ON DELETE SET NULL
 );
 
@@ -592,6 +628,7 @@ CREATE INDEX idx_operational_logs_train ON operational_logs (train_id);
 CREATE INDEX idx_operational_logs_ticket ON operational_logs (ticket_id);
 CREATE INDEX idx_operational_logs_purchase ON operational_logs (purchase_id);
 CREATE INDEX idx_operational_logs_validation ON operational_logs (validation_id);
+CREATE INDEX idx_operational_logs_operator ON operational_logs (staff_user_id);
 CREATE UNIQUE INDEX uk_operational_logs_origin_external_reference
     ON operational_logs (log_origin, external_reference);
 CREATE INDEX idx_operational_logs_received_at ON operational_logs (received_at);

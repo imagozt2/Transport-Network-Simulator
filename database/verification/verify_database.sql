@@ -1,5 +1,8 @@
 USE transport_simulator_db;
 
+SELECT COUNT(*) AS operator_account_count
+FROM operator_accounts;
+
 SELECT 'stations' AS entity, COUNT(*) AS actual, 50 AS expected FROM stations
 UNION ALL SELECT 'transport_lines', COUNT(*), 6 FROM transport_lines
 UNION ALL SELECT 'line_stations', COUNT(*), 88 FROM line_stations
@@ -16,6 +19,15 @@ UNION ALL SELECT 'service_periods', COUNT(*), 15 FROM service_periods
 UNION ALL SELECT 'line_service_levels', COUNT(*), 90 FROM line_service_levels
 UNION ALL SELECT 'line_depots', COUNT(*), 12 FROM line_depots
 UNION ALL SELECT 'ticket_products', COUNT(*), 4 FROM ticket_products;
+
+SELECT id, username, email, operator_role, account_status
+FROM operator_accounts
+WHERE CHAR_LENGTH(TRIM(username)) < 3
+   OR email NOT LIKE '%_@_%._%'
+   OR CHAR_LENGTH(password_hash) < 20
+   OR operator_role NOT IN ('OPERATOR', 'ADMINISTRATOR')
+   OR account_status NOT IN ('ACTIVE', 'DISABLED', 'LOCKED')
+   OR failed_login_attempts < 0;
 
 SELECT transport_line.code, COUNT(line_stations.id) AS station_count
 FROM transport_lines transport_line
