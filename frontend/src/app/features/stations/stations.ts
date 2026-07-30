@@ -13,13 +13,14 @@ import { contrastingTextColor, lineColor } from '../../core/utils/line-visuals';
 import { stationStatusLabel } from '../../core/utils/operation-labels';
 import { PeriodicRefresh } from '../../core/utils/periodic-refresh';
 import { formatCountdown } from '../../core/utils/temporal-formatters';
+import { SummaryCard } from '../../shared/summary-card/summary-card';
 
 type StatusFilter = StationOperationStatus | 'ALL';
 type LineCountFilter = 'ALL' | '1' | '2' | '3_PLUS';
 
 @Component({
   selector: 'app-stations',
-  imports: [RouterLink],
+  imports: [RouterLink, SummaryCard],
   templateUrl: './stations.html',
   styleUrls: ['./stations.css', './stations-arrivals.css']
 })

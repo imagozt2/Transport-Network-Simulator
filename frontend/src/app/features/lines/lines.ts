@@ -14,9 +14,11 @@ import { contrastingTextColor, lineColor } from '../../core/utils/line-visuals';
 import { servicePeriodLabel, servicePhaseLabel } from '../../core/utils/operation-labels';
 import { PeriodicRefresh } from '../../core/utils/periodic-refresh';
 import { formatCountdown, formatDuration, formatTime } from '../../core/utils/temporal-formatters';
+import { SummaryCard } from '../../shared/summary-card/summary-card';
 
 @Component({
   selector: 'app-lines',
+  imports: [SummaryCard],
   templateUrl: './lines.html',
   styleUrls: ['./lines.css', './lines-circulation.css', './lines-depots.css']
 })

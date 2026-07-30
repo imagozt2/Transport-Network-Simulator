@@ -15,12 +15,14 @@ import { contrastingTextColor, lineColor } from '../../core/utils/line-visuals';
 import { fleetRoleLabel, trainStatusLabel } from '../../core/utils/operation-labels';
 import { PeriodicRefresh } from '../../core/utils/periodic-refresh';
 import { formatCountdown } from '../../core/utils/temporal-formatters';
+import { SummaryCard } from '../../shared/summary-card/summary-card';
 
 type StatusFilter = TrainStatus | 'ALL';
 type RoleFilter = FleetRole | 'ALL';
 
 @Component({
   selector: 'app-trains',
+  imports: [SummaryCard],
   templateUrl: './trains.html',
   styleUrls: ['./trains.css', './trains-cards.css', './trains-realtime.css', './trains-roles.css']
 })

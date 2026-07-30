@@ -15,13 +15,14 @@ import { contrastingTextColor, lineColor } from '../../core/utils/line-visuals';
 import { depotStatusLabel, fleetRoleLabel, trainStatusLabel } from '../../core/utils/operation-labels';
 import { PeriodicRefresh } from '../../core/utils/periodic-refresh';
 import { formatTime } from '../../core/utils/temporal-formatters';
+import { SummaryCard } from '../../shared/summary-card/summary-card';
 
 type StatusFilter = DepotOperationStatus | 'ALL';
 const AGENDA_WINDOW_MS = 12 * 60 * 60 * 1_000;
 
 @Component({
   selector: 'app-depots',
-  imports: [RouterLink],
+  imports: [RouterLink, SummaryCard],
   templateUrl: './depots.html',
   styleUrls: ['./depots.css', './depots-cards.css', './depots-fleet.css']
 })

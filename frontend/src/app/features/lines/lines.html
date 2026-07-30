@@ -10,11 +10,11 @@
     @if (errorMessage) { <div class="refresh-warning" role="status">{{ errorMessage }} Se conservan los últimos datos disponibles.</div> }
 
     <section class="summary-grid" aria-label="Resumen operativo de líneas">
-      <article class="summary-card"><span>Líneas de la red</span><strong>{{ data.lines.length }}</strong></article>
-      <article class="summary-card"><span>Estaciones</span><strong>{{ totalStations() }}</strong></article>
-      <article class="summary-card"><span>Trenes en servicio</span><strong>{{ totalTrains() }}</strong></article>
-      <article class="summary-card"><span>Sentido ida</span><strong>{{ trainsInDirection('OUTBOUND') }}</strong></article>
-      <article class="summary-card"><span>Sentido vuelta</span><strong>{{ trainsInDirection('INBOUND') }}</strong></article>
+      <app-summary-card label="Líneas de la red" [value]="data.lines.length" />
+      <app-summary-card label="Estaciones" [value]="totalStations()" />
+      <app-summary-card label="Trenes en servicio" [value]="totalTrains()" />
+      <app-summary-card label="Sentido ida" [value]="trainsInDirection('OUTBOUND')" />
+      <app-summary-card label="Sentido vuelta" [value]="trainsInDirection('INBOUND')" />
     </section>
 
     <div class="lines-list">

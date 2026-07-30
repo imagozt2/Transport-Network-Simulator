@@ -10,11 +10,11 @@
     @if (errorMessage) { <div class="refresh-warning" role="status">{{ errorMessage }} Se conservan los últimos datos disponibles.</div> }
 
     <section class="summary-grid" aria-label="Resumen operativo de estaciones">
-      <article class="summary-card"><span>Estaciones</span><strong>{{ data.summary.stationCount }}</strong></article>
-      <article class="summary-card"><span>Transbordos</span><strong>{{ data.summary.transferStationCount }}</strong></article>
-      <article class="summary-card"><span>Máquinas de billetes</span><strong>{{ data.summary.ticketMachineCount }}</strong></article>
-      <article class="summary-card"><span>Validadores de entrada</span><strong>{{ data.summary.entryValidatorCount }}</strong></article>
-      <article class="summary-card"><span>Validadores de salida</span><strong>{{ data.summary.exitValidatorCount }}</strong></article>
+      <app-summary-card label="Estaciones" [value]="data.summary.stationCount" />
+      <app-summary-card label="Transbordos" [value]="data.summary.transferStationCount" />
+      <app-summary-card label="Máquinas de billetes" [value]="data.summary.ticketMachineCount" />
+      <app-summary-card label="Validadores de entrada" [value]="data.summary.entryValidatorCount" />
+      <app-summary-card label="Validadores de salida" [value]="data.summary.exitValidatorCount" />
     </section>
 
     <section class="filters-panel" aria-label="Filtros de estaciones">

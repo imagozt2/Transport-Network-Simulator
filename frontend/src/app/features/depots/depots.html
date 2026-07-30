@@ -10,15 +10,15 @@
     @if (errorMessage) { <div class="refresh-warning" role="status">{{ errorMessage }} Se conservan los últimos datos disponibles.</div> }
 
     <section class="summary-grid" aria-label="Resumen operativo de cocheras">
-      <article class="summary-card"><span>Cocheras</span><strong>{{ data.summary.depotCount }}</strong></article>
-      <article class="summary-card"><span>Capacidad total</span><strong>{{ data.summary.totalCapacity }}</strong></article>
-      <article class="summary-card"><span>Plazas ocupadas</span><strong>{{ data.summary.occupiedSpaces }}</strong></article>
-      <article class="summary-card"><span>Plazas disponibles</span><strong>{{ data.summary.availableSpaces }}</strong></article>
-      <article class="summary-card"><span>Ocupación</span><strong>{{ data.summary.occupancyPercentage }}%</strong></article>
-      <article class="summary-card"><span>Flota asignada</span><strong>{{ data.summary.assignedFleet }}</strong></article>
-      <article class="summary-card"><span>Trenes en servicio</span><strong>{{ data.summary.trainsInService }}</strong></article>
-      <article class="summary-card"><span>Próximas salidas</span><strong>{{ scheduledMovementCount('EXIT') }}</strong></article>
-      <article class="summary-card"><span>Próximas entradas</span><strong>{{ scheduledMovementCount('ENTRY') }}</strong></article>
+      <app-summary-card label="Cocheras" [value]="data.summary.depotCount" />
+      <app-summary-card label="Capacidad total" [value]="data.summary.totalCapacity" />
+      <app-summary-card label="Plazas ocupadas" [value]="data.summary.occupiedSpaces" />
+      <app-summary-card label="Plazas disponibles" [value]="data.summary.availableSpaces" />
+      <app-summary-card label="Ocupación" [value]="data.summary.occupancyPercentage + '%'" />
+      <app-summary-card label="Flota asignada" [value]="data.summary.assignedFleet" />
+      <app-summary-card label="Trenes en servicio" [value]="data.summary.trainsInService" />
+      <app-summary-card label="Próximas salidas" [value]="scheduledMovementCount('EXIT')" />
+      <app-summary-card label="Próximas entradas" [value]="scheduledMovementCount('ENTRY')" />
     </section>
 
     <section class="filters-panel" aria-label="Filtros de cocheras">

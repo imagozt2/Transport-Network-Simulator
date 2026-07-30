@@ -10,12 +10,12 @@
     @if (errorMessage) { <div class="refresh-warning">{{ errorMessage }} Se conservan los últimos datos disponibles.</div> }
 
     <section class="summary-grid" aria-label="Resumen operativo de la flota">
-      <article class="summary-card"><span>Flota total</span><strong>{{ data.summary.activeFleet }}</strong></article>
-      <article class="summary-card"><span>Trenes en servicio</span><strong>{{ data.summary.trainsInService }}</strong></article>
-      <article class="summary-card"><span>Trenes en cocheras</span><strong>{{ data.summary.trainsInDepots }}</strong></article>
-      <article class="summary-card"><span>Servicio regular</span><strong>{{ data.summary.byRole.REGULAR_SERVICE }}</strong></article>
-      <article class="summary-card"><span>Reserva</span><strong>{{ data.summary.byRole.RESERVE }}</strong></article>
-      <article class="summary-card"><span>Históricos</span><strong>{{ data.summary.byRole.HISTORIC }}</strong></article>
+      <app-summary-card label="Flota total" [value]="data.summary.activeFleet" />
+      <app-summary-card label="Trenes en servicio" [value]="data.summary.trainsInService" />
+      <app-summary-card label="Trenes en cocheras" [value]="data.summary.trainsInDepots" />
+      <app-summary-card label="Servicio regular" [value]="data.summary.byRole.REGULAR_SERVICE" />
+      <app-summary-card label="Reserva" [value]="data.summary.byRole.RESERVE" />
+      <app-summary-card label="Históricos" [value]="data.summary.byRole.HISTORIC" />
     </section>
 
     <section class="filters-panel" aria-label="Filtros de trenes">
