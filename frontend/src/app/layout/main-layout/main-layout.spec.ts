@@ -22,6 +22,9 @@ describe('MainLayout', () => {
     expect(compiled.querySelector('h1')?.textContent).toContain('Centro de Control');
     expect(compiled.querySelector('.sidebar')?.textContent).toContain('Panel General');
     expect(compiled.querySelector('.sidebar')?.textContent).toContain('Mapa de red');
+    expect(compiled.querySelector('.skip-link')?.getAttribute('href')).toBe('#main-content');
+    expect(compiled.querySelector('main')?.id).toBe('main-content');
+    expect(compiled.querySelector('.sidebar')?.id).toBe('primary-navigation');
   });
 
   it('should render every navigation group in the expected order', () => {
@@ -46,18 +49,38 @@ describe('MainLayout', () => {
     const fixture = TestBed.createComponent(MainLayout);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
+    const menuButton = compiled.querySelector('.menu-button') as HTMLButtonElement;
 
-    compiled.querySelector<HTMLButtonElement>('.menu-button')?.click();
+    expect(menuButton.getAttribute('aria-controls')).toBe('primary-navigation');
+    expect(menuButton.getAttribute('aria-expanded')).toBe('false');
+    menuButton.click();
     fixture.detectChanges();
 
     expect(compiled.querySelector('.sidebar')?.classList.contains('open')).toBe(true);
     expect(compiled.querySelector('.sidebar-backdrop')).not.toBeNull();
+    expect(menuButton.getAttribute('aria-expanded')).toBe('true');
 
     compiled.querySelector<HTMLButtonElement>('.sidebar-backdrop')?.click();
     fixture.detectChanges();
 
     expect(compiled.querySelector('.sidebar')?.classList.contains('open')).toBe(false);
     expect(compiled.querySelector('.sidebar-backdrop')).toBeNull();
+    expect(menuButton.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('should close the adaptable sidebar with the Escape key', () => {
+    const fixture = TestBed.createComponent(MainLayout);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    compiled.querySelector<HTMLButtonElement>('.menu-button')?.click();
+    fixture.detectChanges();
+    expect(compiled.querySelector('.sidebar')?.classList.contains('open')).toBe(true);
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    fixture.detectChanges();
+
+    expect(compiled.querySelector('.sidebar')?.classList.contains('open')).toBe(false);
   });
 
   it('should close the sidebar after selecting a navigation link', () => {

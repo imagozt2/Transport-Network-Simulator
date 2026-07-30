@@ -4,6 +4,8 @@
       class="menu-button"
       type="button"
       aria-label="Abrir menú de navegación"
+      aria-controls="primary-navigation"
+      [attr.aria-expanded]="sidebarOpen()"
       (click)="menuToggle.emit()"
     >
       <span></span>

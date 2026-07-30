@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, HostListener, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
 import { Header } from '../header/header';
@@ -19,5 +19,10 @@ export class MainLayout {
 
   protected closeSidebar(): void {
     this.sidebarOpen.set(false);
+  }
+
+  @HostListener('document:keydown.escape')
+  protected closeSidebarWithKeyboard(): void {
+    this.closeSidebar();
   }
 }

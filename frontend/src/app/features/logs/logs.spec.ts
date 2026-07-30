@@ -69,6 +69,7 @@ describe('Logs URL filters', () => {
 
     const fixture = TestBed.createComponent(Logs);
     fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
 
     expect(getLogs).toHaveBeenCalledWith(0, 25, {
       deviceCode: 'RMM-MB-ST001-001',
@@ -92,7 +93,10 @@ describe('Logs URL filters', () => {
     ) as HTMLSelectElement;
     expect(deviceFilter.value).toBe('RMM-MB-ST001-001');
     expect(deviceFilter.selectedOptions[0]?.textContent).toContain('Máquina de billetes 1');
-    expect(fixture.nativeElement.querySelector('.logs-table tbody tr')).not.toBeNull();
+    expect(compiled.querySelector('.logs-table tbody tr')).not.toBeNull();
+    expect(Array.from(
+      compiled.querySelectorAll<HTMLTableCellElement>('.logs-table thead th')
+    ).every((heading) => heading.scope === 'col')).toBe(true);
     expect(fixture.nativeElement.querySelectorAll('.pagination-panel.bottom button'))
       .toHaveLength(5);
     expect(fixture.nativeElement.querySelector(

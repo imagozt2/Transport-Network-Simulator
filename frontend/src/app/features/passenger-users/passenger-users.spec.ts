@@ -49,6 +49,8 @@ describe('PassengerUsers', () => {
     expect(compiled.querySelector('tbody')?.textContent).toContain('Ana García');
     expect(compiled.querySelector('tbody')?.textContent).toContain('ana@example.local');
     expect(compiled.textContent).not.toContain('password');
+    expect(Array.from(compiled.querySelectorAll<HTMLTableCellElement>('thead th'))
+      .every((heading) => heading.scope === 'col')).toBe(true);
   });
 
   it('should combine filters and restart pagination', () => {

@@ -1,4 +1,4 @@
-import { Component, HostListener, inject, output, signal } from '@angular/core';
+import { Component, HostListener, inject, input, output, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 
 import { OperatorAuthService } from '../../core/services/operator-auth.service';
@@ -14,6 +14,7 @@ export class Header {
   private readonly router = inject(Router);
 
   readonly menuToggle = output<void>();
+  readonly sidebarOpen = input(false);
   readonly operator = this.authService.currentOperator;
   readonly userMenuOpen = signal(false);
   readonly loggingOut = signal(false);

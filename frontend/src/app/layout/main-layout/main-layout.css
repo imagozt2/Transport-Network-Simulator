@@ -3,6 +3,25 @@
   background-color: #f4f6f8;
 }
 
+.skip-link {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  z-index: 100;
+  padding: 10px 16px;
+  border-radius: 10px;
+  color: #fff;
+  background: #0f172a;
+  font-weight: 800;
+  text-decoration: none;
+  transform: translate(-50%, -150%);
+  transition: transform 0.15s ease;
+}
+
+.skip-link:focus {
+  transform: translate(-50%, 0);
+}
+
 .main-area {
   min-height: 100vh;
   margin-left: 280px;

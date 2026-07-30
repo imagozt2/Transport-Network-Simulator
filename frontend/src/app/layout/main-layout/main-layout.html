@@ -1,4 +1,6 @@
 <div class="control-center-layout">
+  <a class="skip-link" href="#main-content">Saltar al contenido principal</a>
+
   <app-sidebar
     [open]="sidebarOpen()"
     (navigationSelected)="closeSidebar()"
@@ -14,7 +16,10 @@
   }
 
   <div class="main-area">
-    <app-header (menuToggle)="toggleSidebar()" />
+    <app-header
+      [sidebarOpen]="sidebarOpen()"
+      (menuToggle)="toggleSidebar()"
+    />
 
     <main class="content" id="main-content">
       <router-outlet />
