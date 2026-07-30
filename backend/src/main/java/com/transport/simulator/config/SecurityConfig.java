@@ -42,6 +42,10 @@ public class SecurityConfig {
                                 "/api/auth/login"
                         ).permitAll()
                         .requestMatchers("/api/auth/**").authenticated()
+                        .requestMatchers(
+                                HttpMethod.PATCH,
+                                "/api/admin/passenger-users/**"
+                        ).hasRole("ADMINISTRATOR")
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
                 .exceptionHandling(exceptions -> exceptions

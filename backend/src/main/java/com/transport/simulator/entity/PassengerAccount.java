@@ -67,6 +67,25 @@ public class PassengerAccount extends AuditableEntity {
     protected PassengerAccount() {
     }
 
+    public PassengerAccountStatus changeStatus(PassengerAccountStatus newStatus) {
+        if (newStatus == null) {
+            throw new IllegalArgumentException("Passenger account status is required");
+        }
+        if (status == newStatus) {
+            throw new IllegalStateException("Passenger account already has the requested status");
+        }
+        if (status == PassengerAccountStatus.DISABLED
+                && newStatus != PassengerAccountStatus.ACTIVE) {
+            throw new IllegalStateException(
+                    "A disabled passenger account must be activated before it can be blocked"
+            );
+        }
+
+        PassengerAccountStatus previousStatus = status;
+        status = newStatus;
+        return previousStatus;
+    }
+
     public Long getId() {
         return id;
     }

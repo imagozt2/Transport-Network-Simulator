@@ -1,11 +1,17 @@
 package com.transport.simulator.controller;
 
+import com.transport.simulator.dto.request.passenger.PassengerAccountStatusUpdateRequest;
 import com.transport.simulator.dto.response.passenger.PassengerAccountResponse;
 import com.transport.simulator.dto.response.passenger.PassengerAccountsPageResponse;
 import com.transport.simulator.enums.PassengerAccountStatus;
+import com.transport.simulator.service.PassengerAccountManagementService;
 import com.transport.simulator.service.PassengerAccountQueryService;
+import jakarta.validation.Valid;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -15,11 +21,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class PassengerAccountAdminController {
 
     private final PassengerAccountQueryService passengerAccountQueryService;
+    private final PassengerAccountManagementService passengerAccountManagementService;
 
     public PassengerAccountAdminController(
-            PassengerAccountQueryService passengerAccountQueryService
+            PassengerAccountQueryService passengerAccountQueryService,
+            PassengerAccountManagementService passengerAccountManagementService
     ) {
         this.passengerAccountQueryService = passengerAccountQueryService;
+        this.passengerAccountManagementService = passengerAccountManagementService;
     }
 
     @GetMapping
@@ -46,5 +55,18 @@ public class PassengerAccountAdminController {
     @GetMapping("/{publicId}")
     public PassengerAccountResponse getAccount(@PathVariable String publicId) {
         return passengerAccountQueryService.getAccount(publicId);
+    }
+
+    @PatchMapping("/{publicId}/status")
+    public PassengerAccountResponse updateStatus(
+            @PathVariable String publicId,
+            @Valid @RequestBody PassengerAccountStatusUpdateRequest request,
+            Authentication authentication
+    ) {
+        return passengerAccountManagementService.updateStatus(
+                publicId,
+                request,
+                authentication
+        );
     }
 }
