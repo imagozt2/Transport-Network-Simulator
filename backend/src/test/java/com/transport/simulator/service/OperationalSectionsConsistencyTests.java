@@ -62,6 +62,7 @@ class OperationalSectionsConsistencyTests {
     private StationOperationsQueryService stationQueryService;
     private TrainOperationsQueryService trainQueryService;
     private DepotOperationsQueryService depotQueryService;
+    private DashboardQueryService dashboardQueryService;
 
     @BeforeEach
     void setUp() {
@@ -80,6 +81,13 @@ class OperationalSectionsConsistencyTests {
         );
         depotQueryService = new DepotOperationsQueryService(
                 simulationStateService, depotRepository, trainRepository, stationRepository
+        );
+        dashboardQueryService = new DashboardQueryService(
+                stationRepository,
+                transportLineRepository,
+                deviceRepository,
+                trainRepository,
+                depotRepository
         );
     }
 
@@ -118,11 +126,19 @@ class OperationalSectionsConsistencyTests {
                 .thenReturn(List.of(circulatingTrain, storedTrain));
         when(depotRepository.findAllByActiveTrueOrderByCodeAsc()).thenReturn(List.of(depot));
         when(deviceRepository.summarizeActiveDevicesByStation()).thenReturn(List.of());
+        when(stationRepository.countByActiveTrue()).thenReturn(2L);
+        when(trainRepository.countByActiveTrue()).thenReturn(2L);
+        when(trainRepository.countActiveTrainsByStatus()).thenReturn(List.of());
+        when(deviceRepository.countByActiveTrue()).thenReturn(0L);
+        when(deviceRepository.countActiveDevicesByStatus()).thenReturn(List.of());
+        when(deviceRepository.countActiveDevicesByType()).thenReturn(List.of());
+        when(depotRepository.findActiveDepotOccupancy()).thenReturn(List.of());
 
         var lineOperations = lineQueryService.getOperations();
         var stationOperations = stationQueryService.getOperations();
         var trainOperations = trainQueryService.getOperations();
         var depotOperations = depotQueryService.getOperations();
+        var dashboard = dashboardQueryService.getSummary();
 
         assertThat(List.of(
                 lineOperations.evaluatedAt(),
@@ -139,6 +155,9 @@ class OperationalSectionsConsistencyTests {
 
         var lineResponse = lineOperations.lines().getFirst();
         assertThat(lineResponse.stationCount()).isEqualTo(stationOperations.stationCount());
+        assertThat(dashboard.network().activeStations()).isEqualTo(stationOperations.stationCount());
+        assertThat(dashboard.network().activeLines()).isEqualTo(lineOperations.activeLineCount());
+        assertThat(dashboard.fleet().activeTrains()).isEqualTo(trainOperations.summary().activeFleet());
         assertThat(lineResponse.stations()).extracting("code")
                 .containsExactly("ST010", "ST011");
         assertThat(lineResponse.currentPeriodType()).isEqualTo(ServicePeriodType.REGULAR);
