@@ -51,6 +51,12 @@ export class Sidebar {
       ]
     },
     {
+      title: 'Administración',
+      items: [
+        { label: 'Usuarios', route: '/users', icon: '👥' }
+      ]
+    },
+    {
       title: 'Equipamiento',
       items: [
         { label: 'Máquinas', route: '/devices', icon: '🖥️' }
