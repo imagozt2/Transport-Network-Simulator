@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Router } from '@angular/router';
 
 import { OperatorAuthService } from '../../core/services/operator-auth.service';
 
@@ -14,7 +14,6 @@ import { OperatorAuthService } from '../../core/services/operator-auth.service';
 export class Login {
   private readonly formBuilder = inject(FormBuilder);
   private readonly operatorAuthService = inject(OperatorAuthService);
-  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
   submitting = false;
@@ -41,7 +40,7 @@ export class Login {
     }).subscribe({
       next: () => {
         this.submitting = false;
-        void this.router.navigateByUrl(this.returnUrl());
+        void this.router.navigateByUrl('/dashboard');
       },
       error: (error: HttpErrorResponse) => {
         this.errorMessage = this.messageFor(error);
@@ -52,15 +51,6 @@ export class Login {
 
   togglePasswordVisibility(): void {
     this.passwordVisible = !this.passwordVisible;
-  }
-
-  private returnUrl(): string {
-    const candidate = this.route.snapshot.queryParamMap.get('returnUrl');
-    if (!candidate || !candidate.startsWith('/') || candidate.startsWith('//')
-        || candidate.startsWith('/login')) {
-      return '/dashboard';
-    }
-    return candidate;
   }
 
   private messageFor(error: HttpErrorResponse): string {
