@@ -9,6 +9,7 @@ describe('Application routes', () => {
     expect(shellRoute?.children?.map((route) => route.path)).toEqual([
       '',
       'dashboard',
+      'account',
       'network-map',
       'lines',
       'stations',

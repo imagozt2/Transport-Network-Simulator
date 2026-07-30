@@ -36,6 +36,13 @@ export const routes: Routes = [
         component: Dashboard
       },
       {
+        path: 'account',
+        loadComponent: () =>
+          import('./features/operator-account/operator-account').then(
+            (module) => module.OperatorAccountPage
+          )
+      },
+      {
         path: 'network-map',
         component: NetworkMap
       },

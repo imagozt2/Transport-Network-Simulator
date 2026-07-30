@@ -1,0 +1,93 @@
+<section class="account-page">
+  <header class="page-header">
+    <div>
+      <p>Área personal</p>
+      <h1>Mi cuenta</h1>
+    </div>
+    <a routerLink="/dashboard">Volver al Panel General</a>
+  </header>
+
+  @if (operator(); as account) {
+    <article class="profile-card">
+      <header class="profile-heading">
+        <span class="operator-avatar" aria-hidden="true">
+          {{ initials(account.firstName, account.lastName) }}
+        </span>
+        <span>
+          <small>Operador autenticado</small>
+          <strong>{{ account.firstName }} {{ account.lastName }}</strong>
+          <span class="identity-line">{{ '@' + account.username }} · {{ account.email }}</span>
+        </span>
+        <span class="status-badge">{{ account.status === 'ACTIVE' ? 'Cuenta activa' : account.status }}</span>
+      </header>
+
+      <section class="account-section" aria-labelledby="identity-title">
+        <div class="section-heading">
+          <span class="section-icon" aria-hidden="true">ID</span>
+          <div>
+            <h2 id="identity-title">Identidad del operador</h2>
+            <p>Información asociada a tu acceso al centro de control.</p>
+          </div>
+        </div>
+
+        <dl class="details-grid">
+          <div>
+            <dt>Nombre</dt>
+            <dd>{{ account.firstName }}</dd>
+          </div>
+          <div>
+            <dt>Apellidos</dt>
+            <dd>{{ account.lastName }}</dd>
+          </div>
+          <div>
+            <dt>Nombre de usuario</dt>
+            <dd>{{ account.username }}</dd>
+          </div>
+          <div>
+            <dt>Correo electrónico</dt>
+            <dd>{{ account.email }}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="account-section" aria-labelledby="access-title">
+        <div class="section-heading">
+          <span class="section-icon" aria-hidden="true">AC</span>
+          <div>
+            <h2 id="access-title">Acceso y seguridad</h2>
+            <p>Resumen del nivel de acceso y de la actividad de la cuenta.</p>
+          </div>
+        </div>
+
+        <dl class="details-grid security-grid">
+          <div>
+            <dt>Rol</dt>
+            <dd>{{ roleLabel(account.role) }}</dd>
+          </div>
+          <div>
+            <dt>Estado</dt>
+            <dd>{{ account.status === 'ACTIVE' ? 'Activa' : account.status }}</dd>
+          </div>
+          <div>
+            <dt>Último inicio de sesión</dt>
+            <dd>{{ formatDateTime(account.lastLoginAt, 'Primer acceso registrado') }}</dd>
+          </div>
+          <div>
+            <dt>Cuenta creada</dt>
+            <dd>{{ formatDateTime(account.createdAt, 'Fecha no disponible') }}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <footer class="security-notice">
+        <span aria-hidden="true">i</span>
+        <p>
+          La contraseña y su hash nunca se muestran en esta pantalla. La gestión de credenciales
+          se incorporará mediante una operación específica y protegida.
+        </p>
+      </footer>
+    </article>
+  } @else {
+    <div class="state-card" role="status">Recuperando los datos de la cuenta…</div>
+  }
+</section>
