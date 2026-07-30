@@ -1,5 +1,9 @@
 import { Routes } from '@angular/router';
 
+import {
+  guestOperatorGuard,
+  operatorAuthGuard
+} from './core/guards/operator-auth.guard';
 import { Dashboard } from './features/dashboard/dashboard';
 import { Depots } from './features/depots/depots';
 import { Devices } from './features/devices/devices';
@@ -14,11 +18,13 @@ import { MainLayout } from './layout/main-layout/main-layout';
 export const routes: Routes = [
   {
     path: 'login',
+    canActivate: [guestOperatorGuard],
     loadComponent: () => import('./features/login/login').then((module) => module.Login)
   },
   {
     path: '',
     component: MainLayout,
+    canActivate: [operatorAuthGuard],
     children: [
       {
         path: '',
