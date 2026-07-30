@@ -5,6 +5,7 @@ import java.util.Map;
 
 public record TransportTitleSummaryResponse(
         long totalTitles,
+        long filteredTitles,
         long activeTitles,
         long inactiveTitles,
         Map<TicketProductType, Long> byType
