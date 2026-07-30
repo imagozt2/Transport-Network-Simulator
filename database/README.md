@@ -19,6 +19,12 @@ El primer operador se aprovisionará desde el backend mediante variables de ento
 El procedimiento y el modelo de seguridad se describen en
 [`docs/acceso-operadores.md`](../docs/acceso-operadores.md).
 
+`passenger_accounts` mantiene las cuentas de los futuros usuarios viajeros de RMM App. Estas
+cuentas están separadas de los operadores e incluyen un UUID público, identidad, correo, hash de
+contraseña, verificación, estado administrativo y datos de seguridad. La tabla
+`passenger_account_status_changes` permitirá auditar qué operador cambia el estado de una cuenta.
+Los scripts no insertan pasajeros ficticios.
+
 ## Orden de instalación
 
 Los archivos deben ejecutarse en el orden anterior. Desde PowerShell se puede pasar cada archivo al

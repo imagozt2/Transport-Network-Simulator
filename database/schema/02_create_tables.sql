@@ -34,6 +34,82 @@ CREATE INDEX idx_operator_accounts_role_status
 CREATE INDEX idx_operator_accounts_locked_until
     ON operator_accounts (locked_until);
 
+CREATE TABLE passenger_accounts (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    public_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    email VARCHAR(254) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(150) NOT NULL,
+    account_status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE',
+    email_verified_at DATETIME NULL,
+    failed_login_attempts INT NOT NULL DEFAULT 0,
+    locked_until DATETIME NULL,
+    last_login_at DATETIME NULL,
+    password_changed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_passenger_accounts_public_id UNIQUE (public_id),
+    CONSTRAINT uk_passenger_accounts_email UNIQUE (email),
+    CONSTRAINT chk_passenger_accounts_public_id CHECK (
+        public_id REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+    ),
+    CONSTRAINT chk_passenger_accounts_email CHECK (email LIKE '%_@_%._%'),
+    CONSTRAINT chk_passenger_accounts_password_hash CHECK (CHAR_LENGTH(password_hash) >= 20),
+    CONSTRAINT chk_passenger_accounts_first_name CHECK (
+        CHAR_LENGTH(TRIM(first_name)) > 0
+    ),
+    CONSTRAINT chk_passenger_accounts_last_name CHECK (
+        CHAR_LENGTH(TRIM(last_name)) > 0
+    ),
+    CONSTRAINT chk_passenger_accounts_status CHECK (
+        account_status IN ('ACTIVE', 'BLOCKED', 'DISABLED')
+    ),
+    CONSTRAINT chk_passenger_accounts_failed_attempts CHECK (failed_login_attempts >= 0)
+);
+
+CREATE INDEX idx_passenger_accounts_status_created
+    ON passenger_accounts (account_status, created_at);
+CREATE INDEX idx_passenger_accounts_email_verified
+    ON passenger_accounts (email_verified_at);
+CREATE INDEX idx_passenger_accounts_locked_until
+    ON passenger_accounts (locked_until);
+CREATE INDEX idx_passenger_accounts_name
+    ON passenger_accounts (last_name, first_name);
+
+CREATE TABLE passenger_account_status_changes (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    passenger_account_id BIGINT NOT NULL,
+    changed_by_operator_id BIGINT NOT NULL,
+    previous_status VARCHAR(30) NOT NULL,
+    new_status VARCHAR(30) NOT NULL,
+    reason VARCHAR(500) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_passenger_status_changes_account FOREIGN KEY (passenger_account_id)
+        REFERENCES passenger_accounts (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_passenger_status_changes_operator FOREIGN KEY (changed_by_operator_id)
+        REFERENCES operator_accounts (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT chk_passenger_status_changes_previous CHECK (
+        previous_status IN ('ACTIVE', 'BLOCKED', 'DISABLED')
+    ),
+    CONSTRAINT chk_passenger_status_changes_new CHECK (
+        new_status IN ('ACTIVE', 'BLOCKED', 'DISABLED')
+    ),
+    CONSTRAINT chk_passenger_status_changes_distinct CHECK (
+        previous_status <> new_status
+    ),
+    CONSTRAINT chk_passenger_status_changes_reason CHECK (
+        reason IS NULL OR CHAR_LENGTH(TRIM(reason)) > 0
+    )
+);
+
+CREATE INDEX idx_passenger_status_changes_account_created
+    ON passenger_account_status_changes (passenger_account_id, created_at);
+CREATE INDEX idx_passenger_status_changes_operator_created
+    ON passenger_account_status_changes (changed_by_operator_id, created_at);
+
 CREATE TABLE stations (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     code VARCHAR(20) NOT NULL,

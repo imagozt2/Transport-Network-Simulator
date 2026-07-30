@@ -3,6 +3,12 @@ USE transport_simulator_db;
 SELECT COUNT(*) AS operator_account_count
 FROM operator_accounts;
 
+SELECT COUNT(*) AS passenger_account_count
+FROM passenger_accounts;
+
+SELECT COUNT(*) AS passenger_account_status_change_count
+FROM passenger_account_status_changes;
+
 SELECT 'stations' AS entity, COUNT(*) AS actual, 50 AS expected FROM stations
 UNION ALL SELECT 'transport_lines', COUNT(*), 6 FROM transport_lines
 UNION ALL SELECT 'line_stations', COUNT(*), 88 FROM line_stations
@@ -28,6 +34,28 @@ WHERE CHAR_LENGTH(TRIM(username)) < 3
    OR operator_role NOT IN ('OPERATOR', 'ADMINISTRATOR')
    OR account_status NOT IN ('ACTIVE', 'DISABLED', 'LOCKED')
    OR failed_login_attempts < 0;
+
+SELECT id, public_id, email, account_status
+FROM passenger_accounts
+WHERE public_id NOT REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+   OR email NOT LIKE '%_@_%._%'
+   OR CHAR_LENGTH(password_hash) < 20
+   OR CHAR_LENGTH(TRIM(first_name)) = 0
+   OR CHAR_LENGTH(TRIM(last_name)) = 0
+   OR account_status NOT IN ('ACTIVE', 'BLOCKED', 'DISABLED')
+   OR failed_login_attempts < 0;
+
+SELECT status_changes.id
+FROM passenger_account_status_changes status_changes
+LEFT JOIN passenger_accounts passengers
+    ON passengers.id = status_changes.passenger_account_id
+LEFT JOIN operator_accounts operators
+    ON operators.id = status_changes.changed_by_operator_id
+WHERE passengers.id IS NULL
+   OR operators.id IS NULL
+   OR status_changes.previous_status = status_changes.new_status
+   OR status_changes.previous_status NOT IN ('ACTIVE', 'BLOCKED', 'DISABLED')
+   OR status_changes.new_status NOT IN ('ACTIVE', 'BLOCKED', 'DISABLED');
 
 SELECT transport_line.code, COUNT(line_stations.id) AS station_count
 FROM transport_lines transport_line
