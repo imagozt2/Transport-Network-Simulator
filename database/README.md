@@ -24,6 +24,8 @@ cuentas están separadas de los operadores e incluyen un UUID público, identida
 contraseña, verificación, estado administrativo y datos de seguridad. La tabla
 `passenger_account_status_changes` permitirá auditar qué operador cambia el estado de una cuenta.
 Los scripts no insertan pasajeros ficticios.
+El modelo administrativo se explica en
+[`docs/usuarios-rmm-app.md`](../docs/usuarios-rmm-app.md).
 
 ## Orden de instalación
 

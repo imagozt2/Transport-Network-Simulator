@@ -30,6 +30,8 @@ La aplicación incluye actualmente:
 - autenticación de operadores mediante sesiones protegidas, rutas privadas y bloqueo temporal ante
   intentos fallidos;
 - pantallas personales de cuenta y configuración accesibles desde la cabecera;
+- una sección administrativa para consultar, filtrar y gestionar las cuentas de pasajeros de la
+  futura RMM App;
 - recorridos ordenados y correspondencias entre líneas;
 - calendarios, franjas horarias, frecuencias y tiempos de recorrido configurables;
 - flota regular, de reserva e histórica diferenciada;
@@ -191,6 +193,9 @@ sesión y una autenticación correcta abre siempre el Panel General.
 | `GET` | `/api/transport-titles` | Devuelve el catálogo de títulos y admite filtros combinables. |
 | `GET` | `/api/transport-titles/{titleId}` | Consulta un título por su identificador. |
 | `GET` | `/api/transport-titles/code/{code}` | Consulta un título por su código estable. |
+| `GET` | `/api/admin/passenger-users` | Devuelve el resumen y listado paginado de pasajeros. |
+| `GET` | `/api/admin/passenger-users/{publicId}` | Consulta una cuenta mediante su UUID público. |
+| `PATCH` | `/api/admin/passenger-users/{publicId}/status` | Cambia y audita el estado de una cuenta. |
 
 ## Pruebas y compilación
 
@@ -216,6 +221,7 @@ y en cada actualización de esa rama.
 ## Documentación
 
 - [Acceso y cuentas de operador](docs/acceso-operadores.md)
+- [Administración de usuarios de RMM App](docs/usuarios-rmm-app.md)
 - [Navegación y estructura de la aplicación web](docs/navegacion-aplicacion.md)
 - [Visión transversal de la operación simulada](docs/operacion-simulada.md)
 - [Panel General y agregación de datos operativos](docs/panel-general.md)
