@@ -48,6 +48,14 @@ public class DeviceEventLog {
     @JoinColumn(name = "station_id", nullable = false)
     private Station station;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ticket_id")
+    private Ticket ticket;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "compensatory_issuance_id")
+    private CompensatoryTicketIssuance compensatoryIssuance;
+
     @Column(name = "external_reference", length = 150)
     private String externalReference;
 
@@ -82,6 +90,14 @@ public class DeviceEventLog {
         this.occurredAt = occurredAt;
         this.externalReference = externalReference;
         this.payloadJson = payloadJson;
+    }
+
+    public void linkCompensatoryIssuance(
+            CompensatoryTicketIssuance issuance,
+            Ticket issuedTicket
+    ) {
+        compensatoryIssuance = issuance;
+        ticket = issuedTicket;
     }
 
     @PrePersist
