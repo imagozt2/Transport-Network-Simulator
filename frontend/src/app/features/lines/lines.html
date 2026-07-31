@@ -58,7 +58,10 @@
                 </section>
 
                 <section class="metric-panel">
-                  <h2>Circulación</h2>
+                  <div class="panel-header">
+                    <h2>Circulación</h2>
+                    <a class="context-link" [routerLink]="['/trains']" [queryParams]="{ lineCode: line.code }">Ver trenes</a>
+                  </div>
                   <div class="large-metric"><strong>{{ line.activeTrainCount }}</strong><span>trenes en servicio</span></div>
                   <div class="direction-stats">
                     <div><span>Ida</span><strong>{{ lineTrainsInDirection(line, 'OUTBOUND') }}</strong></div>
@@ -69,7 +72,10 @@
                 <section class="depots-panel">
                   <div class="panel-header">
                     <h2>Cocheras</h2>
-                    <span>{{ line.depots.length }} asociadas</span>
+                    <div class="panel-actions">
+                      <span>{{ line.depots.length }} asociadas</span>
+                      <a class="context-link" [routerLink]="['/depots']" [queryParams]="{ lineCode: line.code }">Ver cocheras</a>
+                    </div>
                   </div>
                   <div class="line-depots-list">
                     @for (depot of line.depots; track depot.id) {
@@ -179,6 +185,7 @@
                       }
                     </div>
                   </div>
+                  <a class="context-link stations-link" [routerLink]="['/stations']" [queryParams]="{ lineCode: line.code }">Ver estaciones</a>
                 </section>
               </div>
             </div>

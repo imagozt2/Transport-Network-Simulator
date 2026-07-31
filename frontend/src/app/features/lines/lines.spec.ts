@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { LineOperation, LineOperationsResponse } from '../../core/models/line-operation.model';
 import { LineOperationsService } from '../../core/services/line-operations.service';
@@ -73,7 +74,7 @@ describe('Lines', () => {
   it('should render the summary, line colors and moving trains on the thermometer', async () => {
     await TestBed.configureTestingModule({
       imports: [Lines],
-      providers: [{ provide: LineOperationsService, useValue: { getOperations: () => of(response) } }]
+      providers: [provideRouter([]), { provide: LineOperationsService, useValue: { getOperations: () => of(response) } }]
     }).compileComponents();
     const fixture = TestBed.createComponent(Lines);
     fixture.detectChanges();
@@ -120,13 +121,24 @@ describe('Lines', () => {
     expect(compiled.querySelector('.mini-thermometer .horizontal-train-marker')).toBeNull();
     expect(compiled.querySelector('.train-tooltip')?.textContent).toContain('T-9001');
     expect(compiled.querySelector('.horizontal-train-marker')?.getAttribute('aria-label')).toContain('T-9001');
+    const contextualLinks = Array.from(compiled.querySelectorAll<HTMLAnchorElement>('.context-link'));
+    expect(contextualLinks.map((link) => link.textContent?.trim())).toEqual([
+      'Ver trenes',
+      'Ver cocheras',
+      'Ver estaciones'
+    ]);
+    expect(contextualLinks.map((link) => link.getAttribute('href'))).toEqual([
+      '/trains?lineCode=L3',
+      '/depots?lineCode=L3',
+      '/stations?lineCode=L3'
+    ]);
     fixture.destroy();
   });
 
   it('should calculate unique stations, directions, transfers and bounded train positions', async () => {
     await TestBed.configureTestingModule({
       imports: [Lines],
-      providers: [{ provide: LineOperationsService, useValue: { getOperations: () => of(response) } }]
+      providers: [provideRouter([]), { provide: LineOperationsService, useValue: { getOperations: () => of(response) } }]
     }).compileComponents();
     const fixture = TestBed.createComponent(Lines);
     fixture.detectChanges();
@@ -165,7 +177,7 @@ describe('Lines', () => {
 
     await TestBed.configureTestingModule({
       imports: [Lines],
-      providers: [{
+      providers: [provideRouter([]), {
         provide: LineOperationsService,
         useValue: { getOperations: () => of({ ...response, lines: [lineWithSeveralArrivals] }) }
       }]
@@ -188,7 +200,7 @@ describe('Lines', () => {
 
     await TestBed.configureTestingModule({
       imports: [Lines],
-      providers: [{
+      providers: [provideRouter([]), {
         provide: LineOperationsService,
         useValue: { getOperations: () => of({ ...response, lines: [lineWithoutOperationalDetails] }) }
       }]
@@ -207,7 +219,7 @@ describe('Lines', () => {
   it('should expose a retry action when the operational API fails', async () => {
     await TestBed.configureTestingModule({
       imports: [Lines],
-      providers: [{ provide: LineOperationsService, useValue: { getOperations: () => throwError(() => new Error('API error')) } }]
+      providers: [provideRouter([]), { provide: LineOperationsService, useValue: { getOperations: () => throwError(() => new Error('API error')) } }]
     }).compileComponents();
     const fixture = TestBed.createComponent(Lines);
     fixture.detectChanges();

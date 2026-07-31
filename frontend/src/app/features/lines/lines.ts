@@ -1,4 +1,5 @@
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 import {
   LineOperation,
@@ -18,7 +19,7 @@ import { SummaryCard } from '../../shared/summary-card/summary-card';
 
 @Component({
   selector: 'app-lines',
-  imports: [SummaryCard],
+  imports: [RouterLink, SummaryCard],
   templateUrl: './lines.html',
   styleUrls: ['./lines.css', './lines-circulation.css', './lines-depots.css']
 })

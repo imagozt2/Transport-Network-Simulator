@@ -49,6 +49,9 @@
 .panel-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
 .panel-header h2 { margin: 0; }
 .panel-header > span { color: #6b7280; font-size: 13px; font-weight: 800; }
+.panel-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+.panel-actions > span { color: #6b7280; font-size: 13px; font-weight: 800; }
+.stations-link { align-self: flex-end; margin-top: 12px; }
 .mini-thermometer { min-height: 0; flex: 1; overflow-y: auto; padding: 8px 6px; border: 1px solid #f3f4f6; border-radius: 14px; background: #fff; }
 .mini-thermometer-route { position: relative; }
 .mini-station-row { min-height: 50px; display: grid; grid-template-columns: 32px minmax(0, 1fr); border-radius: 10px; }
