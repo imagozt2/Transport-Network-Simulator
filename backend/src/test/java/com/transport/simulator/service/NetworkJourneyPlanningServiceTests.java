@@ -36,7 +36,7 @@ class NetworkJourneyPlanningServiceTests {
     }
 
     @Test
-    void shouldPreferFewerTransfersEvenWhenAnotherJourneyIsFaster() {
+    void shouldPreferFewerTransfersWhenTheTimeSavingIsNotSignificant() {
         Station origin = station(1L, "STA", "Origen");
         Station intermediate = station(2L, "STB", "Intermedia");
         Station transfer = station(3L, "STC", "Transbordo");
@@ -47,8 +47,8 @@ class NetworkJourneyPlanningServiceTests {
         stubStations(origin, destination);
         when(lineStationRepository.findAllByActiveTrueOrderByLineCodeAscStationOrderAsc())
                 .thenReturn(List.of(
-                        stop(direct, origin, 1, 300),
-                        stop(direct, intermediate, 2, 300),
+                        stop(direct, origin, 1, 250),
+                        stop(direct, intermediate, 2, 250),
                         stop(direct, destination, 3, null),
                         stop(firstConnection, origin, 1, 100),
                         stop(firstConnection, transfer, 2, null),
@@ -59,14 +59,70 @@ class NetworkJourneyPlanningServiceTests {
         NetworkJourney journey = service.calculate(" sta ", "std");
 
         assertThat(journey.transferCount()).isZero();
-        assertThat(journey.estimatedDurationSeconds()).isEqualTo(600);
+        assertThat(journey.estimatedDurationSeconds()).isEqualTo(500);
         assertThat(journey.stations()).extracting(NetworkJourney.Station::code)
                 .containsExactly("STA", "STB", "STD");
         assertThat(journey.segments()).singleElement().satisfies(segment -> {
             assertThat(segment.lineCode()).isEqualTo("L1");
             assertThat(segment.stopCount()).isEqualTo(2);
-            assertThat(segment.travelSeconds()).isEqualTo(600);
+            assertThat(segment.travelSeconds()).isEqualTo(500);
         });
+    }
+
+    @Test
+    void shouldAcceptAnExtraTransferWhenItProducesASignificantTimeSaving() {
+        Station origin = station(1L, "STA", "Origen");
+        Station intermediate = station(2L, "STB", "Intermedia");
+        Station transfer = station(3L, "STC", "Transbordo");
+        Station destination = station(4L, "STD", "Destino");
+        TransportLine direct = line(10L, "L1", "Línea directa", "Roja");
+        TransportLine firstConnection = line(20L, "L2", "Línea rápida norte", "Verde");
+        TransportLine secondConnection = line(30L, "L3", "Línea rápida sur", "Amarilla");
+        stubStations(origin, destination);
+        when(lineStationRepository.findAllByActiveTrueOrderByLineCodeAscStationOrderAsc())
+                .thenReturn(List.of(
+                        stop(direct, origin, 1, 400),
+                        stop(direct, intermediate, 2, 400),
+                        stop(direct, destination, 3, null),
+                        stop(firstConnection, origin, 1, 100),
+                        stop(firstConnection, transfer, 2, null),
+                        stop(secondConnection, transfer, 1, 100),
+                        stop(secondConnection, destination, 2, null)
+                ));
+
+        NetworkJourney journey = service.calculate("STA", "STD");
+
+        assertThat(journey.transferCount()).isOne();
+        assertThat(journey.estimatedDurationSeconds()).isEqualTo(380);
+        assertThat(journey.segments()).extracting(NetworkJourney.LineSegment::lineCode)
+                .containsExactly("L2", "L3");
+    }
+
+    @Test
+    void shouldNotReturnToALineThatWasAlreadyAbandoned() {
+        Station origin = station(1L, "STA", "Origen");
+        Station firstTransfer = station(2L, "STB", "Primer transbordo");
+        Station secondTransfer = station(3L, "STC", "Segundo transbordo");
+        Station destination = station(4L, "STD", "Destino");
+        TransportLine mainLine = line(10L, "L1", "Línea principal", "Roja");
+        TransportLine shortcut = line(20L, "L2", "Atajo", "Verde");
+        stubStations(origin, destination);
+        when(lineStationRepository.findAllByActiveTrueOrderByLineCodeAscStationOrderAsc())
+                .thenReturn(List.of(
+                        stop(mainLine, origin, 1, 60),
+                        stop(mainLine, firstTransfer, 2, 2_000),
+                        stop(mainLine, secondTransfer, 3, 60),
+                        stop(mainLine, destination, 4, null),
+                        stop(shortcut, firstTransfer, 1, 30),
+                        stop(shortcut, secondTransfer, 2, null)
+                ));
+
+        NetworkJourney journey = service.calculate("STA", "STD");
+
+        assertThat(journey.transferCount()).isZero();
+        assertThat(journey.estimatedDurationSeconds()).isEqualTo(2_120);
+        assertThat(journey.segments()).extracting(NetworkJourney.LineSegment::lineCode)
+                .containsExactly("L1");
     }
 
     @Test

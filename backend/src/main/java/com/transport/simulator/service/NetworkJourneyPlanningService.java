@@ -9,9 +9,11 @@ import com.transport.simulator.service.model.NetworkJourney;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class NetworkJourneyPlanningService {
 
     static final int TRANSFER_SECONDS = 180;
+    static final int ADDITIONAL_TRANSFER_PENALTY_SECONDS = 180;
 
     private final StationRepository stationRepository;
     private final LineStationRepository lineStationRepository;
@@ -112,36 +115,39 @@ public class NetworkJourneyPlanningService {
     }
 
     private Path shortestPath(List<State> origins, Long destinationId, Map<State, List<Edge>> graph) {
-        Map<State, Cost> costs = new HashMap<>();
-        Map<State, Previous> previous = new HashMap<>();
+        Map<SearchState, Cost> costs = new HashMap<>();
+        Map<SearchState, Previous> previous = new HashMap<>();
         PriorityQueue<QueueEntry> queue = new PriorityQueue<>(Comparator.comparing(QueueEntry::cost));
         for (State origin : origins) {
+            SearchState searchState = new SearchState(origin, Set.of(origin.lineId()));
             Cost cost = new Cost(0, 0, 0);
-            costs.put(origin, cost);
-            queue.add(new QueueEntry(origin, cost));
+            costs.put(searchState, cost);
+            queue.add(new QueueEntry(searchState, cost));
         }
 
-        State destination = null;
+        SearchState destination = null;
         while (!queue.isEmpty()) {
             QueueEntry current = queue.remove();
-            if (!current.cost().equals(costs.get(current.state()))) { continue; }
-            if (current.state().stationId().equals(destinationId)) {
-                destination = current.state();
+            if (!current.cost().equals(costs.get(current.searchState()))) { continue; }
+            if (current.searchState().position().stationId().equals(destinationId)) {
+                destination = current.searchState();
                 break;
             }
-            for (Edge edge : graph.getOrDefault(current.state(), List.of())) {
+            for (Edge edge : graph.getOrDefault(current.searchState().position(), List.of())) {
+                SearchState nextState = current.searchState().move(edge);
+                if (nextState == null) { continue; }
                 Cost candidate = current.cost().plus(edge);
-                if (candidate.compareTo(costs.get(edge.to())) < 0) {
-                    costs.put(edge.to(), candidate);
-                    previous.put(edge.to(), new Previous(current.state(), edge));
-                    queue.add(new QueueEntry(edge.to(), candidate));
+                if (candidate.compareTo(costs.get(nextState)) < 0) {
+                    costs.put(nextState, candidate);
+                    previous.put(nextState, new Previous(current.searchState(), edge));
+                    queue.add(new QueueEntry(nextState, candidate));
                 }
             }
         }
         if (destination == null) { return null; }
 
         List<Edge> edges = new ArrayList<>();
-        State cursor = destination;
+        SearchState cursor = destination;
         while (previous.containsKey(cursor)) {
             Previous step = previous.get(cursor);
             edges.add(step.edge());
@@ -203,19 +209,38 @@ public class NetworkJourneyPlanningService {
     private record State(Long stationId, Long lineId) {
     }
 
+    private record SearchState(State position, Set<Long> usedLineIds) {
+        private SearchState {
+            usedLineIds = Set.copyOf(usedLineIds);
+        }
+
+        private SearchState move(Edge edge) {
+            if (!edge.transfer()) {
+                return new SearchState(edge.to(), usedLineIds);
+            }
+            Long nextLineId = edge.to().lineId();
+            if (usedLineIds.contains(nextLineId)) {
+                return null;
+            }
+            Set<Long> nextUsedLineIds = new HashSet<>(usedLineIds);
+            nextUsedLineIds.add(nextLineId);
+            return new SearchState(edge.to(), nextUsedLineIds);
+        }
+    }
+
     private record Edge(State to, Station station, TransportLine line, int seconds, boolean transfer) {
     }
 
     private record Graph(Map<State, List<Edge>> edges, Map<Long, List<State>> statesByStation) {
     }
 
-    private record Previous(State state, Edge edge) {
+    private record Previous(SearchState state, Edge edge) {
     }
 
     private record Path(Cost cost, List<Edge> edges) {
     }
 
-    private record QueueEntry(State state, Cost cost) {
+    private record QueueEntry(SearchState searchState, Cost cost) {
     }
 
     private record Cost(int transfers, int seconds, int stops) implements Comparable<Cost> {
@@ -230,10 +255,16 @@ public class NetworkJourneyPlanningService {
         @Override
         public int compareTo(Cost other) {
             if (other == null) { return -1; }
+            int byEffectiveTime = Integer.compare(effectiveSeconds(), other.effectiveSeconds());
+            if (byEffectiveTime != 0) { return byEffectiveTime; }
             int byTransfers = Integer.compare(transfers, other.transfers);
             if (byTransfers != 0) { return byTransfers; }
-            int bySeconds = Integer.compare(seconds, other.seconds);
-            return bySeconds != 0 ? bySeconds : Integer.compare(stops, other.stops);
+            int byStops = Integer.compare(stops, other.stops);
+            return byStops != 0 ? byStops : Integer.compare(seconds, other.seconds);
+        }
+
+        private int effectiveSeconds() {
+            return seconds + transfers * ADDITIONAL_TRANSFER_PENALTY_SECONDS;
         }
     }
 
