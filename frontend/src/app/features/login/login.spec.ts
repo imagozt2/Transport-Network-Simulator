@@ -26,6 +26,12 @@ describe('Login', () => {
   });
 
   it('should reject an incomplete form without contacting the backend', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    const marks = compiled.querySelectorAll<HTMLElement>(
+      '.network-mark, .mobile-mark'
+    );
+
+    expect(Array.from(marks).map((mark) => mark.textContent?.trim())).toEqual(['M', 'M']);
     fixture.componentInstance.submit();
 
     expect(authService.login).not.toHaveBeenCalled();

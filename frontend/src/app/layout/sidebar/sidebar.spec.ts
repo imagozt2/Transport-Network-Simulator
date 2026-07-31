@@ -29,6 +29,7 @@ describe('Sidebar', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const links = Array.from(compiled.querySelectorAll<HTMLAnchorElement>('.nav-link'));
 
+    expect(compiled.querySelector('.brand-icon')?.textContent?.trim()).toBe('M');
     expect(links.map((link) => link.querySelector('.nav-label')?.textContent?.trim())).toEqual([
       'Panel General',
       'Mapa de red',
