@@ -22,26 +22,38 @@ Las opciones se agrupan por su función dentro del centro de control:
 
 | Grupo | Opción | Ruta | Finalidad |
 | --- | --- | --- | --- |
-| Vista general | Panel General | `/dashboard` | Presenta el resumen global de la red. |
-| Vista general | Mapa de red | `/network-map` | Permite explorar líneas, estaciones y correspondencias. |
-| Red ferroviaria | Líneas | `/lines` | Muestra el estado operativo de las líneas. |
-| Red ferroviaria | Estaciones | `/stations` | Muestra estaciones, máquinas y próximas llegadas. |
-| Material móvil | Trenes | `/trains` | Permite consultar la flota y su situación operativa. |
-| Material móvil | Cocheras | `/depots` | Presenta la distribución y los movimientos de la flota. |
-| Billetaje | Títulos de transporte | `/transport-titles` | Presenta los productos tarifarios y sus reglas de uso. |
-| Administración | Usuarios | `/users` | Consulta y gestiona las cuentas de pasajeros de RMM App. |
-| Equipamiento | Máquinas | `/devices` | Permite consultar las máquinas instaladas en las estaciones. |
-| Supervisión | Logs | `/logs` | Permite filtrar y revisar los eventos emitidos por las máquinas. |
+| Operación de red | Panel general | `/dashboard` | Presenta el resumen global de la red. |
+| Operación de red | Mapa de red | `/network-map` | Permite explorar líneas, estaciones y correspondencias. |
+| Operación de red | Líneas | `/lines` | Muestra el estado operativo de las líneas. |
+| Operación de red | Estaciones | `/stations` | Muestra estaciones, máquinas y próximas llegadas. |
+| Flota y equipamiento | Trenes | `/trains` | Permite consultar la flota y su situación operativa. |
+| Flota y equipamiento | Cocheras | `/depots` | Presenta la distribución y los movimientos de la flota. |
+| Flota y equipamiento | Máquinas | `/devices` | Permite consultar las máquinas instaladas en las estaciones. |
+| Gestión y supervisión | Títulos de transporte | `/transport-titles` | Presenta los productos tarifarios y sus reglas de uso. |
+| Gestión y supervisión | Usuarios | `/users` | Consulta y gestiona las cuentas de pasajeros de RMM App. |
+| Gestión y supervisión | Logs | `/logs` | Permite filtrar y revisar los eventos emitidos por las máquinas. |
 
 Los iconos del menú tienen una función visual y están ocultos para las tecnologías de asistencia. El
 nombre textual de cada opción es el que identifica de forma accesible su destino.
 
+## Identidad y componentes compartidos
+
+La identidad visual utiliza una `M` blanca sobre azul celeste tanto en el favicon como en las marcas
+del inicio de sesión y del menú lateral. Esta representación identifica RMM sin introducir símbolos
+distintos entre la pestaña del navegador y la aplicación.
+
+Los enlaces que conectan una entidad con otra sección reutilizan la clase global `context-link`. Se
+presentan con fondo negro y texto blanco para no confundirse con los colores de las líneas. Este
+componente se utiliza, entre otros casos, para abrir las máquinas o los logs de una estación, los
+logs de una máquina y los trenes de una cochera. El estilo compartido no sustituye los parámetros de
+la URL que inicializan el filtro de la pantalla de destino.
+
 ## Comportamiento de las rutas
 
 La ruta raíz, `/`, redirige a `/dashboard`. Las direcciones que no correspondan con una sección
-registrada también redirigen al Panel General. Todas las rutas incluidas en `MainLayout` requieren
+registrada también redirigen al Panel general. Todas las rutas incluidas en `MainLayout` requieren
 una sesión de operador válida; un acceso anónimo redirige a `/login`. Después de autenticarse se
-abre siempre el Panel General, sin restaurar la sección utilizada en una sesión anterior.
+abre siempre el Panel general, sin restaurar la sección utilizada en una sesión anterior.
 
 Angular aplica la clase `active` exclusivamente al enlace cuya ruta coincide exactamente con la URL
 actual. De esta manera, el menú indica siempre la sección que está abierta.

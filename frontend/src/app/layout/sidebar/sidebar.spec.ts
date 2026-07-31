@@ -59,6 +59,20 @@ describe('Sidebar', () => {
     ).toBe(true);
   });
 
+  it('should group the navigation according to the shared application structure', () => {
+    const fixture = TestBed.createComponent(Sidebar);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const sections = Array.from(compiled.querySelectorAll<HTMLElement>('.nav-section'));
+
+    expect(sections.map((section) => section.querySelector('h2')?.textContent?.trim())).toEqual([
+      'Operación de red',
+      'Flota y equipamiento',
+      'Gestión y supervisión'
+    ]);
+    expect(sections.map((section) => section.querySelectorAll('.nav-link').length)).toEqual([4, 3, 3]);
+  });
+
   it('should mark the current route as active', async () => {
     const router = TestBed.inject(Router);
     const fixture = TestBed.createComponent(Sidebar);
