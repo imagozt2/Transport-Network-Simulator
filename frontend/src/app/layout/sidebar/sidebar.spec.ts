@@ -31,15 +31,15 @@ describe('Sidebar', () => {
 
     expect(compiled.querySelector('.brand-icon')?.textContent?.trim()).toBe('M');
     expect(links.map((link) => link.querySelector('.nav-label')?.textContent?.trim())).toEqual([
-      'Panel General',
+      'Panel general',
       'Mapa de red',
       'Líneas',
       'Estaciones',
       'Trenes',
       'Cocheras',
+      'Máquinas',
       'Títulos de transporte',
       'Usuarios',
-      'Máquinas',
       'Logs'
     ]);
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
@@ -49,9 +49,9 @@ describe('Sidebar', () => {
       '/stations',
       '/trains',
       '/depots',
+      '/devices',
       '/transport-titles',
       '/users',
-      '/devices',
       '/logs'
     ]);
     expect(

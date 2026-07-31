@@ -19,8 +19,8 @@ describe('MainLayout', () => {
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
 
-    expect(compiled.querySelector('h1')?.textContent).toContain('Centro de Control');
-    expect(compiled.querySelector('.sidebar')?.textContent).toContain('Panel General');
+    expect(compiled.querySelector('h1')?.textContent).toContain('Centro de control');
+    expect(compiled.querySelector('.sidebar')?.textContent).toContain('Panel general');
     expect(compiled.querySelector('.sidebar')?.textContent).toContain('Mapa de red');
     expect(compiled.querySelector('.skip-link')?.getAttribute('href')).toBe('#main-content');
     expect(compiled.querySelector('main')?.id).toBe('main-content');
@@ -35,13 +35,9 @@ describe('MainLayout', () => {
       .map((heading) => heading.textContent?.trim());
 
     expect(sectionTitles).toEqual([
-      'Vista general',
-      'Red ferroviaria',
-      'Material móvil',
-      'Billetaje',
-      'Administración',
-      'Equipamiento',
-      'Supervisión'
+      'Operación de red',
+      'Flota y equipamiento',
+      'Gestión y supervisión'
     ]);
   });
 

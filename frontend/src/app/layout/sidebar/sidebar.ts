@@ -24,47 +24,27 @@ export class Sidebar {
 
   protected readonly sections: SidebarSection[] = [
     {
-      title: 'Vista general',
+      title: 'Operación de red',
       items: [
-        { label: 'Panel General', route: '/dashboard', icon: '📊' },
-        { label: 'Mapa de red', route: '/network-map', icon: '🗺️' }
-      ]
-    },
-    {
-      title: 'Red ferroviaria',
-      items: [
+        { label: 'Panel general', route: '/dashboard', icon: '📊' },
+        { label: 'Mapa de red', route: '/network-map', icon: '🗺️' },
         { label: 'Líneas', route: '/lines', icon: '🚇' },
         { label: 'Estaciones', route: '/stations', icon: '🚉' }
       ]
     },
     {
-      title: 'Material móvil',
+      title: 'Flota y equipamiento',
       items: [
         { label: 'Trenes', route: '/trains', icon: '🚆' },
-        { label: 'Cocheras', route: '/depots', icon: '🏭' }
-      ]
-    },
-    {
-      title: 'Billetaje',
-      items: [
-        { label: 'Títulos de transporte', route: '/transport-titles', icon: '🎫' }
-      ]
-    },
-    {
-      title: 'Administración',
-      items: [
-        { label: 'Usuarios', route: '/users', icon: '👥' }
-      ]
-    },
-    {
-      title: 'Equipamiento',
-      items: [
+        { label: 'Cocheras', route: '/depots', icon: '🏭' },
         { label: 'Máquinas', route: '/devices', icon: '🖥️' }
       ]
     },
     {
-      title: 'Supervisión',
+      title: 'Gestión y supervisión',
       items: [
+        { label: 'Títulos de transporte', route: '/transport-titles', icon: '🎫' },
+        { label: 'Usuarios', route: '/users', icon: '👥' },
         { label: 'Logs', route: '/logs', icon: '📋' }
       ]
     }

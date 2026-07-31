@@ -55,7 +55,7 @@ describe('Dashboard', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const cards = Array.from(compiled.querySelectorAll<HTMLElement>('.summary-card'));
 
-    expect(compiled.textContent).toContain('Panel General');
+    expect(compiled.textContent).toContain('Panel general');
     expect(cards).toHaveLength(7);
     expect(cards.map((card) => card.querySelector('span')?.textContent?.trim())).toEqual([
       'Líneas de la red',
