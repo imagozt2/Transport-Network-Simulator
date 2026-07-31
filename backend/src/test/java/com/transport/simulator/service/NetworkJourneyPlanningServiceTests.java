@@ -99,6 +99,61 @@ class NetworkJourneyPlanningServiceTests {
     }
 
     @Test
+    void shouldPreferTheJourneyWithoutTransfersWhenEffectiveTimesAreEqual() {
+        Station origin = station(1L, "STA", "Origen");
+        Station intermediate = station(2L, "STB", "Intermedia");
+        Station transfer = station(3L, "STC", "Transbordo");
+        Station destination = station(4L, "STD", "Destino");
+        TransportLine direct = line(10L, "L1", "Línea directa", "Roja");
+        TransportLine firstConnection = line(20L, "L2", "Primera conexión", "Verde");
+        TransportLine secondConnection = line(30L, "L3", "Segunda conexión", "Amarilla");
+        stubStations(origin, destination);
+        when(lineStationRepository.findAllByActiveTrueOrderByLineCodeAscStationOrderAsc())
+                .thenReturn(List.of(
+                        stop(direct, origin, 1, 280),
+                        stop(direct, intermediate, 2, 280),
+                        stop(direct, destination, 3, null),
+                        stop(firstConnection, origin, 1, 100),
+                        stop(firstConnection, transfer, 2, null),
+                        stop(secondConnection, transfer, 1, 100),
+                        stop(secondConnection, destination, 2, null)
+                ));
+
+        NetworkJourney journey = service.calculate("STA", "STD");
+
+        assertThat(journey.transferCount()).isZero();
+        assertThat(journey.estimatedDurationSeconds()).isEqualTo(560);
+        assertThat(journey.segments()).extracting(NetworkJourney.LineSegment::lineCode)
+                .containsExactly("L1");
+    }
+
+    @Test
+    void shouldPreferFewerStopsWhenTimeAndTransfersAreEqual() {
+        Station origin = station(1L, "STA", "Origen");
+        Station intermediate = station(2L, "STB", "Intermedia");
+        Station destination = station(3L, "STC", "Destino");
+        TransportLine lineWithMoreStops = line(10L, "L1", "Línea con parada", "Roja");
+        TransportLine lineWithFewerStops = line(20L, "L2", "Línea directa", "Verde");
+        stubStations(origin, destination);
+        when(lineStationRepository.findAllByActiveTrueOrderByLineCodeAscStationOrderAsc())
+                .thenReturn(List.of(
+                        stop(lineWithMoreStops, origin, 1, 100),
+                        stop(lineWithMoreStops, intermediate, 2, 100),
+                        stop(lineWithMoreStops, destination, 3, null),
+                        stop(lineWithFewerStops, origin, 1, 200),
+                        stop(lineWithFewerStops, destination, 2, null)
+                ));
+
+        NetworkJourney journey = service.calculate("STA", "STC");
+
+        assertThat(journey.stationCount()).isEqualTo(2);
+        assertThat(journey.segments()).singleElement().satisfies(segment -> {
+            assertThat(segment.lineCode()).isEqualTo("L2");
+            assertThat(segment.stopCount()).isOne();
+        });
+    }
+
+    @Test
     void shouldNotReturnToALineThatWasAlreadyAbandoned() {
         Station origin = station(1L, "STA", "Origen");
         Station firstTransfer = station(2L, "STB", "Primer transbordo");
@@ -153,6 +208,31 @@ class NetworkJourneyPlanningServiceTests {
     }
 
     @Test
+    void shouldPreserveStationOrderWhenTravellingInTheReverseDirection() {
+        Station first = station(1L, "STA", "Cabecera A");
+        Station intermediate = station(2L, "STB", "Intermedia");
+        Station last = station(3L, "STC", "Cabecera C");
+        TransportLine line = line(10L, "L1", "Línea 1", "Roja");
+        stubStations(last, first);
+        when(lineStationRepository.findAllByActiveTrueOrderByLineCodeAscStationOrderAsc())
+                .thenReturn(List.of(
+                        stop(line, first, 1, 60),
+                        stop(line, intermediate, 2, 90),
+                        stop(line, last, 3, null)
+                ));
+
+        NetworkJourney journey = service.calculate("STC", "STA");
+
+        assertThat(journey.estimatedDurationSeconds()).isEqualTo(150);
+        assertThat(journey.stations()).extracting(NetworkJourney.Station::code)
+                .containsExactly("STC", "STB", "STA");
+        assertThat(journey.segments()).singleElement().satisfies(segment ->
+                assertThat(segment.stations()).extracting(NetworkJourney.Station::code)
+                        .containsExactly("STC", "STB", "STA")
+        );
+    }
+
+    @Test
     void shouldReturnAZeroLengthJourneyForTheSameStation() {
         Station station = station(1L, "STA", "Estación A");
         when(stationRepository.findByCodeAndActiveTrue("STA")).thenReturn(Optional.of(station));
@@ -177,6 +257,18 @@ class NetworkJourneyPlanningServiceTests {
         assertThatThrownBy(() -> service.calculate("STA", "STB"))
                 .isInstanceOf(ServiceConfigurationException.class)
                 .hasMessageContaining("No journey connects STA and STB");
+    }
+
+    @Test
+    void shouldRejectBlankAndUnknownStationCodes() {
+        when(stationRepository.findByCodeAndActiveTrue("UNKNOWN")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.calculate(" ", "STA"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("origin station code is required");
+        assertThatThrownBy(() -> service.calculate("unknown", "STA"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Unknown origin station: UNKNOWN");
     }
 
     private void stubStations(Station origin, Station destination) {

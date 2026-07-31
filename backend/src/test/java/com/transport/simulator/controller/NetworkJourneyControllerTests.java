@@ -80,6 +80,25 @@ class NetworkJourneyControllerTests {
     }
 
     @Test
+    void shouldExposeAZeroLengthJourneyForTheSameStation() throws Exception {
+        NetworkJourney.Station station = station(1L, "ST001", "Aeropuerto");
+        when(journeyPlanningService.calculate("ST001", "ST001"))
+                .thenReturn(new NetworkJourney(
+                        station, station, 1, 0, 0, List.of(station), List.of()
+                ));
+
+        mockMvc.perform(get("/api/network-map/journeys")
+                        .param("originStationCode", "ST001")
+                        .param("destinationStationCode", "ST001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.stationCount").value(1))
+                .andExpect(jsonPath("$.transferCount").value(0))
+                .andExpect(jsonPath("$.estimatedDurationSeconds").value(0))
+                .andExpect(jsonPath("$.stations.length()").value(1))
+                .andExpect(jsonPath("$.segments").isEmpty());
+    }
+
+    @Test
     void shouldReportUnavailableJourneysAsUnprocessable() throws Exception {
         when(journeyPlanningService.calculate("ST001", "ST003"))
                 .thenThrow(new ServiceConfigurationException("No journey connects ST001 and ST003"));

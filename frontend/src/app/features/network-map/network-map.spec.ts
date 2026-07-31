@@ -162,6 +162,12 @@ describe('NetworkMap', () => {
     );
     expect(compiled.querySelector('.journey-thermometer')?.textContent).toContain('La Galería');
     expect(compiled.querySelectorAll('.journey-map-line')).toHaveLength(2);
+    expect(compiled.querySelectorAll('.journey-map-line').item(0).getAttribute('points')).toBe(
+      '350,50 350,150',
+    );
+    expect(compiled.querySelectorAll('.journey-map-line').item(1).getAttribute('points')).toBe(
+      '350,150 550,550',
+    );
     expect(compiled.querySelectorAll('.metro-line.dimmed-line')).toHaveLength(6);
     expect(compiled.querySelectorAll('.station-node.highlighted-station')).toHaveLength(3);
     expect(compiled.querySelectorAll('.station-node.dimmed-station').length).toBeGreaterThan(0);
@@ -172,6 +178,85 @@ describe('NetworkMap', () => {
     expect(fixture.componentInstance.journey).toBeNull();
     expect(fixture.componentInstance.originStationCode).toBe('');
     expect(compiled.querySelector('.journey-result')).toBeNull();
+    expect(compiled.querySelector('.journey-map-line')).toBeNull();
+    expect(compiled.querySelector('.metro-line.dimmed-line')).toBeNull();
+  });
+
+  it('should expose unique journey station options sorted by name', async () => {
+    await TestBed.configureTestingModule({
+      imports: [NetworkMap],
+      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(NetworkMap);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.journeyStationOptions.map((station) => station.code)).toEqual([
+      'ST043',
+      'ST020',
+      'ST045',
+    ]);
+  });
+
+  it('should wait for two different stations before requesting a journey', async () => {
+    const calculateJourney = vi.fn(() => of(journeyResponse));
+    await TestBed.configureTestingModule({
+      imports: [NetworkMap],
+      providers: [
+        {
+          provide: NetworkMapService,
+          useValue: { getNetworkMap: () => of(response), calculateJourney },
+        },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(NetworkMap);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+
+    component.setOriginStation('ST045');
+    expect(calculateJourney).not.toHaveBeenCalled();
+
+    component.setDestinationStation('ST045');
+    expect(calculateJourney).not.toHaveBeenCalled();
+    expect(component.journeyErrorMessage).toContain('diferentes');
+
+    component.setDestinationStation('ST020');
+    expect(calculateJourney).toHaveBeenCalledOnce();
+    expect(calculateJourney).toHaveBeenCalledWith('ST045', 'ST020');
+    expect(component.journey).toEqual(journeyResponse);
+  });
+
+  it('should show a local error without altering the map when journey calculation fails', async () => {
+    await TestBed.configureTestingModule({
+      imports: [NetworkMap],
+      providers: [
+        {
+          provide: NetworkMapService,
+          useValue: {
+            getNetworkMap: () => of(response),
+            calculateJourney: () => throwError(() => new Error('Journey API error')),
+          },
+        },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(NetworkMap);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    compiled.querySelectorAll<HTMLButtonElement>('.side-panel-header').item(1).click();
+    fixture.detectChanges();
+
+    const selects = compiled.querySelectorAll<HTMLSelectElement>('.journey-fields select');
+    selects.item(0).value = 'ST045';
+    selects.item(0).dispatchEvent(new Event('change'));
+    selects.item(1).value = 'ST020';
+    selects.item(1).dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    expect(compiled.querySelector('.journey-error')?.textContent).toContain(
+      'No se ha podido calcular',
+    );
     expect(compiled.querySelector('.journey-map-line')).toBeNull();
     expect(compiled.querySelector('.metro-line.dimmed-line')).toBeNull();
   });
