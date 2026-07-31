@@ -97,6 +97,9 @@ describe('Stations', () => {
     expect(compiled.querySelector('.line-badge')?.getAttribute('style')).toContain('rgb(251, 192, 45)');
     expect(compiled.querySelector('.service-panel .large-metric strong')?.textContent?.trim()).toBe('4');
     expect(compiled.querySelector('.station-line-heading em')?.textContent?.trim()).toBe('4 trenes');
+    const trainsLink = compiled.querySelector<HTMLAnchorElement>('.station-line-actions .context-link');
+    expect(trainsLink?.getAttribute('href')).toBe('/trains?lineCode=L3&status=IN_SERVICE');
+    expect(trainsLink?.getAttribute('aria-label')).toBe('Ver trenes en servicio de Línea 3');
     expect(compiled.querySelector('.line-thermometer')).not.toBeNull();
     const directions = compiled.querySelectorAll<HTMLElement>('.line-direction');
     expect(directions).toHaveLength(2);

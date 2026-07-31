@@ -151,6 +151,20 @@ describe('Trains', () => {
     fixture.destroy();
   });
 
+  it('should initialize line and service status filters from a station link', async () => {
+    await configureWith(() => of(response), { lineCode: 'L1', status: 'IN_SERVICE' });
+    const fixture = TestBed.createComponent(Trains);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.selectedLineCode).toBe('L1');
+    expect(fixture.componentInstance.selectedStatus).toBe('IN_SERVICE');
+    expect(fixture.componentInstance.filteredTrains().map((train) => train.code)).toEqual(['T-9001']);
+    expect((fixture.nativeElement.querySelector(
+      '.filters-panel label:nth-of-type(2) select'
+    ) as HTMLSelectElement).value).toBe('IN_SERVICE');
+    fixture.destroy();
+  });
+
   it('should treat an empty depot URL parameter as no contextual filter', async () => {
     await configureWith(() => of(response), { depotCode: '   ' });
     const fixture = TestBed.createComponent(Trains);

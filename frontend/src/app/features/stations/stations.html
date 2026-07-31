@@ -99,7 +99,15 @@
                         <div class="station-line-heading">
                           <span class="line-badge" [style.background-color]="getLineColor(line)" [style.color]="getLineTextColor(getLineColor(line))">{{ line.code }}</span>
                           <span class="line-name"><strong>{{ line.name }}</strong><small>{{ line.firstTerminal.name }} — {{ line.lastTerminal.name }}</small></span>
-                          <em>{{ line.serviceOpen ? line.activeTrainCount + ' trenes' : 'Cerrada' }}</em>
+                          <span class="station-line-actions">
+                            <em>{{ line.serviceOpen ? line.activeTrainCount + ' trenes' : 'Cerrada' }}</em>
+                            <a
+                              class="context-link"
+                              [routerLink]="['/trains']"
+                              [queryParams]="{ lineCode: line.code, status: 'IN_SERVICE' }"
+                              [attr.aria-label]="'Ver trenes en servicio de ' + line.name"
+                            >Ver trenes</a>
+                          </span>
                         </div>
                         @if (line.serviceOpen) {
                           <div class="line-directions" [attr.aria-label]="'Circulación de ' + line.name + ' por sentido'">
