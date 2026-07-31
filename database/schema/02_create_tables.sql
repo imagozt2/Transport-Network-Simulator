@@ -561,6 +561,67 @@ CREATE INDEX idx_purchases_station ON purchases (station_id);
 CREATE INDEX idx_purchases_passenger ON purchases (passenger_user_id);
 CREATE INDEX idx_purchases_external_reference ON purchases (external_reference);
 
+CREATE TABLE compensatory_ticket_issuances (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    code VARCHAR(80) NOT NULL,
+    product_id BIGINT NOT NULL,
+    target_device_id BIGINT NOT NULL,
+    requested_by_operator_id BIGINT NOT NULL,
+    issued_ticket_id BIGINT NULL,
+    issuance_status VARCHAR(30) NOT NULL DEFAULT 'REQUESTED',
+    reason VARCHAR(500) NOT NULL,
+    origin_station_id BIGINT NULL,
+    destination_station_id BIGINT NULL,
+    station_count INT NULL,
+    selected_trips INT NULL,
+    selected_days INT NULL,
+    recharge_amount DECIMAL(10, 2) NULL,
+    charged_amount DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    requested_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at DATETIME NULL,
+    failed_at DATETIME NULL,
+    failure_reason VARCHAR(500) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_compensatory_ticket_issuances_code UNIQUE (code),
+    CONSTRAINT uk_compensatory_ticket_issuances_ticket UNIQUE (issued_ticket_id),
+    CONSTRAINT fk_compensatory_issuances_product FOREIGN KEY (product_id) REFERENCES ticket_products (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_compensatory_issuances_device FOREIGN KEY (target_device_id) REFERENCES devices (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_compensatory_issuances_operator FOREIGN KEY (requested_by_operator_id)
+        REFERENCES operator_accounts (id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_compensatory_issuances_ticket FOREIGN KEY (issued_ticket_id) REFERENCES tickets (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_compensatory_issuances_origin FOREIGN KEY (origin_station_id) REFERENCES stations (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_compensatory_issuances_destination FOREIGN KEY (destination_station_id) REFERENCES stations (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT chk_compensatory_issuances_status CHECK (
+        issuance_status IN ('REQUESTED', 'PROCESSING', 'COMPLETED', 'FAILED', 'CANCELLED')
+    ),
+    CONSTRAINT chk_compensatory_issuances_reason CHECK (CHAR_LENGTH(TRIM(reason)) > 0),
+    CONSTRAINT chk_compensatory_issuances_stations CHECK (
+        (origin_station_id IS NULL AND destination_station_id IS NULL AND station_count IS NULL)
+        OR (origin_station_id IS NOT NULL AND destination_station_id IS NOT NULL
+            AND origin_station_id <> destination_station_id AND station_count > 0)
+    ),
+    CONSTRAINT chk_compensatory_issuances_trips CHECK (selected_trips IS NULL OR selected_trips > 0),
+    CONSTRAINT chk_compensatory_issuances_days CHECK (selected_days IS NULL OR selected_days > 0),
+    CONSTRAINT chk_compensatory_issuances_recharge CHECK (recharge_amount IS NULL OR recharge_amount > 0),
+    CONSTRAINT chk_compensatory_issuances_free CHECK (charged_amount = 0),
+    CONSTRAINT chk_compensatory_issuances_completed_at CHECK (
+        completed_at IS NULL OR completed_at >= requested_at
+    ),
+    CONSTRAINT chk_compensatory_issuances_failed_at CHECK (failed_at IS NULL OR failed_at >= requested_at)
+);
+
+CREATE INDEX idx_compensatory_issuances_status_requested
+    ON compensatory_ticket_issuances (issuance_status, requested_at);
+CREATE INDEX idx_compensatory_issuances_product ON compensatory_ticket_issuances (product_id);
+CREATE INDEX idx_compensatory_issuances_device ON compensatory_ticket_issuances (target_device_id);
+CREATE INDEX idx_compensatory_issuances_operator ON compensatory_ticket_issuances (requested_by_operator_id);
+
 CREATE TABLE ticket_journeys (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     code VARCHAR(80) NOT NULL,
@@ -669,6 +730,7 @@ CREATE TABLE operational_logs (
     train_id BIGINT NULL,
     ticket_id BIGINT NULL,
     purchase_id BIGINT NULL,
+    compensatory_issuance_id BIGINT NULL,
     validation_id BIGINT NULL,
     passenger_user_id BIGINT NULL,
     staff_user_id BIGINT NULL,
@@ -689,6 +751,8 @@ CREATE TABLE operational_logs (
         ON UPDATE CASCADE ON DELETE SET NULL,
     CONSTRAINT fk_operational_logs_purchase FOREIGN KEY (purchase_id) REFERENCES purchases (id)
         ON UPDATE CASCADE ON DELETE SET NULL,
+    CONSTRAINT fk_operational_logs_compensatory_issuance FOREIGN KEY (compensatory_issuance_id)
+        REFERENCES compensatory_ticket_issuances (id) ON UPDATE CASCADE ON DELETE SET NULL,
     CONSTRAINT fk_operational_logs_validation FOREIGN KEY (validation_id) REFERENCES ticket_validations (id)
         ON UPDATE CASCADE ON DELETE SET NULL,
     CONSTRAINT fk_operational_logs_operator FOREIGN KEY (staff_user_id) REFERENCES operator_accounts (id)
@@ -703,6 +767,7 @@ CREATE INDEX idx_operational_logs_line ON operational_logs (line_id);
 CREATE INDEX idx_operational_logs_train ON operational_logs (train_id);
 CREATE INDEX idx_operational_logs_ticket ON operational_logs (ticket_id);
 CREATE INDEX idx_operational_logs_purchase ON operational_logs (purchase_id);
+CREATE INDEX idx_operational_logs_compensatory_issuance ON operational_logs (compensatory_issuance_id);
 CREATE INDEX idx_operational_logs_validation ON operational_logs (validation_id);
 CREATE INDEX idx_operational_logs_operator ON operational_logs (staff_user_id);
 CREATE UNIQUE INDEX uk_operational_logs_origin_external_reference

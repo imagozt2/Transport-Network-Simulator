@@ -9,6 +9,9 @@ FROM passenger_accounts;
 SELECT COUNT(*) AS passenger_account_status_change_count
 FROM passenger_account_status_changes;
 
+SELECT COUNT(*) AS compensatory_ticket_issuance_count
+FROM compensatory_ticket_issuances;
+
 SELECT 'stations' AS entity, COUNT(*) AS actual, 50 AS expected FROM stations
 UNION ALL SELECT 'transport_lines', COUNT(*), 6 FROM transport_lines
 UNION ALL SELECT 'line_stations', COUNT(*), 88 FROM line_stations
@@ -56,6 +59,26 @@ WHERE passengers.id IS NULL
    OR status_changes.previous_status = status_changes.new_status
    OR status_changes.previous_status NOT IN ('ACTIVE', 'BLOCKED', 'DISABLED')
    OR status_changes.new_status NOT IN ('ACTIVE', 'BLOCKED', 'DISABLED');
+
+SELECT issuances.id, issuances.code, products.product_type, devices.code AS device_code,
+       devices.device_type, issuances.issuance_status
+FROM compensatory_ticket_issuances issuances
+LEFT JOIN ticket_products products ON products.id = issuances.product_id
+LEFT JOIN devices ON devices.id = issuances.target_device_id
+LEFT JOIN operator_accounts operators ON operators.id = issuances.requested_by_operator_id
+LEFT JOIN tickets ON tickets.id = issuances.issued_ticket_id
+WHERE products.id IS NULL
+   OR devices.id IS NULL
+   OR devices.device_type <> 'TICKET_MACHINE'
+   OR operators.id IS NULL
+   OR (issuances.issued_ticket_id IS NOT NULL AND tickets.id IS NULL)
+   OR issuances.charged_amount <> 0
+   OR (products.product_type = 'SINGLE_TRIP'
+       AND (issuances.origin_station_id IS NULL OR issuances.destination_station_id IS NULL
+            OR issuances.station_count IS NULL))
+   OR (products.product_type = 'MULTI_TRIP' AND issuances.selected_trips IS NULL)
+   OR (products.product_type = 'TIME_PASS' AND issuances.selected_days IS NULL)
+   OR (products.product_type = 'SMART_BALANCE' AND issuances.recharge_amount IS NULL);
 
 SELECT transport_line.code, COUNT(line_stations.id) AS station_count
 FROM transport_lines transport_line

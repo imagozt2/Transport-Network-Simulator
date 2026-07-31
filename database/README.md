@@ -27,6 +27,13 @@ Los scripts no insertan pasajeros ficticios.
 El modelo administrativo se explica en
 [`docs/usuarios-rmm-app.md`](../docs/usuarios-rmm-app.md).
 
+`compensatory_ticket_issuances` registra las emisiones gratuitas solicitadas por un operador ante
+una incidencia de compra. Conserva el producto y sus parámetros, la máquina de venta de destino,
+el operador responsable, el estado de la solicitud y, cuando finaliza, el billete emitido. No se
+incluyen emisiones iniciales: esta tabla contiene exclusivamente actividad administrativa real o
+simulada de la aplicación. Los logs pueden asociarse a la emisión mediante
+`operational_logs.compensatory_issuance_id`.
+
 ## Orden de instalación
 
 Los archivos deben ejecutarse en el orden anterior. Desde PowerShell se puede pasar cada archivo al
