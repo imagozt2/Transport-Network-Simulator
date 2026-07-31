@@ -1,4 +1,4 @@
-import { signal } from '@angular/core';
+import { signal, WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 
@@ -13,10 +13,13 @@ import { PassengerUsers } from './passenger-users';
 
 describe('PassengerUsers', () => {
   let fixture: ComponentFixture<PassengerUsers>;
+  let currentOperator: WritableSignal<OperatorAccount | null>;
   const accountsService = {
     getAccounts: vi.fn(),
     getAccount: vi.fn(),
-    updateStatus: vi.fn()
+    updateStatus: vi.fn(),
+    createAccount: vi.fn(),
+    deleteAccount: vi.fn()
   };
 
   beforeEach(async () => {
@@ -26,7 +29,9 @@ describe('PassengerUsers', () => {
       ...passenger,
       status: 'BLOCKED'
     }));
-    const currentOperator = signal<OperatorAccount | null>(administrator);
+    accountsService.createAccount.mockReset().mockReturnValue(of(passenger));
+    accountsService.deleteAccount.mockReset().mockReturnValue(of(undefined));
+    currentOperator = signal<OperatorAccount | null>(administrator);
 
     await TestBed.configureTestingModule({
       imports: [PassengerUsers],
@@ -90,6 +95,54 @@ describe('PassengerUsers', () => {
       'DISABLED',
       'Incumplimiento'
     );
+  });
+
+  it('should validate and create a passenger before refreshing the first page', () => {
+    const component = fixture.componentInstance;
+    component.openCreateDialog();
+    component.createFirstName = ' Ana ';
+    component.createLastName = ' García ';
+    component.createEmail = ' ANA@EXAMPLE.LOCAL ';
+    component.createPassword = 'SecurePassword123';
+    component.createPasswordConfirmation = 'SecurePassword123';
+
+    expect(component.passwordMeetsRequirements()).toBe(true);
+    expect(component.canCreateAccount()).toBe(true);
+    component.createAccount();
+
+    expect(accountsService.createAccount).toHaveBeenCalledWith({
+      firstName: 'Ana', lastName: 'García', email: 'ana@example.local',
+      password: 'SecurePassword123'
+    });
+    expect(accountsService.getAccounts).toHaveBeenLastCalledWith(
+      0, 20, expect.objectContaining({ sortBy: 'registeredAt', direction: 'DESC' })
+    );
+    expect(component.createDialogOpen).toBe(false);
+    expect(component.creationConfirmation).toContain('Ana García');
+  });
+
+  it('should require confirmation and refresh after deleting a passenger', () => {
+    const component = fixture.componentInstance;
+    component.openDetail(passenger);
+    component.beginDeleteAccount();
+
+    expect(component.deleteConfirmationOpen).toBe(true);
+    component.deleteAccount();
+
+    expect(accountsService.deleteAccount).toHaveBeenCalledWith(passenger.publicId);
+    expect(component.selectedUser).toBeNull();
+    expect(accountsService.getAccounts).toHaveBeenCalledTimes(2);
+    expect(component.creationConfirmation).toContain('eliminado');
+  });
+
+  it('should hide account mutations from regular operators', () => {
+    currentOperator.set({ ...administrator, role: 'OPERATOR' });
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.canManageAccounts()).toBe(false);
+    expect(fixture.nativeElement.querySelector('.create-user-button')).toBeNull();
+    fixture.componentInstance.openCreateDialog();
+    expect(fixture.componentInstance.createDialogOpen).toBe(false);
   });
 
   const administrator: OperatorAccount = {

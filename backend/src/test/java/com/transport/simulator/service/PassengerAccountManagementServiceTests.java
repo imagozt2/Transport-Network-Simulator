@@ -4,10 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.transport.simulator.dto.request.passenger.PassengerAccountStatusUpdateRequest;
+import com.transport.simulator.dto.request.passenger.PassengerAccountCreateRequest;
 import com.transport.simulator.entity.OperatorAccount;
 import com.transport.simulator.entity.PassengerAccount;
 import com.transport.simulator.entity.PassengerAccountStatusChange;
@@ -27,6 +30,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.server.ResponseStatusException;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,14 +42,90 @@ class PassengerAccountManagementServiceTests {
     private PassengerAccountStatusChangeRepository changeRepository;
     @Mock
     private OperatorAccountRepository operatorRepository;
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
     private PassengerAccountManagementService managementService;
 
     @BeforeEach
     void setUp() {
         managementService = new PassengerAccountManagementService(
-                passengerRepository, changeRepository, operatorRepository
+                passengerRepository, changeRepository, operatorRepository, passwordEncoder
         );
+    }
+
+    @Test
+    void shouldCreateAnActivePassengerWithNormalizedEmailAndEncodedPassword() {
+        when(passengerRepository.existsByEmailIgnoreCase("ana@example.local")).thenReturn(false);
+        when(passwordEncoder.encode("SecurePassword123")).thenReturn("bcrypt-password-hash");
+        when(passengerRepository.save(any(PassengerAccount.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        ArgumentCaptor<PassengerAccount> account = ArgumentCaptor.forClass(PassengerAccount.class);
+
+        var response = managementService.createAccount(
+                new PassengerAccountCreateRequest(
+                        " ANA@Example.Local ", "SecurePassword123", " Ana ", " García "
+                ),
+                authentication(OperatorRole.ADMINISTRATOR)
+        );
+
+        verify(passwordEncoder).encode("SecurePassword123");
+        verify(passengerRepository).save(account.capture());
+        assertThat(account.getValue().getPublicId()).isNotBlank();
+        assertThat(account.getValue().getEmail()).isEqualTo("ana@example.local");
+        assertThat(account.getValue().getPasswordHash()).isEqualTo("bcrypt-password-hash");
+        assertThat(account.getValue().getStatus()).isEqualTo(PassengerAccountStatus.ACTIVE);
+        assertThat(response.email()).isEqualTo("ana@example.local");
+        assertThat(response.emailVerified()).isFalse();
+    }
+
+    @Test
+    void shouldRejectDuplicateEmailsAndCreationByRegularOperators() {
+        assertThatThrownBy(() -> managementService.createAccount(
+                createRequest(), authentication(OperatorRole.OPERATOR)
+        )).isInstanceOfSatisfying(ResponseStatusException.class, exception ->
+                assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN));
+
+        when(passengerRepository.existsByEmailIgnoreCase("ana@example.local")).thenReturn(true);
+        assertThatThrownBy(() -> managementService.createAccount(
+                createRequest(), authentication(OperatorRole.ADMINISTRATOR)
+        )).isInstanceOfSatisfying(ResponseStatusException.class, exception ->
+                assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.CONFLICT));
+
+        verify(passwordEncoder, never()).encode(any());
+        verify(passengerRepository, never()).save(any());
+    }
+
+    @Test
+    void shouldDeleteStatusHistoryBeforeDeletingThePassenger() {
+        PassengerAccount passenger = mock(PassengerAccount.class);
+        when(passenger.getId()).thenReturn(21L);
+        when(passengerRepository.findByPublicId("passenger-uuid")).thenReturn(Optional.of(passenger));
+
+        managementService.deleteAccount(
+                " passenger-uuid ", authentication(OperatorRole.ADMINISTRATOR)
+        );
+
+        var ordered = inOrder(changeRepository, passengerRepository);
+        ordered.verify(changeRepository).deleteAllByPassengerAccountId(21L);
+        ordered.verify(passengerRepository).delete(passenger);
+    }
+
+    @Test
+    void shouldRejectDeletionByRegularOperatorsAndUnknownAccounts() {
+        assertThatThrownBy(() -> managementService.deleteAccount(
+                "passenger-uuid", authentication(OperatorRole.OPERATOR)
+        )).isInstanceOfSatisfying(ResponseStatusException.class, exception ->
+                assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN));
+
+        when(passengerRepository.findByPublicId("unknown")).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> managementService.deleteAccount(
+                "unknown", authentication(OperatorRole.ADMINISTRATOR)
+        )).isInstanceOfSatisfying(ResponseStatusException.class, exception ->
+                assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND));
+
+        verify(changeRepository, never()).deleteAllByPassengerAccountId(any());
+        verify(passengerRepository, never()).delete(any());
     }
 
     @Test
@@ -109,6 +189,12 @@ class PassengerAccountManagementServiceTests {
                 7L, "operator", "operator@example.local", "Test", "Operator", role
         );
         return UsernamePasswordAuthenticationToken.authenticated(principal, null, java.util.List.of());
+    }
+
+    private PassengerAccountCreateRequest createRequest() {
+        return new PassengerAccountCreateRequest(
+                "ana@example.local", "SecurePassword123", "Ana", "García"
+        );
     }
 
     private PassengerAccount passenger(PassengerAccountStatus status) {

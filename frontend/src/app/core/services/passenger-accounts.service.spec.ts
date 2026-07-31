@@ -61,4 +61,37 @@ describe('PassengerAccountsService', () => {
     });
     request.flush({});
   });
+
+  it('should create a passenger after obtaining a CSRF token', () => {
+    const account = {
+      email: 'ana@example.local', password: 'SecurePassword123',
+      firstName: 'Ana', lastName: 'García'
+    };
+    service.createAccount(account).subscribe();
+
+    http.expectOne('http://localhost:8080/api/auth/csrf').flush({
+      headerName: 'X-XSRF-TOKEN', parameterName: '_csrf', token: 'csrf-value'
+    });
+    const request = http.expectOne('http://localhost:8080/api/admin/passenger-users');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual(account);
+    expect(request.request.withCredentials).toBe(true);
+    expect(request.request.headers.get('X-XSRF-TOKEN')).toBe('csrf-value');
+    request.flush({});
+  });
+
+  it('should delete an encoded passenger identifier with CSRF protection', () => {
+    service.deleteAccount('passenger/uuid').subscribe();
+
+    http.expectOne('http://localhost:8080/api/auth/csrf').flush({
+      headerName: 'X-XSRF-TOKEN', parameterName: '_csrf', token: 'csrf-value'
+    });
+    const request = http.expectOne(
+      'http://localhost:8080/api/admin/passenger-users/passenger%2Fuuid'
+    );
+    expect(request.request.method).toBe('DELETE');
+    expect(request.request.withCredentials).toBe(true);
+    expect(request.request.headers.get('X-XSRF-TOKEN')).toBe('csrf-value');
+    request.flush(null);
+  });
 });
