@@ -40,6 +40,23 @@
               }
             </g>
 
+            @if (journey) {
+              <g class="journey-map-lines" aria-label="Trayecto calculado">
+                @for (segment of journey.segments; track $index) {
+                  <polyline
+                    class="journey-map-line"
+                    [attr.points]="getJourneySegmentPoints(segment)"
+                    [attr.stroke]="getMapLineColor(segment.lineCode)"
+                  >
+                    <title>
+                      {{ segment.lineCode }} · {{ segment.origin.name }} —
+                      {{ segment.destination.name }}
+                    </title>
+                  </polyline>
+                }
+              </g>
+            }
+
             <g class="stations">
               @for (station of mapStations; track station.stationCode) {
                 <g

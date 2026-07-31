@@ -180,9 +180,15 @@ export class NetworkMap implements OnInit {
     return this.expandedLineCode === code;
   }
   isMapLineDimmed(code: string): boolean {
+    if (this.journey) {
+      return true;
+    }
     return this.expandedLineCode !== null && this.expandedLineCode !== code;
   }
   isMapLineHighlighted(code: string): boolean {
+    if (this.journey) {
+      return false;
+    }
     return this.activeLineCode === code;
   }
 
@@ -212,6 +218,9 @@ export class NetworkMap implements OnInit {
     );
   }
   shouldDimStation(code: string): boolean {
+    if (this.journey) {
+      return !this.isJourneyStation(code);
+    }
     return (
       this.expandedLineCode !== null &&
       this.lines
@@ -220,7 +229,14 @@ export class NetworkMap implements OnInit {
     );
   }
   shouldHighlightStation(code: string): boolean {
+    if (this.journey) {
+      return this.isJourneyStation(code);
+    }
     return this.activeLineCode !== null && this.isStationInActiveLine(code);
+  }
+
+  isJourneyStation(code: string): boolean {
+    return this.journey?.stations.some((station) => station.code === code) === true;
   }
 
   private get activeLineCode(): string | null {
@@ -247,6 +263,14 @@ export class NetworkMap implements OnInit {
         return point.x !== undefined && point.y !== undefined ? `${point.x},${point.y}` : null;
       })
       .filter((point): point is string => point !== null)
+      .join(' ');
+  }
+
+  getJourneySegmentPoints(segment: NetworkJourneySegment): string {
+    return segment.stations
+      .map((station) => this.mapStations.find((layout) => layout.stationCode === station.code))
+      .filter((station): station is MapStationLayout => station !== undefined)
+      .map((station) => `${station.x},${station.y}`)
       .join(' ');
   }
 

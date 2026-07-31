@@ -1,3 +1,12 @@
+.journey-map-line {
+  fill: none;
+  stroke-width: 11;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+  filter: drop-shadow(0 3px 7px rgba(15, 23, 42, 0.28));
+}
+
 .journey-planner {
   display: flex;
   flex-direction: column;

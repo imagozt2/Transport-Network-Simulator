@@ -161,6 +161,10 @@ describe('NetworkMap', () => {
       'Cuatro Caminos',
     );
     expect(compiled.querySelector('.journey-thermometer')?.textContent).toContain('La Galería');
+    expect(compiled.querySelectorAll('.journey-map-line')).toHaveLength(2);
+    expect(compiled.querySelectorAll('.metro-line.dimmed-line')).toHaveLength(6);
+    expect(compiled.querySelectorAll('.station-node.highlighted-station')).toHaveLength(3);
+    expect(compiled.querySelectorAll('.station-node.dimmed-station').length).toBeGreaterThan(0);
 
     compiled.querySelector<HTMLButtonElement>('.clear-journey-button')?.click();
     fixture.detectChanges();
@@ -168,6 +172,8 @@ describe('NetworkMap', () => {
     expect(fixture.componentInstance.journey).toBeNull();
     expect(fixture.componentInstance.originStationCode).toBe('');
     expect(compiled.querySelector('.journey-result')).toBeNull();
+    expect(compiled.querySelector('.journey-map-line')).toBeNull();
+    expect(compiled.querySelector('.metro-line.dimmed-line')).toBeNull();
   });
 
   it('should label a journey segment with the line terminal in its travel direction', async () => {
