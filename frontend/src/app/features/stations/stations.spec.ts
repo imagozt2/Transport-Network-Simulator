@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
 import { StationOperationsResponse } from '../../core/models/station-operation.model';
@@ -195,6 +195,29 @@ describe('Stations', () => {
 
     expect(compiled.querySelector('[role="alert"]')?.textContent).toContain('No se ha podido cargar');
     expect(compiled.querySelector('.error-card button')?.textContent).toContain('Reintentar');
+    fixture.destroy();
+  });
+
+  it('should initialize the line filter from the URL', async () => {
+    await TestBed.configureTestingModule({
+      imports: [Stations],
+      providers: [
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { queryParamMap: convertToParamMap({ lineCode: '  L3  ' }) } }
+        },
+        { provide: StationOperationsService, useValue: { getOperations: () => of(response) } }
+      ]
+    }).compileComponents();
+    const fixture = TestBed.createComponent(Stations);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.selectedLineCode).toBe('L3');
+    expect(fixture.componentInstance.filteredStations().map((station) => station.code))
+      .toEqual(['STB']);
+    expect((fixture.nativeElement.querySelector('.filter-select select') as HTMLSelectElement).value)
+      .toBe('L3');
     fixture.destroy();
   });
 });

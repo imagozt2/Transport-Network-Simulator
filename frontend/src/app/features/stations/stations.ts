@@ -1,5 +1,5 @@
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import {
   StationArrival,
@@ -26,6 +26,7 @@ type LineCountFilter = 'ALL' | '1' | '2' | '3_PLUS';
 })
 export class Stations implements OnInit, OnDestroy {
   private readonly stationOperationsService = inject(StationOperationsService);
+  private readonly route = inject(ActivatedRoute);
   private readonly periodicRefresh = new PeriodicRefresh(15_000, () => this.loadOperations());
   private readonly expandedStationIds = new Set<number>();
   private countdownIntervalId: number | null = null;
@@ -37,10 +38,12 @@ export class Stations implements OnInit, OnDestroy {
   errorMessage = '';
   selectedStatus: StatusFilter = 'ALL';
   selectedLineCount: LineCountFilter = 'ALL';
+  selectedLineCode = 'ALL';
   searchText = '';
   countdownNowMs = Date.now();
 
   ngOnInit(): void {
+    this.selectedLineCode = this.route.snapshot.queryParamMap.get('lineCode')?.trim() || 'ALL';
     this.loadOperations(true);
     this.periodicRefresh.start();
     this.startCountdown();
@@ -78,17 +81,20 @@ export class Stations implements OnInit, OnDestroy {
   setSearchText(value: string): void { this.searchText = value; }
   setStatusFilter(status: StatusFilter): void { this.selectedStatus = status; }
   setLineCountFilter(lineCount: LineCountFilter): void { this.selectedLineCount = lineCount; }
+  setLineFilter(lineCode: string): void { this.selectedLineCode = lineCode; }
 
   clearFilters(): void {
     this.searchText = '';
     this.selectedStatus = 'ALL';
     this.selectedLineCount = 'ALL';
+    this.selectedLineCode = 'ALL';
   }
 
   hasActiveFilters(): boolean {
     return this.searchText.trim().length > 0
       || this.selectedStatus !== 'ALL'
-      || this.selectedLineCount !== 'ALL';
+      || this.selectedLineCount !== 'ALL'
+      || this.selectedLineCode !== 'ALL';
   }
 
   filteredStations(): StationOperation[] {
@@ -102,8 +108,18 @@ export class Stations implements OnInit, OnDestroy {
         || (this.selectedLineCount === '1' && station.lineCount === 1)
         || (this.selectedLineCount === '2' && station.lineCount === 2)
         || (this.selectedLineCount === '3_PLUS' && station.lineCount >= 3);
-      return matchesSearch && matchesStatus && matchesLineCount;
+      const matchesLine = this.selectedLineCode === 'ALL'
+        || station.lines.some((line) => line.code === this.selectedLineCode);
+      return matchesSearch && matchesStatus && matchesLineCount && matchesLine;
     });
+  }
+
+  lineOptions(): StationOperationLine[] {
+    const options = new Map<string, StationOperationLine>();
+    this.operations?.stations.forEach((station) => station.lines.forEach((line) =>
+      options.set(line.code, line)
+    ));
+    return [...options.values()].sort((first, second) => first.code.localeCompare(second.code));
   }
 
   toggleStation(stationId: number): void {

@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
 
 import { DepotOperation, DepotOperationsResponse } from '../../core/models/depot-operation.model';
@@ -119,6 +119,19 @@ describe('Depots', () => {
     fixture.destroy();
   });
 
+  it('should initialize the line filter from the URL', async () => {
+    await configureWith(() => of(response), { lineCode: '  L1  ' });
+    const fixture = TestBed.createComponent(Depots);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.selectedLineCode).toBe('L1');
+    expect(fixture.componentInstance.filteredDepots().map((depot) => depot.code))
+      .toEqual(['DEP-LF-A']);
+    expect((fixture.nativeElement.querySelector('.filter-select select') as HTMLSelectElement).value)
+      .toBe('L1');
+    fixture.destroy();
+  });
+
   it('should limit and order the railway agenda around the evaluated instant', async () => {
     const completedTemplate = lasFuentes.movements[0];
     const scheduledTemplate = lasFuentes.movements[1];
@@ -229,11 +242,18 @@ describe('Depots', () => {
   });
 });
 
-async function configureWith(getOperations: () => Observable<DepotOperationsResponse>) {
+async function configureWith(
+  getOperations: () => Observable<DepotOperationsResponse>,
+  queryParams: Record<string, string> = {}
+) {
   await TestBed.configureTestingModule({
     imports: [Depots],
     providers: [
       provideRouter([]),
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { queryParamMap: convertToParamMap(queryParams) } }
+      },
       { provide: DepotOperationsService, useValue: { getOperations } }
     ]
   }).compileComponents();

@@ -137,6 +137,20 @@ describe('Trains', () => {
     fixture.destroy();
   });
 
+  it('should initialize the line filter from the URL', async () => {
+    await configureWith(() => of(response), { lineCode: '  L1  ' });
+    const fixture = TestBed.createComponent(Trains);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.selectedLineCode).toBe('L1');
+    expect(fixture.componentInstance.filteredTrains()).toHaveLength(3);
+    const lineFilter = fixture.nativeElement.querySelector(
+      '.filters-panel label:nth-of-type(3) select'
+    ) as HTMLSelectElement;
+    expect(lineFilter.value).toBe('L1');
+    fixture.destroy();
+  });
+
   it('should treat an empty depot URL parameter as no contextual filter', async () => {
     await configureWith(() => of(response), { depotCode: '   ' });
     const fixture = TestBed.createComponent(Trains);

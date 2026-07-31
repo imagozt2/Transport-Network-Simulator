@@ -50,6 +50,7 @@ export class Trains implements OnInit, OnDestroy {
   readonly roles: readonly FleetRole[] = ['REGULAR_SERVICE', 'RESERVE', 'HISTORIC'];
 
   ngOnInit(): void {
+    this.selectedLineCode = this.route.snapshot.queryParamMap.get('lineCode')?.trim() || 'ALL';
     this.selectedDepotCode = this.route.snapshot.queryParamMap.get('depotCode')?.trim() || 'ALL';
     this.loadOperations(true);
     this.periodicRefresh.start();

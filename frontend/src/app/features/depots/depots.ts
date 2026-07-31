@@ -1,5 +1,5 @@
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import {
   DepotMovement,
@@ -28,6 +28,7 @@ const AGENDA_WINDOW_MS = 12 * 60 * 60 * 1_000;
 })
 export class Depots implements OnInit, OnDestroy {
   private readonly depotOperationsService = inject(DepotOperationsService);
+  private readonly route = inject(ActivatedRoute);
   private readonly periodicRefresh = new PeriodicRefresh(15_000, () => this.loadOperations());
   private readonly expandedDepotIds = new Set<number>();
   private hasInitializedExpansion = false;
@@ -37,6 +38,7 @@ export class Depots implements OnInit, OnDestroy {
   errorMessage = '';
   searchText = '';
   selectedStatus: StatusFilter = 'ALL';
+  selectedLineCode = 'ALL';
 
   readonly statuses: readonly DepotOperationStatus[] = [
     'EMPTY', 'AVAILABLE', 'HIGH_OCCUPANCY', 'FULL', 'OVER_CAPACITY'
@@ -44,6 +46,7 @@ export class Depots implements OnInit, OnDestroy {
   readonly fleetRoles: readonly FleetRole[] = ['REGULAR_SERVICE', 'RESERVE', 'HISTORIC'];
 
   ngOnInit(): void {
+    this.selectedLineCode = this.route.snapshot.queryParamMap.get('lineCode')?.trim() || 'ALL';
     this.loadOperations(true);
     this.periodicRefresh.start();
   }
@@ -73,21 +76,39 @@ export class Depots implements OnInit, OnDestroy {
 
   setSearchText(value: string): void { this.searchText = value; }
   setStatusFilter(value: string): void { this.selectedStatus = value as StatusFilter; }
+  setLineFilter(value: string): void { this.selectedLineCode = value; }
 
   clearFilters(): void {
     this.searchText = '';
     this.selectedStatus = 'ALL';
+    this.selectedLineCode = 'ALL';
   }
 
-  hasActiveFilters(): boolean { return this.searchText.trim().length > 0 || this.selectedStatus !== 'ALL'; }
+  hasActiveFilters(): boolean {
+    return this.searchText.trim().length > 0
+      || this.selectedStatus !== 'ALL'
+      || this.selectedLineCode !== 'ALL';
+  }
 
   filteredDepots(): DepotOperation[] {
     const search = this.searchText.trim().toLocaleLowerCase('es');
     return (this.operations?.depots ?? []).filter((depot) => {
       const matchesSearch = !search || [depot.code, depot.name, depot.station.code, depot.station.name]
         .some((value) => value.toLocaleLowerCase('es').includes(search));
-      return matchesSearch && (this.selectedStatus === 'ALL' || depot.status === this.selectedStatus);
+      const matchesLine = this.selectedLineCode === 'ALL'
+        || depot.movements.some((movement) => movement.line.code === this.selectedLineCode);
+      return matchesSearch
+        && (this.selectedStatus === 'ALL' || depot.status === this.selectedStatus)
+        && matchesLine;
     });
+  }
+
+  lineOptions(): DepotMovement['line'][] {
+    const options = new Map<string, DepotMovement['line']>();
+    this.operations?.depots.forEach((depot) => depot.movements.forEach((movement) =>
+      options.set(movement.line.code, movement.line)
+    ));
+    return [...options.values()].sort((first, second) => first.code.localeCompare(second.code));
   }
 
   toggleDepot(depotId: number): void {
