@@ -28,6 +28,8 @@ export class Lines implements OnInit, OnDestroy {
   private readonly periodicRefresh = new PeriodicRefresh(5_000, () => this.loadOperations());
   private readonly expandedLineIds = new Set<number>();
   private hasInitializedExpansion = false;
+  private tooltipCloseTimeoutId: number | null = null;
+  activeTooltipKey: string | null = null;
 
   operations: LineOperationsResponse | null = null;
   loading = true;
@@ -39,7 +41,29 @@ export class Lines implements OnInit, OnDestroy {
     this.periodicRefresh.start();
   }
 
-  ngOnDestroy(): void { this.periodicRefresh.destroy(); }
+  ngOnDestroy(): void {
+    this.periodicRefresh.destroy();
+    this.cancelTooltipClose();
+  }
+
+  tooltipKey(type: 'station' | 'train', lineCode: string, direction: ServiceDirection, id: number): string {
+    return [type, lineCode, direction, id].join('-');
+  }
+
+  showTooltip(key: string): void {
+    this.cancelTooltipClose();
+    this.activeTooltipKey = key;
+  }
+
+  scheduleTooltipClose(key: string): void {
+    this.cancelTooltipClose();
+    this.tooltipCloseTimeoutId = window.setTimeout(() => {
+      if (this.activeTooltipKey === key) { this.activeTooltipKey = null; }
+      this.tooltipCloseTimeoutId = null;
+    }, 50);
+  }
+
+  isTooltipVisible(key: string): boolean { return this.activeTooltipKey === key; }
 
   loadOperations(showLoading = false): void {
     const request = this.periodicRefresh.request(() => this.lineOperationsService.getOperations());
@@ -177,6 +201,13 @@ export class Lines implements OnInit, OnDestroy {
   periodLabel(period: ServicePeriodType | null): string {
     if (!period) { return 'Fuera de servicio'; }
     return servicePeriodLabel(period);
+  }
+
+  private cancelTooltipClose(): void {
+    if (this.tooltipCloseTimeoutId !== null) {
+      window.clearTimeout(this.tooltipCloseTimeoutId);
+      this.tooltipCloseTimeoutId = null;
+    }
   }
 
 }

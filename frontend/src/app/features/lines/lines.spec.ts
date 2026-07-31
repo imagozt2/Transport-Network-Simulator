@@ -96,7 +96,8 @@ describe('Lines', () => {
     expect(compiled.querySelectorAll('.line-title-row .phase-pill')).toHaveLength(2);
     expect(compiled.querySelector('.line-title-row .service-pill')).toBeNull();
     expect(compiled.querySelector('.metric-panel .large-metric strong')?.textContent?.trim()).toBe('~ 4 min');
-    expect(compiled.querySelector('.help-tooltip [role="tooltip"]')?.textContent).toContain('inicio progresivo');
+    expect(compiled.querySelector('.help-tooltip [role="tooltip"]')?.textContent?.toLocaleLowerCase('es'))
+      .toContain('inicio progresivo');
     expect(Array.from(compiled.querySelectorAll('.direction-stats span')).map((label) => label.textContent?.trim())).toEqual(['Ida', 'Vuelta']);
     expect(compiled.querySelector('.direction-stats')?.textContent).not.toContain('Serie');
     expect(compiled.querySelector('.direction-stats')?.textContent).not.toContain('Estado');
@@ -121,7 +122,9 @@ describe('Lines', () => {
     expect(compiled.querySelector('.mini-thermometer .horizontal-train-marker')).toBeNull();
     expect(compiled.querySelector('.train-tooltip')?.textContent).toContain('T-9001');
     expect(compiled.querySelector('.horizontal-train-marker')?.getAttribute('aria-label')).toContain('T-9001');
-    const contextualLinks = Array.from(compiled.querySelectorAll<HTMLAnchorElement>('.context-link'));
+    const contextualLinks = Array.from(
+      compiled.querySelectorAll<HTMLAnchorElement>('.panel-context-link')
+    );
     expect(contextualLinks.map((link) => link.textContent?.trim())).toEqual([
       'Ver trenes',
       'Ver cocheras',
@@ -132,6 +135,15 @@ describe('Lines', () => {
       '/depots?lineCode=L3',
       '/stations?lineCode=L3'
     ]);
+    expect(compiled.querySelector('.period-help')?.textContent).toContain('Inicio progresivo:');
+    expect(compiled.querySelector('.period-help')?.textContent).toContain('Valle:');
+    expect(compiled.querySelector('.period-help')?.textContent).toContain('Punta:');
+    expect(compiled.querySelector('.period-help')?.textContent).toContain('Servicio regular:');
+    expect(compiled.querySelector('.period-help')?.textContent).toContain('Retirada progresiva:');
+    expect(compiled.querySelector<HTMLAnchorElement>('.train-tooltip .context-link')?.getAttribute('href'))
+      .toBe('/trains?trainCode=T-9001');
+    expect(compiled.querySelector<HTMLAnchorElement>('.station-arrival-tooltip .context-link')?.getAttribute('href'))
+      .toBe('/stations?stationCode=ST001');
     fixture.destroy();
   });
 
@@ -153,6 +165,35 @@ describe('Lines', () => {
     expect(component.transferLineCodes(2, 'L3')).toEqual(['L4']);
     expect(component.getTrainPositionPercentage(firstLine, { ...firstLine.trains[0], progressPercentage: 140 })).toBe(100);
     fixture.destroy();
+  });
+
+  it('should delay tooltip closing and cancel it when the pointer enters the tooltip', async () => {
+    vi.useFakeTimers();
+    await TestBed.configureTestingModule({
+      imports: [Lines],
+      providers: [
+        provideRouter([]),
+        { provide: LineOperationsService, useValue: { getOperations: () => of(response) } }
+      ]
+    }).compileComponents();
+    const fixture = TestBed.createComponent(Lines);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    const key = component.tooltipKey('station', 'L3', 'OUTBOUND', 1);
+
+    component.showTooltip(key);
+    component.scheduleTooltipClose(key);
+    vi.advanceTimersByTime(49);
+    expect(component.isTooltipVisible(key)).toBe(true);
+    component.showTooltip(key);
+    vi.advanceTimersByTime(1);
+    expect(component.isTooltipVisible(key)).toBe(true);
+    component.scheduleTooltipClose(key);
+    vi.advanceTimersByTime(50);
+    expect(component.isTooltipVisible(key)).toBe(false);
+
+    fixture.destroy();
+    vi.useRealTimers();
   });
 
   it('should select the closest arrival for each station and direction', async () => {

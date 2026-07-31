@@ -12,12 +12,12 @@
 .horizontal-station.terminal { width: 13px; height: 13px; box-shadow: 0 0 0 3px #fff; }
 .horizontal-station.transfer { width: 11px; height: 11px; border-width: 3px; box-shadow: 0 0 0 2px #fff, 0 0 0 3px #111827; }
 .horizontal-station:focus-visible { outline: 3px solid #2563eb; outline-offset: 5px; }
-.station-arrival-tooltip { position: absolute; bottom: 20px; left: 50%; z-index: 12; min-width: 190px; display: flex; flex-direction: column; gap: 3px; padding: 8px 10px; border-radius: 9px; color: #fff; background: #111827; box-shadow: 0 10px 24px rgba(15, 23, 42, .24); opacity: 0; pointer-events: none; transform: translate(-50%, 4px); transition: opacity .15s ease, transform .15s ease; white-space: nowrap; }
+.station-arrival-tooltip { position: absolute; bottom: 20px; left: 50%; z-index: 12; min-width: 190px; display: flex; flex-direction: column; gap: 4px; padding: 9px 10px; border-radius: 9px; color: #fff; background: #111827; box-shadow: 0 10px 24px rgba(15, 23, 42, .24); opacity: 0; pointer-events: none; transform: translate(-50%, 4px); transition: opacity .15s ease, transform .15s ease; white-space: nowrap; }
 .station-arrival-tooltip strong { font-size: 12px; }
 .station-arrival-tooltip small { color: #cbd5e1; font-size: 10px; font-weight: 700; }
 .station-arrival-tooltip > span { color: #fff; font-size: 11px; font-weight: 800; }
-.horizontal-station:hover, .horizontal-station:focus-visible { z-index: 11; }
-.horizontal-station:hover .station-arrival-tooltip, .horizontal-station:focus-visible .station-arrival-tooltip { opacity: 1; transform: translate(-50%, 0); }
+.horizontal-station:has(.station-arrival-tooltip.visible) { z-index: 11; }
+.station-arrival-tooltip.visible { opacity: 1; pointer-events: auto; transform: translate(-50%, 0); }
 .horizontal-station-label { position: absolute; top: 24px; z-index: 1; color: #475569; font-size: 13px; font-weight: 700; line-height: 1.15; transform: rotate(38deg); transform-origin: top left; white-space: nowrap; }
 .horizontal-line-label { position: absolute; top: 12px; z-index: 5; min-width: 30px; padding: 5px 7px; border-radius: 9px; box-shadow: 0 4px 10px rgba(15, 23, 42, .16); font-size: 11px; font-weight: 900; line-height: 1; text-align: center; transform: translateY(-50%); }
 .horizontal-line-label.start { right: calc(100% + 10px); }
@@ -25,8 +25,9 @@
 .horizontal-train-marker { position: absolute; top: 12px; z-index: 4; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; border-radius: 50%; background: linear-gradient(135deg, #38bdf8, #2563eb); box-shadow: 0 0 0 2px #0f172a, 0 4px 8px rgba(37, 99, 235, .28); transform: translate(-50%, -50%); transition: left 4.5s linear; }
 .horizontal-train-marker:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
 .train-marker-core { color: #fff; font-size: 12px; font-weight: 950; line-height: 1; }
-.train-tooltip { position: absolute; bottom: 22px; left: 50%; z-index: 8; display: flex; gap: 6px; padding: 7px 9px; border-radius: 8px; color: #fff; background: #111827; opacity: 0; pointer-events: none; transform: translateX(-50%); white-space: nowrap; }
+.train-tooltip { position: absolute; bottom: 22px; left: 50%; z-index: 8; display: flex; align-items: center; flex-direction: column; gap: 4px; padding: 8px 9px; border-radius: 8px; color: #fff; background: #111827; opacity: 0; pointer-events: none; transform: translateX(-50%); white-space: nowrap; }
 .train-tooltip small { color: #cbd5e1; font-size: 10px; font-weight: 700; }
-.horizontal-train-marker:hover, .horizontal-train-marker:focus-visible { z-index: 10; }
-.horizontal-train-marker:hover .train-tooltip, .horizontal-train-marker:focus-visible .train-tooltip { opacity: 1; }
+.horizontal-train-marker:has(.train-tooltip.visible) { z-index: 10; }
+.train-tooltip.visible { opacity: 1; pointer-events: auto; }
+.tooltip-context-link { width: 100%; margin-top: 3px; padding: 5px 8px; border-color: #fff; border-radius: 7px; font-size: 10px; }
 @media (max-width: 640px) { .horizontal-route { padding: 10px; } .horizontal-route header { align-items: flex-start; flex-direction: column; gap: 2px; } .horizontal-track-area { margin: 14px 68px 0; } .horizontal-station-label { font-size: 11px; } }

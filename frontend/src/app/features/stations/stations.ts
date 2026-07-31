@@ -32,6 +32,7 @@ export class Stations implements OnInit, OnDestroy {
   private countdownIntervalId: number | null = null;
   private snapshotReceivedAtMs = Date.now();
   private hasInitializedExpansion = false;
+  private contextualStationCode = '';
 
   operations: StationOperationsResponse | null = null;
   loading = true;
@@ -43,6 +44,8 @@ export class Stations implements OnInit, OnDestroy {
   countdownNowMs = Date.now();
 
   ngOnInit(): void {
+    this.contextualStationCode = this.route.snapshot.queryParamMap.get('stationCode')?.trim() || '';
+    if (this.contextualStationCode) { this.searchText = this.contextualStationCode; }
     this.selectedLineCode = this.route.snapshot.queryParamMap.get('lineCode')?.trim() || 'ALL';
     this.loadOperations(true);
     this.periodicRefresh.start();
@@ -66,7 +69,10 @@ export class Stations implements OnInit, OnDestroy {
         this.snapshotReceivedAtMs = Date.now();
         this.countdownNowMs = this.snapshotReceivedAtMs;
         if (!this.hasInitializedExpansion && operations.stations.length > 0) {
-          this.expandedStationIds.add(operations.stations[0].id);
+          const contextualStation = operations.stations.find(
+            (station) => station.code === this.contextualStationCode
+          );
+          this.expandedStationIds.add(contextualStation?.id ?? operations.stations[0].id);
         }
         this.hasInitializedExpansion = true;
         this.loading = false;

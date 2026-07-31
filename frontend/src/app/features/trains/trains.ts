@@ -34,6 +34,7 @@ export class Trains implements OnInit, OnDestroy {
   private countdownIntervalId: number | null = null;
   private snapshotReceivedAtMs = Date.now();
   private hasInitializedExpansion = false;
+  private contextualTrainCode = '';
 
   operations: TrainOperationsResponse | null = null;
   loading = true;
@@ -50,6 +51,8 @@ export class Trains implements OnInit, OnDestroy {
   readonly roles: readonly FleetRole[] = ['REGULAR_SERVICE', 'RESERVE', 'HISTORIC'];
 
   ngOnInit(): void {
+    this.contextualTrainCode = this.route.snapshot.queryParamMap.get('trainCode')?.trim() || '';
+    if (this.contextualTrainCode) { this.searchText = this.contextualTrainCode; }
     const status = this.route.snapshot.queryParamMap.get('status')?.trim() as TrainStatus | undefined;
     this.selectedStatus = status && this.statuses.includes(status) ? status : 'ALL';
     this.selectedLineCode = this.route.snapshot.queryParamMap.get('lineCode')?.trim() || 'ALL';
@@ -75,7 +78,8 @@ export class Trains implements OnInit, OnDestroy {
         this.snapshotReceivedAtMs = Date.now();
         this.countdownNowMs = this.snapshotReceivedAtMs;
         if (!this.hasInitializedExpansion && operations.trains.length > 0) {
-          this.expandedTrainIds.add(operations.trains[0].id);
+          const contextualTrain = operations.trains.find((train) => train.code === this.contextualTrainCode);
+          this.expandedTrainIds.add(contextualTrain?.id ?? operations.trains[0].id);
         }
         this.hasInitializedExpansion = true;
         this.loading = false;

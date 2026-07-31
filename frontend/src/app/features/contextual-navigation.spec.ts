@@ -56,6 +56,16 @@ const contextualNavigations: readonly ContextualNavigation[] = [
     queryParams: { lineCode: 'L3' }, expectedUrl: '/stations?lineCode=L3'
   },
   {
+    sourcePath: 'lines', sourceComponent: Lines,
+    destinationPath: 'trains', destinationComponent: Trains,
+    queryParams: { trainCode: 'T-9001' }, expectedUrl: '/trains?trainCode=T-9001'
+  },
+  {
+    sourcePath: 'lines', sourceComponent: Lines,
+    destinationPath: 'stations', destinationComponent: Stations,
+    queryParams: { stationCode: 'ST001' }, expectedUrl: '/stations?stationCode=ST001'
+  },
+  {
     sourcePath: 'stations', sourceComponent: Stations,
     destinationPath: 'trains', destinationComponent: Trains,
     queryParams: { lineCode: 'L3', status: 'IN_SERVICE' },

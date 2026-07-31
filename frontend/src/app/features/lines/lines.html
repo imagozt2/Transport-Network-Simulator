@@ -47,7 +47,14 @@
                         Franja
                         <span class="help-tooltip" tabindex="0" aria-label="Información sobre las franjas del servicio">
                           ?
-                          <span role="tooltip">El servicio pasa por inicio progresivo, valle, punta, servicio regular y retirada progresiva según el horario del día.</span>
+                          <span role="tooltip" class="period-help">
+                            <strong>Franjas de servicio</strong>
+                            <span><b>Inicio progresivo:</b> incorporación gradual de trenes.</span>
+                            <span><b>Valle:</b> menor demanda y frecuencia reducida.</span>
+                            <span><b>Punta:</b> máxima demanda y mayor frecuencia.</span>
+                            <span><b>Servicio regular:</b> operación estable entre horas punta.</span>
+                            <span><b>Retirada progresiva:</b> regreso gradual de trenes a cocheras.</span>
+                          </span>
                         </span>
                       </dt>
                       <dd>{{ periodLabel(line.currentPeriodType) }}</dd>
@@ -60,7 +67,7 @@
                 <section class="metric-panel">
                   <div class="panel-header">
                     <h2>Circulación</h2>
-                    <a class="context-link" [routerLink]="['/trains']" [queryParams]="{ lineCode: line.code }">Ver trenes</a>
+                    <a class="context-link panel-context-link" [routerLink]="['/trains']" [queryParams]="{ lineCode: line.code }">Ver trenes</a>
                   </div>
                   <div class="large-metric"><strong>{{ line.activeTrainCount }}</strong><span>trenes en servicio</span></div>
                   <div class="direction-stats">
@@ -74,7 +81,7 @@
                     <h2>Cocheras</h2>
                     <div class="panel-actions">
                       <span>{{ line.depots.length }} asociadas</span>
-                      <a class="context-link" [routerLink]="['/depots']" [queryParams]="{ lineCode: line.code }">Ver cocheras</a>
+                      <a class="context-link panel-context-link" [routerLink]="['/depots']" [queryParams]="{ lineCode: line.code }">Ver cocheras</a>
                     </div>
                   </div>
                   <div class="line-depots-list">
@@ -122,10 +129,20 @@
                               [class.transfer]="transferLineCodes(station.id, line.code).length > 0"
                               [style.left.%]="stationPositionPercentage(stationIndex, line.stations.length)"
                               [attr.aria-label]="'Estación ' + station.name + ', dirección ' + directionDestination(line, direction)"
+                              (mouseenter)="showTooltip(tooltipKey('station', line.code, direction, station.id))"
+                              (mouseleave)="scheduleTooltipClose(tooltipKey('station', line.code, direction, station.id))"
+                              (focusin)="showTooltip(tooltipKey('station', line.code, direction, station.id))"
+                              (focusout)="scheduleTooltipClose(tooltipKey('station', line.code, direction, station.id))"
                               tabindex="0"
-                              role="img"
+                              role="group"
                             >
-                              <span class="station-arrival-tooltip" aria-hidden="true">
+                              <span
+                                class="station-arrival-tooltip"
+                                [class.visible]="isTooltipVisible(tooltipKey('station', line.code, direction, station.id))"
+                                (mouseenter)="showTooltip(tooltipKey('station', line.code, direction, station.id))"
+                                (mouseleave)="scheduleTooltipClose(tooltipKey('station', line.code, direction, station.id))"
+                                role="tooltip"
+                              >
                                 <strong>{{ station.name }}</strong>
                                 <small>Dirección {{ directionDestination(line, direction) }}</small>
                                 @if (nextArrival(line, station.id, direction); as arrival) {
@@ -133,6 +150,7 @@
                                 } @else {
                                   <span>Sin próximas llegadas</span>
                                 }
+                                <a class="context-link tooltip-context-link" [routerLink]="['/stations']" [queryParams]="{ stationCode: station.code }">Ver estación</a>
                               </span>
                             </span>
                             <span
@@ -146,13 +164,24 @@
                               class="horizontal-train-marker"
                               [style.left.%]="getTrainPositionPercentage(line, train)"
                               [attr.aria-label]="'Tren ' + train.code + ', dirección ' + directionDestination(line, direction)"
+                              (mouseenter)="showTooltip(tooltipKey('train', line.code, direction, train.id))"
+                              (mouseleave)="scheduleTooltipClose(tooltipKey('train', line.code, direction, train.id))"
+                              (focusin)="showTooltip(tooltipKey('train', line.code, direction, train.id))"
+                              (focusout)="scheduleTooltipClose(tooltipKey('train', line.code, direction, train.id))"
                               tabindex="0"
-                              role="img"
+                              role="group"
                             >
                               <span class="train-marker-core" aria-hidden="true">M</span>
-                              <span class="train-tooltip" aria-hidden="true">
+                              <span
+                                class="train-tooltip"
+                                [class.visible]="isTooltipVisible(tooltipKey('train', line.code, direction, train.id))"
+                                (mouseenter)="showTooltip(tooltipKey('train', line.code, direction, train.id))"
+                                (mouseleave)="scheduleTooltipClose(tooltipKey('train', line.code, direction, train.id))"
+                                role="tooltip"
+                              >
                                 <strong>{{ train.code }}</strong>
                                 <small>{{ directionDestination(line, direction) }}</small>
+                                <a class="context-link tooltip-context-link" [routerLink]="['/trains']" [queryParams]="{ trainCode: train.code }">Ver tren</a>
                               </span>
                             </span>
                           }
@@ -185,7 +214,7 @@
                       }
                     </div>
                   </div>
-                  <a class="context-link stations-link" [routerLink]="['/stations']" [queryParams]="{ lineCode: line.code }">Ver estaciones</a>
+                  <a class="context-link panel-context-link stations-link" [routerLink]="['/stations']" [queryParams]="{ lineCode: line.code }">Ver estaciones</a>
                 </section>
               </div>
             </div>

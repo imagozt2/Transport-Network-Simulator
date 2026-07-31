@@ -165,6 +165,19 @@ describe('Trains', () => {
     fixture.destroy();
   });
 
+  it('should focus and expand a train received from a contextual link', async () => {
+    await configureWith(() => of(response), { trainCode: '  T-7001  ' });
+    const fixture = TestBed.createComponent(Trains);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.searchText).toBe('T-7001');
+    expect(fixture.componentInstance.filteredTrains().map((train) => train.code)).toEqual(['T-7001']);
+    expect(fixture.componentInstance.isExpanded(reserveTrain.id)).toBe(true);
+    expect(fixture.nativeElement.querySelector('.train-card.expanded .train-code')?.textContent)
+      .toContain('T-7001');
+    fixture.destroy();
+  });
+
   it('should treat an empty depot URL parameter as no contextual filter', async () => {
     await configureWith(() => of(response), { depotCode: '   ' });
     const fixture = TestBed.createComponent(Trains);

@@ -223,4 +223,27 @@ describe('Stations', () => {
       .toBe('L3');
     fixture.destroy();
   });
+
+  it('should focus and expand a station received from a contextual link', async () => {
+    await TestBed.configureTestingModule({
+      imports: [Stations],
+      providers: [
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { queryParamMap: convertToParamMap({ stationCode: '  STB  ' }) } }
+        },
+        { provide: StationOperationsService, useValue: { getOperations: () => of(response) } }
+      ]
+    }).compileComponents();
+    const fixture = TestBed.createComponent(Stations);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.searchText).toBe('STB');
+    expect(fixture.componentInstance.filteredStations().map((station) => station.code)).toEqual(['STB']);
+    expect(fixture.componentInstance.isExpanded(response.stations[0].id)).toBe(true);
+    expect(fixture.nativeElement.querySelector('.station-card.expanded .station-code')?.textContent)
+      .toContain('STB');
+    fixture.destroy();
+  });
 });
