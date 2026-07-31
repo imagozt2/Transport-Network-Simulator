@@ -8,9 +8,9 @@
 .summary-card { display: flex; flex-direction: column; gap: 7px; border: 1px solid #e2e8f0; border-radius: 18px; padding: 18px; background: #fff; box-shadow: 0 14px 32px rgba(15, 23, 42, 0.07); }
 .summary-card span { color: #64748b; font-size: 13px; font-weight: 700; }
 .summary-card strong { color: #0f172a; font-size: 28px; line-height: 1; }
-.device-icon.type-ticket-machine { background: #1d4ed8; }
-.device-icon.type-entry-validator { background: #6d28d9; }
-.device-icon.type-exit-validator { background: #c2410c; }
+.device-icon.type-ticket-machine,
+.device-icon.type-entry-validator,
+.device-icon.type-exit-validator { color: #fff; background: #000; }
 .filters-panel { display: grid; grid-template-columns: minmax(240px, 1.5fr) repeat(3, minmax(170px, 1fr)); gap: 14px; border: 1px solid #e2e8f0; border-radius: 20px; padding: 17px; background: #fff; box-shadow: 0 14px 32px rgba(15, 23, 42, 0.05); }
 .filter-field { min-width: 0; display: flex; flex-direction: column; gap: 7px; }
 .filter-field span { color: #475569; font-size: 12px; font-weight: 850; }

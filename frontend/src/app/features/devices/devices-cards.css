@@ -1,9 +1,9 @@
 .devices-grid { display: flex; flex-direction: column; gap: 10px; }
 .device-card { overflow: hidden; border: 1px solid #e2e8f0; border-left-width: 4px; border-radius: 18px; background: #fff; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06); }
-.device-card.status-border-online { border-left-color: #16a34a; }
-.device-card.status-border-offline { border-left-color: #64748b; }
-.device-card.status-border-maintenance { border-left-color: #d97706; }
-.device-card.status-border-error { border-left-color: #dc2626; }
+.device-card.status-border-online,
+.device-card.status-border-offline,
+.device-card.status-border-maintenance,
+.device-card.status-border-error { border-left-color: #000; }
 .device-card-header { width: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 13px; border: 0; padding: 14px 16px; color: inherit; background: transparent; text-align: left; cursor: pointer; }
 .device-card-header:hover { background: #f8fafc; }
 .device-card-header:focus-visible { outline: 3px solid rgba(51, 65, 85, 0.24); outline-offset: -3px; }

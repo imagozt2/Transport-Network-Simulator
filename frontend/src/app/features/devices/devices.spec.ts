@@ -73,6 +73,14 @@ describe('Devices log navigation', () => {
     expect(link.getAttribute('aria-label')).toContain('RMM-MB-ST001-001');
     expect(compiled.querySelector('.device-details')?.textContent).toContain('Última conexión');
     expect(compiled.querySelector('.device-details')?.textContent).not.toContain('Estado operativo');
+    expect(getComputedStyle(compiled.querySelector('.device-icon') as HTMLElement).backgroundColor)
+      .toBe('rgb(0, 0, 0)');
+    expect(getComputedStyle(compiled.querySelector('.device-icon') as HTMLElement).color)
+      .toBe('rgb(255, 255, 255)');
+    expect(getComputedStyle(compiled.querySelector('.device-card') as HTMLElement).borderLeftColor)
+      .toBe('rgb(0, 0, 0)');
+    expect(getComputedStyle(compiled.querySelector('.status-pill') as HTMLElement).backgroundColor)
+      .toBe('rgb(220, 252, 231)');
     expect(fixture.componentInstance.selectedStationCode).toBe('ST001');
     expect(fixture.componentInstance.filteredDevices()).toHaveLength(1);
     expect(fixture.componentInstance.filteredDevices()[0].station.code).toBe('ST001');
