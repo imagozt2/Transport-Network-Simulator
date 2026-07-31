@@ -1,0 +1,38 @@
+.page-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.create-user-button { min-height: 40px; border: 0; border-radius: 11px; padding: 0 15px; color: #fff; background: #0f172a; box-shadow: 0 7px 16px rgba(15, 23, 42, .14); cursor: pointer; font-size: 11px; font-weight: 900; }
+.lifecycle-confirmation { display: flex; align-items: center; justify-content: space-between; gap: 14px; border: 1px solid #86efac; border-radius: 14px; padding: 11px 14px; color: #166534; background: #f0fdf4; font-size: 11px; font-weight: 800; }
+.lifecycle-confirmation button { border: 0; color: inherit; background: transparent; cursor: pointer; font-size: 19px; }
+.manage-delete { color: #fff; background: #991b1b; }
+.delete-confirmation-panel { margin-top: 14px; border: 1px solid #fecaca; border-radius: 14px; padding: 14px; background: #fff7f7; }
+.delete-confirmation-panel > strong { color: #991b1b; font-size: 12px; }
+.delete-confirmation-panel > p { margin: 5px 0 12px; color: #7f1d1d; font-size: 10px; line-height: 1.5; }
+.delete-confirmation-panel > div { display: flex; justify-content: flex-end; gap: 8px; }
+.delete-confirmation-panel button { border: 0; border-radius: 9px; padding: 8px 11px; color: #334155; background: #e2e8f0; cursor: pointer; font-size: 10px; font-weight: 850; }
+.delete-confirmation-panel .delete-confirm-button { color: #fff; background: #991b1b; }
+.create-user-backdrop { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; padding: 22px; background: rgba(15, 23, 42, .55); backdrop-filter: blur(3px); }
+.create-user-dialog { width: min(620px, 100%); max-height: calc(100vh - 44px); overflow-y: auto; border-radius: 20px; background: #fff; box-shadow: 0 28px 70px rgba(15, 23, 42, .28); }
+.create-user-dialog > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; border-bottom: 1px solid #e2e8f0; padding: 21px 23px 17px; }
+.create-user-dialog header span { color: #0284c7; font-size: 9px; font-weight: 950; letter-spacing: .12em; text-transform: uppercase; }
+.create-user-dialog h2 { margin: 4px 0 0; color: #111827; font-size: 21px; }
+.create-user-dialog header p { margin: 6px 0 0; color: #64748b; font-size: 10px; }
+.create-user-dialog header button { width: 34px; height: 34px; flex: 0 0 auto; border: 0; border-radius: 10px; color: #334155; background: #f1f5f9; cursor: pointer; font-size: 20px; }
+.create-user-dialog form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; padding: 20px 23px 23px; }
+.create-user-dialog label { min-width: 0; display: flex; flex-direction: column; gap: 6px; color: #475569; font-size: 10px; font-weight: 850; }
+.create-user-dialog input { width: 100%; min-height: 42px; border: 1px solid #cbd5e1; border-radius: 11px; padding: 0 11px; color: #111827; background: #f8fafc; font: inherit; font-size: 12px; outline: none; }
+.create-user-dialog input:focus { border-color: #0284c7; box-shadow: 0 0 0 3px rgba(14, 165, 233, .12); }
+.wide-field { grid-column: 1 / -1; }
+.password-requirements, .create-error { margin: -3px 0 0; font-size: 10px; }
+.password-requirements { color: #64748b; }
+.password-requirements.valid { color: #166534; }
+.create-error { border-radius: 10px; padding: 9px 11px; color: #991b1b; background: #fef2f2; font-weight: 750; }
+.create-user-dialog footer { display: flex; justify-content: flex-end; gap: 9px; padding-top: 3px; }
+.create-user-dialog footer button { min-height: 39px; border: 0; border-radius: 10px; padding: 0 14px; cursor: pointer; font-size: 10px; font-weight: 900; }
+
+@media (max-width: 650px) {
+  .create-user-backdrop { padding: 9px; }
+  .create-user-dialog { max-height: calc(100vh - 18px); }
+  .create-user-dialog form { grid-template-columns: 1fr; padding-right: 16px; padding-left: 16px; }
+  .wide-field { grid-column: auto; }
+  .create-user-dialog footer { flex-direction: column-reverse; }
+  .create-user-dialog footer button { width: 100%; }
+}

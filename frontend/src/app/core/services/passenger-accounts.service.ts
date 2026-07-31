@@ -4,6 +4,7 @@ import { Observable, switchMap } from 'rxjs';
 
 import {
   PassengerAccount,
+  PassengerAccountCreateRequest,
   PassengerAccountSort,
   PassengerAccountStatus,
   PassengerAccountsPage,
@@ -52,6 +53,35 @@ export class PassengerAccountsService {
   getAccount(publicId: string): Observable<PassengerAccount> {
     return this.http.get<PassengerAccount>(
       `${this.apiUrl}/${encodeURIComponent(publicId)}`
+    );
+  }
+
+  createAccount(request: PassengerAccountCreateRequest): Observable<PassengerAccount> {
+    return this.http.get<CsrfTokenResponse>(this.csrfUrl, {
+      withCredentials: true
+    }).pipe(
+      switchMap((csrf) => this.http.post<PassengerAccount>(
+        this.apiUrl,
+        request,
+        {
+          headers: new HttpHeaders().set(csrf.headerName, csrf.token),
+          withCredentials: true
+        }
+      ))
+    );
+  }
+
+  deleteAccount(publicId: string): Observable<void> {
+    return this.http.get<CsrfTokenResponse>(this.csrfUrl, {
+      withCredentials: true
+    }).pipe(
+      switchMap((csrf) => this.http.delete<void>(
+        `${this.apiUrl}/${encodeURIComponent(publicId)}`,
+        {
+          headers: new HttpHeaders().set(csrf.headerName, csrf.token),
+          withCredentials: true
+        }
+      ))
     );
   }
 

@@ -23,6 +23,13 @@ export interface PassengerAccount {
   updatedAt: string;
 }
 
+export interface PassengerAccountCreateRequest {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+}
+
 export interface PassengerAccountsPage {
   summary: PassengerAccountSummary;
   users: PassengerAccount[];

@@ -1,7 +1,17 @@
 <section class="users-page">
   <header class="page-header">
     <h1>Usuarios</h1>
+    @if (canManageAccounts()) {
+      <button class="create-user-button" type="button" (click)="openCreateDialog()">Crear usuario</button>
+    }
   </header>
+
+  @if (creationConfirmation) {
+    <div class="lifecycle-confirmation" role="status">
+      <span>{{ creationConfirmation }}</span>
+      <button type="button" aria-label="Cerrar confirmación" (click)="creationConfirmation = ''">×</button>
+    </div>
+  }
 
   <section class="summary-grid" aria-label="Resumen de usuarios de RMM App">
     <article><span>Total usuarios</span><strong>{{ summary.totalAccounts }}</strong></article>
@@ -212,6 +222,9 @@
                     (click)="beginStatusChange(status)"
                   >{{ statusActionLabel(status) }}</button>
                 }
+                <button type="button" class="manage-delete" [disabled]="statusSubmitting || deleteSubmitting" (click)="beginDeleteAccount()">
+                  Eliminar cuenta
+                </button>
               </div>
 
               @if (pendingStatus; as targetStatus) {
@@ -240,6 +253,20 @@
                   </div>
                 </div>
               }
+
+              @if (deleteConfirmationOpen) {
+                <div class="delete-confirmation-panel">
+                  <strong>Eliminar permanentemente la cuenta</strong>
+                  <p>Se eliminarán los datos de acceso de {{ user.firstName }} {{ user.lastName }}. Esta acción no se puede deshacer.</p>
+                  @if (deleteError) { <p class="management-error" role="alert">{{ deleteError }}</p> }
+                  <div>
+                    <button type="button" [disabled]="deleteSubmitting" (click)="cancelDeleteAccount()">Cancelar</button>
+                    <button type="button" class="delete-confirm-button" [disabled]="deleteSubmitting" (click)="deleteAccount()">
+                      {{ deleteSubmitting ? 'Eliminando…' : 'Eliminar definitivamente' }}
+                    </button>
+                  </div>
+                </div>
+              }
             } @else {
               <p class="read-only-notice">
                 Tu cuenta puede consultar los usuarios, pero solo un administrador puede cambiar su estado.
@@ -248,6 +275,58 @@
           </section>
         }
       </aside>
+    </div>
+  }
+
+
+  @if (createDialogOpen) {
+    <div class="create-user-backdrop" (mousedown)="$event.target === $event.currentTarget && closeCreateDialog()">
+      <section class="create-user-dialog" role="dialog" aria-modal="true" aria-labelledby="create-user-title">
+        <header>
+          <div>
+            <span>RMM App</span>
+            <h2 id="create-user-title">Crear usuario pasajero</h2>
+            <p>La cuenta se creará activa y con el correo pendiente de verificación.</p>
+          </div>
+          <button type="button" aria-label="Cerrar diálogo" [disabled]="createSubmitting" (click)="closeCreateDialog()">×</button>
+        </header>
+
+        <form (submit)="$event.preventDefault(); createAccount()">
+          <label>
+            <span>Nombre</span>
+            <input type="text" maxlength="100" autocomplete="given-name" [value]="createFirstName" (input)="createFirstName = $any($event.target).value" />
+          </label>
+          <label>
+            <span>Apellidos</span>
+            <input type="text" maxlength="150" autocomplete="family-name" [value]="createLastName" (input)="createLastName = $any($event.target).value" />
+          </label>
+          <label class="wide-field">
+            <span>Correo electrónico</span>
+            <input type="email" maxlength="254" autocomplete="email" placeholder="usuario@ejemplo.com" [value]="createEmail" (input)="createEmail = $any($event.target).value" />
+          </label>
+          <label>
+            <span>Contraseña provisional</span>
+            <input type="password" maxlength="72" autocomplete="new-password" [value]="createPassword" (input)="createPassword = $any($event.target).value" />
+          </label>
+          <label>
+            <span>Confirmar contraseña</span>
+            <input type="password" maxlength="72" autocomplete="new-password" [value]="createPasswordConfirmation" (input)="createPasswordConfirmation = $any($event.target).value" />
+          </label>
+          <p class="password-requirements wide-field" [class.valid]="passwordMeetsRequirements()">
+            Entre 12 y 72 caracteres, con mayúsculas, minúsculas y números.
+          </p>
+          @if (createPasswordConfirmation && createPassword !== createPasswordConfirmation) {
+            <p class="create-error wide-field" role="alert">Las contraseñas no coinciden.</p>
+          }
+          @if (createError) { <p class="create-error wide-field" role="alert">{{ createError }}</p> }
+          <footer class="wide-field">
+            <button type="button" class="secondary-button" [disabled]="createSubmitting" (click)="closeCreateDialog()">Cancelar</button>
+            <button type="submit" class="primary-button" [disabled]="!canCreateAccount()">
+              {{ createSubmitting ? 'Creando…' : 'Crear cuenta' }}
+            </button>
+          </footer>
+        </form>
+      </section>
     </div>
   }
 </section>

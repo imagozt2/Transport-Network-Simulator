@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, HostListener, inject, OnInit } from '@angular/core';
 
 import {
   PassengerAccount,
@@ -17,7 +17,11 @@ type VerificationFilter = 'ALL' | 'VERIFIED' | 'PENDING';
 @Component({
   selector: 'app-passenger-users',
   templateUrl: './passenger-users.html',
-  styleUrls: ['./passenger-users.css', './passenger-user-detail.css']
+  styleUrls: [
+    './passenger-users.css',
+    './passenger-user-detail.css',
+    './passenger-user-lifecycle.css'
+  ]
 })
 export class PassengerUsers implements OnInit {
   private readonly passengerAccountsService = inject(PassengerAccountsService);
@@ -46,6 +50,18 @@ export class PassengerUsers implements OnInit {
   statusReason = '';
   statusSubmitting = false;
   statusError = '';
+  createDialogOpen = false;
+  createFirstName = '';
+  createLastName = '';
+  createEmail = '';
+  createPassword = '';
+  createPasswordConfirmation = '';
+  createSubmitting = false;
+  createError = '';
+  creationConfirmation = '';
+  deleteConfirmationOpen = false;
+  deleteSubmitting = false;
+  deleteError = '';
 
   readonly operator = this.operatorAuthService.currentOperator;
 
@@ -145,12 +161,13 @@ export class PassengerUsers implements OnInit {
   }
 
   closeDetail(): void {
-    if (this.statusSubmitting) {
+    if (this.statusSubmitting || this.deleteSubmitting) {
       return;
     }
     this.selectedUser = null;
     this.detailError = '';
     this.cancelStatusChange();
+    this.cancelDeleteAccount();
   }
 
   canManageAccounts(): boolean {
@@ -212,6 +229,111 @@ export class PassengerUsers implements OnInit {
       error: () => {
         this.statusError = 'No se ha podido cambiar el estado de la cuenta.';
         this.statusSubmitting = false;
+      }
+    });
+  }
+
+  openCreateDialog(): void {
+    if (!this.canManageAccounts()) return;
+    this.createDialogOpen = true;
+    this.createFirstName = '';
+    this.createLastName = '';
+    this.createEmail = '';
+    this.createPassword = '';
+    this.createPasswordConfirmation = '';
+    this.createError = '';
+    this.creationConfirmation = '';
+  }
+
+  closeCreateDialog(): void {
+    if (!this.createSubmitting) {
+      this.createDialogOpen = false;
+      this.createError = '';
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  closeActiveDialog(): void {
+    if (this.createDialogOpen) {
+      this.closeCreateDialog();
+    } else if (this.deleteConfirmationOpen) {
+      this.cancelDeleteAccount();
+    }
+  }
+
+  passwordMeetsRequirements(): boolean {
+    return this.createPassword.length >= 12
+      && this.createPassword.length <= 72
+      && /[a-z]/.test(this.createPassword)
+      && /[A-Z]/.test(this.createPassword)
+      && /[0-9]/.test(this.createPassword);
+  }
+
+  canCreateAccount(): boolean {
+    return !this.createSubmitting
+      && this.createFirstName.trim() !== ''
+      && this.createLastName.trim() !== ''
+      && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.createEmail.trim())
+      && this.passwordMeetsRequirements()
+      && this.createPassword === this.createPasswordConfirmation;
+  }
+
+  createAccount(): void {
+    if (!this.canCreateAccount()) return;
+    this.createSubmitting = true;
+    this.createError = '';
+    this.passengerAccountsService.createAccount({
+      firstName: this.createFirstName.trim(),
+      lastName: this.createLastName.trim(),
+      email: this.createEmail.trim().toLowerCase(),
+      password: this.createPassword
+    }).subscribe({
+      next: (account) => {
+        this.createSubmitting = false;
+        this.createDialogOpen = false;
+        this.creationConfirmation = `Se ha creado la cuenta de ${account.firstName} ${account.lastName}.`;
+        this.loadUsers(0);
+      },
+      error: (error) => {
+        this.createSubmitting = false;
+        this.createError = error.status === 409
+          ? 'Ya existe una cuenta asociada a ese correo electrónico.'
+          : 'No se ha podido crear la cuenta de pasajero.';
+      }
+    });
+  }
+
+  beginDeleteAccount(): void {
+    this.cancelStatusChange();
+    this.deleteConfirmationOpen = true;
+    this.deleteError = '';
+  }
+
+  cancelDeleteAccount(): void {
+    if (!this.deleteSubmitting) {
+      this.deleteConfirmationOpen = false;
+      this.deleteError = '';
+    }
+  }
+
+  deleteAccount(): void {
+    if (!this.selectedUser || this.deleteSubmitting) return;
+    const account = this.selectedUser;
+    this.deleteSubmitting = true;
+    this.deleteError = '';
+    this.passengerAccountsService.deleteAccount(account.publicId).subscribe({
+      next: () => {
+        const targetPage = this.users.length === 1 && this.currentPage > 0
+          ? this.currentPage - 1 : this.currentPage;
+        this.deleteSubmitting = false;
+        this.selectedUser = null;
+        this.deleteConfirmationOpen = false;
+        this.creationConfirmation = `Se ha eliminado la cuenta de ${account.firstName} ${account.lastName}.`;
+        this.loadUsers(targetPage);
+      },
+      error: () => {
+        this.deleteSubmitting = false;
+        this.deleteError = 'No se ha podido eliminar la cuenta de pasajero.';
       }
     });
   }
