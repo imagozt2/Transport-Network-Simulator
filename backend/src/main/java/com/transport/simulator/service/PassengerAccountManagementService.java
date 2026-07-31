@@ -80,6 +80,20 @@ public class PassengerAccountManagementService {
     }
 
     @Transactional
+    public void deleteAccount(String publicId, Authentication authentication) {
+        requireAdministrator(authentication);
+        PassengerAccount passenger = passengerAccountRepository
+                .findByPublicId(publicId == null ? "" : publicId.trim())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Passenger account not found"
+                ));
+
+        statusChangeRepository.deleteAllByPassengerAccountId(passenger.getId());
+        passengerAccountRepository.delete(passenger);
+    }
+
+    @Transactional
     public PassengerAccountResponse updateStatus(
             String publicId,
             PassengerAccountStatusUpdateRequest request,

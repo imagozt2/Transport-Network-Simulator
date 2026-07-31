@@ -50,6 +50,10 @@ public class SecurityConfig {
                                 HttpMethod.POST,
                                 "/api/admin/passenger-users"
                         ).hasRole("ADMINISTRATOR")
+                        .requestMatchers(
+                                HttpMethod.DELETE,
+                                "/api/admin/passenger-users/**"
+                        ).hasRole("ADMINISTRATOR")
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
                 .exceptionHandling(exceptions -> exceptions
