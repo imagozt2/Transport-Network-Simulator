@@ -46,7 +46,10 @@
       <article class="panel-card">
         <div class="panel-header">
           <h2>Estado de trenes</h2>
-          <span>{{ data.totalFleet }} trenes</span>
+          <div class="panel-actions">
+            <span>{{ data.totalFleet }} trenes</span>
+            <a class="context-link" routerLink="/trains">Ver trenes</a>
+          </div>
         </div>
         <div class="status-list">
           @for (item of trainStatuses; track item.status) {
@@ -62,7 +65,10 @@
       <article class="panel-card">
         <div class="panel-header">
           <h2>Estado de máquinas</h2>
-          <span>{{ data.deviceCount }} máquinas</span>
+          <div class="panel-actions">
+            <span>{{ data.deviceCount }} máquinas</span>
+            <a class="context-link" routerLink="/devices">Ver máquinas</a>
+          </div>
         </div>
         <div class="status-list">
           @for (item of deviceStatuses; track item.status) {
@@ -86,7 +92,10 @@
       <article class="panel-card">
         <div class="panel-header">
           <h2>Ocupación de las cocheras</h2>
-          <span>{{ data.availableDepotSpaces }} plazas libres</span>
+          <div class="panel-actions">
+            <span>{{ data.availableDepotSpaces }} plazas libres</span>
+            <a class="context-link" routerLink="/depots">Ver cocheras</a>
+          </div>
         </div>
         <div class="depot-occupation">
           <div class="occupation-info">
@@ -118,7 +127,10 @@
       <article class="panel-card">
         <div class="panel-header">
           <h2>Líneas de la red</h2>
-          <span>{{ data.lineCount }} líneas</span>
+          <div class="panel-actions">
+            <span>{{ data.lineCount }} líneas</span>
+            <a class="context-link" routerLink="/lines">Ver líneas</a>
+          </div>
         </div>
         <div class="line-list">
           @for (line of data.lines; track line.id) {

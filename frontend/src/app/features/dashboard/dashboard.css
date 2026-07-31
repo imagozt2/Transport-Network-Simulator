@@ -15,6 +15,7 @@
 .panel-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px; }
 .panel-header h2 { margin: 0; color: #111827; font-size: 20px; }
 .panel-header span { color: #64748b; font-size: 13px; font-weight: 650; }
+.panel-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
 .status-list { display: flex; flex-direction: column; gap: 12px; }
 .status-row { display: grid; grid-template-columns: 16px 1fr auto; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
 .status-row:last-child { border-bottom: 0; }
@@ -64,4 +65,6 @@
   .device-type-grid { grid-template-columns: 1fr; }
   .line-row { grid-template-columns: 48px minmax(0, 1fr); }
   .service-pill { grid-column: 2; justify-self: start; }
+  .panel-header { align-items: flex-start; }
+  .panel-actions { align-items: flex-end; flex-direction: column; gap: 6px; }
 }

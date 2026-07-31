@@ -1,4 +1,5 @@
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { DashboardResponse } from '../../core/models/dashboard.model';
 import { DeviceStatus, DeviceType } from '../../core/models/device-operation.model';
 import { TrainStatus } from '../../core/models/train-operation.model';
@@ -12,7 +13,12 @@ interface StatusItem<T extends string> {
   tone: 'ok' | 'neutral' | 'warning' | 'danger';
 }
 
-@Component({ selector: 'app-dashboard', templateUrl: './dashboard.html', styleUrl: './dashboard.css' })
+@Component({
+  selector: 'app-dashboard',
+  imports: [RouterLink],
+  templateUrl: './dashboard.html',
+  styleUrl: './dashboard.css'
+})
 export class Dashboard implements OnInit, OnDestroy {
   private readonly dashboardService = inject(DashboardService);
   private readonly periodicRefresh = new PeriodicRefresh(5_000, () => this.loadSummary());

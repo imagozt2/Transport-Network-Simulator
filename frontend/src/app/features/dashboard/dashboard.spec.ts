@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
 import { DashboardResponse } from '../../core/models/dashboard.model';
@@ -47,7 +48,10 @@ describe('Dashboard', () => {
   it('should render the operational summary', async () => {
     await TestBed.configureTestingModule({
       imports: [Dashboard],
-      providers: [{ provide: DashboardService, useValue: { getSummary: () => of(summary) } }]
+      providers: [
+        provideRouter([]),
+        { provide: DashboardService, useValue: { getSummary: () => of(summary) } }
+      ]
     }).compileComponents();
 
     const fixture = TestBed.createComponent(Dashboard);
@@ -74,12 +78,30 @@ describe('Dashboard', () => {
     expect(compiled.textContent).toContain('Estado de máquinas');
     expect(compiled.textContent).toContain('Cochera de Cuatro Caminos');
     expect(compiled.textContent).toContain('14 trenes en servicio');
+    const contextualLinks = Array.from(
+      compiled.querySelectorAll<HTMLAnchorElement>('.panel-header .context-link')
+    );
+    expect(contextualLinks.map((link) => link.textContent?.trim())).toEqual([
+      'Ver trenes',
+      'Ver máquinas',
+      'Ver cocheras',
+      'Ver líneas'
+    ]);
+    expect(contextualLinks.map((link) => link.getAttribute('href'))).toEqual([
+      '/trains',
+      '/devices',
+      '/depots',
+      '/lines'
+    ]);
   });
 
   it('should show a retry action when loading fails', async () => {
     await TestBed.configureTestingModule({
       imports: [Dashboard],
-      providers: [{ provide: DashboardService, useValue: { getSummary: () => throwError(() => new Error('connection error')) } }]
+      providers: [
+        provideRouter([]),
+        { provide: DashboardService, useValue: { getSummary: () => throwError(() => new Error('connection error')) } }
+      ]
     }).compileComponents();
 
     const fixture = TestBed.createComponent(Dashboard);
