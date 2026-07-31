@@ -2,8 +2,10 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 
 import { routes } from '../app.routes';
+import { Dashboard } from './dashboard/dashboard';
 import { Depots } from './depots/depots';
 import { Devices } from './devices/devices';
+import { Lines } from './lines/lines';
 import { Logs } from './logs/logs';
 import { Stations } from './stations/stations';
 import { Trains } from './trains/trains';
@@ -13,42 +15,83 @@ interface ContextualNavigation {
   sourceComponent: unknown;
   destinationPath: string;
   destinationComponent: unknown;
-  queryParam: 'stationCode' | 'deviceCode' | 'depotCode';
-  value: string;
+  queryParams: Record<string, string>;
+  expectedUrl: string;
 }
 
 const contextualNavigations: readonly ContextualNavigation[] = [
+  {
+    sourcePath: 'dashboard', sourceComponent: Dashboard,
+    destinationPath: 'trains', destinationComponent: Trains,
+    queryParams: {}, expectedUrl: '/trains'
+  },
+  {
+    sourcePath: 'dashboard', sourceComponent: Dashboard,
+    destinationPath: 'devices', destinationComponent: Devices,
+    queryParams: {}, expectedUrl: '/devices'
+  },
+  {
+    sourcePath: 'dashboard', sourceComponent: Dashboard,
+    destinationPath: 'depots', destinationComponent: Depots,
+    queryParams: {}, expectedUrl: '/depots'
+  },
+  {
+    sourcePath: 'dashboard', sourceComponent: Dashboard,
+    destinationPath: 'lines', destinationComponent: Lines,
+    queryParams: {}, expectedUrl: '/lines'
+  },
+  {
+    sourcePath: 'lines', sourceComponent: Lines,
+    destinationPath: 'trains', destinationComponent: Trains,
+    queryParams: { lineCode: 'L3' }, expectedUrl: '/trains?lineCode=L3'
+  },
+  {
+    sourcePath: 'lines', sourceComponent: Lines,
+    destinationPath: 'depots', destinationComponent: Depots,
+    queryParams: { lineCode: 'L3' }, expectedUrl: '/depots?lineCode=L3'
+  },
+  {
+    sourcePath: 'lines', sourceComponent: Lines,
+    destinationPath: 'stations', destinationComponent: Stations,
+    queryParams: { lineCode: 'L3' }, expectedUrl: '/stations?lineCode=L3'
+  },
+  {
+    sourcePath: 'stations', sourceComponent: Stations,
+    destinationPath: 'trains', destinationComponent: Trains,
+    queryParams: { lineCode: 'L3', status: 'IN_SERVICE' },
+    expectedUrl: '/trains?lineCode=L3&status=IN_SERVICE'
+  },
   {
     sourcePath: 'stations',
     sourceComponent: Stations,
     destinationPath: 'devices',
     destinationComponent: Devices,
-    queryParam: 'stationCode',
-    value: 'ST001'
+    queryParams: { stationCode: 'ST001' },
+    expectedUrl: '/devices?stationCode=ST001'
   },
   {
     sourcePath: 'stations',
     sourceComponent: Stations,
     destinationPath: 'logs',
     destinationComponent: Logs,
-    queryParam: 'stationCode',
-    value: 'ST001'
+    queryParams: { stationCode: 'ST001' },
+    expectedUrl: '/logs?stationCode=ST001'
   },
   {
     sourcePath: 'devices',
     sourceComponent: Devices,
     destinationPath: 'logs',
     destinationComponent: Logs,
-    queryParam: 'deviceCode',
-    value: 'RMM-MB-ST001-001'
+    queryParams: { deviceCode: 'RMM-MB-ST001-001' },
+    expectedUrl: '/logs?deviceCode=RMM-MB-ST001-001'
   },
   {
     sourcePath: 'depots',
     sourceComponent: Depots,
     destinationPath: 'trains',
     destinationComponent: Trains,
-    queryParam: 'depotCode',
-    value: 'DEP-AIR-A'
+    queryParams: { depotCode: 'DEP-AIR-A' },
+    expectedUrl: '/trains?depotCode=DEP-AIR-A'
   }
 ];
 
@@ -73,16 +116,14 @@ describe('Contextual navigation between operational sections', () => {
 
       const url = router.serializeUrl(router.createUrlTree(
         [`/${navigation.destinationPath}`],
-        { queryParams: { [navigation.queryParam]: navigation.value } }
+        { queryParams: navigation.queryParams }
       ));
       const parsedUrl = router.parseUrl(url);
 
-      expect(url).toBe(
-        `/${navigation.destinationPath}?${navigation.queryParam}=${navigation.value}`
-      );
+      expect(url).toBe(navigation.expectedUrl);
       expect(parsedUrl.root.children['primary'].segments.map((segment) => segment.path))
         .toEqual([navigation.destinationPath]);
-      expect(parsedUrl.queryParams[navigation.queryParam]).toBe(navigation.value);
+      expect(parsedUrl.queryParams).toEqual(navigation.queryParams);
     }
   );
 });
