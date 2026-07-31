@@ -33,12 +33,12 @@
 .terminal-dot.first { left: 0; } .terminal-dot.last { left: 100%; }
 .station-dot { width: 12px; height: 12px; top: 1px; border-color: #111827; box-shadow: 0 0 0 3px #fff; }
 
-.arrivals-panel { min-width: 0; }
+.arrivals-panel { min-width: 0; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); }
 .arrivals-panel > header { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 16px; }
 .arrivals-panel > header h2 { margin: 0; }
 .arrivals-panel > header span { color: #6b7280; font-size: 13px; font-weight: 800; }
 .empty-arrivals { padding: 14px; border: 1px solid #e5e7eb; border-radius: 14px; color: #6b7280; background: #f9fafb; font-size: 13px; font-weight: 800; }
-.arrival-list { flex: 1; max-height: 420px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; }
+.arrival-list { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; }
 .arrival-card { --line-color: #64748b; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 12px; border: 1px solid #e5e7eb; border-left: 4px solid var(--line-color); border-radius: 16px; background: #f8fafc; }
 .arrival-info { min-width: 0; }
 .arrival-info strong, .arrival-info small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -46,4 +46,5 @@
 .arrival-info small { margin-top: 3px; color: #6b7280; font-size: 11px; font-weight: 700; }
 .arrival-time { padding: 6px 10px; border-radius: 999px; color: #fff; background: #111827; font-size: 12px; white-space: nowrap; }
 .arrival-meta { grid-column: 2 / -1; color: #6b7280; font-size: 11px; font-weight: 700; }
+@media (max-width: 1250px) { .arrivals-panel { display: flex; } .arrival-list { max-height: 420px; } }
 @media (max-width: 640px) { .mini-stats, .line-directions { grid-template-columns: 1fr; } .arrival-card { grid-template-columns: auto minmax(0, 1fr); } .arrival-time { grid-column: 2; justify-self: start; } .arrival-meta { grid-column: 2; } }
