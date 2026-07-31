@@ -4,18 +4,13 @@ import com.transport.simulator.dto.request.transporttitle.CompensatoryTicketIssu
 import com.transport.simulator.dto.response.transporttitle.CompensatoryTicketIssuanceResponse;
 import com.transport.simulator.entity.CompensatoryTicketIssuance;
 import com.transport.simulator.entity.Device;
-import com.transport.simulator.entity.DeviceEventLog;
 import com.transport.simulator.entity.OperatorAccount;
 import com.transport.simulator.entity.Station;
 import com.transport.simulator.entity.Ticket;
 import com.transport.simulator.entity.TicketProduct;
-import com.transport.simulator.enums.DeviceEventType;
 import com.transport.simulator.enums.DeviceStatus;
 import com.transport.simulator.enums.DeviceType;
-import com.transport.simulator.enums.LogOrigin;
-import com.transport.simulator.enums.LogSeverity;
 import com.transport.simulator.repository.CompensatoryTicketIssuanceRepository;
-import com.transport.simulator.repository.DeviceEventLogRepository;
 import com.transport.simulator.repository.DeviceRepository;
 import com.transport.simulator.repository.OperatorAccountRepository;
 import com.transport.simulator.repository.StationRepository;
@@ -43,7 +38,7 @@ public class CompensatoryTicketIssuanceService {
     private final OperatorAccountRepository operatorRepository;
     private final TicketRepository ticketRepository;
     private final CompensatoryTicketIssuanceRepository issuanceRepository;
-    private final DeviceEventLogRepository logRepository;
+    private final TicketIssuanceEventRegistrationService eventRegistrationService;
     private final NetworkJourneyPlanningService journeyPlanningService;
     private final Clock clock;
 
@@ -54,7 +49,7 @@ public class CompensatoryTicketIssuanceService {
             OperatorAccountRepository operatorRepository,
             TicketRepository ticketRepository,
             CompensatoryTicketIssuanceRepository issuanceRepository,
-            DeviceEventLogRepository logRepository,
+            TicketIssuanceEventRegistrationService eventRegistrationService,
             NetworkJourneyPlanningService journeyPlanningService,
             Clock clock
     ) {
@@ -64,7 +59,7 @@ public class CompensatoryTicketIssuanceService {
         this.operatorRepository = operatorRepository;
         this.ticketRepository = ticketRepository;
         this.issuanceRepository = issuanceRepository;
-        this.logRepository = logRepository;
+        this.eventRegistrationService = eventRegistrationService;
         this.journeyPlanningService = journeyPlanningService;
         this.clock = clock;
     }
@@ -96,23 +91,11 @@ public class CompensatoryTicketIssuanceService {
         Ticket ticket = new Ticket(uniqueCode("RMM"), UUID.randomUUID().toString(), product, now);
         configure(product, request, issuance, ticket, now);
 
+        issuanceRepository.save(issuance);
+        eventRegistrationService.registerRequested(issuance, now);
         ticketRepository.save(ticket);
         issuance.complete(ticket, now);
-        issuanceRepository.save(issuance);
-
-        DeviceEventLog log = new DeviceEventLog(
-                LogOrigin.ADMINISTRATION,
-                DeviceEventType.COMPENSATORY_TICKET_ISSUED,
-                LogSeverity.INFO,
-                "Emisión compensatoria de " + product.getProductType()
-                        + " completada por " + operator.getUsername(),
-                device,
-                now,
-                issuanceCode,
-                payload(issuanceCode, ticket.getCode(), product)
-        );
-        log.linkCompensatoryIssuance(issuance, ticket);
-        logRepository.save(log);
+        eventRegistrationService.registerCompleted(issuance, now);
         return CompensatoryTicketIssuanceResponse.from(issuance);
     }
 
@@ -225,11 +208,6 @@ public class CompensatoryTicketIssuanceService {
 
     private String uniqueCode(String prefix) {
         return prefix + "-" + UUID.randomUUID().toString().toUpperCase(Locale.ROOT);
-    }
-
-    private String payload(String issuanceCode, String ticketCode, TicketProduct product) {
-        return "{\"issuanceCode\":\"" + issuanceCode + "\",\"ticketCode\":\""
-                + ticketCode + "\",\"ticketType\":\"" + product.getProductType() + "\"}";
     }
 
     private ResponseStatusException badRequest(String message) {

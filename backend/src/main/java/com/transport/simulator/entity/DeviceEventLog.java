@@ -56,6 +56,10 @@ public class DeviceEventLog {
     @JoinColumn(name = "compensatory_issuance_id")
     private CompensatoryTicketIssuance compensatoryIssuance;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "staff_user_id")
+    private OperatorAccount operator;
+
     @Column(name = "external_reference", length = 150)
     private String externalReference;
 
@@ -94,10 +98,12 @@ public class DeviceEventLog {
 
     public void linkCompensatoryIssuance(
             CompensatoryTicketIssuance issuance,
-            Ticket issuedTicket
+            Ticket issuedTicket,
+            OperatorAccount responsibleOperator
     ) {
         compensatoryIssuance = issuance;
         ticket = issuedTicket;
+        operator = responsibleOperator;
     }
 
     @PrePersist
@@ -141,6 +147,18 @@ public class DeviceEventLog {
 
     public String getPayloadJson() {
         return payloadJson;
+    }
+
+    public Ticket getTicket() {
+        return ticket;
+    }
+
+    public CompensatoryTicketIssuance getCompensatoryIssuance() {
+        return compensatoryIssuance;
+    }
+
+    public OperatorAccount getOperator() {
+        return operator;
     }
 
     public LocalDateTime getOccurredAt() {
