@@ -43,3 +43,31 @@ export interface TransportTitlesResponse {
   summary: TransportTitleSummary;
   titles: TransportTitle[];
 }
+
+export interface CompensatoryTicketIssuanceRequest {
+  deviceCode: string;
+  reason: string;
+  originStationCode?: string;
+  destinationStationCode?: string;
+  trips?: number;
+  days?: number;
+  balanceAmount?: number;
+}
+
+export interface CompensatoryTicketIssuanceResponse {
+  id: number;
+  code: string;
+  status: 'REQUESTED' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+  ticketCode: string;
+  qrToken: string;
+  productCode: string;
+  productType: TransportTitleType;
+  deviceCode: string;
+  deviceName: string;
+  stationCode: string;
+  stationName: string;
+  operatorUsername: string;
+  chargedAmount: number;
+  requestedAt: string;
+  completedAt: string;
+}

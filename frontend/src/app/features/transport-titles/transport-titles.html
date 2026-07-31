@@ -3,6 +3,13 @@
     <h1>Títulos de transporte</h1>
   </header>
 
+  @if (issuanceConfirmation) {
+    <div class="issuance-confirmation" role="status">
+      <span>{{ issuanceConfirmation }}</span>
+      <button type="button" aria-label="Cerrar confirmación" (click)="issuanceConfirmation = ''">×</button>
+    </div>
+  }
+
   @if (loading) {
     <div class="state-card" role="status">Cargando títulos de transporte…</div>
   } @else if (errorMessage || !catalog) {
@@ -99,6 +106,11 @@
               <dd>{{ title.rechargeable ? 'Permitida' : 'No disponible' }}</dd>
             </div>
           </dl>
+          <footer class="title-actions">
+            <button type="button" class="issue-ticket-button" [disabled]="!title.active" (click)="openIssuanceDialog(title)">
+              Emitir sin coste
+            </button>
+          </footer>
         </article>
       } @empty {
         <div class="state-card empty-card">
@@ -106,5 +118,99 @@
         </div>
       }
     </section>
+  }
+
+  @if (issuanceTitle) {
+    <div class="dialog-backdrop" (mousedown)="$event.target === $event.currentTarget && closeIssuanceDialog()">
+      <section class="issuance-dialog" role="dialog" aria-modal="true" aria-labelledby="issuance-dialog-title">
+        <header class="dialog-header">
+          <div>
+            <span class="dialog-eyebrow">Emisión compensatoria</span>
+            <h2 id="issuance-dialog-title">{{ issuanceTitle.name }}</h2>
+            <p>La emisión será gratuita y quedará asociada a tu cuenta de operador.</p>
+          </div>
+          <button type="button" class="dialog-close" aria-label="Cerrar diálogo" [disabled]="issuingTicket" (click)="closeIssuanceDialog()">×</button>
+        </header>
+
+        @if (loadingIssuanceOptions) {
+          <div class="dialog-state" role="status">Cargando máquinas y estaciones…</div>
+        } @else {
+          <form class="issuance-form" (submit)="$event.preventDefault(); submitCompensatoryIssuance()">
+            <label class="dialog-field full-width">
+              <span>Máquina de emisión</span>
+              <select required [value]="selectedDeviceCode" (change)="selectedDeviceCode = $any($event.target).value">
+                <option value="">Selecciona una máquina online</option>
+                @for (machine of ticketMachines; track machine.id) {
+                  <option [value]="machine.code">{{ machine.name }} · {{ machine.station.name }}</option>
+                }
+              </select>
+              @if (ticketMachines.length === 0) { <small>No hay máquinas de venta online disponibles.</small> }
+            </label>
+
+            @switch (issuanceTitle.type) {
+              @case ('SINGLE_TRIP') {
+                <label class="dialog-field">
+                  <span>Estación de origen</span>
+                  <select [value]="originStationCode" (change)="originStationCode = $any($event.target).value">
+                    <option value="">Selecciona el origen</option>
+                    @for (station of stations; track station.code) {
+                      <option [value]="station.code" [disabled]="station.code === destinationStationCode">{{ station.name }} · {{ station.code }}</option>
+                    }
+                  </select>
+                </label>
+                <label class="dialog-field">
+                  <span>Estación de destino</span>
+                  <select [value]="destinationStationCode" (change)="destinationStationCode = $any($event.target).value">
+                    <option value="">Selecciona el destino</option>
+                    @for (station of stations; track station.code) {
+                      <option [value]="station.code" [disabled]="station.code === originStationCode">{{ station.name }} · {{ station.code }}</option>
+                    }
+                  </select>
+                </label>
+              }
+              @case ('MULTI_TRIP') {
+                <label class="dialog-field full-width">
+                  <span>Número de viajes</span>
+                  <input type="number" [min]="issuanceTitle.minTrips ?? 1" [max]="issuanceTitle.maxTrips ?? null" [value]="selectedTrips ?? ''" (input)="setOptionalNumber('trips', $any($event.target).value)" />
+                  <small>Entre {{ issuanceTitle.minTrips }} y {{ issuanceTitle.maxTrips }} viajes.</small>
+                </label>
+              }
+              @case ('TIME_PASS') {
+                <label class="dialog-field full-width">
+                  <span>Días de validez</span>
+                  <input type="number" [min]="issuanceTitle.minDays ?? 1" [max]="issuanceTitle.maxDays ?? null" [value]="selectedDays ?? ''" (input)="setOptionalNumber('days', $any($event.target).value)" />
+                  <small>Entre {{ issuanceTitle.minDays }} y {{ issuanceTitle.maxDays }} días.</small>
+                </label>
+              }
+              @case ('SMART_BALANCE') {
+                <label class="dialog-field full-width">
+                  <span>Saldo inicial</span>
+                  <div class="money-input">
+                    <input type="number" step="0.01" [min]="issuanceTitle.minRechargeAmount ?? 0.01" [max]="issuanceTitle.maxRechargeAmount ?? null" [value]="balanceAmount ?? ''" (input)="setOptionalNumber('balance', $any($event.target).value)" />
+                    <span>EUR</span>
+                  </div>
+                  <small>Saldo entre {{ money(issuanceTitle.minRechargeAmount) }} y {{ money(issuanceTitle.maxRechargeAmount) }}.</small>
+                </label>
+              }
+            }
+
+            <label class="dialog-field full-width">
+              <span>Motivo de la emisión</span>
+              <textarea maxlength="500" rows="3" placeholder="Describe brevemente la incidencia que justifica la compensación" [value]="issuanceReason" (input)="issuanceReason = $any($event.target).value"></textarea>
+              <small>{{ issuanceReason.length }}/500 caracteres</small>
+            </label>
+            @if (issuanceError) { <div class="dialog-error full-width" role="alert">{{ issuanceError }}</div> }
+            <div class="issuance-warning full-width">
+              <strong>Importe de la operación: 0,00 €</strong>
+              <span>La emisión y sus eventos quedarán registrados en los logs operativos.</span>
+            </div>
+            <footer class="dialog-actions full-width">
+              <button type="button" class="secondary-button" [disabled]="issuingTicket" (click)="closeIssuanceDialog()">Cancelar</button>
+              <button type="submit" class="primary-button" [disabled]="!canSubmitIssuance()">{{ issuingTicket ? 'Emitiendo…' : 'Confirmar emisión' }}</button>
+            </footer>
+          </form>
+        }
+      </section>
+    </div>
   }
 </section>

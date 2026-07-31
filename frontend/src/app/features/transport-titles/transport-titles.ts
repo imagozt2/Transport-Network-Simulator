@@ -1,11 +1,17 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, HostListener, inject, OnInit } from '@angular/core';
+import { forkJoin } from 'rxjs';
 
 import {
+  CompensatoryTicketIssuanceRequest,
   TransportTitle,
   TransportTitlesResponse,
   TransportTitleType
 } from '../../core/models/transport-title.model';
 import { TransportTitlesService } from '../../core/services/transport-titles.service';
+import { DeviceOperation } from '../../core/models/device-operation.model';
+import { NetworkMapStation } from '../../core/models/network-map.model';
+import { DeviceOperationsService } from '../../core/services/device-operations.service';
+import { NetworkMapService } from '../../core/services/network-map.service';
 
 type TypeFilter = TransportTitleType | 'ALL';
 type StatusFilter = 'ALL' | 'ACTIVE' | 'INACTIVE';
@@ -13,10 +19,12 @@ type StatusFilter = 'ALL' | 'ACTIVE' | 'INACTIVE';
 @Component({
   selector: 'app-transport-titles',
   templateUrl: './transport-titles.html',
-  styleUrl: './transport-titles.css'
+  styleUrls: ['./transport-titles.css', './transport-title-issuance-dialog.css']
 })
 export class TransportTitles implements OnInit {
   private readonly transportTitlesService = inject(TransportTitlesService);
+  private readonly deviceOperationsService = inject(DeviceOperationsService);
+  private readonly networkMapService = inject(NetworkMapService);
 
   catalog: TransportTitlesResponse | null = null;
   loading = true;
@@ -24,6 +32,20 @@ export class TransportTitles implements OnInit {
   searchText = '';
   selectedType: TypeFilter = 'ALL';
   selectedStatus: StatusFilter = 'ALL';
+  issuanceTitle: TransportTitle | null = null;
+  ticketMachines: DeviceOperation[] = [];
+  stations: NetworkMapStation[] = [];
+  loadingIssuanceOptions = false;
+  issuingTicket = false;
+  issuanceError = '';
+  issuanceConfirmation = '';
+  selectedDeviceCode = '';
+  issuanceReason = '';
+  originStationCode = '';
+  destinationStationCode = '';
+  selectedTrips: number | null = null;
+  selectedDays: number | null = null;
+  balanceAmount: number | null = null;
 
   readonly types: readonly TransportTitleType[] = [
     'SINGLE_TRIP',
@@ -150,6 +172,136 @@ export class TransportTitles implements OnInit {
       style: 'currency',
       currency: this.catalog?.currency ?? 'EUR'
     }).format(value);
+  }
+
+  openIssuanceDialog(title: TransportTitle): void {
+    if (!title.active) {
+      return;
+    }
+    this.issuanceTitle = title;
+    this.resetIssuanceForm(title);
+    if (this.ticketMachines.length === 0 || this.stations.length === 0) {
+      this.loadIssuanceOptions();
+    }
+  }
+
+  closeIssuanceDialog(): void {
+    if (!this.issuingTicket) {
+      this.issuanceTitle = null;
+      this.issuanceError = '';
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  closeIssuanceDialogWithEscape(): void {
+    this.closeIssuanceDialog();
+  }
+
+  submitCompensatoryIssuance(): void {
+    const title = this.issuanceTitle;
+    if (!title || !this.canSubmitIssuance()) {
+      return;
+    }
+    this.issuingTicket = true;
+    this.issuanceError = '';
+    this.transportTitlesService.issueCompensatoryTicket(title.id, this.issuanceRequest(title)).subscribe({
+      next: (issuance) => {
+        this.issuingTicket = false;
+        this.issuanceTitle = null;
+        this.issuanceConfirmation = `Billete ${issuance.ticketCode} emitido en ${issuance.deviceName}.`;
+      },
+      error: () => {
+        this.issuingTicket = false;
+        this.issuanceError = 'No se ha podido completar la emisión compensatoria.';
+      }
+    });
+  }
+
+  canSubmitIssuance(): boolean {
+    const title = this.issuanceTitle;
+    if (!title || this.loadingIssuanceOptions || this.issuingTicket
+      || !this.selectedDeviceCode || !this.issuanceReason.trim()) {
+      return false;
+    }
+    switch (title.type) {
+      case 'SINGLE_TRIP':
+        return !!this.originStationCode && !!this.destinationStationCode
+          && this.originStationCode !== this.destinationStationCode;
+      case 'MULTI_TRIP':
+        return this.inRange(this.selectedTrips, title.minTrips, title.maxTrips);
+      case 'TIME_PASS':
+        return this.inRange(this.selectedDays, title.minDays, title.maxDays);
+      case 'SMART_BALANCE':
+        return this.inRange(this.balanceAmount, title.minRechargeAmount, title.maxRechargeAmount);
+    }
+  }
+
+  setOptionalNumber(field: 'trips' | 'days' | 'balance', value: string): void {
+    const parsed = value === '' ? null : Number(value);
+    const normalized = parsed !== null && Number.isFinite(parsed) ? parsed : null;
+    if (field === 'trips') this.selectedTrips = normalized;
+    if (field === 'days') this.selectedDays = normalized;
+    if (field === 'balance') this.balanceAmount = normalized;
+  }
+
+  private loadIssuanceOptions(): void {
+    this.loadingIssuanceOptions = true;
+    this.issuanceError = '';
+    forkJoin({
+      devices: this.deviceOperationsService.getOperations(),
+      network: this.networkMapService.getNetworkMap()
+    }).subscribe({
+      next: ({ devices, network }) => {
+        this.ticketMachines = devices.devices
+          .filter((device) => device.type === 'TICKET_MACHINE' && device.status === 'ONLINE')
+          .sort((first, second) => first.name.localeCompare(second.name, 'es'));
+        const byCode = new Map<string, NetworkMapStation>();
+        network.lines.flatMap((line) => line.stations)
+          .forEach((station) => byCode.set(station.code, station));
+        this.stations = [...byCode.values()]
+          .sort((first, second) => first.name.localeCompare(second.name, 'es'));
+        this.loadingIssuanceOptions = false;
+      },
+      error: () => {
+        this.loadingIssuanceOptions = false;
+        this.issuanceError = 'No se han podido cargar las máquinas y estaciones disponibles.';
+      }
+    });
+  }
+
+  private resetIssuanceForm(title: TransportTitle): void {
+    this.issuanceError = '';
+    this.issuanceConfirmation = '';
+    this.selectedDeviceCode = '';
+    this.issuanceReason = '';
+    this.originStationCode = '';
+    this.destinationStationCode = '';
+    this.selectedTrips = title.minTrips;
+    this.selectedDays = title.minDays;
+    this.balanceAmount = title.minRechargeAmount;
+  }
+
+  private issuanceRequest(title: TransportTitle): CompensatoryTicketIssuanceRequest {
+    const request: CompensatoryTicketIssuanceRequest = {
+      deviceCode: this.selectedDeviceCode,
+      reason: this.issuanceReason.trim()
+    };
+    if (title.type === 'SINGLE_TRIP') {
+      request.originStationCode = this.originStationCode;
+      request.destinationStationCode = this.destinationStationCode;
+    } else if (title.type === 'MULTI_TRIP') {
+      request.trips = this.selectedTrips!;
+    } else if (title.type === 'TIME_PASS') {
+      request.days = this.selectedDays!;
+    } else {
+      request.balanceAmount = this.balanceAmount!;
+    }
+    return request;
+  }
+
+  private inRange(value: number | null, minimum: number | null, maximum: number | null): boolean {
+    return value !== null && (minimum === null || value >= minimum)
+      && (maximum === null || value <= maximum);
   }
 
 }

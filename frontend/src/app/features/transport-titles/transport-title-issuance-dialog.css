@@ -1,0 +1,42 @@
+.title-actions { display: flex; justify-content: flex-end; margin-top: 15px; padding-top: 14px; border-top: 1px solid #e2e8f0; }
+.issue-ticket-button, .primary-button, .secondary-button { min-height: 40px; border: 0; border-radius: 12px; padding: 0 16px; font: inherit; font-size: 12px; font-weight: 900; cursor: pointer; }
+.issue-ticket-button, .primary-button { color: #fff; background: #0f172a; box-shadow: 0 7px 16px rgba(15, 23, 42, .15); }
+.issue-ticket-button:disabled, .primary-button:disabled, .secondary-button:disabled { cursor: not-allowed; opacity: .45; box-shadow: none; }
+.issuance-confirmation { display: flex; align-items: center; justify-content: space-between; gap: 14px; border: 1px solid #86efac; border-radius: 15px; padding: 12px 15px; color: #166534; background: #f0fdf4; font-size: 13px; font-weight: 800; }
+.issuance-confirmation button { border: 0; color: inherit; background: transparent; font-size: 20px; cursor: pointer; }
+.dialog-backdrop { position: fixed; z-index: 1000; inset: 0; display: grid; place-items: center; padding: 24px; background: rgba(15, 23, 42, .58); backdrop-filter: blur(3px); }
+.issuance-dialog { width: min(680px, 100%); max-height: calc(100vh - 48px); overflow: auto; border: 1px solid #cbd5e1; border-radius: 22px; background: #fff; box-shadow: 0 28px 70px rgba(15, 23, 42, .28); }
+.dialog-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 22px 24px 18px; border-bottom: 1px solid #e2e8f0; }
+.dialog-eyebrow { color: #0284c7; font-size: 10px; font-weight: 950; letter-spacing: .12em; text-transform: uppercase; }
+.dialog-header h2 { margin: 5px 0 0; color: #111827; font-size: 23px; }
+.dialog-header p { margin: 7px 0 0; color: #64748b; font-size: 12px; line-height: 1.45; }
+.dialog-close { width: 36px; height: 36px; flex: 0 0 auto; border: 0; border-radius: 50%; color: #334155; background: #f1f5f9; font-size: 22px; cursor: pointer; }
+.dialog-state { padding: 34px 24px; color: #475569; text-align: center; font-size: 13px; }
+.issuance-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; padding: 22px 24px 24px; }
+.full-width { grid-column: 1 / -1; }
+.dialog-field { min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+.dialog-field > span { color: #334155; font-size: 11px; font-weight: 900; }
+.dialog-field select, .dialog-field input, .dialog-field textarea { width: 100%; border: 1px solid #cbd5e1; border-radius: 12px; padding: 0 12px; color: #111827; background: #f8fafc; font: inherit; font-size: 13px; outline: none; }
+.dialog-field select, .dialog-field input { min-height: 43px; }
+.dialog-field textarea { min-height: 82px; padding-top: 11px; resize: vertical; }
+.dialog-field select:focus, .dialog-field input:focus, .dialog-field textarea:focus { border-color: #0284c7; box-shadow: 0 0 0 3px rgba(14, 165, 233, .12); }
+.dialog-field small { color: #64748b; font-size: 10px; }
+.money-input { position: relative; }
+.money-input input { padding-right: 54px; }
+.money-input span { position: absolute; top: 50%; right: 13px; transform: translateY(-50%); color: #64748b; font-size: 11px; font-weight: 900; }
+.issuance-warning { display: flex; flex-direction: column; gap: 4px; border: 1px solid #bae6fd; border-radius: 13px; padding: 12px 14px; color: #075985; background: #f0f9ff; }
+.issuance-warning strong { font-size: 12px; }
+.issuance-warning span { font-size: 10px; line-height: 1.4; }
+.dialog-error { border-radius: 12px; padding: 11px 13px; color: #991b1b; background: #fef2f2; font-size: 12px; font-weight: 750; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 3px; }
+.secondary-button { color: #334155; background: #e2e8f0; }
+
+@media (max-width: 520px) {
+  .dialog-backdrop { padding: 10px; }
+  .issuance-dialog { max-height: calc(100vh - 20px); border-radius: 17px; }
+  .dialog-header, .issuance-form { padding-left: 16px; padding-right: 16px; }
+  .issuance-form { grid-template-columns: 1fr; }
+  .full-width { grid-column: auto; }
+  .dialog-actions { flex-direction: column-reverse; }
+  .dialog-actions button { width: 100%; }
+}
