@@ -34,6 +34,13 @@ incluyen emisiones iniciales: esta tabla contiene exclusivamente actividad admin
 simulada de la aplicación. Los logs pueden asociarse a la emisión mediante
 `operational_logs.compensatory_issuance_id`.
 
+`incidents` constituye la base de la herramienta de ticketing del centro de control. Cada incidencia
+incluye categoría, prioridad, estado, operador creador y responsable, fechas del ciclo de vida y
+referencias opcionales a la línea, estación, tren, máquina o cochera afectada. La evolución queda
+auditada en `incident_status_changes`, mientras que `incident_comments` conserva la conversación
+operativa sin duplicarla en el registro principal. Los logs relacionados pueden enlazarse mediante
+`operational_logs.incident_id`. No se cargan incidencias iniciales ni se simulan fallos.
+
 ## Orden de instalación
 
 Los archivos deben ejecutarse en el orden anterior. Desde PowerShell se puede pasar cada archivo al

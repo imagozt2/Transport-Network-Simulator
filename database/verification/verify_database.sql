@@ -12,6 +12,15 @@ FROM passenger_account_status_changes;
 SELECT COUNT(*) AS compensatory_ticket_issuance_count
 FROM compensatory_ticket_issuances;
 
+SELECT COUNT(*) AS incident_count
+FROM incidents;
+
+SELECT COUNT(*) AS incident_status_change_count
+FROM incident_status_changes;
+
+SELECT COUNT(*) AS incident_comment_count
+FROM incident_comments;
+
 SELECT 'stations' AS entity, COUNT(*) AS actual, 50 AS expected FROM stations
 UNION ALL SELECT 'transport_lines', COUNT(*), 6 FROM transport_lines
 UNION ALL SELECT 'line_stations', COUNT(*), 88 FROM line_stations
@@ -83,6 +92,49 @@ WHERE products.id IS NULL
    OR (products.product_type = 'MULTI_TRIP' AND issuances.selected_trips IS NULL)
    OR (products.product_type = 'TIME_PASS' AND issuances.selected_days IS NULL)
    OR (products.product_type = 'SMART_BALANCE' AND issuances.recharge_amount IS NULL);
+
+SELECT incidents.id, incidents.code, incidents.incident_status, incidents.priority
+FROM incidents
+LEFT JOIN operator_accounts creators ON creators.id = incidents.created_by_operator_id
+LEFT JOIN operator_accounts assignees ON assignees.id = incidents.assigned_to_operator_id
+LEFT JOIN transport_lines lines ON lines.id = incidents.affected_line_id
+LEFT JOIN stations ON stations.id = incidents.affected_station_id
+LEFT JOIN trains ON trains.id = incidents.affected_train_id
+LEFT JOIN devices ON devices.id = incidents.affected_device_id
+LEFT JOIN depots ON depots.id = incidents.affected_depot_id
+WHERE creators.id IS NULL
+   OR (incidents.assigned_to_operator_id IS NOT NULL AND assignees.id IS NULL)
+   OR (incidents.affected_line_id IS NOT NULL AND lines.id IS NULL)
+   OR (incidents.affected_station_id IS NOT NULL AND stations.id IS NULL)
+   OR (incidents.affected_train_id IS NOT NULL AND trains.id IS NULL)
+   OR (incidents.affected_device_id IS NOT NULL AND devices.id IS NULL)
+   OR (incidents.affected_depot_id IS NOT NULL AND depots.id IS NULL)
+   OR incidents.incident_category NOT IN ('SERVICE', 'DEVICE', 'INFRASTRUCTURE', 'TICKETING', 'SECURITY', 'OTHER')
+   OR incidents.priority NOT IN ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL')
+   OR incidents.incident_status NOT IN ('OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'CANCELLED')
+   OR (incidents.assigned_at IS NOT NULL AND incidents.assigned_at < incidents.opened_at)
+   OR (incidents.resolved_at IS NOT NULL AND incidents.resolved_at < incidents.opened_at)
+   OR (incidents.closed_at IS NOT NULL AND incidents.closed_at < incidents.opened_at);
+
+SELECT changes.id
+FROM incident_status_changes changes
+LEFT JOIN incidents ON incidents.id = changes.incident_id
+LEFT JOIN operator_accounts operators ON operators.id = changes.changed_by_operator_id
+WHERE incidents.id IS NULL
+   OR operators.id IS NULL
+   OR (changes.previous_status IS NOT NULL AND changes.previous_status = changes.new_status)
+   OR (changes.previous_status IS NOT NULL AND changes.previous_status NOT IN (
+       'OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'CANCELLED'
+   ))
+   OR changes.new_status NOT IN ('OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'CANCELLED');
+
+SELECT comments.id
+FROM incident_comments comments
+LEFT JOIN incidents ON incidents.id = comments.incident_id
+LEFT JOIN operator_accounts operators ON operators.id = comments.author_operator_id
+WHERE incidents.id IS NULL
+   OR operators.id IS NULL
+   OR CHAR_LENGTH(TRIM(comments.comment_text)) = 0;
 
 SELECT transport_line.code, COUNT(line_stations.id) AS station_count
 FROM transport_lines transport_line

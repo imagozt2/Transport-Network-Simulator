@@ -716,6 +716,128 @@ CREATE INDEX idx_ticket_validations_device ON ticket_validations (device_id);
 CREATE INDEX idx_ticket_validations_qr_token ON ticket_validations (qr_token);
 CREATE INDEX idx_ticket_validations_external_reference ON ticket_validations (external_reference);
 
+CREATE TABLE incidents (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    code VARCHAR(30) NOT NULL,
+    title VARCHAR(150) NOT NULL,
+    description TEXT NOT NULL,
+    incident_category VARCHAR(30) NOT NULL,
+    priority VARCHAR(20) NOT NULL DEFAULT 'MEDIUM',
+    incident_status VARCHAR(30) NOT NULL DEFAULT 'OPEN',
+    created_by_operator_id BIGINT NOT NULL,
+    assigned_to_operator_id BIGINT NULL,
+    affected_line_id BIGINT NULL,
+    affected_station_id BIGINT NULL,
+    affected_train_id BIGINT NULL,
+    affected_device_id BIGINT NULL,
+    affected_depot_id BIGINT NULL,
+    resolution_summary TEXT NULL,
+    opened_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    assigned_at DATETIME NULL,
+    resolved_at DATETIME NULL,
+    closed_at DATETIME NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_incidents_code UNIQUE (code),
+    CONSTRAINT fk_incidents_creator FOREIGN KEY (created_by_operator_id)
+        REFERENCES operator_accounts (id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_incidents_assignee FOREIGN KEY (assigned_to_operator_id)
+        REFERENCES operator_accounts (id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_incidents_line FOREIGN KEY (affected_line_id)
+        REFERENCES transport_lines (id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_incidents_station FOREIGN KEY (affected_station_id)
+        REFERENCES stations (id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_incidents_train FOREIGN KEY (affected_train_id)
+        REFERENCES trains (id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_incidents_device FOREIGN KEY (affected_device_id)
+        REFERENCES devices (id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_incidents_depot FOREIGN KEY (affected_depot_id)
+        REFERENCES depots (id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT chk_incidents_code CHECK (CHAR_LENGTH(TRIM(code)) > 0),
+    CONSTRAINT chk_incidents_title CHECK (CHAR_LENGTH(TRIM(title)) > 0),
+    CONSTRAINT chk_incidents_description CHECK (CHAR_LENGTH(TRIM(description)) > 0),
+    CONSTRAINT chk_incidents_category CHECK (
+        incident_category IN ('SERVICE', 'DEVICE', 'INFRASTRUCTURE', 'TICKETING', 'SECURITY', 'OTHER')
+    ),
+    CONSTRAINT chk_incidents_priority CHECK (
+        priority IN ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL')
+    ),
+    CONSTRAINT chk_incidents_status CHECK (
+        incident_status IN ('OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'CANCELLED')
+    ),
+    CONSTRAINT chk_incidents_resolution CHECK (
+        resolution_summary IS NULL OR CHAR_LENGTH(TRIM(resolution_summary)) > 0
+    ),
+    CONSTRAINT chk_incidents_assigned_at CHECK (assigned_at IS NULL OR assigned_at >= opened_at),
+    CONSTRAINT chk_incidents_resolved_at CHECK (resolved_at IS NULL OR resolved_at >= opened_at),
+    CONSTRAINT chk_incidents_closed_at CHECK (closed_at IS NULL OR closed_at >= opened_at)
+);
+
+CREATE INDEX idx_incidents_status_priority
+    ON incidents (incident_status, priority);
+CREATE INDEX idx_incidents_category_opened
+    ON incidents (incident_category, opened_at);
+CREATE INDEX idx_incidents_creator
+    ON incidents (created_by_operator_id);
+CREATE INDEX idx_incidents_assignee_status
+    ON incidents (assigned_to_operator_id, incident_status);
+CREATE INDEX idx_incidents_line ON incidents (affected_line_id);
+CREATE INDEX idx_incidents_station ON incidents (affected_station_id);
+CREATE INDEX idx_incidents_train ON incidents (affected_train_id);
+CREATE INDEX idx_incidents_device ON incidents (affected_device_id);
+CREATE INDEX idx_incidents_depot ON incidents (affected_depot_id);
+
+CREATE TABLE incident_status_changes (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    incident_id BIGINT NOT NULL,
+    changed_by_operator_id BIGINT NOT NULL,
+    previous_status VARCHAR(30) NULL,
+    new_status VARCHAR(30) NOT NULL,
+    change_note VARCHAR(500) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_incident_status_changes_incident FOREIGN KEY (incident_id)
+        REFERENCES incidents (id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_incident_status_changes_operator FOREIGN KEY (changed_by_operator_id)
+        REFERENCES operator_accounts (id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT chk_incident_changes_previous CHECK (
+        previous_status IS NULL
+        OR previous_status IN ('OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'CANCELLED')
+    ),
+    CONSTRAINT chk_incident_changes_new CHECK (
+        new_status IN ('OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'CANCELLED')
+    ),
+    CONSTRAINT chk_incident_changes_distinct CHECK (
+        previous_status IS NULL OR previous_status <> new_status
+    ),
+    CONSTRAINT chk_incident_changes_note CHECK (
+        change_note IS NULL OR CHAR_LENGTH(TRIM(change_note)) > 0
+    )
+);
+
+CREATE INDEX idx_incident_status_changes_incident_created
+    ON incident_status_changes (incident_id, created_at);
+CREATE INDEX idx_incident_status_changes_operator_created
+    ON incident_status_changes (changed_by_operator_id, created_at);
+
+CREATE TABLE incident_comments (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    incident_id BIGINT NOT NULL,
+    author_operator_id BIGINT NOT NULL,
+    comment_text TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_incident_comments_incident FOREIGN KEY (incident_id)
+        REFERENCES incidents (id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_incident_comments_author FOREIGN KEY (author_operator_id)
+        REFERENCES operator_accounts (id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT chk_incident_comments_text CHECK (CHAR_LENGTH(TRIM(comment_text)) > 0)
+);
+
+CREATE INDEX idx_incident_comments_incident_created
+    ON incident_comments (incident_id, created_at);
+CREATE INDEX idx_incident_comments_author_created
+    ON incident_comments (author_operator_id, created_at);
+
 CREATE TABLE operational_logs (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     log_origin VARCHAR(50) NOT NULL,
@@ -753,6 +875,8 @@ CREATE TABLE operational_logs (
         REFERENCES compensatory_ticket_issuances (id) ON UPDATE CASCADE ON DELETE SET NULL,
     CONSTRAINT fk_operational_logs_validation FOREIGN KEY (validation_id) REFERENCES ticket_validations (id)
         ON UPDATE CASCADE ON DELETE SET NULL,
+    CONSTRAINT fk_operational_logs_incident FOREIGN KEY (incident_id) REFERENCES incidents (id)
+        ON UPDATE CASCADE ON DELETE SET NULL,
     CONSTRAINT fk_operational_logs_operator FOREIGN KEY (staff_user_id) REFERENCES operator_accounts (id)
         ON UPDATE CASCADE ON DELETE SET NULL
 );
@@ -767,6 +891,7 @@ CREATE INDEX idx_operational_logs_ticket ON operational_logs (ticket_id);
 CREATE INDEX idx_operational_logs_purchase ON operational_logs (purchase_id);
 CREATE INDEX idx_operational_logs_compensatory_issuance ON operational_logs (compensatory_issuance_id);
 CREATE INDEX idx_operational_logs_validation ON operational_logs (validation_id);
+CREATE INDEX idx_operational_logs_incident ON operational_logs (incident_id);
 CREATE INDEX idx_operational_logs_operator ON operational_logs (staff_user_id);
 CREATE UNIQUE INDEX uk_operational_logs_origin_external_reference
     ON operational_logs (log_origin, external_reference);
