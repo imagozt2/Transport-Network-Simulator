@@ -10,6 +10,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+import java.util.Locale;
+import java.util.Objects;
 
 @Entity
 @Table(name = "passenger_accounts")
@@ -65,6 +67,21 @@ public class PassengerAccount extends AuditableEntity {
     private LocalDateTime passwordChangedAt;
 
     protected PassengerAccount() {
+    }
+
+    public PassengerAccount(
+            String publicId,
+            String email,
+            String passwordHash,
+            String firstName,
+            String lastName
+    ) {
+        this.publicId = Objects.requireNonNull(publicId);
+        this.email = requireText(email).toLowerCase(Locale.ROOT);
+        this.passwordHash = Objects.requireNonNull(passwordHash);
+        this.firstName = requireText(firstName);
+        this.lastName = requireText(lastName);
+        this.status = PassengerAccountStatus.ACTIVE;
     }
 
     public PassengerAccountStatus changeStatus(PassengerAccountStatus newStatus) {
@@ -132,5 +149,12 @@ public class PassengerAccount extends AuditableEntity {
 
     public LocalDateTime getPasswordChangedAt() {
         return passwordChangedAt;
+    }
+
+    private static String requireText(String value) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException("Passenger account fields cannot be blank");
+        }
+        return value.trim();
     }
 }

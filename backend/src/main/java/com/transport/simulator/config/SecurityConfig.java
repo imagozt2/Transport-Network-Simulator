@@ -46,6 +46,10 @@ public class SecurityConfig {
                                 HttpMethod.PATCH,
                                 "/api/admin/passenger-users/**"
                         ).hasRole("ADMINISTRATOR")
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/admin/passenger-users"
+                        ).hasRole("ADMINISTRATOR")
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
                 .exceptionHandling(exceptions -> exceptions

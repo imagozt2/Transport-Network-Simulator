@@ -1,6 +1,7 @@
 package com.transport.simulator.service;
 
 import com.transport.simulator.dto.request.passenger.PassengerAccountStatusUpdateRequest;
+import com.transport.simulator.dto.request.passenger.PassengerAccountCreateRequest;
 import com.transport.simulator.dto.response.passenger.PassengerAccountResponse;
 import com.transport.simulator.entity.OperatorAccount;
 import com.transport.simulator.entity.PassengerAccount;
@@ -12,10 +13,14 @@ import com.transport.simulator.repository.PassengerAccountRepository;
 import com.transport.simulator.repository.PassengerAccountStatusChangeRepository;
 import com.transport.simulator.security.OperatorPrincipal;
 import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import java.util.Locale;
+import java.util.UUID;
 
 @Service
 public class PassengerAccountManagementService {
@@ -23,15 +28,55 @@ public class PassengerAccountManagementService {
     private final PassengerAccountRepository passengerAccountRepository;
     private final PassengerAccountStatusChangeRepository statusChangeRepository;
     private final OperatorAccountRepository operatorAccountRepository;
+    private final PasswordEncoder passwordEncoder;
 
+    @Autowired
     public PassengerAccountManagementService(
             PassengerAccountRepository passengerAccountRepository,
             PassengerAccountStatusChangeRepository statusChangeRepository,
-            OperatorAccountRepository operatorAccountRepository
+            OperatorAccountRepository operatorAccountRepository,
+            PasswordEncoder passwordEncoder
     ) {
         this.passengerAccountRepository = passengerAccountRepository;
         this.statusChangeRepository = statusChangeRepository;
         this.operatorAccountRepository = operatorAccountRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    PassengerAccountManagementService(
+            PassengerAccountRepository passengerAccountRepository,
+            PassengerAccountStatusChangeRepository statusChangeRepository,
+            OperatorAccountRepository operatorAccountRepository
+    ) {
+        this(passengerAccountRepository, statusChangeRepository, operatorAccountRepository, null);
+    }
+
+    @Transactional
+    public PassengerAccountResponse createAccount(
+            PassengerAccountCreateRequest request,
+            Authentication authentication
+    ) {
+        requireAdministrator(authentication);
+        String email = request.email().trim().toLowerCase(Locale.ROOT);
+        if (passengerAccountRepository.existsByEmailIgnoreCase(email)) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "A passenger account already uses this email address"
+            );
+        }
+        validatePassword(request.password());
+        if (passwordEncoder == null) {
+            throw new IllegalStateException("Password encoder is not configured");
+        }
+
+        PassengerAccount passenger = new PassengerAccount(
+                UUID.randomUUID().toString(),
+                email,
+                passwordEncoder.encode(request.password()),
+                request.firstName(),
+                request.lastName()
+        );
+        return PassengerAccountResponse.from(passengerAccountRepository.save(passenger));
     }
 
     @Transactional
@@ -91,6 +136,18 @@ public class PassengerAccountManagementService {
 
     private String normalizeReason(String reason) {
         return reason == null || reason.isBlank() ? null : reason.trim();
+    }
+
+    private void validatePassword(String password) {
+        boolean hasLowercase = password.chars().anyMatch(Character::isLowerCase);
+        boolean hasUppercase = password.chars().anyMatch(Character::isUpperCase);
+        boolean hasDigit = password.chars().anyMatch(Character::isDigit);
+        if (!hasLowercase || !hasUppercase || !hasDigit) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Password must contain uppercase, lowercase and numeric characters"
+            );
+        }
     }
 
     private void requireReasonForRestrictedStatus(

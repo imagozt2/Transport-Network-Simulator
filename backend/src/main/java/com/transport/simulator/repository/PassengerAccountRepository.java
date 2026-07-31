@@ -13,6 +13,8 @@ public interface PassengerAccountRepository extends JpaRepository<PassengerAccou
 
     Optional<PassengerAccount> findByPublicId(String publicId);
 
+    boolean existsByEmailIgnoreCase(String email);
+
     long countByStatus(PassengerAccountStatus status);
 
     long countByEmailVerifiedAtIsNull();
