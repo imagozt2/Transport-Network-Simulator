@@ -8,43 +8,88 @@ import { Trains } from './trains';
 
 const line = { id: 1, code: 'L1', name: 'Línea 1', color: 'Roja' };
 const depot = {
-  id: 20, code: 'DEP-LF-A', name: 'Cochera de Las Fuentes - Sector A',
-  stationId: 10, stationCode: 'ST010', stationName: 'Plaza de la Mina'
+  id: 20,
+  code: 'DEP-LF-A',
+  name: 'Cochera de Las Fuentes - Sector A',
+  stationId: 10,
+  stationCode: 'ST010',
+  stationName: 'Plaza de la Mina',
 };
 const historicDepot = {
-  id: 21, code: 'DEP-CC-B', name: 'Cochera de Cuatro Caminos - Sector B',
-  stationId: 11, stationCode: 'ST011', stationName: 'Cuatro Caminos'
+  id: 21,
+  code: 'DEP-CC-B',
+  name: 'Cochera de Cuatro Caminos - Sector B',
+  stationId: 11,
+  stationCode: 'ST011',
+  stationName: 'Cuatro Caminos',
 };
 const regularTrain: TrainOperation = {
-  id: 100, code: 'T-9001', manufacturer: 'Macegocia Rail', model: 'MR9', series: '9000',
-  carCount: 6, passengerCapacity: 900, maximumSpeedKmh: 80, fleetRole: 'REGULAR_SERVICE',
-  status: 'IN_SERVICE', dispatchOrder: 1, assignedLine: line, homeDepot: depot, currentDepot: null,
+  id: 100,
+  code: 'T-9001',
+  manufacturer: 'Macegocia Rail',
+  model: 'MR9',
+  series: '9000',
+  carCount: 6,
+  passengerCapacity: 900,
+  maximumSpeedKmh: 80,
+  fleetRole: 'REGULAR_SERVICE',
+  status: 'IN_SERVICE',
+  dispatchOrder: 1,
+  assignedLine: line,
+  homeDepot: depot,
+  currentDepot: null,
   serviceLocation: {
-    currentLine: line, dutyNumber: 1, positionState: 'BETWEEN_STATIONS', direction: 'OUTBOUND',
-    destination: { id: 11, code: 'ST011', name: 'Las Fuentes' }, currentStation: null,
+    currentLine: line,
+    dutyNumber: 1,
+    positionState: 'BETWEEN_STATIONS',
+    direction: 'OUTBOUND',
+    destination: { id: 11, code: 'ST011', name: 'Las Fuentes' },
+    currentStation: null,
     previousStation: { id: 10, code: 'ST010', name: 'Plaza de la Mina' },
-    nextStation: { id: 11, code: 'ST011', name: 'Las Fuentes' }, progressPercentage: 40,
-    secondsUntilNextStation: 65, estimatedArrivalAt: '2026-07-22T08:31:05+02:00'
-  }
+    nextStation: { id: 11, code: 'ST011', name: 'Las Fuentes' },
+    progressPercentage: 40,
+    secondsUntilNextStation: 65,
+    estimatedArrivalAt: '2026-07-22T08:31:05+02:00',
+  },
 };
 const reserveTrain: TrainOperation = {
-  ...regularTrain, id: 101, code: 'T-7001', model: 'MR7', series: '7000', fleetRole: 'RESERVE',
-  status: 'DEPOT', dispatchOrder: 2, currentDepot: depot, serviceLocation: null
+  ...regularTrain,
+  id: 101,
+  code: 'T-7001',
+  model: 'MR7',
+  series: '7000',
+  fleetRole: 'RESERVE',
+  status: 'DEPOT',
+  dispatchOrder: 2,
+  currentDepot: depot,
+  serviceLocation: null,
 };
 const historicTrain: TrainOperation = {
-  ...regularTrain, id: 102, code: 'T-1001', manufacturer: 'Clásicos Macegocia', model: 'CM1',
-  series: '1000', fleetRole: 'HISTORIC', status: 'DEPOT', dispatchOrder: null,
-  homeDepot: historicDepot, currentDepot: historicDepot, serviceLocation: null
+  ...regularTrain,
+  id: 102,
+  code: 'T-1001',
+  manufacturer: 'Clásicos Macegocia',
+  model: 'CM1',
+  series: '1000',
+  fleetRole: 'HISTORIC',
+  status: 'DEPOT',
+  dispatchOrder: null,
+  homeDepot: historicDepot,
+  currentDepot: historicDepot,
+  serviceLocation: null,
 };
 const response: TrainOperationsResponse = {
-  evaluatedAt: '2026-07-22T08:30:00+02:00', phase: 'OPERATING',
+  evaluatedAt: '2026-07-22T08:30:00+02:00',
+  phase: 'OPERATING',
   summary: {
-    activeFleet: 3, trainsInService: 1, trainsInDepots: 2,
+    activeFleet: 3,
+    trainsInService: 1,
+    trainsInDepots: 2,
     byStatus: { IN_SERVICE: 1, DEPOT: 2, MAINTENANCE: 0, STOPPED: 0, OUT_OF_SERVICE: 0 },
     byRole: { REGULAR_SERVICE: 1, RESERVE: 1, HISTORIC: 1 },
-    bySeries: { '9000': 1, '7000': 1, '1000': 1 }
+    bySeries: { '9000': 1, '7000': 1, '1000': 1 },
   },
-  trains: [regularTrain, reserveTrain, historicTrain]
+  trains: [regularTrain, reserveTrain, historicTrain],
 };
 
 describe('Trains', () => {
@@ -56,16 +101,8 @@ describe('Trains', () => {
 
     expect(compiled.querySelectorAll('.train-card')).toHaveLength(3);
     const summaryCards = Array.from(compiled.querySelectorAll<HTMLElement>('.summary-card'));
-    expect(summaryCards.map((card) => card.querySelector('span')?.textContent?.trim())).toEqual([
-      'Flota total',
-      'Trenes en servicio',
-      'Trenes en cocheras',
-      'Servicio regular',
-      'Reserva',
-      'Históricos'
-    ]);
-    expect(summaryCards.map((card) => card.querySelector('strong')?.textContent?.trim()))
-      .toEqual(['3', '1', '2', '1', '1', '1']);
+    expect(summaryCards.map((card) => card.querySelector('span')?.textContent?.trim())).toEqual(['Flota total', 'Trenes en servicio', 'Trenes en cocheras', 'Servicio regular', 'Reserva', 'Históricos']);
+    expect(summaryCards.map((card) => card.querySelector('strong')?.textContent?.trim())).toEqual(['3', '1', '2', '1', '1', '1']);
     expect(compiled.querySelector('.summary-grid small')).toBeNull();
     expect(compiled.querySelector('.fleet-role-summary')).toBeNull();
     expect(compiled.querySelector('.train-card.role-regular')).not.toBeNull();
@@ -73,23 +110,25 @@ describe('Trains', () => {
     expect(compiled.querySelector('.train-card.role-historic')).not.toBeNull();
     expect(compiled.querySelector('.train-card.role-regular .line-badge')?.textContent).toContain('L1');
     expect(compiled.querySelector('.train-card.role-reserve .depot-badge')?.textContent).toContain('LF');
-    expect(compiled.querySelector('.train-card.role-reserve .depot-badge')?.getAttribute('title'))
-      .toContain('Cochera de Las Fuentes');
-    expect(compiled.querySelector('.train-card.role-regular .train-code')?.getAttribute('title'))
-      .toBe('T-9001');
-    expect(compiled.querySelector('.train-card.role-regular .train-summary')?.textContent?.trim())
-      .toBe('Serie 9000 · Entre Plaza de la Mina y Las Fuentes');
-    expect(compiled.querySelector('.train-card.role-regular .train-summary')?.textContent)
-      .not.toContain('Línea 1');
+    expect(compiled.querySelector('.train-card.role-reserve .depot-badge')?.getAttribute('title')).toContain('Cochera de Las Fuentes');
+    expect(compiled.querySelector('.train-card.role-regular .train-code')?.getAttribute('title')).toBe('T-9001');
+    expect(compiled.querySelector('.train-card.role-regular .train-summary')?.textContent?.trim()).toBe('Serie 9000 · Entre Plaza de la Mina y Las Fuentes');
+    expect(compiled.querySelector('.train-card.role-regular .train-summary')?.textContent).not.toContain('Línea 1');
     expect(compiled.querySelector('.service-context')?.textContent).toContain('Línea 1');
     expect(compiled.querySelector('.service-context')?.textContent).toContain('Dirección Las Fuentes');
-    expect(compiled.querySelector('.situation-title')?.textContent?.trim())
-      .toBe('Entre Plaza de la Mina y Las Fuentes');
-    expect(compiled.querySelector('.live-location-heading')?.textContent)
-      .toContain('Progreso hacia Las Fuentes');
+    expect(compiled.querySelector('.situation-title')?.textContent?.trim()).toBe('Entre Plaza de la Mina y Las Fuentes');
+    expect(compiled.querySelector('.live-location-heading')?.textContent).toContain('Progreso hacia Las Fuentes');
     expect(compiled.querySelector('.live-location-heading')?.textContent).toContain('40%');
     expect(compiled.querySelector('.live-location')?.textContent).toContain('Las Fuentes');
     expect(compiled.querySelector('.countdown')?.textContent).toContain('1:05');
+    const details = compiled.querySelector('.train-details') as HTMLElement;
+    expect(getComputedStyle(details).gridTemplateColumns).toContain('repeat(3');
+    const styles = loadedComponentStyles();
+    expect(styles).toContain('@media (max-width: 1100px)');
+    expect(styles).toMatch(/\.train-details[^}]*repeat\(2/);
+    expect(styles).toContain('@media (max-width: 900px)');
+    expect(styles).toMatch(/\.train-card-body[^}]*grid-template-columns:\s*1fr/);
+    expect(styles).toContain('@media (max-width: 640px)');
 
     fixture.componentInstance.countdownNowMs += 1_000;
     expect(fixture.componentInstance.nextArrivalLabel(regularTrain)).toBe('1:04');
@@ -127,11 +166,8 @@ describe('Trains', () => {
     fixture.detectChanges();
 
     expect(fixture.componentInstance.selectedDepotCode).toBe('DEP-LF-A');
-    expect(fixture.componentInstance.filteredTrains().map((train) => train.code))
-      .toEqual(['T-9001', 'T-7001']);
-    const depotFilter = fixture.nativeElement.querySelector(
-      '.filters-panel label:nth-of-type(4) select'
-    ) as HTMLSelectElement;
+    expect(fixture.componentInstance.filteredTrains().map((train) => train.code)).toEqual(['T-9001', 'T-7001']);
+    const depotFilter = fixture.nativeElement.querySelector('.filters-panel label:nth-of-type(4) select') as HTMLSelectElement;
     expect(depotFilter.value).toBe('DEP-LF-A');
     expect(depotFilter.selectedOptions[0]?.textContent).toContain('Las Fuentes');
     fixture.destroy();
@@ -144,9 +180,7 @@ describe('Trains', () => {
 
     expect(fixture.componentInstance.selectedLineCode).toBe('L1');
     expect(fixture.componentInstance.filteredTrains()).toHaveLength(3);
-    const lineFilter = fixture.nativeElement.querySelector(
-      '.filters-panel label:nth-of-type(3) select'
-    ) as HTMLSelectElement;
+    const lineFilter = fixture.nativeElement.querySelector('.filters-panel label:nth-of-type(3) select') as HTMLSelectElement;
     expect(lineFilter.value).toBe('L1');
     fixture.destroy();
   });
@@ -159,9 +193,7 @@ describe('Trains', () => {
     expect(fixture.componentInstance.selectedLineCode).toBe('L1');
     expect(fixture.componentInstance.selectedStatus).toBe('IN_SERVICE');
     expect(fixture.componentInstance.filteredTrains().map((train) => train.code)).toEqual(['T-9001']);
-    expect((fixture.nativeElement.querySelector(
-      '.filters-panel label:nth-of-type(2) select'
-    ) as HTMLSelectElement).value).toBe('IN_SERVICE');
+    expect((fixture.nativeElement.querySelector('.filters-panel label:nth-of-type(2) select') as HTMLSelectElement).value).toBe('IN_SERVICE');
     fixture.destroy();
   });
 
@@ -173,8 +205,7 @@ describe('Trains', () => {
     expect(fixture.componentInstance.searchText).toBe('T-7001');
     expect(fixture.componentInstance.filteredTrains().map((train) => train.code)).toEqual(['T-7001']);
     expect(fixture.componentInstance.isExpanded(reserveTrain.id)).toBe(true);
-    expect(fixture.nativeElement.querySelector('.train-card.expanded .train-code')?.textContent)
-      .toContain('T-7001');
+    expect(fixture.nativeElement.querySelector('.train-card.expanded .train-code')?.textContent).toContain('T-7001');
     fixture.destroy();
   });
 
@@ -185,9 +216,7 @@ describe('Trains', () => {
 
     expect(fixture.componentInstance.selectedDepotCode).toBe('ALL');
     expect(fixture.componentInstance.filteredTrains()).toHaveLength(3);
-    const depotFilter = fixture.nativeElement.querySelector(
-      '.filters-panel label:nth-of-type(4) select'
-    ) as HTMLSelectElement;
+    const depotFilter = fixture.nativeElement.querySelector('.filters-panel label:nth-of-type(4) select') as HTMLSelectElement;
     expect(depotFilter.value).toBe('ALL');
     fixture.destroy();
   });
@@ -198,18 +227,17 @@ describe('Trains', () => {
       id: 103,
       code: 'T-7002',
       homeDepot: historicDepot,
-      currentDepot: depot
+      currentDepot: depot,
     };
     const responseWithVisitingTrain: TrainOperationsResponse = {
       ...response,
-      trains: [...response.trains, visitingTrain]
+      trains: [...response.trains, visitingTrain],
     };
     await configureWith(() => of(responseWithVisitingTrain), { depotCode: 'DEP-LF-A' });
     const fixture = TestBed.createComponent(Trains);
     fixture.detectChanges();
 
-    expect(fixture.componentInstance.filteredTrains().map((train) => train.code))
-      .toEqual(['T-9001', 'T-7001', 'T-7002']);
+    expect(fixture.componentInstance.filteredTrains().map((train) => train.code)).toEqual(['T-9001', 'T-7001', 'T-7002']);
     fixture.destroy();
   });
 
@@ -225,18 +253,27 @@ describe('Trains', () => {
   });
 });
 
-async function configureWith(
-  getOperations: () => Observable<TrainOperationsResponse>,
-  queryParams: Record<string, string> = {}
-) {
+function loadedComponentStyles(): string {
+  return Array.from(document.styleSheets)
+    .flatMap((sheet) => {
+      try {
+        return Array.from(sheet.cssRules).map((rule) => rule.cssText);
+      } catch {
+        return [];
+      }
+    })
+    .join('\n');
+}
+
+async function configureWith(getOperations: () => Observable<TrainOperationsResponse>, queryParams: Record<string, string> = {}) {
   await TestBed.configureTestingModule({
     imports: [Trains],
     providers: [
       {
         provide: ActivatedRoute,
-        useValue: { snapshot: { queryParamMap: convertToParamMap(queryParams) } }
+        useValue: { snapshot: { queryParamMap: convertToParamMap(queryParams) } },
       },
-      { provide: TrainOperationsService, useValue: { getOperations } }
-    ]
+      { provide: TrainOperationsService, useValue: { getOperations } },
+    ],
   }).compileComponents();
 }

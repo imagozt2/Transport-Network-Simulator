@@ -13,7 +13,7 @@ const response: DeviceOperationsResponse = {
     totalDevices: 2,
     filteredDevices: 2,
     byType: { TICKET_MACHINE: 2, ENTRY_VALIDATOR: 0, EXIT_VALIDATOR: 0 },
-    byStatus: { ONLINE: 2, OFFLINE: 0, MAINTENANCE: 0, ERROR: 0 }
+    byStatus: { ONLINE: 2, OFFLINE: 0, MAINTENANCE: 0, ERROR: 0 },
   },
   devices: [
     {
@@ -23,7 +23,7 @@ const response: DeviceOperationsResponse = {
       type: 'TICKET_MACHINE',
       status: 'ONLINE',
       lastConnectionAt: '2026-07-23T11:59:55+02:00',
-      station: { id: 1, code: 'ST001', name: 'Los Molinos' }
+      station: { id: 1, code: 'ST001', name: 'Los Molinos' },
     },
     {
       id: 11,
@@ -32,9 +32,9 @@ const response: DeviceOperationsResponse = {
       type: 'TICKET_MACHINE',
       status: 'ONLINE',
       lastConnectionAt: '2026-07-23T11:59:55+02:00',
-      station: { id: 2, code: 'ST002', name: 'Cuatro Caminos' }
-    }
-  ]
+      station: { id: 2, code: 'ST002', name: 'Cuatro Caminos' },
+    },
+  ],
 };
 
 describe('Devices log navigation', () => {
@@ -46,14 +46,14 @@ describe('Devices log navigation', () => {
         {
           provide: ActivatedRoute,
           useValue: {
-            snapshot: { queryParamMap: convertToParamMap({ stationCode: '  ST001  ' }) }
-          }
+            snapshot: { queryParamMap: convertToParamMap({ stationCode: '  ST001  ' }) },
+          },
         },
         {
           provide: DeviceOperationsService,
-          useValue: { getOperations: () => of(response) }
-        }
-      ]
+          useValue: { getOperations: () => of(response) },
+        },
+      ],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(Devices);
@@ -73,36 +73,28 @@ describe('Devices log navigation', () => {
     expect(link.getAttribute('aria-label')).toContain('RMM-MB-ST001-001');
     expect(compiled.querySelector('.device-details')?.textContent).toContain('Última conexión');
     expect(compiled.querySelector('.device-details')?.textContent).not.toContain('Estado operativo');
-    expect(getComputedStyle(compiled.querySelector('.device-icon') as HTMLElement).backgroundColor)
-      .toBe('rgb(0, 0, 0)');
-    expect(getComputedStyle(compiled.querySelector('.device-icon') as HTMLElement).color)
-      .toBe('rgb(255, 255, 255)');
-    expect(getComputedStyle(compiled.querySelector('.device-card') as HTMLElement).borderLeftColor)
-      .toBe('rgb(0, 0, 0)');
-    expect(getComputedStyle(compiled.querySelector('.status-pill') as HTMLElement).backgroundColor)
-      .toBe('rgb(220, 252, 231)');
+    expect(getComputedStyle(compiled.querySelector('.device-icon') as HTMLElement).backgroundColor).toBe('rgb(0, 0, 0)');
+    expect(getComputedStyle(compiled.querySelector('.device-icon') as HTMLElement).color).toBe('rgb(255, 255, 255)');
+    expect(getComputedStyle(compiled.querySelector('.device-card') as HTMLElement).borderLeftColor).toBe('rgb(0, 0, 0)');
+    expect(getComputedStyle(compiled.querySelector('.status-pill') as HTMLElement).backgroundColor).toBe('rgb(220, 252, 231)');
+    const responsiveHeader = compiled.querySelector('.device-card-header') as HTMLElement;
+    expect(getComputedStyle(responsiveHeader).display).toBe('grid');
+    const styles = loadedComponentStyles();
+    expect(styles).toContain('@media (max-width: 1300px)');
+    expect(styles).toMatch(/\.filters-panel[^}]*repeat\(2/);
+    expect(styles).toContain('@media (max-width: 900px)');
+    expect(styles).toContain('@media (max-width: 640px)');
+    expect(styles).toMatch(/\.device-details[^}]*grid-template-columns:\s*1fr/);
     expect(fixture.componentInstance.selectedStationCode).toBe('ST001');
     expect(fixture.componentInstance.filteredDevices()).toHaveLength(1);
     expect(fixture.componentInstance.filteredDevices()[0].station.code).toBe('ST001');
-    const stationFilter = compiled.querySelector(
-      '.filters-panel label:nth-of-type(4) select'
-    ) as HTMLSelectElement;
+    const stationFilter = compiled.querySelector('.filters-panel label:nth-of-type(4) select') as HTMLSelectElement;
     expect(stationFilter.value).toBe('ST001');
     expect(stationFilter.selectedOptions[0]?.textContent).toContain('Los Molinos');
     expect(compiled.textContent).not.toContain('RMM-MB-ST002-001');
     const summaryCards = Array.from(compiled.querySelectorAll<HTMLElement>('.summary-card'));
-    expect(summaryCards.map((card) => card.querySelector('span')?.textContent?.trim())).toEqual([
-      'Total de máquinas',
-      'Online',
-      'Offline',
-      'En mantenimiento',
-      'Con error',
-      'Máquinas de billetes',
-      'Validadores de entrada',
-      'Validadores de salida'
-    ]);
-    expect(summaryCards.map((card) => card.querySelector('strong')?.textContent?.trim()))
-      .toEqual(['2', '2', '0', '0', '0', '2', '0', '0']);
+    expect(summaryCards.map((card) => card.querySelector('span')?.textContent?.trim())).toEqual(['Total de máquinas', 'Online', 'Offline', 'En mantenimiento', 'Con error', 'Máquinas de billetes', 'Validadores de entrada', 'Validadores de salida']);
+    expect(summaryCards.map((card) => card.querySelector('strong')?.textContent?.trim())).toEqual(['2', '2', '0', '0', '0', '2', '0', '0']);
     expect(compiled.querySelector('.type-overview')).toBeNull();
     expect(compiled.querySelector('.summary-card small')).toBeNull();
     fixture.destroy();
@@ -116,14 +108,14 @@ describe('Devices log navigation', () => {
         {
           provide: ActivatedRoute,
           useValue: {
-            snapshot: { queryParamMap: convertToParamMap({ stationCode: '   ' }) }
-          }
+            snapshot: { queryParamMap: convertToParamMap({ stationCode: '   ' }) },
+          },
         },
         {
           provide: DeviceOperationsService,
-          useValue: { getOperations: () => of(response) }
-        }
-      ]
+          useValue: { getOperations: () => of(response) },
+        },
+      ],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(Devices);
@@ -131,9 +123,7 @@ describe('Devices log navigation', () => {
 
     expect(fixture.componentInstance.selectedStationCode).toBe('ALL');
     expect(fixture.componentInstance.filteredDevices()).toHaveLength(2);
-    const stationFilter = fixture.nativeElement.querySelector(
-      '.filters-panel label:nth-of-type(4) select'
-    ) as HTMLSelectElement;
+    const stationFilter = fixture.nativeElement.querySelector('.filters-panel label:nth-of-type(4) select') as HTMLSelectElement;
     expect(stationFilter.value).toBe('ALL');
     fixture.destroy();
   });
@@ -145,3 +135,15 @@ describe('Devices log navigation', () => {
     expect(logsRoute).toBeDefined();
   });
 });
+
+function loadedComponentStyles(): string {
+  return Array.from(document.styleSheets)
+    .flatMap((sheet) => {
+      try {
+        return Array.from(sheet.cssRules).map((rule) => rule.cssText);
+      } catch {
+        return [];
+      }
+    })
+    .join('\n');
+}
