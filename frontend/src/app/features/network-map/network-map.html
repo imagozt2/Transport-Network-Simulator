@@ -275,11 +275,124 @@
           </button>
 
           @if (journeyPlannerExpanded) {
-            <div
-              id="journey-planner-content"
-              class="side-panel-content journey-planner-placeholder"
-            >
-              <p>Selecciona una estación de origen y otra de destino para calcular el trayecto.</p>
+            <div id="journey-planner-content" class="side-panel-content journey-planner">
+              <div class="journey-fields">
+                <label>
+                  <span>Estación de origen</span>
+                  <select
+                    [value]="originStationCode"
+                    (change)="setOriginStation($any($event.target).value)"
+                  >
+                    <option value="">Selecciona una estación</option>
+                    @for (station of journeyStationOptions; track station.code) {
+                      <option
+                        [value]="station.code"
+                        [disabled]="station.code === destinationStationCode"
+                      >
+                        {{ station.name }} · {{ station.code }}
+                      </option>
+                    }
+                  </select>
+                </label>
+
+                <label>
+                  <span>Estación de destino</span>
+                  <select
+                    [value]="destinationStationCode"
+                    (change)="setDestinationStation($any($event.target).value)"
+                  >
+                    <option value="">Selecciona una estación</option>
+                    @for (station of journeyStationOptions; track station.code) {
+                      <option
+                        [value]="station.code"
+                        [disabled]="station.code === originStationCode"
+                      >
+                        {{ station.name }} · {{ station.code }}
+                      </option>
+                    }
+                  </select>
+                </label>
+              </div>
+
+              <button
+                type="button"
+                class="clear-journey-button"
+                [disabled]="!originStationCode && !destinationStationCode"
+                (click)="clearJourney()"
+              >
+                Limpiar
+              </button>
+
+              @if (journeyLoading) {
+                <p class="journey-state" role="status">Calculando trayecto…</p>
+              } @else if (journeyErrorMessage) {
+                <p class="journey-state journey-error" role="alert">{{ journeyErrorMessage }}</p>
+              } @else if (journey) {
+                <article class="journey-result" aria-label="Trayecto calculado">
+                  <header class="journey-summary">
+                    <div>
+                      <strong>~{{ journeyDurationMinutes }} min</strong>
+                      <span>{{ journey.stationCount }} estaciones</span>
+                    </div>
+                    <span
+                      >{{ journey.transferCount }}
+                      {{ journey.transferCount === 1 ? 'transbordo' : 'transbordos' }}</span
+                    >
+                  </header>
+
+                  <div class="journey-thermometer">
+                    @for (
+                      segment of journey.segments;
+                      track $index;
+                      let segmentFirst = $first;
+                      let segmentLast = $last
+                    ) {
+                      <section class="journey-segment">
+                        <header>
+                          <span
+                            class="journey-line-badge"
+                            [style.background-color]="getMapLineColor(segment.lineCode)"
+                            [style.color]="getLineTextColor(getMapLineColor(segment.lineCode))"
+                            >{{ segment.lineCode }}</span
+                          >
+                          <span>Dirección {{ getJourneySegmentDirection(segment) }}</span>
+                        </header>
+
+                        @for (
+                          station of segment.stations;
+                          track station.code;
+                          let first = $first;
+                          let last = $last
+                        ) {
+                          <div
+                            class="journey-station"
+                            [class.first-journey-station]="first"
+                            [class.last-journey-station]="last"
+                            [class.transfer-station-row]="
+                              (last && !segmentLast) || (first && !segmentFirst)
+                            "
+                          >
+                            <span
+                              class="journey-track"
+                              [style.--journey-line-color]="getMapLineColor(segment.lineCode)"
+                            >
+                              <span></span>
+                            </span>
+                            <span
+                              ><strong>{{ station.name }}</strong
+                              ><small>{{ station.code }}</small></span
+                            >
+                          </div>
+                        }
+                      </section>
+                    }
+                  </div>
+                </article>
+              } @else {
+                <p class="journey-help">
+                  Selecciona una estación de origen y otra de destino para calcular el trayecto.
+                </p>
+              }
             </div>
           }
         </section>

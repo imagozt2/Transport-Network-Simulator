@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
+import { NetworkJourneyResponse } from '../../core/models/network-journey.model';
 import { NetworkMapResponse } from '../../core/models/network-map.model';
 import { NetworkMapService } from '../../core/services/network-map.service';
 import { NetworkMap } from './network-map';
@@ -24,6 +25,49 @@ const response: NetworkMapResponse = {
       stations: [
         { id: 43, code: 'ST043', name: 'Cuatro Caminos', stationOrder: 1 },
         { id: 20, code: 'ST020', name: 'La Galería', stationOrder: 2 },
+      ],
+    },
+  ],
+};
+
+const journeyResponse: NetworkJourneyResponse = {
+  origin: { id: 45, code: 'ST045', name: 'Los Molinos' },
+  destination: { id: 20, code: 'ST020', name: 'La Galería' },
+  stationCount: 3,
+  transferCount: 1,
+  estimatedDurationSeconds: 430,
+  stations: [
+    { id: 45, code: 'ST045', name: 'Los Molinos' },
+    { id: 43, code: 'ST043', name: 'Cuatro Caminos' },
+    { id: 20, code: 'ST020', name: 'La Galería' },
+  ],
+  segments: [
+    {
+      lineId: 1,
+      lineCode: 'L1',
+      lineName: 'Línea 1',
+      lineColor: 'Roja',
+      origin: { id: 45, code: 'ST045', name: 'Los Molinos' },
+      destination: { id: 43, code: 'ST043', name: 'Cuatro Caminos' },
+      stopCount: 1,
+      travelSeconds: 120,
+      stations: [
+        { id: 45, code: 'ST045', name: 'Los Molinos' },
+        { id: 43, code: 'ST043', name: 'Cuatro Caminos' },
+      ],
+    },
+    {
+      lineId: 2,
+      lineCode: 'L2',
+      lineName: 'Línea 2',
+      lineColor: 'Verde',
+      origin: { id: 43, code: 'ST043', name: 'Cuatro Caminos' },
+      destination: { id: 20, code: 'ST020', name: 'La Galería' },
+      stopCount: 1,
+      travelSeconds: 130,
+      stations: [
+        { id: 43, code: 'ST043', name: 'Cuatro Caminos' },
+        { id: 20, code: 'ST020', name: 'La Galería' },
       ],
     },
   ],
@@ -75,6 +119,98 @@ describe('NetworkMap', () => {
     );
     expect(sectionButtons.item(0).getAttribute('aria-expanded')).toBe('false');
     expect(sectionButtons.item(1).getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('should calculate, display and clear a journey', async () => {
+    const calculateJourney = vi.fn(() => of(journeyResponse));
+    await TestBed.configureTestingModule({
+      imports: [NetworkMap],
+      providers: [
+        {
+          provide: NetworkMapService,
+          useValue: { getNetworkMap: () => of(response), calculateJourney },
+        },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(NetworkMap);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    compiled.querySelectorAll<HTMLButtonElement>('.side-panel-header').item(1).click();
+    fixture.detectChanges();
+    const selects = compiled.querySelectorAll<HTMLSelectElement>('.journey-fields select');
+
+    selects.item(0).value = 'ST045';
+    selects.item(0).dispatchEvent(new Event('change'));
+    selects.item(1).value = 'ST020';
+    selects.item(1).dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    expect(calculateJourney).toHaveBeenCalledWith('ST045', 'ST020');
+    expect(compiled.querySelector('.journey-summary')?.textContent).toContain('~8 min');
+    expect(compiled.querySelector('.journey-summary')?.textContent).toContain('1 transbordo');
+    expect(compiled.querySelectorAll('.journey-segment')).toHaveLength(2);
+    expect(compiled.querySelectorAll('.journey-station')).toHaveLength(4);
+    expect(compiled.querySelectorAll('.first-journey-station')).toHaveLength(2);
+    expect(compiled.querySelectorAll('.last-journey-station')).toHaveLength(2);
+    expect(compiled.querySelectorAll('.transfer-station-row')).toHaveLength(2);
+    expect(compiled.querySelectorAll('.journey-station strong').item(1).textContent).toBe(
+      'Cuatro Caminos',
+    );
+    expect(compiled.querySelectorAll('.journey-station strong').item(2).textContent).toBe(
+      'Cuatro Caminos',
+    );
+    expect(compiled.querySelector('.journey-thermometer')?.textContent).toContain('La Galería');
+
+    compiled.querySelector<HTMLButtonElement>('.clear-journey-button')?.click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.journey).toBeNull();
+    expect(fixture.componentInstance.originStationCode).toBe('');
+    expect(compiled.querySelector('.journey-result')).toBeNull();
+  });
+
+  it('should label a journey segment with the line terminal in its travel direction', async () => {
+    await TestBed.configureTestingModule({
+      imports: [NetworkMap],
+      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(NetworkMap);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.lines = [
+      {
+        id: 6,
+        code: 'L6',
+        name: 'Línea 6',
+        color: 'Naranja',
+        stations: [
+          { id: 1, code: 'ST001', name: 'El Espigón', stationOrder: 1 },
+          { id: 40, code: 'ST040', name: 'Parque de la Cultura', stationOrder: 2 },
+          { id: 49, code: 'ST049', name: 'Las Salinas', stationOrder: 3 },
+        ],
+      },
+    ];
+    const outwardSegment = {
+      ...journeyResponse.segments[0],
+      lineCode: 'L6',
+      destination: { id: 40, code: 'ST040', name: 'Parque de la Cultura' },
+      stations: [
+        { id: 1, code: 'ST001', name: 'El Espigón' },
+        { id: 40, code: 'ST040', name: 'Parque de la Cultura' },
+      ],
+    };
+
+    expect(component.getJourneySegmentDirection(outwardSegment)).toBe('Las Salinas');
+    expect(
+      component.getJourneySegmentDirection({
+        ...outwardSegment,
+        origin: outwardSegment.destination,
+        destination: outwardSegment.stations[0],
+        stations: [...outwardSegment.stations].reverse(),
+      }),
+    ).toBe('El Espigón');
   });
 
   it('should highlight and expand a line from the map or the side panel', async () => {

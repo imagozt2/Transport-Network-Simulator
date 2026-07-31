@@ -1,4 +1,8 @@
 import { Component, inject, OnInit } from '@angular/core';
+import {
+  NetworkJourneyResponse,
+  NetworkJourneySegment,
+} from '../../core/models/network-journey.model';
 import { NetworkMapLine, NetworkMapStation } from '../../core/models/network-map.model';
 import { NetworkMapService } from '../../core/services/network-map.service';
 import { contrastingTextColor } from '../../core/utils/line-visuals';
@@ -13,7 +17,7 @@ import {
 @Component({
   selector: 'app-network-map',
   templateUrl: './network-map.html',
-  styleUrl: './network-map.css',
+  styleUrls: ['./network-map.css', './network-map-journey.css'],
 })
 export class NetworkMap implements OnInit {
   private readonly networkMapService = inject(NetworkMapService);
@@ -25,6 +29,11 @@ export class NetworkMap implements OnInit {
   lines: NetworkMapLine[] = [];
   linesPanelExpanded = true;
   journeyPlannerExpanded = false;
+  originStationCode = '';
+  destinationStationCode = '';
+  journey: NetworkJourneyResponse | null = null;
+  journeyLoading = false;
+  journeyErrorMessage = '';
   expandedLineCode: string | null = null;
   hoveredLineCode: string | null = null;
   private lastHoveredLineCode: string | null = null;
@@ -60,6 +69,85 @@ export class NetworkMap implements OnInit {
 
   toggleJourneyPlanner(): void {
     this.journeyPlannerExpanded = !this.journeyPlannerExpanded;
+  }
+
+  setOriginStation(code: string): void {
+    this.originStationCode = code;
+    this.calculateJourneyIfReady();
+  }
+
+  setDestinationStation(code: string): void {
+    this.destinationStationCode = code;
+    this.calculateJourneyIfReady();
+  }
+
+  clearJourney(): void {
+    this.originStationCode = '';
+    this.destinationStationCode = '';
+    this.journey = null;
+    this.journeyLoading = false;
+    this.journeyErrorMessage = '';
+  }
+
+  get journeyStationOptions(): NetworkMapStation[] {
+    const stationsByCode = new Map<string, NetworkMapStation>();
+    this.lines
+      .flatMap((line) => line.stations)
+      .forEach((station) => stationsByCode.set(station.code, station));
+    return [...stationsByCode.values()].sort((first, second) =>
+      first.name.localeCompare(second.name, 'es'),
+    );
+  }
+
+  get journeyDurationMinutes(): number {
+    return this.journey ? Math.max(1, Math.ceil(this.journey.estimatedDurationSeconds / 60)) : 0;
+  }
+
+  getJourneySegmentDirection(segment: NetworkJourneySegment): string {
+    const line = this.lines.find((candidate) => candidate.code === segment.lineCode);
+    if (!line || segment.stations.length < 2) {
+      return segment.destination.name;
+    }
+
+    const originIndex = line.stations.findIndex(
+      (station) => station.code === segment.stations[0].code,
+    );
+    const nextIndex = line.stations.findIndex(
+      (station) => station.code === segment.stations[1].code,
+    );
+    if (originIndex < 0 || nextIndex < 0 || originIndex === nextIndex) {
+      return segment.destination.name;
+    }
+
+    return nextIndex > originIndex
+      ? (line.stations.at(-1)?.name ?? segment.destination.name)
+      : (line.stations[0]?.name ?? segment.destination.name);
+  }
+
+  private calculateJourneyIfReady(): void {
+    this.journey = null;
+    this.journeyErrorMessage = '';
+    if (!this.originStationCode || !this.destinationStationCode) {
+      return;
+    }
+    if (this.originStationCode === this.destinationStationCode) {
+      this.journeyErrorMessage = 'El origen y el destino deben ser estaciones diferentes.';
+      return;
+    }
+
+    this.journeyLoading = true;
+    this.networkMapService
+      .calculateJourney(this.originStationCode, this.destinationStationCode)
+      .subscribe({
+        next: (journey) => {
+          this.journey = journey;
+          this.journeyLoading = false;
+        },
+        error: () => {
+          this.journeyErrorMessage = 'No se ha podido calcular el trayecto seleccionado.';
+          this.journeyLoading = false;
+        },
+      });
   }
 
   hoverLine(code: string): void {
