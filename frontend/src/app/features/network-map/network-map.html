@@ -6,26 +6,90 @@
   @if (loading) {
     <div class="state-card" role="status">Cargando mapa de red…</div>
   } @else if (errorMessage) {
-    <div class="state-card error-card" role="alert"><span>{{ errorMessage }}</span><button type="button" (click)="loadNetworkMap()">Reintentar</button></div>
+    <div class="state-card error-card" role="alert">
+      <span>{{ errorMessage }}</span
+      ><button type="button" (click)="loadNetworkMap()">Reintentar</button>
+    </div>
   } @else {
     <section class="map-layout">
       <article class="map-card">
         <div class="map-scroll">
-          <svg class="network-svg" [attr.viewBox]="'0 0 ' + mapViewBox.width + ' ' + mapViewBox.height" [attr.width]="mapViewBox.width" [attr.height]="mapViewBox.height" aria-label="Mapa de la red de metro de Macegocia" role="img" (click)="clearLineSelectionFromBackground($event)">
+          <svg
+            class="network-svg"
+            [attr.viewBox]="'0 0 ' + mapViewBox.width + ' ' + mapViewBox.height"
+            [attr.width]="mapViewBox.width"
+            [attr.height]="mapViewBox.height"
+            aria-label="Mapa de la red de metro de Macegocia"
+            role="img"
+            (click)="clearLineSelectionFromBackground($event)"
+          >
             <g class="metro-lines">
               @for (line of mapLines; track line.code) {
-                <polyline class="metro-line" [class.dimmed-line]="isMapLineDimmed(line.code)" [class.highlighted-line]="isMapLineHighlighted(line.code)" [attr.points]="getLinePoints(line)" [attr.stroke]="line.color" (mouseenter)="hoverLine(line.code)" (mouseleave)="clearHoveredLine()" (click)="toggleExpandedLine(line.code)"><title>{{ line.code }}</title></polyline>
+                <polyline
+                  class="metro-line"
+                  [class.dimmed-line]="isMapLineDimmed(line.code)"
+                  [class.highlighted-line]="isMapLineHighlighted(line.code)"
+                  [attr.points]="getLinePoints(line)"
+                  [attr.stroke]="line.color"
+                  (mouseenter)="hoverLine(line.code)"
+                  (mouseleave)="clearHoveredLine()"
+                  (click)="toggleExpandedLine(line.code)"
+                >
+                  <title>{{ line.code }}</title>
+                </polyline>
               }
             </g>
 
             <g class="stations">
               @for (station of mapStations; track station.stationCode) {
-                <g class="station-node" [attr.data-station-code]="station.stationCode" [class.dimmed-station]="shouldDimStation(station.stationCode)" [class.highlighted-station]="shouldHighlightStation(station.stationCode)" (mouseenter)="hoverStation(station.stationCode)" (mouseleave)="clearHoveredLine()" (click)="selectStationLine(station.stationCode)">
-                  @if (isTransferStation(station.stationCode)) { <circle class="station-transfer-ring" [attr.cx]="station.x" [attr.cy]="station.y" r="11" /> }
-                  <circle class="station-circle" [class.transfer-station]="isTransferStation(station.stationCode)" [attr.cx]="station.x" [attr.cy]="station.y" r="6" />
+                <g
+                  class="station-node"
+                  [attr.data-station-code]="station.stationCode"
+                  [class.dimmed-station]="shouldDimStation(station.stationCode)"
+                  [class.highlighted-station]="shouldHighlightStation(station.stationCode)"
+                  (mouseenter)="hoverStation(station.stationCode)"
+                  (mouseleave)="clearHoveredLine()"
+                  (click)="selectStationLine(station.stationCode)"
+                >
+                  @if (isTransferStation(station.stationCode)) {
+                    <circle
+                      class="station-transfer-ring"
+                      [attr.cx]="station.x"
+                      [attr.cy]="station.y"
+                      r="11"
+                    />
+                  }
+                  <circle
+                    class="station-circle"
+                    [class.transfer-station]="isTransferStation(station.stationCode)"
+                    [attr.cx]="station.x"
+                    [attr.cy]="station.y"
+                    r="6"
+                  />
                   @if (station.showLabel !== false) {
-                    <text class="station-label" [attr.x]="getStationLabelX(station)" [attr.y]="getStationLabelY(station)" [attr.text-anchor]="getStationLabelAnchor(station)" [attr.transform]="'rotate(' + getStationLabelRotation(station) + ' ' + getStationLabelX(station) + ' ' + getStationLabelY(station) + ')'">
-                      @for (labelLine of getStationLabelLines(station); track $index) { <tspan [attr.x]="getStationLabelX(station)" [attr.y]="getStationLabelLineY(station, $index)">{{ labelLine }}</tspan> }
+                    <text
+                      class="station-label"
+                      [attr.x]="getStationLabelX(station)"
+                      [attr.y]="getStationLabelY(station)"
+                      [attr.text-anchor]="getStationLabelAnchor(station)"
+                      [attr.transform]="
+                        'rotate(' +
+                        getStationLabelRotation(station) +
+                        ' ' +
+                        getStationLabelX(station) +
+                        ' ' +
+                        getStationLabelY(station) +
+                        ')'
+                      "
+                    >
+                      @for (labelLine of getStationLabelLines(station); track $index) {
+                        <tspan
+                          [attr.x]="getStationLabelX(station)"
+                          [attr.y]="getStationLabelLineY(station, $index)"
+                        >
+                          {{ labelLine }}
+                        </tspan>
+                      }
                     </text>
                   }
                   <title>{{ getStationName(station.stationCode) }}</title>
@@ -35,11 +99,50 @@
 
             <g class="line-end-labels">
               @for (line of mapLines; track line.code) {
-                <g class="line-end-label" [class.dimmed-line-label]="isMapLineDimmed(line.code)" [class.highlighted-line-label]="isMapLineHighlighted(line.code)" (mouseenter)="hoverLine(line.code)" (mouseleave)="clearHoveredLine()" (click)="toggleExpandedLine(line.code)">
-                  <rect class="line-end-label-box" [attr.x]="line.startLabel.x" [attr.y]="line.startLabel.y" [attr.width]="getLineLabelWidth(line, 'start')" [attr.height]="getLineLabelHeight(line, 'start')" [attr.rx]="getLineLabelRadius(line, 'start')" [attr.fill]="line.color" />
-                  <text class="line-end-label-text" [attr.x]="getLineLabelTextX(line, 'start')" [attr.y]="getLineLabelTextY(line, 'start')" text-anchor="middle" [attr.fill]="getLineTextColor(line.color)">{{ line.code }}</text>
-                  <rect class="line-end-label-box" [attr.x]="line.endLabel.x" [attr.y]="line.endLabel.y" [attr.width]="getLineLabelWidth(line, 'end')" [attr.height]="getLineLabelHeight(line, 'end')" [attr.rx]="getLineLabelRadius(line, 'end')" [attr.fill]="line.color" />
-                  <text class="line-end-label-text" [attr.x]="getLineLabelTextX(line, 'end')" [attr.y]="getLineLabelTextY(line, 'end')" text-anchor="middle" [attr.fill]="getLineTextColor(line.color)">{{ line.code }}</text>
+                <g
+                  class="line-end-label"
+                  [class.dimmed-line-label]="isMapLineDimmed(line.code)"
+                  [class.highlighted-line-label]="isMapLineHighlighted(line.code)"
+                  (mouseenter)="hoverLine(line.code)"
+                  (mouseleave)="clearHoveredLine()"
+                  (click)="toggleExpandedLine(line.code)"
+                >
+                  <rect
+                    class="line-end-label-box"
+                    [attr.x]="line.startLabel.x"
+                    [attr.y]="line.startLabel.y"
+                    [attr.width]="getLineLabelWidth(line, 'start')"
+                    [attr.height]="getLineLabelHeight(line, 'start')"
+                    [attr.rx]="getLineLabelRadius(line, 'start')"
+                    [attr.fill]="line.color"
+                  />
+                  <text
+                    class="line-end-label-text"
+                    [attr.x]="getLineLabelTextX(line, 'start')"
+                    [attr.y]="getLineLabelTextY(line, 'start')"
+                    text-anchor="middle"
+                    [attr.fill]="getLineTextColor(line.color)"
+                  >
+                    {{ line.code }}
+                  </text>
+                  <rect
+                    class="line-end-label-box"
+                    [attr.x]="line.endLabel.x"
+                    [attr.y]="line.endLabel.y"
+                    [attr.width]="getLineLabelWidth(line, 'end')"
+                    [attr.height]="getLineLabelHeight(line, 'end')"
+                    [attr.rx]="getLineLabelRadius(line, 'end')"
+                    [attr.fill]="line.color"
+                  />
+                  <text
+                    class="line-end-label-text"
+                    [attr.x]="getLineLabelTextX(line, 'end')"
+                    [attr.y]="getLineLabelTextY(line, 'end')"
+                    text-anchor="middle"
+                    [attr.fill]="getLineTextColor(line.color)"
+                  >
+                    {{ line.code }}
+                  </text>
                 </g>
               }
             </g>
@@ -47,39 +150,139 @@
         </div>
       </article>
 
-      <aside class="network-lines-panel" aria-label="Líneas de la red">
-        <div class="line-accordion-list">
-          @for (line of lines; track line.id) {
-            <article class="line-accordion" [class.expanded]="isLineExpanded(line.code)">
-              <button type="button" class="line-accordion-header" (click)="toggleExpandedLine(line.code)" [attr.aria-expanded]="isLineExpanded(line.code)">
-                <span class="selected-line-badge" [style.background-color]="getMapLineColor(line.code)" [style.color]="getLineTextColor(getMapLineColor(line.code))">{{ line.code }}</span>
-                <span class="line-accordion-title"><strong>{{ line.name }}</strong><small>{{ line.stations.length }} estaciones</small></span>
-                <span class="accordion-icon" aria-hidden="true">{{ isLineExpanded(line.code) ? '−' : '+' }}</span>
-              </button>
+      <aside class="network-lines-panel" aria-label="Herramientas del mapa de red">
+        <section class="side-panel-section">
+          <button
+            type="button"
+            class="side-panel-header"
+            (click)="toggleLinesPanel()"
+            [attr.aria-expanded]="linesPanelExpanded"
+            aria-controls="network-lines-content"
+          >
+            <span
+              ><strong>Líneas</strong><small>{{ lines.length }} líneas activas</small></span
+            >
+            <span class="accordion-icon" aria-hidden="true">{{
+              linesPanelExpanded ? '−' : '+'
+            }}</span>
+          </button>
 
-              @if (isLineExpanded(line.code)) {
-                <div class="line-accordion-body">
-                  <div class="mini-thermometer">
-                    @for (station of line.stations; track station.id; let first = $first; let last = $last) {
-                      <div class="mini-station-row">
-                        <div class="mini-track">
-                          @if (!first) { <span class="mini-track-line top" [style.background-color]="getMapLineColor(line.code)"></span> }
-                          <span class="mini-station-dot" [class.transfer-dot]="isTransferStation(station.code)" [style.border-color]="getMapLineColor(line.code)"></span>
-                          @if (!last) { <span class="mini-track-line bottom" [style.background-color]="getMapLineColor(line.code)"></span> }
-                        </div>
-                        <div class="mini-station-content"><div class="mini-station-main"><div><strong>{{ station.name }}</strong><small>{{ station.code }}</small></div>
-                          <div class="mini-transfer-lines">
-                            @for (transferLine of getTransferLines(station.code, line.code); track transferLine.id) { <span class="mini-transfer-badge" [style.background-color]="getMapLineColor(transferLine.code)" [style.color]="getLineTextColor(getMapLineColor(transferLine.code))">{{ transferLine.code }}</span> }
+          @if (linesPanelExpanded) {
+            <div id="network-lines-content" class="side-panel-content line-accordion-list">
+              @for (line of lines; track line.id) {
+                <article class="line-accordion" [class.expanded]="isLineExpanded(line.code)">
+                  <button
+                    type="button"
+                    class="line-accordion-header"
+                    (click)="toggleExpandedLine(line.code)"
+                    [attr.aria-expanded]="isLineExpanded(line.code)"
+                  >
+                    <span
+                      class="selected-line-badge"
+                      [style.background-color]="getMapLineColor(line.code)"
+                      [style.color]="getLineTextColor(getMapLineColor(line.code))"
+                      >{{ line.code }}</span
+                    >
+                    <span class="line-accordion-title"
+                      ><strong>{{ line.name }}</strong
+                      ><small>{{ line.stations.length }} estaciones</small></span
+                    >
+                    <span class="accordion-icon" aria-hidden="true">{{
+                      isLineExpanded(line.code) ? '−' : '+'
+                    }}</span>
+                  </button>
+
+                  @if (isLineExpanded(line.code)) {
+                    <div class="line-accordion-body">
+                      <div class="mini-thermometer">
+                        @for (
+                          station of line.stations;
+                          track station.id;
+                          let first = $first;
+                          let last = $last
+                        ) {
+                          <div class="mini-station-row">
+                            <div class="mini-track">
+                              @if (!first) {
+                                <span
+                                  class="mini-track-line top"
+                                  [style.background-color]="getMapLineColor(line.code)"
+                                ></span>
+                              }
+                              <span
+                                class="mini-station-dot"
+                                [class.transfer-dot]="isTransferStation(station.code)"
+                                [style.border-color]="getMapLineColor(line.code)"
+                              ></span>
+                              @if (!last) {
+                                <span
+                                  class="mini-track-line bottom"
+                                  [style.background-color]="getMapLineColor(line.code)"
+                                ></span>
+                              }
+                            </div>
+                            <div class="mini-station-content">
+                              <div class="mini-station-main">
+                                <div>
+                                  <strong>{{ station.name }}</strong
+                                  ><small>{{ station.code }}</small>
+                                </div>
+                                <div class="mini-transfer-lines">
+                                  @for (
+                                    transferLine of getTransferLines(station.code, line.code);
+                                    track transferLine.id
+                                  ) {
+                                    <span
+                                      class="mini-transfer-badge"
+                                      [style.background-color]="getMapLineColor(transferLine.code)"
+                                      [style.color]="
+                                        getLineTextColor(getMapLineColor(transferLine.code))
+                                      "
+                                      >{{ transferLine.code }}</span
+                                    >
+                                  }
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                        </div></div>
+                        }
                       </div>
-                    }
-                  </div>
-                </div>
+                    </div>
+                  }
+                </article>
+              } @empty {
+                <p class="empty-message">No hay líneas activas disponibles.</p>
               }
-            </article>
-          } @empty { <p class="empty-message">No hay líneas activas disponibles.</p> }
-        </div>
+            </div>
+          }
+        </section>
+
+        <section class="side-panel-section">
+          <button
+            type="button"
+            class="side-panel-header"
+            (click)="toggleJourneyPlanner()"
+            [attr.aria-expanded]="journeyPlannerExpanded"
+            aria-controls="journey-planner-content"
+          >
+            <span
+              ><strong>Calculadora de trayectos</strong
+              ><small>Planifica un recorrido por la red</small></span
+            >
+            <span class="accordion-icon" aria-hidden="true">{{
+              journeyPlannerExpanded ? '−' : '+'
+            }}</span>
+          </button>
+
+          @if (journeyPlannerExpanded) {
+            <div
+              id="journey-planner-content"
+              class="side-panel-content journey-planner-placeholder"
+            >
+              <p>Selecciona una estación de origen y otra de destino para calcular el trayecto.</p>
+            </div>
+          }
+        </section>
       </aside>
     </section>
   }

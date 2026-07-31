@@ -13,8 +13,8 @@ const response: NetworkMapResponse = {
       color: 'Roja',
       stations: [
         { id: 45, code: 'ST045', name: 'Los Molinos', stationOrder: 1 },
-        { id: 43, code: 'ST043', name: 'Cuatro Caminos', stationOrder: 2 }
-      ]
+        { id: 43, code: 'ST043', name: 'Cuatro Caminos', stationOrder: 2 },
+      ],
     },
     {
       id: 2,
@@ -23,17 +23,17 @@ const response: NetworkMapResponse = {
       color: 'Verde',
       stations: [
         { id: 43, code: 'ST043', name: 'Cuatro Caminos', stationOrder: 1 },
-        { id: 20, code: 'ST020', name: 'La Galería', stationOrder: 2 }
-      ]
-    }
-  ]
+        { id: 20, code: 'ST020', name: 'La Galería', stationOrder: 2 },
+      ],
+    },
+  ],
 };
 
 describe('NetworkMap', () => {
   it('should combine API stations with the visual map by station code', async () => {
     await TestBed.configureTestingModule({
       imports: [NetworkMap],
-      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }]
+      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(NetworkMap);
@@ -48,10 +48,39 @@ describe('NetworkMap', () => {
     expect(compiled.querySelector('.station-node[tabindex]')).toBeNull();
   });
 
+  it('should organize the side panel into independent line and journey sections', async () => {
+    await TestBed.configureTestingModule({
+      imports: [NetworkMap],
+      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(NetworkMap);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const sectionButtons = compiled.querySelectorAll<HTMLButtonElement>('.side-panel-header');
+
+    expect(sectionButtons).toHaveLength(2);
+    expect(sectionButtons.item(0).textContent).toContain('Líneas');
+    expect(sectionButtons.item(1).textContent).toContain('Calculadora de trayectos');
+    expect(compiled.querySelector('#network-lines-content')).not.toBeNull();
+    expect(compiled.querySelector('#journey-planner-content')).toBeNull();
+
+    sectionButtons.item(0).click();
+    sectionButtons.item(1).click();
+    fixture.detectChanges();
+
+    expect(compiled.querySelector('#network-lines-content')).toBeNull();
+    expect(compiled.querySelector('#journey-planner-content')?.textContent).toContain(
+      'estación de origen',
+    );
+    expect(sectionButtons.item(0).getAttribute('aria-expanded')).toBe('false');
+    expect(sectionButtons.item(1).getAttribute('aria-expanded')).toBe('true');
+  });
+
   it('should highlight and expand a line from the map or the side panel', async () => {
     await TestBed.configureTestingModule({
       imports: [NetworkMap],
-      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }]
+      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(NetworkMap);
@@ -77,7 +106,7 @@ describe('NetworkMap', () => {
   it('should highlight a line and all its stations on hover without adding a focus frame', async () => {
     await TestBed.configureTestingModule({
       imports: [NetworkMap],
-      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }]
+      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(NetworkMap);
@@ -105,7 +134,7 @@ describe('NetworkMap', () => {
   it('should treat line labels like their tracks and stations', async () => {
     await TestBed.configureTestingModule({
       imports: [NetworkMap],
-      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }]
+      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(NetworkMap);
@@ -130,7 +159,7 @@ describe('NetworkMap', () => {
   it('should toggle the line from one of its stations without selecting the station itself', async () => {
     await TestBed.configureTestingModule({
       imports: [NetworkMap],
-      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }]
+      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(NetworkMap);
@@ -156,7 +185,7 @@ describe('NetworkMap', () => {
   it('should replace the selected line when clicking a station from another line', async () => {
     await TestBed.configureTestingModule({
       imports: [NetworkMap],
-      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }]
+      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(NetworkMap);
@@ -171,14 +200,16 @@ describe('NetworkMap', () => {
     fixture.detectChanges();
 
     expect(compiled.querySelectorAll('.metro-line.highlighted-line')).toHaveLength(1);
-    expect(compiled.querySelectorAll('.metro-line').item(1).classList.contains('highlighted-line')).toBe(true);
+    expect(
+      compiled.querySelectorAll('.metro-line').item(1).classList.contains('highlighted-line'),
+    ).toBe(true);
     expect(compiled.querySelector('.line-accordion-body')?.textContent).toContain('La Galería');
   });
 
   it('should select the hovered line when clicking a transfer station shared by several lines', async () => {
     await TestBed.configureTestingModule({
       imports: [NetworkMap],
-      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }]
+      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(NetworkMap);
@@ -206,7 +237,7 @@ describe('NetworkMap', () => {
   it('should keep a station selection after its click bubbles through the map', async () => {
     await TestBed.configureTestingModule({
       imports: [NetworkMap],
-      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }]
+      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(NetworkMap);
@@ -225,7 +256,7 @@ describe('NetworkMap', () => {
   it('should clear the selected line when clicking the empty map background', async () => {
     await TestBed.configureTestingModule({
       imports: [NetworkMap],
-      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }]
+      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(NetworkMap);
@@ -250,7 +281,7 @@ describe('NetworkMap', () => {
   it('should not clear the selection when the map click comes from a line element', async () => {
     await TestBed.configureTestingModule({
       imports: [NetworkMap],
-      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }]
+      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => of(response) } }],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(NetworkMap);
@@ -268,14 +299,21 @@ describe('NetworkMap', () => {
   it('should show an error and retry action when the API fails', async () => {
     await TestBed.configureTestingModule({
       imports: [NetworkMap],
-      providers: [{ provide: NetworkMapService, useValue: { getNetworkMap: () => throwError(() => new Error('API error')) } }]
+      providers: [
+        {
+          provide: NetworkMapService,
+          useValue: { getNetworkMap: () => throwError(() => new Error('API error')) },
+        },
+      ],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(NetworkMap);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
 
-    expect(compiled.querySelector('[role="alert"]')?.textContent).toContain('No se ha podido cargar');
+    expect(compiled.querySelector('[role="alert"]')?.textContent).toContain(
+      'No se ha podido cargar',
+    );
     expect(compiled.querySelector('.error-card button')?.textContent).toContain('Reintentar');
   });
 });
