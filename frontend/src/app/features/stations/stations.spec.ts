@@ -126,7 +126,9 @@ describe('Stations', () => {
     expect(compiled.querySelector('.arrival-time')?.textContent).toContain('1:05');
     const arrivalsPanel = compiled.querySelector('.arrivals-panel') as HTMLElement;
     const arrivalList = compiled.querySelector('.arrival-list') as HTMLElement;
-    expect(getComputedStyle(arrivalsPanel).display).toBe('grid');
+    expect(getComputedStyle(arrivalsPanel).display).toBe('flex');
+    expect(getComputedStyle(arrivalList).height).toBe('0px');
+    expect(getComputedStyle(arrivalList).overflowY).toBe('auto');
     expect(getComputedStyle(arrivalList).maxHeight).not.toBe('420px');
     expect(loadedComponentStyles()).toContain('@media (max-width: 1250px)');
     expect(loadedComponentStyles()).toMatch(/\.arrival-list[^}]*max-height:\s*420px/);
