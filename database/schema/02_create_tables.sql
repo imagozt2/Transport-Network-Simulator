@@ -601,10 +601,8 @@ CREATE TABLE compensatory_ticket_issuances (
         issuance_status IN ('REQUESTED', 'PROCESSING', 'COMPLETED', 'FAILED', 'CANCELLED')
     ),
     CONSTRAINT chk_compensatory_issuances_reason CHECK (CHAR_LENGTH(TRIM(reason)) > 0),
-    CONSTRAINT chk_compensatory_issuances_stations CHECK (
-        (origin_station_id IS NULL AND destination_station_id IS NULL AND station_count IS NULL)
-        OR (origin_station_id IS NOT NULL AND destination_station_id IS NOT NULL
-            AND origin_station_id <> destination_station_id AND station_count > 0)
+    CONSTRAINT chk_compensatory_issuances_station_count CHECK (
+        station_count IS NULL OR station_count > 0
     ),
     CONSTRAINT chk_compensatory_issuances_trips CHECK (selected_trips IS NULL OR selected_trips > 0),
     CONSTRAINT chk_compensatory_issuances_days CHECK (selected_days IS NULL OR selected_days > 0),

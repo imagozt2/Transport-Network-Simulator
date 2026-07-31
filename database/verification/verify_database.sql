@@ -73,6 +73,10 @@ WHERE products.id IS NULL
    OR operators.id IS NULL
    OR (issuances.issued_ticket_id IS NOT NULL AND tickets.id IS NULL)
    OR issuances.charged_amount <> 0
+   OR ((issuances.origin_station_id IS NULL) <> (issuances.destination_station_id IS NULL))
+   OR (issuances.origin_station_id IS NOT NULL
+       AND issuances.origin_station_id = issuances.destination_station_id)
+   OR ((issuances.origin_station_id IS NULL) <> (issuances.station_count IS NULL))
    OR (products.product_type = 'SINGLE_TRIP'
        AND (issuances.origin_station_id IS NULL OR issuances.destination_station_id IS NULL
             OR issuances.station_count IS NULL))
