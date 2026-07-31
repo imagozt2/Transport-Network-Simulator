@@ -30,6 +30,32 @@ a:focus-visible {
   outline-offset: 2px;
 }
 
+.context-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #000;
+  border-radius: 12px;
+  padding: 9px 13px;
+  color: #fff;
+  background: #000;
+  text-align: center;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.35;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, transform 140ms ease;
+}
+
+.context-link:hover {
+  border-color: #1f2937;
+  color: #fff;
+  background: #1f2937;
+  transform: translateY(-1px);
+}
+
 html.reduce-motion *,
 html.reduce-motion *::before,
 html.reduce-motion *::after {

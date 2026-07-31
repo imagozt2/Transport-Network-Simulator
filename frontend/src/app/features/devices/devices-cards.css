@@ -28,9 +28,6 @@
 .device-details dd { margin: 4px 0 0; color: #111827; font-size: 12px; font-weight: 800; }
 .device-details small { display: block; margin-top: 3px; color: #64748b; font-size: 11px; font-weight: 750; }
 .device-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
-.logs-link { display: inline-flex; align-items: center; gap: 8px; border-radius: 12px; padding: 9px 13px; color: #fff; background: #111827; text-decoration: none; font-size: 12px; font-weight: 900; transition: background-color 140ms ease, transform 140ms ease; }
-.logs-link:hover { background: #334155; transform: translateY(-1px); }
-.logs-link:focus-visible { outline: 3px solid rgba(51, 65, 85, 0.28); outline-offset: 2px; }
 .empty-card { text-align: center; }
 
 @media (max-width: 640px) {

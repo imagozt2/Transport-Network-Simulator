@@ -90,7 +90,7 @@ describe('Depots', () => {
     expect(compiled.querySelector('.infrastructure-panel')?.textContent)
       .not.toContain('Capacidad configurada');
     expect(compiled.querySelector('.status-distribution p')).toBeNull();
-    const trainsLink = compiled.querySelector<HTMLAnchorElement>('.trains-link');
+    const trainsLink = compiled.querySelector<HTMLAnchorElement>('.context-link');
     expect(trainsLink?.getAttribute('href')).toBe('/trains?depotCode=DEP-LF-A');
     expect(trainsLink?.getAttribute('aria-label')).toContain('Cochera de Las Fuentes');
     expect(compiled.querySelectorAll('.role-row')).toHaveLength(3);

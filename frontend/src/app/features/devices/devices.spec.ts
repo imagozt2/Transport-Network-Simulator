@@ -62,12 +62,12 @@ describe('Devices log navigation', () => {
     const cardHeader = compiled.querySelector('.device-card-header') as HTMLButtonElement;
 
     expect(cardHeader.getAttribute('aria-expanded')).toBe('false');
-    expect(compiled.querySelector('.logs-link')).toBeNull();
+    expect(compiled.querySelector('.context-link')).toBeNull();
     expect(compiled.querySelector('.device-heading')?.textContent).toContain('Los Molinos');
     cardHeader.click();
     fixture.detectChanges();
 
-    const link = compiled.querySelector('.logs-link') as HTMLAnchorElement;
+    const link = compiled.querySelector('.context-link') as HTMLAnchorElement;
     expect(cardHeader.getAttribute('aria-expanded')).toBe('true');
     expect(link.getAttribute('href')).toBe('/logs?deviceCode=RMM-MB-ST001-001');
     expect(link.getAttribute('aria-label')).toContain('RMM-MB-ST001-001');

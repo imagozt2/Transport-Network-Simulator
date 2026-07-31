@@ -109,6 +109,7 @@ describe('Stations', () => {
     expect(compiled.querySelector('.devices-panel h2')?.textContent?.trim()).toBe('Máquinas');
     expect(compiled.querySelector('.devices-panel')?.textContent).not.toContain('Errores');
     const contextLinks = compiled.querySelectorAll<HTMLAnchorElement>('.station-context-actions a');
+    expect(Array.from(contextLinks).every((link) => link.classList.contains('context-link'))).toBe(true);
     expect(contextLinks.item(0).getAttribute('href')).toBe('/devices?stationCode=STB');
     expect(contextLinks.item(1).getAttribute('href')).toBe('/logs?stationCode=STB');
 

@@ -76,8 +76,8 @@
                     <div><span>Validadores de salida</span><strong>{{ station.devices.exitValidators }}</strong></div>
                   </div>
                   <nav class="station-context-actions" aria-label="Acciones sobre las máquinas de la estación">
-                    <a [routerLink]="['/devices']" [queryParams]="{ stationCode: station.code }">Ver máquinas</a>
-                    <a [routerLink]="['/logs']" [queryParams]="{ stationCode: station.code }">Ver logs</a>
+                    <a class="context-link" [routerLink]="['/devices']" [queryParams]="{ stationCode: station.code }">Ver máquinas</a>
+                    <a class="context-link" [routerLink]="['/logs']" [queryParams]="{ stationCode: station.code }">Ver logs</a>
                   </nav>
                 </section>
 

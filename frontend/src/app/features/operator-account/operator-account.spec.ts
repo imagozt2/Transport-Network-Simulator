@@ -31,6 +31,7 @@ describe('OperatorAccountPage', () => {
     expect(compiled.querySelector('.security-grid')?.textContent).toContain('Administrador');
     expect(compiled.querySelector('.security-grid')?.textContent).toContain('Activa');
     expect(compiled.querySelector('a')?.getAttribute('href')).toBe('/dashboard');
+    expect(compiled.querySelector('a')?.classList.contains('context-link')).toBe(true);
     expect(compiled.textContent?.toLowerCase()).not.toContain('secure-password');
     expect(compiled.textContent?.toLowerCase()).not.toContain('passwordhash');
   });

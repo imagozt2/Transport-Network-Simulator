@@ -26,6 +26,7 @@ describe('OperatorSettingsPage', () => {
 
     expect(component.reduceMotion).toBe(false);
     expect(fixture.nativeElement.querySelector('a')?.getAttribute('href')).toBe('/dashboard');
+    expect(fixture.nativeElement.querySelector('a')?.classList.contains('context-link')).toBe(true);
 
     const reduceMotionCheckbox = fixture.nativeElement.querySelector(
       'input[type="checkbox"]'
