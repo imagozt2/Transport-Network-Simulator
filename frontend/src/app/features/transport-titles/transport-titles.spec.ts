@@ -2,7 +2,11 @@ import { TestBed } from '@angular/core/testing';
 import { Observable, of, throwError } from 'rxjs';
 
 import { TransportTitlesResponse } from '../../core/models/transport-title.model';
+import { DeviceOperationsResponse } from '../../core/models/device-operation.model';
+import { NetworkMapResponse } from '../../core/models/network-map.model';
 import { TransportTitlesService } from '../../core/services/transport-titles.service';
+import { DeviceOperationsService } from '../../core/services/device-operations.service';
+import { NetworkMapService } from '../../core/services/network-map.service';
 import { TransportTitles } from './transport-titles';
 
 const response: TransportTitlesResponse = {
@@ -88,11 +92,93 @@ describe('TransportTitles', () => {
       .toContain('No se ha podido cargar');
     expect(compiled.querySelector('button')?.textContent).toContain('Reintentar');
   });
+
+  it('should validate and submit a compensatory single-trip issuance form', async () => {
+    const issueCompensatoryTicket = vi.fn().mockReturnValue(of({
+      id: 1, code: 'COMP-1', status: 'COMPLETED', ticketCode: 'RMM-1', qrToken: 'qr-token',
+      productCode: 'SINGLE_TRIP', productType: 'SINGLE_TRIP', deviceCode: 'TM-ST001-01',
+      deviceName: 'Máquina Aeropuerto', stationCode: 'ST001', stationName: 'Aeropuerto',
+      operatorUsername: 'admin', chargedAmount: 0,
+      requestedAt: '2026-08-05T10:00:00', completedAt: '2026-08-05T10:00:00'
+    }));
+    await configureWith(
+      () => of(response),
+      issueCompensatoryTicket,
+      () => of({
+        evaluatedAt: '2026-08-05T10:00:00',
+        summary: {
+          totalDevices: 1, filteredDevices: 1,
+          byType: { TICKET_MACHINE: 1, ENTRY_VALIDATOR: 0, EXIT_VALIDATOR: 0 },
+          byStatus: { ONLINE: 1, OFFLINE: 0, MAINTENANCE: 0, ERROR: 0 }
+        },
+        devices: [{
+          id: 1, code: 'TM-ST001-01', name: 'Máquina Aeropuerto',
+          type: 'TICKET_MACHINE', status: 'ONLINE', lastConnectionAt: null,
+          station: { id: 1, code: 'ST001', name: 'Aeropuerto' }
+        }]
+      }),
+      () => of({ lines: [{
+        id: 1, code: 'L2', name: 'Línea 2', color: '#000000',
+        stations: [
+          { id: 1, code: 'ST001', name: 'Aeropuerto', stationOrder: 1 },
+          { id: 2, code: 'ST002', name: 'Plaza de la Merced', stationOrder: 2 }
+        ]
+      }] })
+    );
+    const fixture = TestBed.createComponent(TransportTitles);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+
+    component.openIssuanceDialog(response.titles[0]);
+    expect(component.ticketMachines).toHaveLength(1);
+    expect(component.stations).toHaveLength(2);
+    component.selectedDeviceCode = 'TM-ST001-01';
+    component.originStationCode = 'ST001';
+    component.destinationStationCode = 'ST002';
+    component.issuanceReason = '  Fallo durante la compra  ';
+    expect(component.canSubmitIssuance()).toBe(true);
+
+    component.submitCompensatoryIssuance();
+
+    expect(issueCompensatoryTicket).toHaveBeenCalledWith(1, {
+      deviceCode: 'TM-ST001-01', reason: 'Fallo durante la compra',
+      originStationCode: 'ST001', destinationStationCode: 'ST002'
+    });
+    expect(component.issuanceTitle).toBeNull();
+    expect(component.issuanceConfirmation).toContain('RMM-1');
+  });
+
+  it('should retain tablet and mobile layouts for cards and the issuance dialog', async () => {
+    await configureWith(() => of(response));
+    const fixture = TestBed.createComponent(TransportTitles);
+    fixture.detectChanges();
+    const styles = loadedComponentStyles();
+
+    expect(styles).toContain('@media (max-width: 1000px)');
+    expect(styles).toContain('@media (max-width: 760px)');
+    expect(styles).toContain('@media (max-width: 520px)');
+    expect(styles).toMatch(/\.issuance-dialog[^}]*width:\s*min/);
+  });
 });
 
-async function configureWith(getTitles: () => Observable<TransportTitlesResponse>) {
+async function configureWith(
+  getTitles: () => Observable<TransportTitlesResponse>,
+  issueCompensatoryTicket = vi.fn(),
+  getOperations: () => Observable<DeviceOperationsResponse> = vi.fn(),
+  getNetworkMap: () => Observable<NetworkMapResponse> = vi.fn()
+) {
   await TestBed.configureTestingModule({
     imports: [TransportTitles],
-    providers: [{ provide: TransportTitlesService, useValue: { getTitles } }]
+    providers: [
+      { provide: TransportTitlesService, useValue: { getTitles, issueCompensatoryTicket } },
+      { provide: DeviceOperationsService, useValue: { getOperations } },
+      { provide: NetworkMapService, useValue: { getNetworkMap } }
+    ]
   }).compileComponents();
+}
+
+function loadedComponentStyles(): string {
+  return Array.from(document.head.querySelectorAll('style'))
+    .map((style) => style.textContent ?? '')
+    .join('\n');
 }

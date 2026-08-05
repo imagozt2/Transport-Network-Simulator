@@ -115,6 +115,15 @@ describe('Incidents', () => {
     );
   });
 
+  it('should retain responsive list, detail and workflow layouts', () => {
+    const styles = loadedComponentStyles();
+
+    expect(styles).toContain('@media (max-width: 1200px)');
+    expect(styles).toContain('@media (max-width: 700px)');
+    expect(styles).toContain('@media (max-width: 600px)');
+    expect(styles).toMatch(/\.table-wrapper[^}]*overflow-x:\s*auto/);
+  });
+
   const operator: OperatorAccount = {
     id: 7,
     username: 'operator',
@@ -177,3 +186,9 @@ describe('Incidents', () => {
     empty: false
   };
 });
+
+function loadedComponentStyles(): string {
+  return Array.from(document.head.querySelectorAll('style'))
+    .map((style) => style.textContent ?? '')
+    .join('\n');
+}

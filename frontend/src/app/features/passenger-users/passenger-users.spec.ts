@@ -145,6 +145,15 @@ describe('PassengerUsers', () => {
     expect(fixture.componentInstance.createDialogOpen).toBe(false);
   });
 
+  it('should retain responsive table, detail and form layouts', () => {
+    const styles = loadedComponentStyles();
+
+    expect(styles).toContain('@media (max-width: 1100px)');
+    expect(styles).toContain('@media (max-width: 650px)');
+    expect(styles).toMatch(/\.table-wrapper[^}]*overflow-x:\s*auto/);
+    expect(styles).toMatch(/\.create-user-dialog[^}]*form[^}]*grid-template-columns:\s*1fr/);
+  });
+
   const administrator: OperatorAccount = {
     id: 1,
     username: 'admin',
@@ -188,3 +197,9 @@ describe('PassengerUsers', () => {
     empty: false
   };
 });
+
+function loadedComponentStyles(): string {
+  return Array.from(document.head.querySelectorAll('style'))
+    .map((style) => style.textContent ?? '')
+    .join('\n');
+}
