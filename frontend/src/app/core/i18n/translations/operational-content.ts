@@ -421,6 +421,26 @@ const englishPhrases: Readonly<Record<string, string>> = {
   'No se ha podido actualizar el estado.': 'Unable to update the status.',
   'No se ha podido añadir el comentario.': 'Unable to add the comment.',
   'No se ha podido actualizar el detalle de la incidencia.': 'Unable to update the incident details.'
+  ,
+  'Área personal': 'Personal area',
+  'Volver al panel general': 'Back to overview',
+  'Aplicación': 'Application',
+  'Preferencias de idioma e información operativa de la plataforma.': 'Language preferences and operational platform information.',
+  'Idioma de la interfaz': 'Interface language',
+  'Selecciona el idioma utilizado en los menús y contenidos de la aplicación.': 'Select the language used in the application menus and content.',
+  'Zona horaria': 'Time zone',
+  'Actualización de datos': 'Data updates',
+  'Automática': 'Automatic',
+  'La zona horaria y la actualización de datos forman parte de la configuración operativa y no pueden modificarse desde una cuenta de operador.': 'The time zone and data updates are part of the operational configuration and cannot be changed from an operator account.',
+  'Accesibilidad': 'Accessibility',
+  'Preferencias guardadas únicamente en este navegador.': 'Preferences stored only in this browser.',
+  'Reducir animaciones': 'Reduce animations',
+  'Minimiza transiciones y movimientos de la interfaz.': 'Minimise interface transitions and motion.',
+  'Preferencias del navegador': 'Browser preferences',
+  'Los cambios de idioma y accesibilidad se guardarán en este dispositivo.': 'Language and accessibility changes will be saved on this device.',
+  'Restablecer': 'Reset',
+  'Guardar preferencias': 'Save preferences',
+  'Las preferencias se han guardado correctamente.': 'Preferences have been saved successfully.'
 };
 
 const englishPatterns: ReadonlyArray<readonly [RegExp, string]> = [

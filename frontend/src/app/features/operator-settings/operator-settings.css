@@ -13,6 +13,12 @@
 .fixed-settings dt { color: #64748b; font-size: 11px; font-weight: 750; }
 .fixed-settings dd { margin: 0; color: #111827; font-size: 12px; font-weight: 850; text-align: right; }
 .settings-note { margin: 15px 0 0; color: #64748b; font-size: 11px; line-height: 1.55; }
+.language-setting { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-top: 20px; border: 1px solid #bae6fd; border-radius: 14px; padding: 15px; background: #f0f9ff; }
+.language-setting > span { display: flex; flex-direction: column; gap: 4px; }
+.language-setting strong { color: #111827; font-size: 13px; }
+.language-setting small { max-width: 340px; color: #64748b; font-size: 11px; line-height: 1.4; }
+.language-setting select { min-width: 145px; border: 1px solid #cbd5e1; border-radius: 10px; padding: 10px 34px 10px 11px; color: #111827; background: #fff; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.operational-settings { margin-top: 10px; }
 .preference-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-top: 20px; border: 1px solid #e2e8f0; border-radius: 14px; padding: 15px; background: #f8fafc; cursor: pointer; }
 .preference-row > span { display: flex; flex-direction: column; gap: 4px; }
 .preference-row strong { color: #111827; font-size: 13px; }
@@ -25,6 +31,11 @@
 .secondary-button { color: #334155; background: #e2e8f0; }
 .secondary-button:hover { background: #cbd5e1; }
 .saved-message { margin: 14px 0 0; border-radius: 11px; padding: 10px 12px; color: #166534; background: #dcfce7; font-size: 11px; font-weight: 750; }
+.preferences-footer { display: flex; align-items: center; justify-content: space-between; gap: 20px; border: 1px solid #e2e8f0; border-radius: 18px; padding: 17px 20px; background: #fff; box-shadow: 0 14px 34px rgba(15, 23, 42, 0.05); }
+.preferences-footer > div:first-child { display: flex; flex-direction: column; gap: 4px; }
+.preferences-footer strong { color: #111827; font-size: 13px; }
+.preferences-footer span { color: #64748b; font-size: 11px; }
+.preferences-footer .settings-actions { margin-top: 0; }
 
 @media (max-width: 850px) {
   .settings-layout { grid-template-columns: 1fr; }
@@ -32,7 +43,9 @@
 
 @media (max-width: 600px) {
   .page-header { align-items: flex-start; flex-direction: column; }
-  .fixed-settings div, .preference-row { align-items: flex-start; }
+  .fixed-settings div, .preference-row, .language-setting { align-items: flex-start; }
+  .language-setting, .preferences-footer { flex-direction: column; }
+  .language-setting select, .preferences-footer .settings-actions { width: 100%; }
   .settings-actions { flex-direction: column-reverse; }
   .settings-actions button { width: 100%; }
 }

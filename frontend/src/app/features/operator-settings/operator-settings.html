@@ -13,15 +13,26 @@
         <span class="section-icon" aria-hidden="true">AP</span>
         <div>
           <h2>Aplicación</h2>
-          <p>Parámetros comunes del Centro de control operativo.</p>
+          <p>Preferencias de idioma e información operativa de la plataforma.</p>
         </div>
       </header>
 
-      <dl class="fixed-settings">
-        <div>
-          <dt>Idioma</dt>
-          <dd>Español</dd>
-        </div>
+      <label class="language-setting">
+        <span>
+          <strong>Idioma de la interfaz</strong>
+          <small>Selecciona el idioma utilizado en los menús y contenidos de la aplicación.</small>
+        </span>
+        <select
+          [value]="selectedLanguage"
+          (change)="selectLanguage($any($event.target).value)"
+        >
+          @for (language of languageOptions; track language.code) {
+            <option [value]="language.code">{{ language.label }}</option>
+          }
+        </select>
+      </label>
+
+      <dl class="fixed-settings operational-settings">
         <div>
           <dt>Zona horaria</dt>
           <dd>Europe/Madrid</dd>
@@ -33,8 +44,8 @@
       </dl>
 
       <p class="settings-note">
-        Estos valores forman parte de la configuración operativa de la aplicación y no pueden
-        modificarse desde una cuenta de operador.
+        La zona horaria y la actualización de datos forman parte de la configuración operativa y
+        no pueden modificarse desde una cuenta de operador.
       </p>
     </article>
 
@@ -59,18 +70,25 @@
         />
       </label>
 
-      <footer class="settings-actions">
-        <button class="secondary-button" type="button" (click)="resetPreferences()">
-          Restablecer
-        </button>
-        <button class="primary-button" type="button" (click)="savePreferences()">
-          Guardar preferencias
-        </button>
-      </footer>
-
-      @if (saved) {
-        <p class="saved-message" role="status">Las preferencias se han guardado correctamente.</p>
-      }
     </article>
   </div>
+
+  <footer class="preferences-footer">
+    <div>
+      <strong>Preferencias del navegador</strong>
+      <span>Los cambios de idioma y accesibilidad se guardarán en este dispositivo.</span>
+    </div>
+    <div class="settings-actions">
+      <button class="secondary-button" type="button" (click)="resetPreferences()">
+        Restablecer
+      </button>
+      <button class="primary-button" type="button" (click)="savePreferences()">
+        Guardar preferencias
+      </button>
+    </div>
+  </footer>
+
+  @if (saved) {
+    <p class="saved-message" role="status">Las preferencias se han guardado correctamente.</p>
+  }
 </section>
