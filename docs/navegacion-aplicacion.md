@@ -31,6 +31,7 @@ Las opciones se agrupan por su función dentro del centro de control:
 | Flota y equipamiento | Máquinas | `/devices` | Permite consultar las máquinas instaladas en las estaciones. |
 | Gestión y supervisión | Títulos de transporte | `/transport-titles` | Presenta los productos tarifarios y sus reglas de uso. |
 | Gestión y supervisión | Usuarios | `/users` | Consulta y gestiona las cuentas de pasajeros de RMM App. |
+| Gestión y supervisión | Incidencias | `/incidents` | Registra, consulta y actualiza incidencias operativas. |
 | Gestión y supervisión | Logs | `/logs` | Permite filtrar y revisar los eventos emitidos por las máquinas. |
 
 Los iconos del menú tienen una función visual y están ocultos para las tecnologías de asistencia. El
@@ -90,6 +91,13 @@ solicita una instantánea nueva y se reanuda el intervalo correspondiente.
 
 Logs conserva el botón `Actualizar`, porque se trata de una consulta filtrada y paginada que el
 operador puede volver a ejecutar de forma explícita.
+
+## Idioma y preferencias
+
+La pantalla `/settings` permite elegir español o inglés, ajustar la densidad visual y reducir las
+animaciones. Estas preferencias se guardan en el navegador y se restauran en visitas posteriores;
+no modifican la cuenta del operador ni se envían al backend. Los textos públicos, operativos y
+administrativos utilizan el mismo servicio de internacionalización.
 
 ## Incorporación de nuevas secciones
 

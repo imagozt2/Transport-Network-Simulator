@@ -37,10 +37,15 @@ sesión se abre siempre `/dashboard`.
 | `/depots` | Ocupación, distribución de flota y agenda de movimientos. |
 | `/transport-titles` | Catálogo y reglas de los productos tarifarios. |
 | `/users` | Consulta y gestión administrativa de pasajeros. |
+| `/incidents` | Consulta, detalle y gestión del ciclo de incidencias. |
 | `/devices` | Inventario y estado operativo de las máquinas. |
 | `/logs` | Consulta filtrada y paginada de eventos de máquinas. |
 | `/account` | Datos de la cuenta del operador autenticado. |
-| `/settings` | Preferencias locales de accesibilidad. |
+| `/settings` | Idioma y preferencias locales de presentación y accesibilidad. |
+
+El mapa incluye un planificador de trayectos. El itinerario calculado por el backend se presenta por
+tramos, muestra el sentido de cada línea y se representa sobre la red sin añadir transbordos
+innecesarios.
 
 ## Navegación contextual
 
@@ -51,6 +56,8 @@ Algunas pantallas enlazan con otras conservando el contexto mediante parámetros
 /stations -> /logs?stationCode=ST001
 /devices  -> /logs?deviceCode=RMM-MB-ST001-001
 /depots   -> /trains?depotCode=DEP-AIR-A
+/lines    -> /trains?lineCode=L1
+/stations -> /trains?stationCode=ST001
 ```
 
 Las pantallas receptoras normalizan los códigos, inicializan el control visible y aplican el mismo
@@ -77,6 +84,7 @@ Líneas, Estaciones, Trenes y Cocheras utilizan `SummaryCard`.
 - Los iconos decorativos se ocultan a las tecnologías de asistencia.
 - Las tablas identifican semánticamente sus cabeceras de columna.
 - La preferencia «Reducir animaciones» se guarda únicamente en el navegador.
+- El idioma y la densidad visual también se conservan localmente y no alteran la cuenta del operador.
 - El sidebar pasa a modo superpuesto hasta 900 píxeles y las cuadrículas reducen progresivamente sus
   columnas en pantallas estrechas.
 

@@ -14,6 +14,8 @@ La aplicación incluye actualmente:
 
 - un Panel General en vivo con indicadores y paneles operativos de la red;
 - un mapa SVG interactivo con las seis líneas y las 50 estaciones de Macegocia;
+- un planificador de trayectos que prioriza el tiempo y el número de estaciones sin introducir
+  transbordos innecesarios, con representación del recorrido sobre el mapa;
 - una sección operativa de líneas con frecuencias, termómetros y trenes en movimiento;
 - una sección de estaciones con filtros, máquinas, circulación por sentido, próximas llegadas en
   formato `mm:ss` y navegación contextual;
@@ -27,11 +29,18 @@ La aplicación incluye actualmente:
   directa entre páginas;
 - una sección de títulos de transporte con el catálogo tarifario, sus reglas de uso y filtros por
   producto y estado;
+- emisión compensatoria gratuita de billetes desde máquinas de venta, vinculada al operador y
+  registrada en los logs operativos;
 - autenticación de operadores mediante sesiones protegidas, rutas privadas y bloqueo temporal ante
   intentos fallidos;
 - pantallas personales de cuenta y configuración accesibles desde la cabecera;
 - una sección administrativa para consultar, filtrar y gestionar las cuentas de pasajeros de la
   futura RMM App;
+- un ciclo administrativo para crear, bloquear, reactivar y eliminar cuentas de pasajeros;
+- una sección de incidencias con filtros, detalle, comentarios, cambios de estado y trazabilidad del
+  operador responsable;
+- interfaz disponible en español e inglés, con preferencias locales persistentes de idioma,
+  reducción de movimiento y densidad visual;
 - recorridos ordenados y correspondencias entre líneas;
 - calendarios, franjas horarias, frecuencias y tiempos de recorrido configurables;
 - flota regular, de reserva e histórica diferenciada;
@@ -186,6 +195,7 @@ sesión y una autenticación correcta abre siempre el Panel General.
 | `POST` | `/api/auth/logout` | Invalida la sesión del operador. |
 | `GET` | `/api/dashboard/summary` | Devuelve el resumen persistido legado; el Panel General utiliza las consultas operativas. |
 | `GET` | `/api/network-map` | Devuelve las líneas activas y sus estaciones ordenadas. |
+| `GET` | `/api/network-map/journeys` | Calcula un trayecto entre dos estaciones y devuelve sus tramos ordenados. |
 | `GET` | `/api/lines/operations` | Devuelve frecuencias, cocheras, próximas llegadas, recorridos y trenes de cada línea. |
 | `GET` | `/api/stations/operations` | Devuelve el estado, líneas, dispositivos y próximas llegadas de cada estación. |
 | `GET` | `/api/trains/operations` | Devuelve la flota, su clasificación y la ubicación operativa de cada tren. |
@@ -195,9 +205,17 @@ sesión y una autenticación correcta abre siempre el Panel General.
 | `GET` | `/api/transport-titles` | Devuelve el catálogo de títulos y admite filtros combinables. |
 | `GET` | `/api/transport-titles/{titleId}` | Consulta un título por su identificador. |
 | `GET` | `/api/transport-titles/code/{code}` | Consulta un título por su código estable. |
+| `POST` | `/api/transport-titles/{titleId}/compensatory-issuances` | Emite gratuitamente un billete compensatorio y audita la operación. |
 | `GET` | `/api/admin/passenger-users` | Devuelve el resumen y listado paginado de pasajeros. |
 | `GET` | `/api/admin/passenger-users/{publicId}` | Consulta una cuenta mediante su UUID público. |
+| `POST` | `/api/admin/passenger-users` | Crea una cuenta de pasajero. |
 | `PATCH` | `/api/admin/passenger-users/{publicId}/status` | Cambia y audita el estado de una cuenta. |
+| `DELETE` | `/api/admin/passenger-users/{publicId}` | Elimina una cuenta de pasajero cuando cumple las reglas administrativas. |
+| `GET` | `/api/incidents` | Consulta y filtra las incidencias registradas. |
+| `GET` | `/api/incidents/{code}` | Devuelve el detalle y la cronología de una incidencia. |
+| `POST` | `/api/incidents` | Registra una incidencia nueva. |
+| `PATCH` | `/api/incidents/{code}/status` | Cambia y audita el estado de una incidencia. |
+| `POST` | `/api/incidents/{code}/comments` | Añade un comentario a la cronología de una incidencia. |
 
 ## Pruebas y compilación
 
