@@ -15,7 +15,7 @@ describe('OperatorSettingsPage', () => {
     document.documentElement.lang = 'es';
   });
 
-  it('should save and restore the reduced-motion preference', async () => {
+  async function createPage() {
     await TestBed.configureTestingModule({
       imports: [OperatorSettingsPage],
       providers: [provideRouter([])]
@@ -23,6 +23,11 @@ describe('OperatorSettingsPage', () => {
 
     const fixture = TestBed.createComponent(OperatorSettingsPage);
     fixture.detectChanges();
+    return fixture;
+  }
+
+  it('should save the language and reduced-motion preferences', async () => {
+    const fixture = await createPage();
     const component = fixture.componentInstance;
 
     expect(component.reduceMotion).toBe(false);
@@ -43,6 +48,29 @@ describe('OperatorSettingsPage', () => {
     expect(document.documentElement.lang).toBe('en');
     expect(document.documentElement.classList.contains('reduce-motion')).toBe(true);
     expect(component.saved).toBe(true);
+  });
+
+  it('should restore persisted preferences when opening the page', async () => {
+    localStorage.setItem('rmm.language', 'en');
+    localStorage.setItem('rmm.reduce-motion', 'true');
+
+    const fixture = await createPage();
+    const component = fixture.componentInstance;
+
+    expect(component.selectedLanguage).toBe('en');
+    expect(component.reduceMotion).toBe(true);
+    expect(document.documentElement.lang).toBe('en');
+    expect(document.documentElement.classList.contains('reduce-motion')).toBe(true);
+
+    const languageSelect = fixture.nativeElement.querySelector('select') as HTMLSelectElement;
+    expect(languageSelect.value).toBe('en');
+  });
+
+  it('should reset all browser preferences to their defaults', async () => {
+    localStorage.setItem('rmm.language', 'en');
+    localStorage.setItem('rmm.reduce-motion', 'true');
+    const fixture = await createPage();
+    const component = fixture.componentInstance;
 
     component.resetPreferences();
 
@@ -51,5 +79,7 @@ describe('OperatorSettingsPage', () => {
     expect(localStorage.getItem('rmm.reduce-motion')).toBeNull();
     expect(localStorage.getItem('rmm.language')).toBe('es');
     expect(document.documentElement.classList.contains('reduce-motion')).toBe(false);
+    expect(document.documentElement.lang).toBe('es');
+    expect(component.saved).toBe(true);
   });
 });
