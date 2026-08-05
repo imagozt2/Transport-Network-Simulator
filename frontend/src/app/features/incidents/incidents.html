@@ -4,6 +4,9 @@
       <h1>Incidencias</h1>
       <p>Seguimiento operativo y asignación de incidencias del centro de control.</p>
     </div>
+    <button class="create-incident-button" type="button" (click)="openCreateDialog()">
+      Crear incidencia
+    </button>
   </header>
 
   <section class="summary-grid" aria-label="Resumen de incidencias">
@@ -134,6 +137,7 @@
                 <th scope="col">Elementos afectados</th>
                 <th scope="col">Responsable</th>
                 <th scope="col">Apertura</th>
+                <th scope="col"><span class="visually-hidden">Acciones</span></th>
               </tr>
             </thead>
             <tbody>
@@ -157,6 +161,11 @@
                   <td class="resources-cell">{{ affectedResources(incident) }}</td>
                   <td [class.unassigned]="!incident.assignedTo">{{ operatorName(incident) }}</td>
                   <td>{{ formatDate(incident.openedAt) }}</td>
+                  <td>
+                    <button class="detail-button" type="button" (click)="openDetail(incident)">
+                      Ver incidencia
+                    </button>
+                  </td>
                 </tr>
               }
             </tbody>
@@ -174,5 +183,184 @@
         </nav>
       }
     </section>
+  }
+
+  @if (selectedIncident; as incident) {
+    <div class="incident-detail-backdrop" (mousedown)="$event.target === $event.currentTarget && closeDetail()">
+      <aside class="incident-detail" role="dialog" aria-modal="true" aria-labelledby="incident-detail-title">
+        <header class="incident-detail-heading">
+          <div>
+            <span>{{ incident.code }}</span>
+            <h2 id="incident-detail-title">{{ incident.title }}</h2>
+          </div>
+          <button type="button" aria-label="Cerrar detalle" (click)="closeDetail()">×</button>
+        </header>
+
+        @if (detailLoading) {
+          <div class="detail-state" role="status">Cargando detalle…</div>
+        } @else if (detailError) {
+          <div class="detail-state error-state" role="alert">{{ detailError }}</div>
+        } @else {
+          <div class="incident-badges">
+            <span class="status status-{{ incident.status.toLowerCase().replace('_', '-') }}">{{ statusLabel(incident.status) }}</span>
+            <span class="priority priority-{{ incident.priority.toLowerCase() }}">{{ priorityLabel(incident.priority) }}</span>
+            <span>{{ categoryLabel(incident.category) }}</span>
+          </div>
+
+          @if (editing) {
+            <section class="detail-section edit-section">
+              <h3>Editar incidencia</h3>
+              <label><span>Título</span><input maxlength="150" [value]="editTitle" (input)="editTitle = $any($event.target).value" /></label>
+              <label><span>Descripción</span><textarea rows="4" [value]="editDescription" (input)="editDescription = $any($event.target).value"></textarea></label>
+              <div class="edit-grid">
+                <label>
+                  <span>Categoría</span>
+                  <select [value]="editCategory" (change)="editCategory = $any($event.target).value">
+                    @for (category of categories; track category) { <option [value]="category">{{ categoryLabel(category) }}</option> }
+                  </select>
+                </label>
+                <label>
+                  <span>Prioridad</span>
+                  <select [value]="editPriority" (change)="editPriority = $any($event.target).value">
+                    @for (priority of priorities; track priority) { <option [value]="priority">{{ priorityLabel(priority) }}</option> }
+                  </select>
+                </label>
+              </div>
+              @if (editError) { <p class="form-error" role="alert">{{ editError }}</p> }
+              <div class="dialog-actions">
+                <button type="button" [disabled]="editSubmitting" (click)="cancelEdit()">Cancelar</button>
+                <button class="primary-button" type="button" [disabled]="editSubmitting || !editTitle.trim() || !editDescription.trim()" (click)="saveEdit()">
+                  {{ editSubmitting ? 'Guardando…' : 'Guardar cambios' }}
+                </button>
+              </div>
+            </section>
+          } @else {
+            <section class="detail-section incident-overview">
+              <div class="section-heading">
+                <h3>Información</h3>
+                @if (isEditable(incident)) { <button type="button" (click)="beginEdit()">Editar</button> }
+              </div>
+              <p>{{ incident.description }}</p>
+              <dl>
+                <div><dt>Elementos afectados</dt><dd>{{ affectedResources(incident) }}</dd></div>
+                <div><dt>Creada por</dt><dd>{{ incident.createdBy.firstName }} {{ incident.createdBy.lastName }}</dd></div>
+                <div><dt>Responsable</dt><dd>{{ operatorName(incident) }}</dd></div>
+                <div><dt>Apertura</dt><dd>{{ formatDate(incident.openedAt) }}</dd></div>
+              </dl>
+              @if (isEditable(incident)) {
+                <div class="assignment-actions">
+                  @if (incident.assignedTo?.id !== operator()?.id) {
+                    <button class="context-button" type="button" [disabled]="editSubmitting" (click)="assignToMe()">Asignarme</button>
+                  }
+                  @if (incident.assignedTo) {
+                    <button type="button" [disabled]="editSubmitting" (click)="unassign()">Dejar sin asignar</button>
+                  }
+                </div>
+              }
+            </section>
+          }
+
+          <section class="detail-section workflow-section">
+            <h3>Flujo de trabajo</h3>
+            @if (availableTransitions(incident.status).length > 0) {
+              <div class="workflow-actions">
+                @for (status of availableTransitions(incident.status); track status) {
+                  <button type="button" (click)="beginStatusChange(status)">{{ statusLabel(status) }}</button>
+                }
+              </div>
+            } @else {
+              <p class="closed-notice">La incidencia ha finalizado y conserva su historial en modo de consulta.</p>
+            }
+            @if (pendingStatus; as targetStatus) {
+              <div class="status-confirmation">
+                <strong>Cambiar estado a {{ statusLabel(targetStatus).toLowerCase() }}</strong>
+                @if (targetStatus === 'RESOLVED') {
+                  <label><span>Resumen de la resolución</span><textarea rows="3" [value]="resolutionSummary" (input)="resolutionSummary = $any($event.target).value"></textarea></label>
+                }
+                <label><span>Nota del cambio (opcional)</span><textarea maxlength="500" rows="2" [value]="statusNote" (input)="statusNote = $any($event.target).value"></textarea></label>
+                @if (workflowError) { <p class="form-error" role="alert">{{ workflowError }}</p> }
+                <div class="dialog-actions">
+                  <button type="button" [disabled]="workflowSubmitting" (click)="cancelStatusChange()">Cancelar</button>
+                  <button class="primary-button" type="button" [disabled]="!canConfirmStatus()" (click)="confirmStatusChange()">Confirmar cambio</button>
+                </div>
+              </div>
+            }
+            @if (incident.resolutionSummary) {
+              <div class="resolution-summary"><strong>Resolución</strong><p>{{ incident.resolutionSummary }}</p></div>
+            }
+          </section>
+
+          <section class="detail-section">
+            <h3>Historial</h3>
+            <ol class="status-history">
+              @for (change of incident.statusHistory; track change.id) {
+                <li>
+                  <span class="history-marker" aria-hidden="true"></span>
+                  <div>
+                    <strong>{{ statusLabel(change.newStatus) }}</strong>
+                    <small>{{ formatDate(change.createdAt) }} · {{ change.changedBy.firstName }} {{ change.changedBy.lastName }}</small>
+                    @if (change.note) { <p>{{ change.note }}</p> }
+                  </div>
+                </li>
+              }
+            </ol>
+          </section>
+
+          <section class="detail-section comments-section">
+            <h3>Comentarios</h3>
+            @if (incident.comments.length === 0) { <p class="empty-comments">Todavía no hay comentarios.</p> }
+            @for (comment of incident.comments; track comment.id) {
+              <article>
+                <header><strong>{{ comment.author.firstName }} {{ comment.author.lastName }}</strong><span>{{ formatDate(comment.createdAt) }}</span></header>
+                <p>{{ comment.text }}</p>
+              </article>
+            }
+            @if (isEditable(incident)) {
+              <label class="comment-field"><span>Añadir comentario</span><textarea rows="3" [value]="commentText" (input)="commentText = $any($event.target).value"></textarea></label>
+              @if (commentError) { <p class="form-error" role="alert">{{ commentError }}</p> }
+              <button class="primary-button comment-button" type="button" [disabled]="commentSubmitting || !commentText.trim()" (click)="addComment()">
+                {{ commentSubmitting ? 'Publicando…' : 'Publicar comentario' }}
+              </button>
+            }
+          </section>
+        }
+      </aside>
+    </div>
+  }
+
+  @if (createDialogOpen) {
+    <div class="create-incident-backdrop" (mousedown)="$event.target === $event.currentTarget && closeCreateDialog()">
+      <section class="create-incident-dialog" role="dialog" aria-modal="true" aria-labelledby="create-incident-title">
+        <header>
+          <div><span>Nuevo ticket</span><h2 id="create-incident-title">Crear incidencia</h2></div>
+          <button type="button" aria-label="Cerrar diálogo" (click)="closeCreateDialog()">×</button>
+        </header>
+        <form (submit)="$event.preventDefault(); createIncident()">
+          <label class="wide-field"><span>Título</span><input maxlength="150" [value]="createTitle" (input)="createTitle = $any($event.target).value" /></label>
+          <label class="wide-field"><span>Descripción</span><textarea rows="5" [value]="createDescription" (input)="createDescription = $any($event.target).value"></textarea></label>
+          <label>
+            <span>Categoría</span>
+            <select [value]="createCategory" (change)="createCategory = $any($event.target).value">
+              @for (category of categories; track category) { <option [value]="category">{{ categoryLabel(category) }}</option> }
+            </select>
+          </label>
+          <label>
+            <span>Prioridad</span>
+            <select [value]="createPriority" (change)="createPriority = $any($event.target).value">
+              @for (priority of priorities; track priority) { <option [value]="priority">{{ priorityLabel(priority) }}</option> }
+            </select>
+          </label>
+          <label class="assignment-check wide-field">
+            <input type="checkbox" [checked]="createAssignToMe" (change)="createAssignToMe = $any($event.target).checked" />
+            <span>Asignarme la incidencia al crearla</span>
+          </label>
+          @if (createError) { <p class="form-error wide-field" role="alert">{{ createError }}</p> }
+          <footer class="wide-field dialog-actions">
+            <button type="button" [disabled]="createSubmitting" (click)="closeCreateDialog()">Cancelar</button>
+            <button class="primary-button" type="submit" [disabled]="!canCreate()">{{ createSubmitting ? 'Creando…' : 'Crear incidencia' }}</button>
+          </footer>
+        </form>
+      </section>
+    </div>
   }
 </section>

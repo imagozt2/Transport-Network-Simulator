@@ -86,3 +86,22 @@ export interface IncidentsPage {
   last: boolean;
   empty: boolean;
 }
+
+export interface IncidentWriteRequest {
+  title: string;
+  description: string;
+  category: IncidentCategory;
+  priority: IncidentPriority;
+  assignedOperatorId: number | null;
+  affectedLineId: number | null;
+  affectedStationId: number | null;
+  affectedTrainId: number | null;
+  affectedDeviceId: number | null;
+  affectedDepotId: number | null;
+}
+
+export interface IncidentStatusUpdateRequest {
+  status: IncidentStatus;
+  note: string | null;
+  resolutionSummary: string | null;
+}

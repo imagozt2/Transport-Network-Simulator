@@ -1,0 +1,58 @@
+.incident-detail-backdrop, .create-incident-backdrop { position: fixed; z-index: 1000; inset: 0; display: flex; justify-content: flex-end; background: rgba(15, 23, 42, .48); backdrop-filter: blur(2px); }
+.incident-detail { width: min(620px, 100%); height: 100%; overflow-y: auto; padding: 22px; background: #f8fafc; box-shadow: -18px 0 45px rgba(15, 23, 42, .18); }
+.incident-detail-heading, .create-incident-dialog > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.incident-detail-heading span, .create-incident-dialog > header span { color: #64748b; font-size: 10px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.incident-detail-heading h2, .create-incident-dialog h2 { margin: 4px 0 0; color: #111827; font-size: 22px; }
+.incident-detail-heading > button, .create-incident-dialog > header > button { width: 34px; height: 34px; border: 0; border-radius: 10px; color: #111827; background: #e2e8f0; cursor: pointer; font-size: 20px; }
+.incident-badges { display: flex; flex-wrap: wrap; gap: 7px; margin: 16px 0; }
+.incident-badges > span:not(.status):not(.priority) { border-radius: 999px; padding: 5px 8px; color: #334155; background: #e2e8f0; font-size: 9px; font-weight: 900; }
+.detail-section, .detail-state { border: 1px solid #e2e8f0; border-radius: 16px; margin-top: 12px; padding: 16px; background: #fff; }
+.detail-section h3 { margin: 0; color: #111827; font-size: 14px; }
+.detail-section > p { color: #475569; font-size: 11px; line-height: 1.6; }
+.section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.section-heading button, .assignment-actions button, .workflow-actions button { border: 0; border-radius: 9px; padding: 8px 11px; color: #334155; background: #e2e8f0; cursor: pointer; font-size: 10px; font-weight: 850; }
+.incident-overview dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 14px 0 0; }
+.incident-overview dl div { border-radius: 10px; padding: 10px; background: #f8fafc; }
+.incident-overview dt { color: #64748b; font-size: 9px; font-weight: 800; }
+.incident-overview dd { margin: 4px 0 0; color: #111827; font-size: 11px; font-weight: 800; }
+.assignment-actions, .workflow-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.assignment-actions .context-button, .workflow-actions button:first-child { color: #fff; background: #0f172a; }
+.edit-section, .status-confirmation { display: flex; flex-direction: column; gap: 11px; }
+.edit-section label, .status-confirmation label, .comment-field, .create-incident-dialog label { display: flex; flex-direction: column; gap: 5px; color: #475569; font-size: 10px; font-weight: 800; }
+.edit-section input, .edit-section textarea, .edit-section select, .status-confirmation textarea, .comment-field textarea, .create-incident-dialog input, .create-incident-dialog textarea, .create-incident-dialog select { border: 1px solid #cbd5e1; border-radius: 10px; padding: 10px; color: #111827; background: #f8fafc; font: inherit; resize: vertical; }
+.edit-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.dialog-actions button, .comment-button { border: 0; border-radius: 10px; padding: 9px 13px; cursor: pointer; color: #334155; background: #e2e8f0; font-size: 10px; font-weight: 850; }
+.dialog-actions .primary-button, .comment-button { color: #fff; background: #0f172a; }
+.status-confirmation { border-radius: 12px; margin-top: 12px; padding: 13px; background: #f8fafc; }
+.resolution-summary { border-left: 3px solid #22c55e; margin-top: 12px; padding: 9px 12px; background: #f0fdf4; }
+.resolution-summary p { margin: 5px 0 0; color: #166534; font-size: 11px; }
+.closed-notice, .empty-comments { color: #64748b; font-size: 11px; }
+.status-history { list-style: none; margin: 14px 0 0; padding: 0; }
+.status-history li { position: relative; display: grid; grid-template-columns: 14px 1fr; gap: 9px; padding-bottom: 14px; }
+.status-history li:not(:last-child)::before { position: absolute; top: 11px; bottom: -2px; left: 5px; width: 2px; background: #cbd5e1; content: ''; }
+.history-marker { z-index: 1; width: 10px; height: 10px; border: 2px solid #fff; border-radius: 50%; margin-top: 2px; background: #0f172a; box-shadow: 0 0 0 1px #0f172a; }
+.status-history strong, .status-history small { display: block; }
+.status-history strong { color: #111827; font-size: 11px; }
+.status-history small { margin-top: 3px; color: #64748b; font-size: 9px; }
+.status-history p { margin: 5px 0 0; color: #475569; font-size: 10px; }
+.comments-section article { border-radius: 12px; margin-top: 10px; padding: 11px; background: #f8fafc; }
+.comments-section article header { display: flex; justify-content: space-between; gap: 10px; color: #111827; font-size: 10px; }
+.comments-section article header span { color: #64748b; font-size: 9px; }
+.comments-section article p { margin: 7px 0 0; color: #334155; font-size: 11px; line-height: 1.5; }
+.comment-field { margin-top: 13px; }
+.comment-button { margin-top: 8px; }
+.form-error { margin: 0; color: #b91c1c; font-size: 10px; font-weight: 750; }
+
+.create-incident-backdrop { align-items: center; justify-content: center; padding: 20px; }
+.create-incident-dialog { width: min(650px, 100%); max-height: calc(100vh - 40px); overflow-y: auto; border-radius: 20px; padding: 20px; background: #fff; box-shadow: 0 24px 60px rgba(15, 23, 42, .25); }
+.create-incident-dialog form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+.create-incident-dialog .wide-field { grid-column: 1 / -1; }
+.assignment-check { align-items: center; flex-direction: row !important; }
+.assignment-check input { width: 16px; height: 16px; }
+
+@media (max-width: 600px) {
+  .incident-detail { padding: 16px; }
+  .incident-overview dl, .edit-grid, .create-incident-dialog form { grid-template-columns: 1fr; }
+  .create-incident-dialog .wide-field { grid-column: auto; }
+}

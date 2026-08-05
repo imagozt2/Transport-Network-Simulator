@@ -1,6 +1,8 @@
 .incidents-page { display: flex; flex-direction: column; gap: 18px; }
+.page-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .page-header h1 { margin: 0; color: #111827; font-size: 30px; }
 .page-header p { margin: 5px 0 0; color: #64748b; font-size: 12px; }
+.create-incident-button, .detail-button { border: 0; border-radius: 10px; padding: 10px 14px; color: #fff; background: #0f172a; cursor: pointer; font-size: 11px; font-weight: 850; white-space: nowrap; }
 .summary-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
 .summary-grid article { display: flex; flex-direction: column; gap: 6px; border: 1px solid #e2e8f0; border-radius: 16px; padding: 16px; background: #fff; }
 .summary-grid article::before { width: 28px; height: 3px; border-radius: 999px; background: #94a3b8; content: ''; }
@@ -33,6 +35,7 @@ td strong, td small { display: block; }
 td strong { color: #111827; font-size: 12px; }
 td small { margin-top: 4px; color: #64748b; font-size: 9px; font-weight: 800; letter-spacing: .04em; }
 .resources-cell { max-width: 260px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .unassigned { color: #64748b; font-style: italic; }
 .priority, .status { display: inline-flex; border-radius: 999px; padding: 5px 8px; font-size: 9px; font-weight: 900; white-space: nowrap; }
 .priority-low { color: #334155; background: #e2e8f0; }
@@ -64,4 +67,5 @@ td small { margin-top: 4px; color: #64748b; font-size: 9px; font-weight: 800; le
   .search-field { grid-column: auto; }
   .pagination { align-items: stretch; flex-wrap: wrap; justify-content: center; }
   .pagination span { width: 100%; text-align: center; }
+  .page-header { align-items: stretch; flex-direction: column; }
 }
