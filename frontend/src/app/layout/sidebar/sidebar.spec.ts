@@ -17,8 +17,8 @@ describe('Sidebar', () => {
           { path: 'transport-titles', children: [] },
           { path: 'users', children: [] },
           { path: 'devices', children: [] },
-          { path: 'logs', children: [] },
-          { path: 'incidents', children: [] }
+          { path: 'incidents', children: [] },
+          { path: 'logs', children: [] }
         ])
       ]
     }).compileComponents();
@@ -41,8 +41,8 @@ describe('Sidebar', () => {
       'Máquinas',
       'Títulos de transporte',
       'Usuarios',
-      'Logs',
-      'Incidencias'
+      'Incidencias',
+      'Logs'
     ]);
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
       '/dashboard',
@@ -54,8 +54,8 @@ describe('Sidebar', () => {
       '/devices',
       '/transport-titles',
       '/users',
-      '/logs',
-      '/incidents'
+      '/incidents',
+      '/logs'
     ]);
     expect(
       links.every((link) => (link.querySelector('.nav-icon')?.textContent?.trim().length ?? 0) > 0)
@@ -88,6 +88,21 @@ describe('Sidebar', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const activeLink = compiled.querySelector<HTMLAnchorElement>('.nav-link.active');
     expect(activeLink?.querySelector('.nav-label')?.textContent?.trim()).toBe('Estaciones');
+  });
+
+  it('should expose incidents as an active management destination', async () => {
+    const router = TestBed.inject(Router);
+    const fixture = TestBed.createComponent(Sidebar);
+    fixture.detectChanges();
+
+    await router.navigateByUrl('/incidents');
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const activeLink = compiled.querySelector<HTMLAnchorElement>('.nav-link.active');
+    expect(activeLink?.getAttribute('href')).toBe('/incidents');
+    expect(activeLink?.querySelector('.nav-label')?.textContent?.trim()).toBe('Incidencias');
   });
 
   it('should notify the layout when a navigation option is selected', () => {

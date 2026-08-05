@@ -23,8 +23,8 @@ describe('Application routes', () => {
       'transport-titles',
       'users',
       'devices',
-      'logs',
-      'incidents'
+      'incidents',
+      'logs'
     ]);
   });
 
@@ -47,5 +47,14 @@ describe('Application routes', () => {
     expect(loginRoute?.canActivate).toEqual([guestOperatorGuard]);
     expect(shellRoute?.canActivate).toEqual([operatorAuthGuard]);
     expect(shellRoute?.children?.every((route) => route.canActivate === undefined)).toBe(true);
+  });
+
+  it('should load incidents lazily inside the protected application shell', () => {
+    const shellRoute = routes.find((route) => route.path === '');
+    const incidentsRoute = shellRoute?.children?.find((route) => route.path === 'incidents');
+
+    expect(incidentsRoute).toBeDefined();
+    expect(incidentsRoute?.loadComponent).toEqual(expect.any(Function));
+    expect(incidentsRoute?.component).toBeUndefined();
   });
 });

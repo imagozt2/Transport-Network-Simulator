@@ -85,13 +85,13 @@ export const routes: Routes = [
         component: Devices
       },
       {
-        path: 'logs',
-        component: Logs
-      },
-      {
         path: 'incidents',
         loadComponent: () =>
           import('./features/incidents/incidents').then((module) => module.Incidents)
+      },
+      {
+        path: 'logs',
+        component: Logs
       }
     ]
   },

@@ -22,6 +22,7 @@ describe('MainLayout', () => {
     expect(compiled.querySelector('h1')?.textContent).toContain('Centro de control');
     expect(compiled.querySelector('.sidebar')?.textContent).toContain('Panel general');
     expect(compiled.querySelector('.sidebar')?.textContent).toContain('Mapa de red');
+    expect(compiled.querySelector('.sidebar')?.textContent).toContain('Incidencias');
     expect(compiled.querySelector('.skip-link')?.getAttribute('href')).toBe('#main-content');
     expect(compiled.querySelector('main')?.id).toBe('main-content');
     expect(compiled.querySelector('.sidebar')?.id).toBe('primary-navigation');
