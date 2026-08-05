@@ -1,8 +1,10 @@
 package com.transport.simulator.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -63,7 +65,9 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.server.ResponseStatusException;
 import tools.jackson.databind.ObjectMapper;
 
 class ControlCenterFeaturesIntegrationTests {
@@ -127,12 +131,12 @@ class ControlCenterFeaturesIntegrationTests {
         );
 
         NetworkJourney plannedJourney = journeyService.calculate("ST001", "ST003");
+        CompensatoryTicketIssuanceRequest request = new CompensatoryTicketIssuanceRequest(
+                "tm-st001-01", "Compensación por fallo de impresión",
+                "st001", "st003", null, null, null
+        );
         var response = issuanceService.issue(
-                1L,
-                new CompensatoryTicketIssuanceRequest(
-                        "tm-st001-01", "Compensación por fallo de impresión",
-                        "st001", "st003", null, null, null
-                ),
+                1L, request,
                 authentication(7L, "admin", OperatorRole.ADMINISTRATOR)
         );
 
@@ -151,8 +155,21 @@ class ControlCenterFeaturesIntegrationTests {
                         DeviceEventType.COMPENSATORY_TICKET_ISSUANCE_REQUESTED,
                         DeviceEventType.COMPENSATORY_TICKET_ISSUED
                 );
+        assertThat(logs.getAllValues()).allSatisfy(log -> {
+            assertThat(log.getOperator()).isSameAs(operator);
+            assertThat(log.getDevice()).isSameAs(device);
+            assertThat(log.getStation()).isSameAs(origin);
+            assertThat(log.getCompensatoryIssuance()).isSameAs(issuance.getValue());
+            assertThat(log.getExternalReference()).startsWith(issuance.getValue().getCode());
+        });
         assertThat(logs.getAllValues().getLast().getPayloadJson())
                 .contains("SINGLE_TRIP", response.ticketCode(), "TM-ST001-01", "admin");
+
+        assertThatThrownBy(() -> issuanceService.issue(1L, request, null))
+                .isInstanceOfSatisfying(ResponseStatusException.class, exception ->
+                        assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED));
+        verify(issuanceRepository).save(any(CompensatoryTicketIssuance.class));
+        verify(ticketRepository).save(any(Ticket.class));
     }
 
     @Test
@@ -186,10 +203,18 @@ class ControlCenterFeaturesIntegrationTests {
         PassengerAccountQueryService passengerQuery =
                 new PassengerAccountQueryService(passengerRepository);
 
+        PassengerAccountCreateRequest passengerRequest = new PassengerAccountCreateRequest(
+                " ANA@Example.Local ", "SecurePassword123", "Ana", "García"
+        );
+        assertThatThrownBy(() -> passengerManagement.createAccount(
+                passengerRequest,
+                authentication(8L, "operator", OperatorRole.OPERATOR)
+        )).isInstanceOfSatisfying(ResponseStatusException.class, exception ->
+                assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN));
+        verify(passengerRepository, never()).save(any(PassengerAccount.class));
+
         var createdPassenger = passengerManagement.createAccount(
-                new PassengerAccountCreateRequest(
-                        " ANA@Example.Local ", "SecurePassword123", "Ana", "García"
-                ),
+                passengerRequest,
                 authentication
         );
         var queriedPassenger = passengerQuery.getAccount(createdPassenger.publicId());
@@ -252,11 +277,19 @@ class ControlCenterFeaturesIntegrationTests {
                 authentication
         );
 
+        ArgumentCaptor<IncidentStatusChange> auditChanges =
+                ArgumentCaptor.forClass(IncidentStatusChange.class);
+        verify(incidentChanges, times(3)).save(auditChanges.capture());
         assertThat(comment.text()).contains(queriedPassenger.publicId());
         assertThat(resolved.status()).isEqualTo(IncidentStatus.RESOLVED);
         assertThat(resolved.assignedTo().username()).isEqualTo("admin");
         assertThat(resolved.resolutionSummary()).isEqualTo("Se emitió un billete compensatorio");
-        verify(incidentChanges, times(3)).save(any(IncidentStatusChange.class));
+        assertThat(auditChanges.getAllValues()).extracting(IncidentStatusChange::getNewStatus)
+                .containsExactly(IncidentStatus.OPEN, IncidentStatus.IN_PROGRESS, IncidentStatus.RESOLVED);
+        assertThat(auditChanges.getAllValues()).allSatisfy(change -> {
+            assertThat(change.getChangedBy()).isSameAs(administrator);
+            assertThat(change.getIncident().getCode()).isEqualTo(createdIncident.code());
+        });
     }
 
     private Station station(Long id, String code, String name) {

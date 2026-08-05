@@ -136,6 +136,35 @@ describe('Contextual navigation between operational sections', () => {
       expect(parsedUrl.queryParams).toEqual(navigation.queryParams);
     }
   );
+
+  it('should only send filters supported by each destination section', () => {
+    const supportedFilters: Readonly<Record<string, readonly string[]>> = {
+      trains: ['lineCode', 'status', 'trainCode', 'depotCode'],
+      depots: ['lineCode'],
+      stations: ['lineCode', 'stationCode'],
+      devices: ['stationCode'],
+      logs: ['stationCode', 'deviceCode'],
+      dashboard: [],
+      lines: []
+    };
+
+    for (const navigation of contextualNavigations) {
+      expect(Object.keys(navigation.queryParams).every((parameter) =>
+        supportedFilters[navigation.destinationPath]?.includes(parameter)
+      )).toBe(true);
+    }
+  });
+
+  it('should keep contextual identifiers normalized and compatible between sections', () => {
+    for (const navigation of contextualNavigations) {
+      const { lineCode, stationCode, trainCode, depotCode, status } = navigation.queryParams;
+      if (lineCode) expect(lineCode).toMatch(/^L\d+$/);
+      if (stationCode) expect(stationCode).toMatch(/^ST\d{3}$/);
+      if (trainCode) expect(trainCode).toMatch(/^[A-Z0-9-]+$/);
+      if (depotCode) expect(depotCode).toMatch(/^DEP-[A-Z0-9-]+$/);
+      if (status) expect(status).toBe('IN_SERVICE');
+    }
+  });
 });
 
 function operationalRoute(path: string) {
