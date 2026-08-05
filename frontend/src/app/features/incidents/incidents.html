@@ -1,0 +1,178 @@
+<section class="incidents-page">
+  <header class="page-header">
+    <div>
+      <h1>Incidencias</h1>
+      <p>Seguimiento operativo y asignación de incidencias del centro de control.</p>
+    </div>
+  </header>
+
+  <section class="summary-grid" aria-label="Resumen de incidencias">
+    <article><span>Total</span><strong>{{ summary.total }}</strong></article>
+    <article class="summary-open"><span>Abiertas</span><strong>{{ summary.open }}</strong></article>
+    <article class="summary-progress"><span>En curso</span><strong>{{ summary.inProgress }}</strong></article>
+    <article class="summary-resolved"><span>Resueltas</span><strong>{{ summary.resolved }}</strong></article>
+    <article><span>Cerradas</span><strong>{{ summary.closed }}</strong></article>
+    <article><span>Canceladas</span><strong>{{ summary.cancelled }}</strong></article>
+  </section>
+
+  <section class="filters-panel" aria-label="Filtros de incidencias">
+    <div class="filters-heading">
+      <div>
+        <h2>Buscar incidencias</h2>
+        <p>Filtra el registro por estado, prioridad o categoría.</p>
+      </div>
+      <div class="filter-actions">
+        @if (hasActiveFilters()) {
+          <button class="secondary-button" type="button" (click)="clearFilters()">Limpiar</button>
+        }
+        <button class="primary-button" type="button" [disabled]="loading" (click)="applyFilters()">
+          Aplicar filtros
+        </button>
+      </div>
+    </div>
+
+    <div class="filters-grid">
+      <label class="search-field">
+        <span>Código, título o descripción</span>
+        <input
+          type="search"
+          placeholder="Buscar incidencia"
+          [value]="search"
+          (input)="search = $any($event.target).value"
+          (keydown.enter)="applyFilters()"
+        />
+      </label>
+      <label>
+        <span>Estado</span>
+        <select [value]="selectedStatus" (change)="selectedStatus = $any($event.target).value">
+          <option value="ALL">Todos</option>
+          @for (status of statuses; track status) {
+            <option [value]="status">{{ statusLabel(status) }}</option>
+          }
+        </select>
+      </label>
+      <label>
+        <span>Prioridad</span>
+        <select [value]="selectedPriority" (change)="selectedPriority = $any($event.target).value">
+          <option value="ALL">Todas</option>
+          @for (priority of priorities; track priority) {
+            <option [value]="priority">{{ priorityLabel(priority) }}</option>
+          }
+        </select>
+      </label>
+      <label>
+        <span>Categoría</span>
+        <select [value]="selectedCategory" (change)="selectedCategory = $any($event.target).value">
+          <option value="ALL">Todas</option>
+          @for (category of categories; track category) {
+            <option [value]="category">{{ categoryLabel(category) }}</option>
+          }
+        </select>
+      </label>
+      <label>
+        <span>Ordenar por</span>
+        <select [value]="selectedSort" (change)="selectedSort = $any($event.target).value">
+          <option value="openedAt">Fecha de apertura</option>
+          <option value="updatedAt">Última actualización</option>
+          <option value="priority">Prioridad</option>
+          <option value="status">Estado</option>
+          <option value="title">Título</option>
+        </select>
+      </label>
+      <label>
+        <span>Dirección</span>
+        <select [value]="selectedDirection" (change)="selectedDirection = $any($event.target).value">
+          <option value="DESC">Descendente</option>
+          <option value="ASC">Ascendente</option>
+        </select>
+      </label>
+    </div>
+  </section>
+
+  @if (loading) {
+    <div class="state-card" role="status">Cargando incidencias…</div>
+  } @else if (errorMessage) {
+    <div class="state-card error-state" role="alert">
+      <span>{{ errorMessage }}</span>
+      <button type="button" (click)="loadIncidents(0)">Reintentar</button>
+    </div>
+  } @else {
+    <section class="results-panel" aria-label="Listado de incidencias">
+      <header class="results-heading">
+        <div>
+          <h2>Registro operativo</h2>
+          <p>{{ totalElements }} {{ totalElements === 1 ? 'incidencia' : 'incidencias' }}</p>
+        </div>
+        <label>
+          <span>Incidencias por página</span>
+          <select [value]="pageSize" (change)="setPageSize($any($event.target).value)">
+            @for (size of pageSizes; track size) {
+              <option [value]="size">{{ size }}</option>
+            }
+          </select>
+        </label>
+      </header>
+
+      @if (incidents.length === 0) {
+        <div class="empty-state">
+          <strong>No hay incidencias disponibles</strong>
+          <span>
+            {{ hasActiveFilters()
+              ? 'No hay incidencias que coincidan con los filtros seleccionados.'
+              : 'Todavía no se ha registrado ninguna incidencia.' }}
+          </span>
+        </div>
+      } @else {
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Incidencia</th>
+                <th scope="col">Categoría</th>
+                <th scope="col">Prioridad</th>
+                <th scope="col">Estado</th>
+                <th scope="col">Elementos afectados</th>
+                <th scope="col">Responsable</th>
+                <th scope="col">Apertura</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (incident of incidents; track incident.code) {
+                <tr>
+                  <td>
+                    <strong>{{ incident.title }}</strong>
+                    <small>{{ incident.code }}</small>
+                  </td>
+                  <td>{{ categoryLabel(incident.category) }}</td>
+                  <td>
+                    <span class="priority priority-{{ incident.priority.toLowerCase() }}">
+                      {{ priorityLabel(incident.priority) }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="status status-{{ incident.status.toLowerCase().replace('_', '-') }}">
+                      {{ statusLabel(incident.status) }}
+                    </span>
+                  </td>
+                  <td class="resources-cell">{{ affectedResources(incident) }}</td>
+                  <td [class.unassigned]="!incident.assignedTo">{{ operatorName(incident) }}</td>
+                  <td>{{ formatDate(incident.openedAt) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      @if (totalPages > 1) {
+        <nav class="pagination" aria-label="Paginación de incidencias">
+          <button type="button" [disabled]="firstPage" (click)="goToPage(0)">Primera</button>
+          <button type="button" [disabled]="firstPage" (click)="goToPage(currentPage - 1)">Anterior</button>
+          <span>Página <strong>{{ currentPage + 1 }}</strong> de <strong>{{ totalPages }}</strong></span>
+          <button type="button" [disabled]="lastPage" (click)="goToPage(currentPage + 1)">Siguiente</button>
+          <button type="button" [disabled]="lastPage" (click)="goToPage(totalPages - 1)">Última</button>
+        </nav>
+      }
+    </section>
+  }
+</section>

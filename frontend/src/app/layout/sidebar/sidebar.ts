@@ -45,7 +45,8 @@ export class Sidebar {
       items: [
         { label: 'Títulos de transporte', route: '/transport-titles', icon: '🎫' },
         { label: 'Usuarios', route: '/users', icon: '👥' },
-        { label: 'Logs', route: '/logs', icon: '📋' }
+        { label: 'Logs', route: '/logs', icon: '📋' },
+        { label: 'Incidencias', route: '/incidents', icon: '⚠️' }
       ]
     }
   ];

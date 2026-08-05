@@ -23,7 +23,8 @@ describe('Application routes', () => {
       'transport-titles',
       'users',
       'devices',
-      'logs'
+      'logs',
+      'incidents'
     ]);
   });
 

@@ -17,7 +17,8 @@ describe('Sidebar', () => {
           { path: 'transport-titles', children: [] },
           { path: 'users', children: [] },
           { path: 'devices', children: [] },
-          { path: 'logs', children: [] }
+          { path: 'logs', children: [] },
+          { path: 'incidents', children: [] }
         ])
       ]
     }).compileComponents();
@@ -40,7 +41,8 @@ describe('Sidebar', () => {
       'Máquinas',
       'Títulos de transporte',
       'Usuarios',
-      'Logs'
+      'Logs',
+      'Incidencias'
     ]);
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
       '/dashboard',
@@ -52,7 +54,8 @@ describe('Sidebar', () => {
       '/devices',
       '/transport-titles',
       '/users',
-      '/logs'
+      '/logs',
+      '/incidents'
     ]);
     expect(
       links.every((link) => (link.querySelector('.nav-icon')?.textContent?.trim().length ?? 0) > 0)
@@ -70,7 +73,7 @@ describe('Sidebar', () => {
       'Flota y equipamiento',
       'Gestión y supervisión'
     ]);
-    expect(sections.map((section) => section.querySelectorAll('.nav-link').length)).toEqual([4, 3, 3]);
+    expect(sections.map((section) => section.querySelectorAll('.nav-link').length)).toEqual([4, 3, 4]);
   });
 
   it('should mark the current route as active', async () => {
