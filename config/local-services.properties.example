@@ -1,0 +1,10 @@
+# Direcciones públicas del entorno local. Este archivo no contiene credenciales.
+RMM_API_ANDROID_BASE_URL=http://10.0.2.2:8080/api/rmm-app/v1
+RMM_API_DESKTOP_BASE_URL=http://127.0.0.1:8080
+RMM_WEB_BASE_URL=http://localhost:4200
+
+# Broker MQTT local sin TLS. Los entornos desplegados utilizarán TLS y secretos externos.
+RMM_MQTT_HOST=127.0.0.1
+RMM_MQTT_PORT=1883
+RMM_MQTT_TLS=false
+

@@ -51,7 +51,8 @@ La aplicación incluye actualmente:
 - pruebas unitarias del backend y del frontend;
 - escenarios integrados de operación, administración, sesión y navegación contextual;
 - controles de accesibilidad, diseño adaptable y suspensión de consultas en pestañas ocultas;
-- compilación automática de ambas aplicaciones mediante GitHub Actions.
+- compilación automática del backend, el frontend, RMM App y las aplicaciones Qt mediante GitHub
+  Actions.
 
 El proyecto continúa en desarrollo. En fases posteriores se incorporarán nuevas funciones al centro
 de control y simuladores externos para validación y compra de billetes.
@@ -63,7 +64,9 @@ de control y simuladores externos para validación y compra de billetes.
 | Frontend | Angular 21, TypeScript, RxJS, Zone.js y SVG |
 | Backend | Java 21, Spring Boot 4, Spring Web MVC y Spring Data JPA |
 | Base de datos | MySQL 8 y scripts SQL versionados |
-| Pruebas | JUnit, Mockito, MockMvc y Vitest |
+| Aplicación Android | Kotlin, Jetpack Compose y Gradle |
+| Máquinas simuladas | C++20, Qt 6, Qt Widgets, Qt MQTT y CMake |
+| Pruebas | JUnit, Mockito, MockMvc, Vitest y Qt Test |
 | Integración continua | GitHub Actions |
 
 ## Estructura del repositorio
@@ -71,11 +74,17 @@ de control y simuladores externos para validación y compra de billetes.
 ```text
 Transport-Network-Simulator/
 ├── .github/workflows/   # Pipeline de integración continua
+├── android/             # Aplicación para pasajeros desarrollada con Kotlin y Compose
 ├── backend/             # API REST desarrollada con Spring Boot
+├── config/              # Direcciones compartidas de los servicios locales
 ├── database/            # Esquema, datos iniciales y verificaciones de MySQL
 ├── docs/                # Documentación funcional y contratos de API
-└── frontend/            # Aplicación web desarrollada con Angular
+├── frontend/            # Aplicación web desarrollada con Angular
+└── qt/                  # Máquinas simuladas desarrolladas con Qt y C++
 ```
+
+La [configuración local de servicios](config/README.md) centraliza las direcciones utilizadas por
+RMM App y las aplicaciones Qt sin almacenar credenciales.
 
 ## Requisitos
 
@@ -184,6 +193,13 @@ npm start
 La aplicación estará disponible en `http://localhost:4200`. Las rutas operativas requieren iniciar
 sesión y una autenticación correcta abre siempre el Panel General.
 
+### Aplicaciones cliente
+
+RMM App y las máquinas Qt disponen de una guía específica con la configuración compartida, la
+ejecución desde los IDE, los comandos de compilación y la ubicación de los artefactos:
+
+- [Ejecución de las aplicaciones cliente](docs/ejecucion-aplicaciones-cliente.md)
+
 ## Endpoints disponibles
 
 | Método | Ruta | Descripción |
@@ -235,12 +251,14 @@ npm test -- --watch=false
 npm run build -- --configuration production
 ```
 
-El workflow de GitHub Actions compila el backend y el frontend en cada pull request dirigida a `main`
-y en cada actualización de esa rama.
+El workflow de GitHub Actions compila el backend, el frontend, RMM App y las aplicaciones Qt en cada
+pull request dirigida a `main` o `develop/ecosystem` y en cada actualización de esas ramas. También
+ejecuta las pruebas de Android y Qt y conserva temporalmente sus artefactos de compilación.
 
 ## Documentación
 
 - [Arquitectura, componentes y responsabilidades del ecosistema RMM](docs/arquitectura-ecosistema.md)
+- [Ejecución de RMM App y las aplicaciones Qt](docs/ejecucion-aplicaciones-cliente.md)
 - [Ciclo de vida de los billetes RMM](docs/ciclo-vida-billetes.md)
 - [Contrato y firma de los códigos QR](docs/contrato-codigos-qr.md)
 - [Contratos REST para RMM App](docs/contratos-rest-rmm-app.md)
