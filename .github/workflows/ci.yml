@@ -126,16 +126,16 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Install Qt 6.11.1 and Qt MQTT
+      - name: Install Qt 6.11.0 and Qt MQTT
         uses: jurplel/install-qt-action@v4
         with:
-          version: "6.11.1"
+          version: "6.11.0"
           host: windows
           target: desktop
           arch: win64_msvc2022_64
           modules: qtmqtt
           cache: true
-          cache-key-prefix: qt-6.11.1-msvc2022
+          cache-key-prefix: qt-6.11.0-msvc2022
 
       - name: Configure Qt applications
         shell: pwsh
