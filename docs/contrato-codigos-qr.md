@@ -305,5 +305,6 @@ No deben conservar el JWS completo, la clave privada, el código de vinculación
 - Las versiones aceptadas se configuran explícitamente y disponen de una fecha de retirada.
 - Los ejemplos de este documento son ilustrativos y nunca deben utilizarse como credenciales reales.
 
-Los contratos REST y MQTT posteriores transportarán este valor sin reinterpretarlo y aplicarán los
-límites de exposición definidos aquí.
+El [contrato REST de RMM App](contratos-rest-rmm-app.md) transporta este valor sin reinterpretarlo y
+aplica los límites de exposición definidos aquí. El contrato MQTT posterior mantendrá las mismas
+garantías.

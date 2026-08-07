@@ -224,4 +224,6 @@ Este documento no fija todavía:
 
 Cada aspecto se concretará en los siguientes documentos de arquitectura, respetando los límites y
 responsabilidades establecidos aquí. El [ciclo de vida de los billetes RMM](ciclo-vida-billetes.md)
-y el [contrato de códigos QR](contrato-codigos-qr.md) desarrollan las primeras decisiones.
+y el [contrato de códigos QR](contrato-codigos-qr.md) desarrollan las primeras decisiones. La
+[API REST de RMM App](contratos-rest-rmm-app.md) delimita la comunicación del cliente Android con el
+backend.

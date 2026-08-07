@@ -295,7 +295,8 @@ Este ciclo no define por sí mismo:
 
 - la estructura y firma criptográfica del QR, especificadas en el [contrato de códigos QR de
   RMM](contrato-codigos-qr.md);
-- las rutas y representaciones de la API REST;
+- las rutas y representaciones de la API REST, definidas para Android en los [contratos de RMM
+  App](contratos-rest-rmm-app.md);
 - los topics, payloads y niveles de servicio MQTT;
 - el almacenamiento local permitido durante una desconexión;
 - las reglas tarifarias de regularización de trayectos incompletos.
