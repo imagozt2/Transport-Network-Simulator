@@ -1,7 +1,7 @@
 # Aplicaciones Qt de RMM
 
 Este directorio contiene las aplicaciones de escritorio que simularán las máquinas físicas del
-ecosistema RMM. Por ahora incluye la estructura inicial de la máquina de venta.
+ecosistema RMM. Incluye las estructuras iniciales de la máquina de venta y la máquina validadora.
 
 ## Requisitos locales
 
@@ -15,8 +15,11 @@ compilación.
 
 ## Abrir con Qt Creator
 
-Abre `qt/CMakeLists.txt`, selecciona el kit de Qt 6.11.1 MinGW 64-bit y configura el proyecto. El
-ejecutable disponible es `rmm-ticket-vending-machine`.
+Abre `qt/CMakeLists.txt`, selecciona el kit de Qt 6.11.1 MinGW 64-bit y configura el proyecto. Los
+ejecutables disponibles son:
+
+- `rmm-ticket-vending-machine` para simular la compra y emisión de billetes;
+- `rmm-ticket-validator` para simular las validaciones de entrada y salida.
 
 ## Compilar desde PowerShell
 
@@ -33,4 +36,5 @@ Desde la raíz del repositorio:
 & D:\Qt\Tools\CMake_64\bin\cmake.exe --build qt/build
 ```
 
-La conexión MQTT y los flujos de compra y emisión se incorporarán en fases posteriores.
+La conexión MQTT, la lectura de QR y los flujos de compra, emisión y validación se incorporarán en
+fases posteriores.

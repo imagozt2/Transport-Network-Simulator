@@ -18,4 +18,4 @@ find_package(Qt6 6.11 REQUIRED COMPONENTS Core Gui Widgets Mqtt)
 qt_standard_project_setup(REQUIRES 6.11)
 
 add_subdirectory(ticket-vending-machine)
-
+add_subdirectory(ticket-validator)
