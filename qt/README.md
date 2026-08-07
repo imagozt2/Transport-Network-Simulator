@@ -26,6 +26,9 @@ ejecutables disponibles son:
 - `rmm-ticket-vending-machine` para simular la compra y emisión de billetes;
 - `rmm-ticket-validator` para simular las validaciones de entrada y salida.
 
+La guía conjunta de ejecución, servicios previos y artefactos está disponible en
+[`../docs/ejecucion-aplicaciones-cliente.md`](../docs/ejecucion-aplicaciones-cliente.md).
+
 ## Compilar desde PowerShell
 
 Desde la raíz del repositorio:
@@ -41,6 +44,9 @@ Desde la raíz del repositorio:
 & D:\Qt\Tools\CMake_64\bin\cmake.exe --build qt/build
 & D:\Qt\Tools\CMake_64\bin\ctest.exe --test-dir qt/build --output-on-failure
 ```
+
+Los ejecutables `RMMTicketVendingMachine.exe` y `RMMTicketValidator.exe` se generan dentro de
+`qt/build`.
 
 La conexión MQTT, la lectura de QR y los flujos de compra, emisión y validación se incorporarán en
 fases posteriores.

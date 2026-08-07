@@ -21,12 +21,17 @@ se explica en la [guía de configuración](../config/README.md).
 Android Studio debe abrir directamente la carpeta `android`. Tras sincronizar Gradle puede ejecutar
 el módulo `app` en el emulador configurado.
 
+La guía conjunta de puesta en marcha, instalación del APK y servicios necesarios está disponible en
+[`../docs/ejecucion-aplicaciones-cliente.md`](../docs/ejecucion-aplicaciones-cliente.md).
+
 ## Comprobación desde PowerShell
 
 ```powershell
 cd android
 ./gradlew.bat testDebugUnitTest assembleDebug
 ```
+
+El APK de depuración se genera en `app/build/outputs/apk/debug/app-debug.apk`.
 
 La aplicación contiene por ahora únicamente la identidad visual mínima. Las capas de navegación,
 datos, dominio y seguridad se incorporarán de forma progresiva.

@@ -193,6 +193,13 @@ npm start
 La aplicación estará disponible en `http://localhost:4200`. Las rutas operativas requieren iniciar
 sesión y una autenticación correcta abre siempre el Panel General.
 
+### Aplicaciones cliente
+
+RMM App y las máquinas Qt disponen de una guía específica con la configuración compartida, la
+ejecución desde los IDE, los comandos de compilación y la ubicación de los artefactos:
+
+- [Ejecución de las aplicaciones cliente](docs/ejecucion-aplicaciones-cliente.md)
+
 ## Endpoints disponibles
 
 | Método | Ruta | Descripción |
@@ -251,6 +258,7 @@ ejecuta las pruebas de Android y Qt y conserva temporalmente sus artefactos de c
 ## Documentación
 
 - [Arquitectura, componentes y responsabilidades del ecosistema RMM](docs/arquitectura-ecosistema.md)
+- [Ejecución de RMM App y las aplicaciones Qt](docs/ejecucion-aplicaciones-cliente.md)
 - [Ciclo de vida de los billetes RMM](docs/ciclo-vida-billetes.md)
 - [Contrato y firma de los códigos QR](docs/contrato-codigos-qr.md)
 - [Contratos REST para RMM App](docs/contratos-rest-rmm-app.md)
