@@ -297,7 +297,8 @@ Este ciclo no define por sí mismo:
   RMM](contrato-codigos-qr.md);
 - las rutas y representaciones de la API REST, definidas para Android en los [contratos de RMM
   App](contratos-rest-rmm-app.md);
-- los topics, payloads y niveles de servicio MQTT;
+- los topics, payloads y niveles de servicio MQTT, definidos en el [contrato de mensajería con las
+  máquinas](contrato-mqtt.md);
 - el almacenamiento local permitido durante una desconexión;
 - las reglas tarifarias de regularización de trayectos incompletos.
 

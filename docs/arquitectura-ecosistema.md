@@ -226,4 +226,5 @@ Cada aspecto se concretará en los siguientes documentos de arquitectura, respet
 responsabilidades establecidos aquí. El [ciclo de vida de los billetes RMM](ciclo-vida-billetes.md)
 y el [contrato de códigos QR](contrato-codigos-qr.md) desarrollan las primeras decisiones. La
 [API REST de RMM App](contratos-rest-rmm-app.md) delimita la comunicación del cliente Android con el
-backend.
+backend, mientras que el [contrato MQTT](contrato-mqtt.md) define los intercambios con las máquinas
+Qt.
