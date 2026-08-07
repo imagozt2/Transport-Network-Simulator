@@ -245,6 +245,7 @@ y en cada actualización de esa rama.
 - [Contrato y firma de los códigos QR](docs/contrato-codigos-qr.md)
 - [Contratos REST para RMM App](docs/contratos-rest-rmm-app.md)
 - [Topics y mensajes MQTT del ecosistema RMM](docs/contrato-mqtt.md)
+- [Identidad y autenticación de las máquinas RMM](docs/identidad-maquinas.md)
 - [Integración final de la aplicación web](docs/integracion-aplicacion-web.md)
 - [Acceso y cuentas de operador](docs/acceso-operadores.md)
 - [Administración de usuarios de RMM App](docs/usuarios-rmm-app.md)

@@ -227,4 +227,5 @@ responsabilidades establecidos aquí. El [ciclo de vida de los billetes RMM](cic
 y el [contrato de códigos QR](contrato-codigos-qr.md) desarrollan las primeras decisiones. La
 [API REST de RMM App](contratos-rest-rmm-app.md) delimita la comunicación del cliente Android con el
 backend, mientras que el [contrato MQTT](contrato-mqtt.md) define los intercambios con las máquinas
-Qt.
+Qt. La [identidad y autenticación de las máquinas](identidad-maquinas.md) determina quién puede
+utilizar esos intercambios.

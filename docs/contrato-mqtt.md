@@ -393,6 +393,8 @@ QR](contrato-codigos-qr.md): distribuir, confirmar disponibilidad, empezar a fir
 
 ## Autenticación y ACL
 
+- El ciclo completo de identidad, aprovisionamiento y credenciales se define en el [contrato de
+  identidad de las máquinas](identidad-maquinas.md).
 - Cada máquina utiliza una identidad MQTT individual.
 - En producción se requiere TLS y verificación del servidor y del cliente.
 - Las credenciales se inyectan fuera del repositorio y se protegen mediante el sistema operativo.
