@@ -87,7 +87,7 @@ target_include_directories(
     INTERFACE "${CMAKE_CURRENT_BINARY_DIR}/generated"
 )
 
-find_package(Qt6 6.11 REQUIRED COMPONENTS Core Gui Widgets Mqtt)
+find_package(Qt6 6.9 REQUIRED COMPONENTS Core Gui Widgets Mqtt)
 qt_standard_project_setup(REQUIRES 6.11)
 
 add_subdirectory(ticket-vending-machine)
@@ -96,6 +96,6 @@ add_subdirectory(ticket-validator)
 include(CTest)
 
 if(BUILD_TESTING)
-    find_package(Qt6 6.11 REQUIRED COMPONENTS Test)
+    find_package(Qt6 6.9 REQUIRED COMPONENTS Test)
     add_subdirectory(tests)
 endif()

@@ -126,16 +126,34 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Install Qt 6.11.0 and Qt MQTT
+      - name: Install Qt 6.9.2
         uses: jurplel/install-qt-action@v4
         with:
-          version: "6.11.0"
+          version: "6.9.2"
           host: windows
           target: desktop
           arch: win64_msvc2022_64
-          modules: qtmqtt
           cache: true
-          cache-key-prefix: qt-6.11.0-msvc2022
+          cache-key-prefix: qt-6.9.2-msvc2022
+
+      - name: Check out Qt MQTT 6.9.2
+        uses: actions/checkout@v4
+        with:
+          repository: qt/qtmqtt
+          ref: v6.9.2
+          path: qt-mqtt-source
+
+      - name: Build and install Qt MQTT
+        shell: pwsh
+        run: |
+          cmake -S qt-mqtt-source -B qt-mqtt-build `
+            -G "Visual Studio 17 2022" -A x64 `
+            -DCMAKE_PREFIX_PATH="$env:QT_ROOT_DIR" `
+            -DCMAKE_INSTALL_PREFIX="$env:QT_ROOT_DIR" `
+            -DQT_BUILD_EXAMPLES=OFF `
+            -DQT_BUILD_TESTS=OFF
+          cmake --build qt-mqtt-build --config Release --parallel
+          cmake --install qt-mqtt-build --config Release
 
       - name: Configure Qt applications
         shell: pwsh

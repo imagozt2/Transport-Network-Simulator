@@ -5,8 +5,8 @@ ecosistema RMM. Incluye las estructuras iniciales de la máquina de venta y la m
 
 ## Requisitos locales
 
-- Qt 6.11.1 para MinGW 64 bits.
-- Qt MQTT 6.11.1.
+- Qt 6.9 o posterior para MinGW 64 bits (el entorno local de referencia utiliza Qt 6.11.1).
+- Qt MQTT de la misma versión que Qt.
 - CMake y Ninja incluidos con Qt.
 - Compilador MinGW 13.1 de 64 bits.
 
