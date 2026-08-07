@@ -10,6 +10,7 @@ target_link_libraries(rmm-ticket-validator
         Qt6::Gui
         Qt6::Widgets
         Qt6::Mqtt
+        rmm-local-services
 )
 
 set_target_properties(rmm-ticket-validator PROPERTIES
@@ -21,4 +22,3 @@ install(TARGETS rmm-ticket-validator
     RUNTIME DESTINATION bin
     BUNDLE DESTINATION .
 )
-

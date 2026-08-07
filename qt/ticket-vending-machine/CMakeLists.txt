@@ -10,6 +10,7 @@ target_link_libraries(rmm-ticket-vending-machine
         Qt6::Gui
         Qt6::Widgets
         Qt6::Mqtt
+        rmm-local-services
 )
 
 set_target_properties(rmm-ticket-vending-machine PROPERTIES
@@ -21,4 +22,3 @@ install(TARGETS rmm-ticket-vending-machine
     RUNTIME DESTINATION bin
     BUNDLE DESTINATION .
 )
-

@@ -1,7 +1,23 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+
+val localServicesFile = sequenceOf(
+    rootProject.file("../config/local-services.properties"),
+    rootProject.file("../config/local-services.properties.example"),
+).firstOrNull { it.isFile }
+    ?: error("No se ha encontrado la configuración local de servicios en /config")
+
+val localServices = Properties().apply {
+    localServicesFile.inputStream().use(::load)
+}
+
+fun localService(name: String): String =
+    localServices.getProperty(name)?.trim()?.takeIf(String::isNotEmpty)
+        ?: error("Falta la propiedad $name en ${localServicesFile.path}")
 
 android {
     namespace = "com.rmm.app"
@@ -13,6 +29,12 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+
+        buildConfigField(
+            "String",
+            "RMM_API_BASE_URL",
+            "\"${localService("RMM_API_ANDROID_BASE_URL")}\"",
+        )
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -57,4 +79,3 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
 }
-

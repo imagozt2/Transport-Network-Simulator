@@ -13,6 +13,11 @@ ecosistema RMM. Incluye las estructuras iniciales de la máquina de venta y la m
 No se versionan rutas locales, configuraciones de Qt Creator, credenciales ni directorios de
 compilación.
 
+Las direcciones de API y MQTT se leen desde
+[`../config/local-services.properties.example`](../config/local-services.properties.example). Para
+usar otros valores sin modificar Git, crea `../config/local-services.properties` siguiendo la
+[guía compartida](../config/README.md).
+
 ## Abrir con Qt Creator
 
 Abre `qt/CMakeLists.txt`, selecciona el kit de Qt 6.11.1 MinGW 64-bit y configura el proyecto. Los

@@ -71,11 +71,17 @@ de control y simuladores externos para validación y compra de billetes.
 ```text
 Transport-Network-Simulator/
 ├── .github/workflows/   # Pipeline de integración continua
+├── android/             # Aplicación para pasajeros desarrollada con Kotlin y Compose
 ├── backend/             # API REST desarrollada con Spring Boot
+├── config/              # Direcciones compartidas de los servicios locales
 ├── database/            # Esquema, datos iniciales y verificaciones de MySQL
 ├── docs/                # Documentación funcional y contratos de API
-└── frontend/            # Aplicación web desarrollada con Angular
+├── frontend/            # Aplicación web desarrollada con Angular
+└── qt/                  # Máquinas simuladas desarrolladas con Qt y C++
 ```
+
+La [configuración local de servicios](config/README.md) centraliza las direcciones utilizadas por
+RMM App y las aplicaciones Qt sin almacenar credenciales.
 
 ## Requisitos
 

@@ -11,6 +11,11 @@ Aplicación Android para pasajeros de la Red de Metro de Macegocia.
 El SDK debe configurarse mediante `ANDROID_HOME`, `ANDROID_SDK_ROOT` o el archivo local no versionado
 `local.properties`.
 
+Las direcciones de los servicios se obtienen de
+[`../config/local-services.properties.example`](../config/local-services.properties.example). Para
+personalizarlas sin modificar archivos versionados, crea `../config/local-services.properties` como
+se explica en la [guía de configuración](../config/README.md).
+
 ## Abrir el proyecto
 
 Android Studio debe abrir directamente la carpeta `android`. Tras sincronizar Gradle puede ejecutar
