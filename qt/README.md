@@ -39,6 +39,7 @@ Desde la raíz del repositorio:
   -DCMAKE_CXX_COMPILER=D:\Qt\Tools\mingw1310_64\bin\g++.exe
 
 & D:\Qt\Tools\CMake_64\bin\cmake.exe --build qt/build
+& D:\Qt\Tools\CMake_64\bin\ctest.exe --test-dir qt/build --output-on-failure
 ```
 
 La conexión MQTT, la lectura de QR y los flujos de compra, emisión y validación se incorporarán en

@@ -51,7 +51,8 @@ La aplicación incluye actualmente:
 - pruebas unitarias del backend y del frontend;
 - escenarios integrados de operación, administración, sesión y navegación contextual;
 - controles de accesibilidad, diseño adaptable y suspensión de consultas en pestañas ocultas;
-- compilación automática del backend, el frontend y RMM App mediante GitHub Actions.
+- compilación automática del backend, el frontend, RMM App y las aplicaciones Qt mediante GitHub
+  Actions.
 
 El proyecto continúa en desarrollo. En fases posteriores se incorporarán nuevas funciones al centro
 de control y simuladores externos para validación y compra de billetes.
@@ -63,7 +64,9 @@ de control y simuladores externos para validación y compra de billetes.
 | Frontend | Angular 21, TypeScript, RxJS, Zone.js y SVG |
 | Backend | Java 21, Spring Boot 4, Spring Web MVC y Spring Data JPA |
 | Base de datos | MySQL 8 y scripts SQL versionados |
-| Pruebas | JUnit, Mockito, MockMvc y Vitest |
+| Aplicación Android | Kotlin, Jetpack Compose y Gradle |
+| Máquinas simuladas | C++20, Qt 6, Qt Widgets, Qt MQTT y CMake |
+| Pruebas | JUnit, Mockito, MockMvc, Vitest y Qt Test |
 | Integración continua | GitHub Actions |
 
 ## Estructura del repositorio
@@ -241,9 +244,9 @@ npm test -- --watch=false
 npm run build -- --configuration production
 ```
 
-El workflow de GitHub Actions compila el backend, el frontend y RMM App en cada pull request dirigida
-a `main` o `develop/ecosystem` y en cada actualización de esas ramas. Para Android también ejecuta
-las pruebas unitarias y conserva temporalmente el APK de depuración y su informe.
+El workflow de GitHub Actions compila el backend, el frontend, RMM App y las aplicaciones Qt en cada
+pull request dirigida a `main` o `develop/ecosystem` y en cada actualización de esas ramas. También
+ejecuta las pruebas de Android y Qt y conserva temporalmente sus artefactos de compilación.
 
 ## Documentación
 

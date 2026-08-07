@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.22)
 
 project(
     RMMClientApplications
@@ -92,3 +92,10 @@ qt_standard_project_setup(REQUIRES 6.11)
 
 add_subdirectory(ticket-vending-machine)
 add_subdirectory(ticket-validator)
+
+include(CTest)
+
+if(BUILD_TESTING)
+    find_package(Qt6 6.11 REQUIRED COMPONENTS Test)
+    add_subdirectory(tests)
+endif()

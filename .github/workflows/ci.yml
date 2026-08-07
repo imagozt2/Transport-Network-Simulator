@@ -117,3 +117,46 @@ jobs:
           path: android/app/build/reports/tests/testDebugUnitTest
           if-no-files-found: warn
           retention-days: 7
+
+  qt:
+    name: Qt applications build and tests
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Qt 6.11.1 and Qt MQTT
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: "6.11.1"
+          host: windows
+          target: desktop
+          arch: win64_msvc2022_64
+          modules: qtmqtt
+          cache: true
+          cache-key-prefix: qt-6.11.1-msvc2022
+
+      - name: Configure Qt applications
+        shell: pwsh
+        run: >-
+          cmake -S qt -B qt/build-ci
+          -G "Visual Studio 17 2022" -A x64
+          -DCMAKE_PREFIX_PATH="$env:QT_ROOT_DIR"
+          -DBUILD_TESTING=ON
+
+      - name: Build Qt applications
+        run: cmake --build qt/build-ci --config Release --parallel
+
+      - name: Test Qt applications
+        run: ctest --test-dir qt/build-ci -C Release --output-on-failure
+
+      - name: Upload Qt executables
+        uses: actions/upload-artifact@v4
+        with:
+          name: rmm-qt-applications
+          path: |
+            qt/build-ci/Release/RMMTicketVendingMachine.exe
+            qt/build-ci/Release/RMMTicketValidator.exe
+          if-no-files-found: error
+          retention-days: 7
