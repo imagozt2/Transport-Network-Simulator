@@ -241,6 +241,7 @@ y en cada actualización de esa rama.
 ## Documentación
 
 - [Arquitectura, componentes y responsabilidades del ecosistema RMM](docs/arquitectura-ecosistema.md)
+- [Ciclo de vida de los billetes RMM](docs/ciclo-vida-billetes.md)
 - [Integración final de la aplicación web](docs/integracion-aplicacion-web.md)
 - [Acceso y cuentas de operador](docs/acceso-operadores.md)
 - [Administración de usuarios de RMM App](docs/usuarios-rmm-app.md)
