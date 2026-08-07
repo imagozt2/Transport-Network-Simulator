@@ -51,7 +51,7 @@ La aplicación incluye actualmente:
 - pruebas unitarias del backend y del frontend;
 - escenarios integrados de operación, administración, sesión y navegación contextual;
 - controles de accesibilidad, diseño adaptable y suspensión de consultas en pestañas ocultas;
-- compilación automática de ambas aplicaciones mediante GitHub Actions.
+- compilación automática del backend, el frontend y RMM App mediante GitHub Actions.
 
 El proyecto continúa en desarrollo. En fases posteriores se incorporarán nuevas funciones al centro
 de control y simuladores externos para validación y compra de billetes.
@@ -241,8 +241,9 @@ npm test -- --watch=false
 npm run build -- --configuration production
 ```
 
-El workflow de GitHub Actions compila el backend y el frontend en cada pull request dirigida a `main`
-y en cada actualización de esa rama.
+El workflow de GitHub Actions compila el backend, el frontend y RMM App en cada pull request dirigida
+a `main` o `develop/ecosystem` y en cada actualización de esas ramas. Para Android también ejecuta
+las pruebas unitarias y conserva temporalmente el APK de depuración y su informe.
 
 ## Documentación
 
