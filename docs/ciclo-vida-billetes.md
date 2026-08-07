@@ -299,7 +299,8 @@ Este ciclo no define por sí mismo:
   App](contratos-rest-rmm-app.md);
 - los topics, payloads y niveles de servicio MQTT, definidos en el [contrato de mensajería con las
   máquinas](contrato-mqtt.md);
-- el almacenamiento local permitido durante una desconexión;
+- el almacenamiento local permitido durante una desconexión, acotado en los [flujos online y sin
+  conexión](flujos-conectividad.md);
 - las reglas tarifarias de regularización de trayectos incompletos.
 
 Esos contratos deben respetar los estados, transiciones y autoridades definidos aquí.

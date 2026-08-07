@@ -382,3 +382,4 @@ La implementación debe cubrir:
   una máquina comprometida.
 - Los [contratos REST de RMM App](contratos-rest-rmm-app.md) mantienen separada la autenticación de
   pasajeros.
+- Los [flujos online y sin conexión](flujos-conectividad.md) regulan la reconexión de cada instancia.

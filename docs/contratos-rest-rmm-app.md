@@ -671,6 +671,9 @@ correo, billete o código de vinculación existe.
 
 ## Caché y conectividad
 
+La política transversal se define en los [flujos online y sin conexión del
+ecosistema](flujos-conectividad.md).
+
 - Red y catálogo admiten caché condicional mediante `ETag`.
 - Cuenta, cartera, compras, QR e historial son privados y no se almacenan en cachés compartidas.
 - Las respuestas con tokens o QR utilizan `Cache-Control: no-store`.

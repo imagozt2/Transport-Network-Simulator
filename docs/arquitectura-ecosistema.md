@@ -220,7 +220,8 @@ Este documento no fija todavía:
 - el contenido binario o textual del QR y su algoritmo de firma;
 - las rutas, cuerpos y respuestas concretas de la API REST;
 - la jerarquía definitiva de topics y payloads MQTT;
-- las reglas completas del funcionamiento sin conexión.
+- las reglas completas del funcionamiento sin conexión, concretadas en los [flujos de
+  conectividad](flujos-conectividad.md).
 
 Cada aspecto se concretará en los siguientes documentos de arquitectura, respetando los límites y
 responsabilidades establecidos aquí. El [ciclo de vida de los billetes RMM](ciclo-vida-billetes.md)
@@ -228,4 +229,5 @@ y el [contrato de códigos QR](contrato-codigos-qr.md) desarrollan las primeras 
 [API REST de RMM App](contratos-rest-rmm-app.md) delimita la comunicación del cliente Android con el
 backend, mientras que el [contrato MQTT](contrato-mqtt.md) define los intercambios con las máquinas
 Qt. La [identidad y autenticación de las máquinas](identidad-maquinas.md) determina quién puede
-utilizar esos intercambios.
+utilizar esos intercambios, y los [flujos online y sin conexión](flujos-conectividad.md) fijan el
+comportamiento cuando algún componente deja de estar disponible.

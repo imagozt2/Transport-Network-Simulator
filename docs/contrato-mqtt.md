@@ -274,7 +274,7 @@ lectura. El backend responde en `devices/{deviceCode}/responses`:
 
 La verificación local de la firma no concede acceso por sí sola. Sin respuesta autoritativa dentro
 del plazo configurado, la máquina muestra un resultado no concluyente y no crea una validación
-definitiva. El funcionamiento sin conexión requerirá un contrato independiente.
+definitiva. Los [flujos online y sin conexión](flujos-conectividad.md) concretan la política inicial.
 
 ## Órdenes del backend
 

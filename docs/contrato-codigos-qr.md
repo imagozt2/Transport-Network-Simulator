@@ -261,7 +261,7 @@ La versión inicial requiere una decisión online del backend. La verificación 
 rechazar rápidamente un QR manipulado, pero no autoriza por sí sola el acceso porque la máquina
 desconoce bloqueos, consumos o trayectos recientes.
 
-Una futura política offline deberá definir por separado:
+Una futura política de aceptación offline deberá definir por separado:
 
 - duración máxima de desconexión;
 - copia firmada y acotada de datos autorizables;
@@ -271,7 +271,8 @@ Una futura política offline deberá definir por separado:
 - productos que nunca admiten validación offline.
 
 Hasta aprobar ese contrato, una validadora sin backend mostrará indisponibilidad temporal y emitirá
-el evento técnico correspondiente.
+el evento técnico correspondiente. Los demás comportamientos durante una interrupción se detallan
+en los [flujos online y sin conexión](flujos-conectividad.md).
 
 ## Protección frente a amenazas
 
