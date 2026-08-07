@@ -291,9 +291,10 @@ garantía definitiva corresponde al backend y a la transacción de base de datos
 
 ## Aspectos pendientes de otros contratos
 
-Este ciclo no define todavía:
+Este ciclo no define por sí mismo:
 
-- la estructura y firma criptográfica del QR;
+- la estructura y firma criptográfica del QR, especificadas en el [contrato de códigos QR de
+  RMM](contrato-codigos-qr.md);
 - las rutas y representaciones de la API REST;
 - los topics, payloads y niveles de servicio MQTT;
 - el almacenamiento local permitido durante una desconexión;

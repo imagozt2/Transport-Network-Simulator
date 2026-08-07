@@ -223,5 +223,5 @@ Este documento no fija todavía:
 - las reglas completas del funcionamiento sin conexión.
 
 Cada aspecto se concretará en los siguientes documentos de arquitectura, respetando los límites y
-responsabilidades establecidos aquí. El primero de ellos define el [ciclo de vida de los billetes
-RMM](ciclo-vida-billetes.md).
+responsabilidades establecidos aquí. El [ciclo de vida de los billetes RMM](ciclo-vida-billetes.md)
+y el [contrato de códigos QR](contrato-codigos-qr.md) desarrollan las primeras decisiones.
