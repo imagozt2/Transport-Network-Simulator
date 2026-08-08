@@ -89,8 +89,17 @@ public class Ticket extends AuditableEntity {
     @Column(name = "issued_at", nullable = false)
     private LocalDateTime issuedAt;
 
+    @Column(name = "last_recharged_at")
+    private LocalDateTime lastRechargedAt;
+
+    @Column(name = "last_used_at")
+    private LocalDateTime lastUsedAt;
+
     @Column(name = "status_changed_at", nullable = false)
     private LocalDateTime statusChangedAt;
+
+    @Column(name = "exhausted_at")
+    private LocalDateTime exhaustedAt;
 
     @Column(name = "lock_version", nullable = false)
     @Version
@@ -110,6 +119,13 @@ public class Ticket extends AuditableEntity {
     }
 
     public void configureSingleTrip(Station origin, Station destination, int stations) {
+        if (productType != TicketProductType.SINGLE_TRIP) {
+            throw new IllegalStateException("Only single tickets have an origin and destination");
+        }
+        if (stations <= 0 || (origin != null && destination != null
+                && origin.getCode().equals(destination.getCode()))) {
+            throw new IllegalArgumentException("A single ticket requires a valid route");
+        }
         originStation = Objects.requireNonNull(origin);
         destinationStation = Objects.requireNonNull(destination);
         stationCount = stations;
@@ -141,12 +157,44 @@ public class Ticket extends AuditableEntity {
         passengerAccount = passenger;
     }
 
+    public void exhaust(LocalDateTime at) {
+        if (status != TicketStatus.ACTIVE) {
+            throw new IllegalStateException("Only an active ticket can be exhausted");
+        }
+        status = TicketStatus.EXHAUSTED;
+        exhaustedAt = Objects.requireNonNull(at, "at is required");
+        statusChangedAt = at;
+        lastUsedAt = at;
+    }
+
+    public void rechargeSingleTrip(
+            Station origin,
+            Station destination,
+            int stations,
+            LocalDateTime at
+    ) {
+        if (productType != TicketProductType.SINGLE_TRIP || status != TicketStatus.EXHAUSTED) {
+            throw new IllegalStateException("Only an exhausted single ticket can be recharged");
+        }
+        configureSingleTrip(origin, destination, stations);
+        status = TicketStatus.ACTIVE;
+        exhaustedAt = null;
+        statusChangedAt = Objects.requireNonNull(at, "at is required");
+        lastRechargedAt = at;
+    }
+
     public Long getId() { return id; }
     public String getCode() { return code; }
     public String getQrToken() { return qrToken; }
     public TicketProduct getProduct() { return product; }
     public TicketProductType getProductType() { return productType; }
     public TicketStatus getStatus() { return status; }
+    public Station getOriginStation() { return originStation; }
+    public Station getDestinationStation() { return destinationStation; }
+    public Integer getStationCount() { return stationCount; }
+    public BigDecimal getRoutePriceAmount() { return routePriceAmount; }
+    public String getCurrency() { return currency; }
     public PassengerAccount getPassengerAccount() { return passengerAccount; }
+    public boolean isActive() { return active; }
     public LocalDateTime getIssuedAt() { return issuedAt; }
 }
