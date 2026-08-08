@@ -656,6 +656,25 @@ DELETE /api/rmm-app/v1/me/sessions/{sessionId}
 
 Un pasajero solo puede consultar y revocar sus propias sesiones.
 
+### Listar dispositivos registrados
+
+```http
+GET /api/rmm-app/v1/me/devices
+```
+
+Devuelve las instalaciones Android asociadas a la cuenta, su estado y sus fechas de registro y
+última actividad.
+
+### Revocar un dispositivo
+
+```http
+DELETE /api/rmm-app/v1/me/devices/{deviceId}
+```
+
+Revoca el dispositivo y todas sus sesiones activas. Un dispositivo ajeno no se revela y responde
+como un recurso inexistente. Las garantías completas se detallan en
+[Autenticación de RMM App](autenticacion-rmm-app.md).
+
 ## Límites de frecuencia
 
 Se aplican límites independientes por dirección, cuenta, instalación y operación, especialmente a:

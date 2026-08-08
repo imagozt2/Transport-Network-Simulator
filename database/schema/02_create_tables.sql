@@ -41,7 +41,10 @@ CREATE TABLE passenger_accounts (
     password_hash VARCHAR(255) NOT NULL,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(150) NOT NULL,
-    account_status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE',
+    account_status VARCHAR(30) NOT NULL DEFAULT 'PENDING_VERIFICATION',
+    preferred_locale VARCHAR(10) NOT NULL DEFAULT 'es-ES',
+    accepted_terms_version VARCHAR(30) NULL,
+    accepted_terms_at DATETIME NULL,
     email_verified_at DATETIME NULL,
     failed_login_attempts INT NOT NULL DEFAULT 0,
     locked_until DATETIME NULL,
@@ -63,7 +66,14 @@ CREATE TABLE passenger_accounts (
         CHAR_LENGTH(TRIM(last_name)) > 0
     ),
     CONSTRAINT chk_passenger_accounts_status CHECK (
-        account_status IN ('ACTIVE', 'BLOCKED', 'DISABLED')
+        account_status IN ('PENDING_VERIFICATION', 'ACTIVE', 'BLOCKED', 'DISABLED')
+    ),
+    CONSTRAINT chk_passenger_accounts_locale CHECK (
+        preferred_locale REGEXP '^[a-z]{2}-[A-Z]{2}$'
+    ),
+    CONSTRAINT chk_passenger_accounts_terms CHECK (
+        (accepted_terms_version IS NULL AND accepted_terms_at IS NULL)
+        OR (CHAR_LENGTH(TRIM(accepted_terms_version)) > 0 AND accepted_terms_at IS NOT NULL)
     ),
     CONSTRAINT chk_passenger_accounts_failed_attempts CHECK (failed_login_attempts >= 0)
 );
@@ -76,6 +86,97 @@ CREATE INDEX idx_passenger_accounts_locked_until
     ON passenger_accounts (locked_until);
 CREATE INDEX idx_passenger_accounts_name
     ON passenger_accounts (last_name, first_name);
+
+CREATE TABLE passenger_mobile_devices (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    public_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    passenger_account_id BIGINT NOT NULL,
+    installation_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    device_name VARCHAR(100) NOT NULL,
+    platform VARCHAR(20) NOT NULL,
+    device_status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+    registered_at DATETIME NOT NULL,
+    last_seen_at DATETIME NOT NULL,
+    revoked_at DATETIME NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_passenger_mobile_devices_public_id UNIQUE (public_id),
+    CONSTRAINT uk_passenger_mobile_devices_installation UNIQUE (installation_id),
+    CONSTRAINT fk_passenger_mobile_devices_account FOREIGN KEY (passenger_account_id)
+        REFERENCES passenger_accounts (id) ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT chk_passenger_mobile_devices_platform CHECK (platform = 'ANDROID'),
+    CONSTRAINT chk_passenger_mobile_devices_status CHECK (device_status IN ('ACTIVE', 'REVOKED')),
+    CONSTRAINT chk_passenger_mobile_devices_public_id CHECK (
+        public_id REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+    ),
+    CONSTRAINT chk_passenger_mobile_devices_lifecycle CHECK (
+        (device_status = 'ACTIVE' AND revoked_at IS NULL)
+        OR (device_status = 'REVOKED' AND revoked_at IS NOT NULL)
+    )
+);
+
+CREATE INDEX idx_passenger_mobile_devices_account_status
+    ON passenger_mobile_devices (passenger_account_id, device_status, last_seen_at);
+
+CREATE TABLE passenger_sessions (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    public_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    mobile_device_id BIGINT NOT NULL,
+    access_token_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    refresh_token_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    access_token_expires_at DATETIME NOT NULL,
+    refresh_token_expires_at DATETIME NOT NULL,
+    last_used_at DATETIME NOT NULL,
+    revoked_at DATETIME NULL,
+    revocation_reason VARCHAR(100) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_passenger_sessions_access_token UNIQUE (access_token_hash),
+    CONSTRAINT uk_passenger_sessions_refresh_token UNIQUE (refresh_token_hash),
+    CONSTRAINT uk_passenger_sessions_public_id UNIQUE (public_id),
+    CONSTRAINT fk_passenger_sessions_device FOREIGN KEY (mobile_device_id)
+        REFERENCES passenger_mobile_devices (id) ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT chk_passenger_sessions_public_id CHECK (
+        public_id REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+    ),
+    CONSTRAINT chk_passenger_sessions_access_expiry CHECK (
+        access_token_expires_at <= refresh_token_expires_at
+    ),
+    CONSTRAINT chk_passenger_sessions_hashes CHECK (
+        access_token_hash REGEXP '^[0-9a-fA-F]{64}$'
+        AND refresh_token_hash REGEXP '^[0-9a-fA-F]{64}$'
+    ),
+    CONSTRAINT chk_passenger_sessions_revocation CHECK (
+        (revoked_at IS NULL AND revocation_reason IS NULL)
+        OR (revoked_at IS NOT NULL AND CHAR_LENGTH(TRIM(revocation_reason)) > 0)
+    )
+);
+
+CREATE INDEX idx_passenger_sessions_device_active
+    ON passenger_sessions (mobile_device_id, revoked_at, refresh_token_expires_at);
+
+CREATE TABLE passenger_account_tokens (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    passenger_account_id BIGINT NOT NULL,
+    token_type VARCHAR(30) NOT NULL,
+    token_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    expires_at DATETIME NOT NULL,
+    used_at DATETIME NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_passenger_account_tokens_hash UNIQUE (token_hash),
+    CONSTRAINT fk_passenger_account_tokens_account FOREIGN KEY (passenger_account_id)
+        REFERENCES passenger_accounts (id) ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT chk_passenger_account_tokens_type CHECK (
+        token_type IN ('EMAIL_VERIFICATION', 'PASSWORD_RESET')
+    ),
+    CONSTRAINT chk_passenger_account_tokens_usage CHECK (
+        used_at IS NULL OR used_at <= expires_at
+    )
+);
+
+CREATE INDEX idx_passenger_account_tokens_account_type
+    ON passenger_account_tokens (passenger_account_id, token_type, used_at, expires_at);
 
 CREATE TABLE passenger_account_status_changes (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -92,10 +193,10 @@ CREATE TABLE passenger_account_status_changes (
         REFERENCES operator_accounts (id)
         ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT chk_passenger_status_changes_previous CHECK (
-        previous_status IN ('ACTIVE', 'BLOCKED', 'DISABLED')
+        previous_status IN ('PENDING_VERIFICATION', 'ACTIVE', 'BLOCKED', 'DISABLED')
     ),
     CONSTRAINT chk_passenger_status_changes_new CHECK (
-        new_status IN ('ACTIVE', 'BLOCKED', 'DISABLED')
+        new_status IN ('PENDING_VERIFICATION', 'ACTIVE', 'BLOCKED', 'DISABLED')
     ),
     CONSTRAINT chk_passenger_status_changes_distinct CHECK (
         previous_status <> new_status

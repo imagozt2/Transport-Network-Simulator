@@ -238,6 +238,12 @@ el diagnóstico se recogen en la [guía de infraestructura local](docs/infraestr
 | `POST` | `/api/auth/login` | Autentica al operador y crea su sesión. |
 | `GET` | `/api/auth/me` | Devuelve la cuenta asociada a la sesión actual. |
 | `POST` | `/api/auth/logout` | Invalida la sesión del operador. |
+| `POST` | `/api/rmm-app/v1/auth/register` | Registra una cuenta de pasajero pendiente de verificación. |
+| `POST` | `/api/rmm-app/v1/auth/sessions` | Autentica al pasajero y registra su dispositivo móvil. |
+| `POST` | `/api/rmm-app/v1/auth/session-refreshes` | Rota los tokens de una sesión móvil. |
+| `GET` | `/api/rmm-app/v1/me` | Devuelve la cuenta del pasajero autenticado. |
+| `GET` | `/api/rmm-app/v1/me/sessions` | Lista las sesiones móviles activas de la cuenta. |
+| `GET` | `/api/rmm-app/v1/me/devices` | Lista los dispositivos Android registrados. |
 | `GET` | `/api/dashboard/summary` | Devuelve el resumen persistido legado; el Panel General utiliza las consultas operativas. |
 | `GET` | `/api/network-map` | Devuelve las líneas activas y sus estaciones ordenadas. |
 | `GET` | `/api/network-map/journeys` | Calcula un trayecto entre dos estaciones y devuelve sus tramos ordenados. |
@@ -293,6 +299,7 @@ ejecuta las pruebas de Android y Qt y conserva temporalmente sus artefactos de c
 - [Dominio de billetes y reglas de los productos](docs/dominio-billetes.md)
 - [Seguridad, contrato y firma de los códigos QR](docs/contrato-codigos-qr.md)
 - [Contratos REST para RMM App](docs/contratos-rest-rmm-app.md)
+- [Autenticación, sesiones y dispositivos de RMM App](docs/autenticacion-rmm-app.md)
 - [Topics y mensajes MQTT del ecosistema RMM](docs/contrato-mqtt.md)
 - [Identidad y autenticación de las máquinas RMM](docs/identidad-maquinas.md)
 - [Flujos online y sin conexión del ecosistema RMM](docs/flujos-conectividad.md)

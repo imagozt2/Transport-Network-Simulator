@@ -6,6 +6,15 @@ FROM operator_accounts;
 SELECT COUNT(*) AS passenger_account_count
 FROM passenger_accounts;
 
+SELECT COUNT(*) AS passenger_session_count
+FROM passenger_sessions;
+
+SELECT COUNT(*) AS passenger_mobile_device_count
+FROM passenger_mobile_devices;
+
+SELECT COUNT(*) AS passenger_account_token_count
+FROM passenger_account_tokens;
+
 SELECT COUNT(*) AS passenger_account_status_change_count
 FROM passenger_account_status_changes;
 
@@ -66,8 +75,35 @@ WHERE public_id NOT REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[
    OR CHAR_LENGTH(password_hash) < 20
    OR CHAR_LENGTH(TRIM(first_name)) = 0
    OR CHAR_LENGTH(TRIM(last_name)) = 0
-   OR account_status NOT IN ('ACTIVE', 'BLOCKED', 'DISABLED')
+   OR account_status NOT IN ('PENDING_VERIFICATION', 'ACTIVE', 'BLOCKED', 'DISABLED')
    OR failed_login_attempts < 0;
+
+SELECT devices.id, devices.installation_id, devices.platform, devices.device_status
+FROM passenger_mobile_devices devices
+LEFT JOIN passenger_accounts passengers ON passengers.id = devices.passenger_account_id
+WHERE passengers.id IS NULL
+   OR devices.public_id NOT REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+   OR devices.platform <> 'ANDROID'
+   OR devices.device_status NOT IN ('ACTIVE', 'REVOKED')
+   OR (devices.device_status = 'ACTIVE' AND devices.revoked_at IS NOT NULL)
+   OR (devices.device_status = 'REVOKED' AND devices.revoked_at IS NULL);
+
+SELECT sessions.id, devices.installation_id, devices.platform
+FROM passenger_sessions sessions
+LEFT JOIN passenger_mobile_devices devices ON devices.id = sessions.mobile_device_id
+WHERE devices.id IS NULL
+   OR sessions.public_id NOT REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+   OR sessions.access_token_expires_at > sessions.refresh_token_expires_at
+   OR (sessions.revoked_at IS NULL AND sessions.revocation_reason IS NOT NULL)
+   OR (sessions.revoked_at IS NOT NULL
+       AND (sessions.revocation_reason IS NULL OR CHAR_LENGTH(TRIM(sessions.revocation_reason)) = 0));
+
+SELECT tokens.id, tokens.token_type, tokens.expires_at, tokens.used_at
+FROM passenger_account_tokens tokens
+LEFT JOIN passenger_accounts passengers ON passengers.id = tokens.passenger_account_id
+WHERE passengers.id IS NULL
+   OR tokens.token_type NOT IN ('EMAIL_VERIFICATION', 'PASSWORD_RESET')
+   OR tokens.used_at > tokens.expires_at;
 
 SELECT status_changes.id
 FROM passenger_account_status_changes status_changes
@@ -78,8 +114,8 @@ LEFT JOIN operator_accounts operators
 WHERE passengers.id IS NULL
    OR operators.id IS NULL
    OR status_changes.previous_status = status_changes.new_status
-   OR status_changes.previous_status NOT IN ('ACTIVE', 'BLOCKED', 'DISABLED')
-   OR status_changes.new_status NOT IN ('ACTIVE', 'BLOCKED', 'DISABLED');
+   OR status_changes.previous_status NOT IN ('PENDING_VERIFICATION', 'ACTIVE', 'BLOCKED', 'DISABLED')
+   OR status_changes.new_status NOT IN ('PENDING_VERIFICATION', 'ACTIVE', 'BLOCKED', 'DISABLED');
 
 SELECT issuances.id, issuances.code, products.product_type, devices.code AS device_code,
        devices.device_type, issuances.issuance_status

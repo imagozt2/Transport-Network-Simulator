@@ -49,6 +49,15 @@ public class PassengerAccount extends AuditableEntity {
     @Column(name = "email_verified_at")
     private LocalDateTime emailVerifiedAt;
 
+    @Column(name = "preferred_locale", nullable = false, length = 10)
+    private String preferredLocale;
+
+    @Column(name = "accepted_terms_version", length = 30)
+    private String acceptedTermsVersion;
+
+    @Column(name = "accepted_terms_at")
+    private LocalDateTime acceptedTermsAt;
+
     @Column(name = "failed_login_attempts", nullable = false)
     private int failedLoginAttempts;
 
@@ -62,7 +71,7 @@ public class PassengerAccount extends AuditableEntity {
             name = "password_changed_at",
             nullable = false,
             insertable = false,
-            updatable = false
+            updatable = true
     )
     private LocalDateTime passwordChangedAt;
 
@@ -82,6 +91,30 @@ public class PassengerAccount extends AuditableEntity {
         this.firstName = requireText(firstName);
         this.lastName = requireText(lastName);
         this.status = PassengerAccountStatus.ACTIVE;
+        this.preferredLocale = "es-ES";
+    }
+
+    public static PassengerAccount register(
+            String publicId,
+            String email,
+            String passwordHash,
+            String firstName,
+            String lastName,
+            String preferredLocale,
+            String acceptedTermsVersion,
+            LocalDateTime acceptedTermsAt
+    ) {
+        PassengerAccount account = new PassengerAccount(
+                publicId, email, passwordHash, firstName, lastName
+        );
+        account.status = PassengerAccountStatus.PENDING_VERIFICATION;
+        account.preferredLocale = requireText(preferredLocale);
+        account.acceptedTermsVersion = requireText(acceptedTermsVersion);
+        account.acceptedTermsAt = Objects.requireNonNull(
+                acceptedTermsAt,
+                "acceptedTermsAt is required"
+        );
+        return account;
     }
 
     public PassengerAccountStatus changeStatus(PassengerAccountStatus newStatus) {
@@ -101,6 +134,41 @@ public class PassengerAccount extends AuditableEntity {
         PassengerAccountStatus previousStatus = status;
         status = newStatus;
         return previousStatus;
+    }
+
+    public boolean isTemporarilyLocked(LocalDateTime now) {
+        return lockedUntil != null && lockedUntil.isAfter(now);
+    }
+
+    public void registerFailedLogin(LocalDateTime now, int maximumAttempts, int lockMinutes) {
+        failedLoginAttempts++;
+        if (failedLoginAttempts >= maximumAttempts) {
+            lockedUntil = now.plusMinutes(lockMinutes);
+            failedLoginAttempts = 0;
+        }
+    }
+
+    public void registerSuccessfulLogin(LocalDateTime now) {
+        failedLoginAttempts = 0;
+        lockedUntil = null;
+        lastLoginAt = now;
+    }
+
+    public void verifyEmail(LocalDateTime now) {
+        if (emailVerifiedAt != null) {
+            return;
+        }
+        emailVerifiedAt = Objects.requireNonNull(now);
+        if (status == PassengerAccountStatus.PENDING_VERIFICATION) {
+            status = PassengerAccountStatus.ACTIVE;
+        }
+    }
+
+    public void changePassword(String encodedPassword, LocalDateTime now) {
+        passwordHash = requireText(encodedPassword);
+        passwordChangedAt = Objects.requireNonNull(now);
+        failedLoginAttempts = 0;
+        lockedUntil = null;
     }
 
     public Long getId() {
@@ -134,6 +202,10 @@ public class PassengerAccount extends AuditableEntity {
     public LocalDateTime getEmailVerifiedAt() {
         return emailVerifiedAt;
     }
+
+    public String getPreferredLocale() { return preferredLocale; }
+    public String getAcceptedTermsVersion() { return acceptedTermsVersion; }
+    public LocalDateTime getAcceptedTermsAt() { return acceptedTermsAt; }
 
     public int getFailedLoginAttempts() {
         return failedLoginAttempts;
