@@ -80,6 +80,7 @@ Transport-Network-Simulator/
 ├── database/            # Esquema, datos iniciales y verificaciones de MySQL
 ├── docs/                # Documentación funcional y contratos de API
 ├── frontend/            # Aplicación web desarrollada con Angular
+├── infrastructure/      # Broker MQTT y recursos de infraestructura local
 └── qt/                  # Máquinas simuladas desarrolladas con Qt y C++
 ```
 
@@ -94,7 +95,8 @@ Para ejecutar el proyecto localmente se necesita:
 - Node.js 20 o posterior;
 - npm;
 - MySQL 8;
-- cliente de MySQL disponible desde la terminal para cargar los scripts.
+- cliente de MySQL disponible desde la terminal para cargar los scripts;
+- Docker Desktop con Docker Compose para ejecutar la infraestructura local coordinada.
 
 ## Inicialización de la base de datos
 
@@ -200,6 +202,33 @@ ejecución desde los IDE, los comandos de compilación y la ubicación de los ar
 
 - [Ejecución de las aplicaciones cliente](docs/ejecucion-aplicaciones-cliente.md)
 
+### Entorno Docker
+
+MySQL, Mosquitto y el backend pueden ejecutarse como un entorno coordinado. Antes del primer inicio,
+crea la configuración local y sustituye todos sus marcadores:
+
+```powershell
+Copy-Item .env.example .env
+Copy-Item infrastructure/mosquitto/mqtt-users.example `
+  infrastructure/mosquitto/mqtt-users.local
+.\infrastructure\mosquitto\scripts\initialize-security.ps1
+docker compose up -d --build
+docker compose ps
+```
+
+El backend queda disponible en `127.0.0.1:8080`, Mosquitto en `127.0.0.1:1883` y MySQL en
+`127.0.0.1:3307`, evitando interferir con una instalación local de MySQL en el puerto `3306`.
+
+Los scripts de `database/` se ejecutan automáticamente solo cuando el volumen de MySQL está vacío.
+La configuración y prueba manual del broker se describen en la
+[guía de Mosquitto](infrastructure/mosquitto/README.md).
+
+Cuando exista material criptográfico aprovisionado, el archivo `.env.tls.example` permite sustituir
+el listener local por MQTT sobre TLS con certificados de cliente obligatorios.
+
+La preparación completa, la topología, las comprobaciones de salud, el ciclo de vida de los datos y
+el diagnóstico se recogen en la [guía de infraestructura local](docs/infraestructura-local.md).
+
 ## Endpoints disponibles
 
 | Método | Ruta | Descripción |
@@ -258,6 +287,7 @@ ejecuta las pruebas de Android y Qt y conserva temporalmente sus artefactos de c
 ## Documentación
 
 - [Arquitectura, componentes y responsabilidades del ecosistema RMM](docs/arquitectura-ecosistema.md)
+- [Infraestructura local del ecosistema RMM](docs/infraestructura-local.md)
 - [Ejecución de RMM App y las aplicaciones Qt](docs/ejecucion-aplicaciones-cliente.md)
 - [Ciclo de vida de los billetes RMM](docs/ciclo-vida-billetes.md)
 - [Contrato y firma de los códigos QR](docs/contrato-codigos-qr.md)
