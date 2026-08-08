@@ -125,6 +125,29 @@ CREATE INDEX idx_passenger_sessions_account_active
 CREATE INDEX idx_passenger_sessions_installation
     ON passenger_sessions (installation_id, revoked_at);
 
+CREATE TABLE passenger_account_tokens (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    passenger_account_id BIGINT NOT NULL,
+    token_type VARCHAR(30) NOT NULL,
+    token_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    expires_at DATETIME NOT NULL,
+    used_at DATETIME NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_passenger_account_tokens_hash UNIQUE (token_hash),
+    CONSTRAINT fk_passenger_account_tokens_account FOREIGN KEY (passenger_account_id)
+        REFERENCES passenger_accounts (id) ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT chk_passenger_account_tokens_type CHECK (
+        token_type IN ('EMAIL_VERIFICATION', 'PASSWORD_RESET')
+    ),
+    CONSTRAINT chk_passenger_account_tokens_usage CHECK (
+        used_at IS NULL OR used_at <= expires_at
+    )
+);
+
+CREATE INDEX idx_passenger_account_tokens_account_type
+    ON passenger_account_tokens (passenger_account_id, token_type, used_at, expires_at);
+
 CREATE TABLE passenger_account_status_changes (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     passenger_account_id BIGINT NOT NULL,

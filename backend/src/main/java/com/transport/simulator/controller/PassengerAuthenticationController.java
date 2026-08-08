@@ -3,10 +3,14 @@ package com.transport.simulator.controller;
 import com.transport.simulator.dto.request.passenger.PassengerRegistrationRequest;
 import com.transport.simulator.dto.request.passenger.PassengerLoginRequest;
 import com.transport.simulator.dto.request.passenger.PassengerSessionRefreshRequest;
+import com.transport.simulator.dto.request.passenger.PassengerEmailRequest;
+import com.transport.simulator.dto.request.passenger.PassengerEmailVerificationRequest;
+import com.transport.simulator.dto.request.passenger.PassengerPasswordResetRequest;
 import com.transport.simulator.dto.response.passenger.PassengerRegistrationResponse;
 import com.transport.simulator.dto.response.passenger.PassengerSessionResponse;
 import com.transport.simulator.service.PassengerRegistrationService;
 import com.transport.simulator.service.PassengerSessionService;
+import com.transport.simulator.service.PassengerAccountRecoveryService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,13 +27,16 @@ public class PassengerAuthenticationController {
 
     private final PassengerRegistrationService registrationService;
     private final PassengerSessionService sessionService;
+    private final PassengerAccountRecoveryService recoveryService;
 
     public PassengerAuthenticationController(
             PassengerRegistrationService registrationService,
-            PassengerSessionService sessionService
+            PassengerSessionService sessionService,
+            PassengerAccountRecoveryService recoveryService
     ) {
         this.registrationService = registrationService;
         this.sessionService = sessionService;
+        this.recoveryService = recoveryService;
     }
 
     @PostMapping("/register")
@@ -57,5 +64,29 @@ public class PassengerAuthenticationController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void logout(Authentication authentication) {
         sessionService.logout(authentication);
+    }
+
+    @PostMapping("/email-verification-requests")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void requestEmailVerification(@Valid @RequestBody PassengerEmailRequest request) {
+        recoveryService.requestEmailVerification(request.email());
+    }
+
+    @PostMapping("/email-verifications")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void verifyEmail(@Valid @RequestBody PassengerEmailVerificationRequest request) {
+        recoveryService.verifyEmail(request.verificationToken());
+    }
+
+    @PostMapping("/password-recovery-requests")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void requestPasswordRecovery(@Valid @RequestBody PassengerEmailRequest request) {
+        recoveryService.requestPasswordReset(request.email());
+    }
+
+    @PostMapping("/password-resets")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void resetPassword(@Valid @RequestBody PassengerPasswordResetRequest request) {
+        recoveryService.resetPassword(request);
     }
 }

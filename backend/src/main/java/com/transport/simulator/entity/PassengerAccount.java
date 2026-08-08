@@ -71,7 +71,7 @@ public class PassengerAccount extends AuditableEntity {
             name = "password_changed_at",
             nullable = false,
             insertable = false,
-            updatable = false
+            updatable = true
     )
     private LocalDateTime passwordChangedAt;
 
@@ -152,6 +152,23 @@ public class PassengerAccount extends AuditableEntity {
         failedLoginAttempts = 0;
         lockedUntil = null;
         lastLoginAt = now;
+    }
+
+    public void verifyEmail(LocalDateTime now) {
+        if (emailVerifiedAt != null) {
+            return;
+        }
+        emailVerifiedAt = Objects.requireNonNull(now);
+        if (status == PassengerAccountStatus.PENDING_VERIFICATION) {
+            status = PassengerAccountStatus.ACTIVE;
+        }
+    }
+
+    public void changePassword(String encodedPassword, LocalDateTime now) {
+        passwordHash = requireText(encodedPassword);
+        passwordChangedAt = Objects.requireNonNull(now);
+        failedLoginAttempts = 0;
+        lockedUntil = null;
     }
 
     public Long getId() {

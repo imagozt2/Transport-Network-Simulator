@@ -6,6 +6,7 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.repository.query.Param;
 
 public interface PassengerSessionRepository extends JpaRepository<PassengerSession, Long> {
@@ -20,4 +21,16 @@ public interface PassengerSessionRepository extends JpaRepository<PassengerSessi
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select session from PassengerSession session join fetch session.passengerAccount where session.id = :id")
     Optional<PassengerSession> findByIdForUpdate(@Param("id") Long id);
+
+    @Modifying
+    @Query("""
+            update PassengerSession session
+            set session.revokedAt = :revokedAt, session.revocationReason = :reason
+            where session.passengerAccount.id = :accountId and session.revokedAt is null
+            """)
+    int revokeAllActiveByAccountId(
+            @Param("accountId") Long accountId,
+            @Param("revokedAt") java.time.LocalDateTime revokedAt,
+            @Param("reason") String reason
+    );
 }

@@ -23,16 +23,19 @@ public class PassengerRegistrationService {
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
     private final String currentTermsVersion;
+    private final PassengerAccountRecoveryService recoveryService;
 
     public PassengerRegistrationService(
             PassengerAccountRepository passengerAccountRepository,
             PasswordEncoder passwordEncoder,
             Clock clock,
+            PassengerAccountRecoveryService recoveryService,
             @Value("${app.rmm-app.current-terms-version}") String currentTermsVersion
     ) {
         this.passengerAccountRepository = passengerAccountRepository;
         this.passwordEncoder = passwordEncoder;
         this.clock = clock;
+        this.recoveryService = recoveryService;
         this.currentTermsVersion = currentTermsVersion;
     }
 
@@ -59,6 +62,7 @@ public class PassengerRegistrationService {
                 LocalDateTime.now(clock)
         );
         PassengerAccount persisted = passengerAccountRepository.save(passenger);
+        recoveryService.issueEmailVerification(persisted);
         return new PassengerRegistrationResponse(
                 PassengerRegistrationUserResponse.from(persisted), true
         );

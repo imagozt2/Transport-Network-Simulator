@@ -48,6 +48,10 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/rmm-app/v1/auth/sessions").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/rmm-app/v1/auth/session-refreshes").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/rmm-app/v1/auth/email-verification-requests").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/rmm-app/v1/auth/email-verifications").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/rmm-app/v1/auth/password-recovery-requests").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/rmm-app/v1/auth/password-resets").permitAll()
                         .requestMatchers("/api/rmm-app/v1/**").hasRole("PASSENGER")
                         .requestMatchers("/api/auth/**").authenticated()
                         .requestMatchers(

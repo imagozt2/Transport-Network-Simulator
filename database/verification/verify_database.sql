@@ -9,6 +9,9 @@ FROM passenger_accounts;
 SELECT COUNT(*) AS passenger_session_count
 FROM passenger_sessions;
 
+SELECT COUNT(*) AS passenger_account_token_count
+FROM passenger_account_tokens;
+
 SELECT COUNT(*) AS passenger_account_status_change_count
 FROM passenger_account_status_changes;
 
@@ -81,6 +84,13 @@ WHERE passengers.id IS NULL
    OR (sessions.revoked_at IS NULL AND sessions.revocation_reason IS NOT NULL)
    OR (sessions.revoked_at IS NOT NULL
        AND (sessions.revocation_reason IS NULL OR CHAR_LENGTH(TRIM(sessions.revocation_reason)) = 0));
+
+SELECT tokens.id, tokens.token_type, tokens.expires_at, tokens.used_at
+FROM passenger_account_tokens tokens
+LEFT JOIN passenger_accounts passengers ON passengers.id = tokens.passenger_account_id
+WHERE passengers.id IS NULL
+   OR tokens.token_type NOT IN ('EMAIL_VERIFICATION', 'PASSWORD_RESET')
+   OR tokens.used_at > tokens.expires_at;
 
 SELECT status_changes.id
 FROM passenger_account_status_changes status_changes
