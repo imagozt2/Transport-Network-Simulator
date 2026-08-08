@@ -135,6 +135,10 @@ public class Ticket extends AuditableEntity {
     }
 
     public void configureTripBalance(int trips) {
+        if (productType != TicketProductType.MULTI_TRIP) {
+            throw new IllegalStateException("Only multi-trip tickets have a trip balance");
+        }
+        requireTripAmountWithinProductRange(trips);
         purchasedTrips = trips;
         remainingTrips = trips;
     }
@@ -183,6 +187,50 @@ public class Ticket extends AuditableEntity {
         lastRechargedAt = at;
     }
 
+    public void consumeTrip(LocalDateTime at) {
+        if (productType != TicketProductType.MULTI_TRIP || status != TicketStatus.ACTIVE
+                || remainingTrips == null || remainingTrips <= 0) {
+            throw new IllegalStateException("The ticket has no trip available for entry");
+        }
+        remainingTrips--;
+        lastUsedAt = Objects.requireNonNull(at, "at is required");
+        if (remainingTrips == 0) {
+            status = TicketStatus.EXHAUSTED;
+            exhaustedAt = at;
+            statusChangedAt = at;
+        }
+    }
+
+    public void rechargeTrips(int trips, LocalDateTime at) {
+        if (productType != TicketProductType.MULTI_TRIP) {
+            throw new IllegalStateException("Only multi-trip tickets accept trip recharges");
+        }
+        if (status != TicketStatus.ACTIVE && status != TicketStatus.EXHAUSTED) {
+            throw new IllegalStateException("The ticket cannot be recharged in its current status");
+        }
+        requireTripAmountWithinProductRange(trips);
+        int currentTrips = remainingTrips == null ? 0 : remainingTrips;
+        int resultingTrips = Math.addExact(currentTrips, trips);
+        if (product.getMaxTrips() != null && resultingTrips > product.getMaxTrips()) {
+            throw new IllegalArgumentException("The resulting trip balance exceeds the product maximum");
+        }
+        purchasedTrips = resultingTrips;
+        remainingTrips = resultingTrips;
+        status = TicketStatus.ACTIVE;
+        exhaustedAt = null;
+        statusChangedAt = Objects.requireNonNull(at, "at is required");
+        lastRechargedAt = at;
+    }
+
+    private void requireTripAmountWithinProductRange(int trips) {
+        if (product.getMinTrips() == null || product.getMaxTrips() == null
+                || trips < product.getMinTrips() || trips > product.getMaxTrips()) {
+            throw new IllegalArgumentException(
+                    "Trips must be between " + product.getMinTrips() + " and " + product.getMaxTrips()
+            );
+        }
+    }
+
     public Long getId() { return id; }
     public String getCode() { return code; }
     public String getQrToken() { return qrToken; }
@@ -193,6 +241,8 @@ public class Ticket extends AuditableEntity {
     public Station getDestinationStation() { return destinationStation; }
     public Integer getStationCount() { return stationCount; }
     public BigDecimal getRoutePriceAmount() { return routePriceAmount; }
+    public Integer getPurchasedTrips() { return purchasedTrips; }
+    public Integer getRemainingTrips() { return remainingTrips; }
     public String getCurrency() { return currency; }
     public PassengerAccount getPassengerAccount() { return passengerAccount; }
     public boolean isActive() { return active; }
