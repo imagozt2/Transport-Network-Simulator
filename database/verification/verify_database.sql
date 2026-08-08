@@ -6,6 +6,9 @@ FROM operator_accounts;
 SELECT COUNT(*) AS passenger_account_count
 FROM passenger_accounts;
 
+SELECT COUNT(*) AS passenger_session_count
+FROM passenger_sessions;
+
 SELECT COUNT(*) AS passenger_account_status_change_count
 FROM passenger_account_status_changes;
 
@@ -68,6 +71,16 @@ WHERE public_id NOT REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[
    OR CHAR_LENGTH(TRIM(last_name)) = 0
    OR account_status NOT IN ('PENDING_VERIFICATION', 'ACTIVE', 'BLOCKED', 'DISABLED')
    OR failed_login_attempts < 0;
+
+SELECT sessions.id, sessions.installation_id, sessions.platform
+FROM passenger_sessions sessions
+LEFT JOIN passenger_accounts passengers ON passengers.id = sessions.passenger_account_id
+WHERE passengers.id IS NULL
+   OR sessions.platform <> 'ANDROID'
+   OR sessions.access_token_expires_at > sessions.refresh_token_expires_at
+   OR (sessions.revoked_at IS NULL AND sessions.revocation_reason IS NOT NULL)
+   OR (sessions.revoked_at IS NOT NULL
+       AND (sessions.revocation_reason IS NULL OR CHAR_LENGTH(TRIM(sessions.revocation_reason)) = 0));
 
 SELECT status_changes.id
 FROM passenger_account_status_changes status_changes

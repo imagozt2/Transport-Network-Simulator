@@ -136,6 +136,24 @@ public class PassengerAccount extends AuditableEntity {
         return previousStatus;
     }
 
+    public boolean isTemporarilyLocked(LocalDateTime now) {
+        return lockedUntil != null && lockedUntil.isAfter(now);
+    }
+
+    public void registerFailedLogin(LocalDateTime now, int maximumAttempts, int lockMinutes) {
+        failedLoginAttempts++;
+        if (failedLoginAttempts >= maximumAttempts) {
+            lockedUntil = now.plusMinutes(lockMinutes);
+            failedLoginAttempts = 0;
+        }
+    }
+
+    public void registerSuccessfulLogin(LocalDateTime now) {
+        failedLoginAttempts = 0;
+        lockedUntil = null;
+        lastLoginAt = now;
+    }
+
     public Long getId() {
         return id;
     }

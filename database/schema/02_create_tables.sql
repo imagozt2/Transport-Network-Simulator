@@ -87,6 +87,44 @@ CREATE INDEX idx_passenger_accounts_locked_until
 CREATE INDEX idx_passenger_accounts_name
     ON passenger_accounts (last_name, first_name);
 
+CREATE TABLE passenger_sessions (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    passenger_account_id BIGINT NOT NULL,
+    installation_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    device_name VARCHAR(100) NOT NULL,
+    platform VARCHAR(20) NOT NULL,
+    access_token_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    refresh_token_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    access_token_expires_at DATETIME NOT NULL,
+    refresh_token_expires_at DATETIME NOT NULL,
+    last_used_at DATETIME NOT NULL,
+    revoked_at DATETIME NULL,
+    revocation_reason VARCHAR(100) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_passenger_sessions_access_token UNIQUE (access_token_hash),
+    CONSTRAINT uk_passenger_sessions_refresh_token UNIQUE (refresh_token_hash),
+    CONSTRAINT fk_passenger_sessions_account FOREIGN KEY (passenger_account_id)
+        REFERENCES passenger_accounts (id) ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT chk_passenger_sessions_platform CHECK (platform = 'ANDROID'),
+    CONSTRAINT chk_passenger_sessions_access_expiry CHECK (
+        access_token_expires_at <= refresh_token_expires_at
+    ),
+    CONSTRAINT chk_passenger_sessions_hashes CHECK (
+        access_token_hash REGEXP '^[0-9a-fA-F]{64}$'
+        AND refresh_token_hash REGEXP '^[0-9a-fA-F]{64}$'
+    ),
+    CONSTRAINT chk_passenger_sessions_revocation CHECK (
+        (revoked_at IS NULL AND revocation_reason IS NULL)
+        OR (revoked_at IS NOT NULL AND CHAR_LENGTH(TRIM(revocation_reason)) > 0)
+    )
+);
+
+CREATE INDEX idx_passenger_sessions_account_active
+    ON passenger_sessions (passenger_account_id, revoked_at, refresh_token_expires_at);
+CREATE INDEX idx_passenger_sessions_installation
+    ON passenger_sessions (installation_id, revoked_at);
+
 CREATE TABLE passenger_account_status_changes (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     passenger_account_id BIGINT NOT NULL,

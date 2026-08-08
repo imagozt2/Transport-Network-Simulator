@@ -2,6 +2,7 @@ package com.transport.simulator.config;
 
 import com.transport.simulator.security.RestAccessDeniedHandler;
 import com.transport.simulator.security.RestAuthenticationEntryPoint;
+import com.transport.simulator.security.PassengerBearerAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -11,6 +12,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 public class SecurityConfig {
@@ -24,7 +26,8 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             RestAuthenticationEntryPoint authenticationEntryPoint,
-            RestAccessDeniedHandler accessDeniedHandler
+            RestAccessDeniedHandler accessDeniedHandler,
+            PassengerBearerAuthenticationFilter passengerBearerAuthenticationFilter
     ) throws Exception {
         CookieCsrfTokenRepository csrfRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
         csrfRepository.setCookiePath("/");
@@ -43,6 +46,9 @@ public class SecurityConfig {
                                 "/api/auth/login",
                                 "/api/rmm-app/v1/auth/register"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/rmm-app/v1/auth/sessions").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/rmm-app/v1/auth/session-refreshes").permitAll()
+                        .requestMatchers("/api/rmm-app/v1/**").hasRole("PASSENGER")
                         .requestMatchers("/api/auth/**").authenticated()
                         .requestMatchers(
                                 HttpMethod.PATCH,
@@ -67,6 +73,10 @@ public class SecurityConfig {
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
                 .logout(logout -> logout.disable())
+                .addFilterBefore(
+                        passengerBearerAuthenticationFilter,
+                        UsernamePasswordAuthenticationFilter.class
+                )
                 .build();
     }
 }
