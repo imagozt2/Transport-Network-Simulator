@@ -7,6 +7,7 @@ public record TicketQrSigningProperties(
         String keyId,
         String privateKey,
         String publicKey,
+        String retiredPublicKeys,
         long allowedClockSkewSeconds,
         int maximumQrLength
 ) {
