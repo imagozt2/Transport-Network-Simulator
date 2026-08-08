@@ -70,6 +70,25 @@ docker compose exec mosquitto mosquitto_pub -h 127.0.0.1 `
 La primera terminal debe mostrar el mensaje. Un intento con esa identidad sobre el topic de otra
 máquina debe ser rechazado por el broker.
 
+## Pruebas de integración
+
+La comprobación automatizada levanta un broker aislado y valida tres comportamientos del transporte:
+
+- una máquina publica su estado y el backend lo recibe mediante una suscripción autorizada;
+- una máquina no puede publicar en el espacio de topics perteneciente a otra identidad;
+- una sesión persistente recupera tras reconectarse un mensaje QoS 1 recibido mientras estaba
+  desconectada.
+
+Con Docker Desktop iniciado, se puede ejecutar desde la raíz del repositorio:
+
+```powershell
+.\infrastructure\mosquitto\tests\mqtt-integration-tests.ps1
+```
+
+El script crea credenciales exclusivamente temporales, no publica ningún puerto y elimina el
+contenedor y los archivos generados incluso si una aserción falla. El pipeline ejecuta el mismo
+escenario en cada pull request dirigida a `main` o `develop/ecosystem`.
+
 ## Usuarios y permisos
 
 - `rmm-backend` consume presencia, estado, telemetría, eventos, validaciones y confirmaciones de

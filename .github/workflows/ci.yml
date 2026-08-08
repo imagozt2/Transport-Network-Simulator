@@ -191,3 +191,15 @@ jobs:
             qt/build-ci/Release/RMMTicketValidator.exe
           if-no-files-found: error
           retention-days: 7
+
+  mqtt:
+    name: MQTT integration tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Test MQTT publication, subscription and reconnection
+        shell: pwsh
+        run: ./infrastructure/mosquitto/tests/mqtt-integration-tests.ps1
