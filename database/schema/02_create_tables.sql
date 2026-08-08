@@ -697,7 +697,7 @@ CREATE INDEX idx_purchases_status_requested ON purchases (purchase_status, reque
 CREATE INDEX idx_purchases_device ON purchases (device_id);
 CREATE INDEX idx_purchases_station ON purchases (station_id);
 CREATE INDEX idx_purchases_passenger ON purchases (passenger_user_id);
-CREATE INDEX idx_purchases_external_reference ON purchases (external_reference);
+CREATE UNIQUE INDEX uk_purchases_external_reference ON purchases (external_reference);
 
 CREATE TABLE compensatory_ticket_issuances (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
