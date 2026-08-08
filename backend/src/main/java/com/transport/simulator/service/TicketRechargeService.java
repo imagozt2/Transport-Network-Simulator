@@ -12,6 +12,7 @@ import com.transport.simulator.enums.PassengerAccountStatus;
 import com.transport.simulator.repository.PurchaseRepository;
 import com.transport.simulator.repository.TicketRepository;
 import com.transport.simulator.service.model.TicketRechargeParameters;
+import com.transport.simulator.service.model.TicketSnapshot;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -30,6 +31,7 @@ public class TicketRechargeService {
     private final MultiTripTicketService multiTripService;
     private final TimePassTicketService timePassService;
     private final SmartBalanceTicketService smartBalanceService;
+    private final TicketOperationRegistrationService operationRegistrationService;
     private final Clock clock;
 
     public TicketRechargeService(
@@ -39,6 +41,7 @@ public class TicketRechargeService {
             MultiTripTicketService multiTripService,
             TimePassTicketService timePassService,
             SmartBalanceTicketService smartBalanceService,
+            TicketOperationRegistrationService operationRegistrationService,
             Clock clock
     ) {
         this.ticketRepository = ticketRepository;
@@ -47,6 +50,7 @@ public class TicketRechargeService {
         this.multiTripService = multiTripService;
         this.timePassService = timePassService;
         this.smartBalanceService = smartBalanceService;
+        this.operationRegistrationService = operationRegistrationService;
         this.clock = clock;
     }
 
@@ -80,6 +84,7 @@ public class TicketRechargeService {
         }
         Objects.requireNonNull(parameters, "parameters are required");
         validateContext(origin, device, passenger, current);
+        TicketSnapshot before = TicketSnapshot.from(current);
 
         Ticket updated = switch (current.getProductType()) {
             case SINGLE_TRIP -> rechargeSingleTrip(current, parameters);
@@ -94,7 +99,9 @@ public class TicketRechargeService {
                 device, passenger, total, LocalDateTime.now(clock)
         );
         configurePurchase(purchase, updated, parameters);
-        return purchaseRepository.save(purchase);
+        Purchase persisted = purchaseRepository.save(purchase);
+        operationRegistrationService.recordRecharge(persisted, before, device, passenger);
+        return persisted;
     }
 
     private Ticket rechargeSingleTrip(Ticket ticket, TicketRechargeParameters parameters) {

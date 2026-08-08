@@ -854,6 +854,85 @@ CREATE INDEX idx_ticket_validations_device ON ticket_validations (device_id);
 CREATE INDEX idx_ticket_validations_qr_token ON ticket_validations (qr_token);
 CREATE INDEX idx_ticket_validations_external_reference ON ticket_validations (external_reference);
 
+CREATE TABLE ticket_operations (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    code VARCHAR(80) NOT NULL,
+    ticket_id BIGINT NOT NULL,
+    operation_type VARCHAR(40) NOT NULL,
+    operation_source VARCHAR(40) NOT NULL,
+    support_id BIGINT NULL,
+    purchase_id BIGINT NULL,
+    journey_id BIGINT NULL,
+    station_id BIGINT NULL,
+    device_id BIGINT NULL,
+    passenger_account_id BIGINT NULL,
+    external_reference VARCHAR(150) NULL,
+    previous_status VARCHAR(40) NULL,
+    resulting_status VARCHAR(40) NOT NULL,
+    balance_before DECIMAL(10, 2) NULL,
+    balance_after DECIMAL(10, 2) NULL,
+    remaining_trips_before INT NULL,
+    remaining_trips_after INT NULL,
+    valid_from_before DATETIME NULL,
+    valid_until_before DATETIME NULL,
+    valid_from_after DATETIME NULL,
+    valid_until_after DATETIME NULL,
+    operation_amount DECIMAL(10, 2) NULL,
+    currency CHAR(3) NOT NULL DEFAULT 'EUR',
+    occurred_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    details_json JSON NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_ticket_operations_code UNIQUE (code),
+    CONSTRAINT fk_ticket_operations_ticket FOREIGN KEY (ticket_id) REFERENCES tickets (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_ticket_operations_support FOREIGN KEY (support_id) REFERENCES ticket_supports (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_ticket_operations_purchase FOREIGN KEY (purchase_id) REFERENCES purchases (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_ticket_operations_journey FOREIGN KEY (journey_id) REFERENCES ticket_journeys (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_ticket_operations_station FOREIGN KEY (station_id) REFERENCES stations (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_ticket_operations_device FOREIGN KEY (device_id) REFERENCES devices (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_ticket_operations_passenger FOREIGN KEY (passenger_account_id) REFERENCES passenger_accounts (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT chk_ticket_operations_type CHECK (
+        operation_type IN ('ISSUED', 'RECHARGED', 'ENTRY_ACCEPTED', 'EXIT_ACCEPTED',
+            'BLOCKED', 'UNBLOCKED', 'CANCELLED', 'SUPPORT_LINKED', 'QR_REVOKED')
+    ),
+    CONSTRAINT chk_ticket_operations_source CHECK (
+        operation_source IN ('SYSTEM', 'RMM_APP', 'TICKET_MACHINE', 'VALIDATOR', 'CONTROL_CENTER')
+    ),
+    CONSTRAINT chk_ticket_operations_status CHECK (
+        resulting_status IN ('ACTIVE', 'EXHAUSTED', 'EXPIRED', 'BLOCKED', 'CANCELLED')
+        AND (previous_status IS NULL
+            OR previous_status IN ('ACTIVE', 'EXHAUSTED', 'EXPIRED', 'BLOCKED', 'CANCELLED'))
+    ),
+    CONSTRAINT chk_ticket_operations_balances CHECK (
+        (balance_before IS NULL OR balance_before >= 0)
+        AND (balance_after IS NULL OR balance_after >= 0)
+    ),
+    CONSTRAINT chk_ticket_operations_trips CHECK (
+        (remaining_trips_before IS NULL OR remaining_trips_before >= 0)
+        AND (remaining_trips_after IS NULL OR remaining_trips_after >= 0)
+    ),
+    CONSTRAINT chk_ticket_operations_amount CHECK (
+        operation_amount IS NULL OR operation_amount >= 0
+    ),
+    CONSTRAINT chk_ticket_operations_currency CHECK (currency REGEXP '^[A-Z]{3}$')
+);
+
+CREATE INDEX idx_ticket_operations_ticket_occurred
+    ON ticket_operations (ticket_id, occurred_at);
+CREATE INDEX idx_ticket_operations_type_occurred
+    ON ticket_operations (operation_type, occurred_at);
+CREATE INDEX idx_ticket_operations_purchase ON ticket_operations (purchase_id);
+CREATE INDEX idx_ticket_operations_journey ON ticket_operations (journey_id);
+CREATE INDEX idx_ticket_operations_external_reference
+    ON ticket_operations (external_reference);
+
 CREATE TABLE incidents (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     code VARCHAR(30) NOT NULL,

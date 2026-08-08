@@ -4,12 +4,15 @@ import com.transport.simulator.entity.Station;
 import com.transport.simulator.entity.Ticket;
 import com.transport.simulator.entity.TicketJourney;
 import com.transport.simulator.enums.TicketJourneyStatus;
+import com.transport.simulator.enums.TicketOperationType;
 import com.transport.simulator.enums.TicketProductType;
 import com.transport.simulator.enums.TicketStatus;
 import com.transport.simulator.repository.StationRepository;
 import com.transport.simulator.repository.TicketJourneyRepository;
 import com.transport.simulator.repository.TicketRepository;
 import com.transport.simulator.service.model.NetworkJourney;
+import com.transport.simulator.service.model.TicketSnapshot;
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Locale;
@@ -24,6 +27,7 @@ public class SingleTripTicketService {
     private final TicketJourneyRepository journeyRepository;
     private final StationRepository stationRepository;
     private final NetworkJourneyPlanningService journeyPlanningService;
+    private final TicketOperationRegistrationService operationRegistrationService;
     private final Clock clock;
 
     public SingleTripTicketService(
@@ -31,12 +35,14 @@ public class SingleTripTicketService {
             TicketJourneyRepository journeyRepository,
             StationRepository stationRepository,
             NetworkJourneyPlanningService journeyPlanningService,
+            TicketOperationRegistrationService operationRegistrationService,
             Clock clock
     ) {
         this.ticketRepository = ticketRepository;
         this.journeyRepository = journeyRepository;
         this.stationRepository = stationRepository;
         this.journeyPlanningService = journeyPlanningService;
+        this.operationRegistrationService = operationRegistrationService;
         this.clock = clock;
     }
 
@@ -53,10 +59,14 @@ public class SingleTripTicketService {
             throw new IllegalStateException("The ticket already has an open journey");
         }
 
-        TicketJourney journey = new TicketJourney(
+        TicketSnapshot before = TicketSnapshot.from(ticket);
+        TicketJourney journey = journeyRepository.save(new TicketJourney(
                 uniqueCode("RMM-JRN"), ticket, station, LocalDateTime.now(clock)
+        ));
+        operationRegistrationService.recordJourney(
+                TicketOperationType.ENTRY_ACCEPTED, ticket, journey, station, before, BigDecimal.ZERO
         );
-        return journeyRepository.save(journey);
+        return journey;
     }
 
     @Transactional
@@ -71,10 +81,16 @@ public class SingleTripTicketService {
 
         TicketJourney journey = openJourney(ticket)
                 .orElseThrow(() -> new IllegalStateException("The ticket has no open journey"));
+        TicketSnapshot before = TicketSnapshot.from(ticket);
         LocalDateTime now = LocalDateTime.now(clock);
         journey.close(station, ticket.getStationCount(), ticket.getRoutePriceAmount(), now);
         ticket.exhaust(now);
-        return journeyRepository.save(journey);
+        TicketJourney persisted = journeyRepository.save(journey);
+        operationRegistrationService.recordJourney(
+                TicketOperationType.EXIT_ACCEPTED, ticket, persisted, station,
+                before, ticket.getRoutePriceAmount()
+        );
+        return persisted;
     }
 
     @Transactional

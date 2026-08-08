@@ -21,6 +21,9 @@ FROM ticket_supports;
 SELECT COUNT(*) AS ticket_qr_credential_count
 FROM ticket_qr_credentials;
 
+SELECT COUNT(*) AS ticket_operation_count
+FROM ticket_operations;
+
 SELECT COUNT(*) AS incident_count
 FROM incidents;
 
@@ -148,6 +151,24 @@ WHERE tickets.id IS NULL
    OR (credentials.credential_status <> 'SUPERSEDED' AND replacements.id IS NOT NULL)
    OR (credentials.credential_status = 'REVOKED' AND credentials.revoked_at IS NULL)
    OR (credentials.credential_status <> 'REVOKED' AND credentials.revoked_at IS NOT NULL);
+
+SELECT operations.id, operations.code, operations.operation_type
+FROM ticket_operations operations
+LEFT JOIN tickets ON tickets.id = operations.ticket_id
+LEFT JOIN ticket_supports supports ON supports.id = operations.support_id
+LEFT JOIN purchases ON purchases.id = operations.purchase_id
+LEFT JOIN ticket_journeys journeys ON journeys.id = operations.journey_id
+WHERE tickets.id IS NULL
+   OR (operations.support_id IS NOT NULL AND supports.id IS NULL)
+   OR (operations.purchase_id IS NOT NULL AND purchases.id IS NULL)
+   OR (operations.journey_id IS NOT NULL AND journeys.id IS NULL)
+   OR (supports.id IS NOT NULL AND supports.ticket_id <> operations.ticket_id)
+   OR (purchases.id IS NOT NULL AND purchases.ticket_id <> operations.ticket_id)
+   OR (journeys.id IS NOT NULL AND journeys.ticket_id <> operations.ticket_id)
+   OR operations.operation_type NOT IN (
+       'ISSUED', 'RECHARGED', 'ENTRY_ACCEPTED', 'EXIT_ACCEPTED',
+       'BLOCKED', 'UNBLOCKED', 'CANCELLED', 'SUPPORT_LINKED', 'QR_REVOKED'
+   );
 
 SELECT incidents.id, incidents.code, incidents.incident_status, incidents.priority
 FROM incidents

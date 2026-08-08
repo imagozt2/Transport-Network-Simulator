@@ -28,15 +28,18 @@ public class TicketIssuanceService {
 
     private final TicketRepository ticketRepository;
     private final TicketSupportRepository supportRepository;
+    private final TicketOperationRegistrationService operationRegistrationService;
     private final Clock clock;
 
     public TicketIssuanceService(
             TicketRepository ticketRepository,
             TicketSupportRepository supportRepository,
+            TicketOperationRegistrationService operationRegistrationService,
             Clock clock
     ) {
         this.ticketRepository = ticketRepository;
         this.supportRepository = supportRepository;
+        this.operationRegistrationService = operationRegistrationService;
         this.clock = clock;
     }
 
@@ -155,6 +158,7 @@ public class TicketIssuanceService {
     private IssuedTicket persist(Ticket ticket, TicketSupport support) {
         Ticket persistedTicket = ticketRepository.save(ticket);
         TicketSupport persistedSupport = supportRepository.save(support);
+        operationRegistrationService.recordIssuance(persistedTicket, persistedSupport);
         return new IssuedTicket(persistedTicket, persistedSupport);
     }
 

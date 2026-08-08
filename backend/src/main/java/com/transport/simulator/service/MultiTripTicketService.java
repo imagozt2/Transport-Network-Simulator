@@ -4,12 +4,15 @@ import com.transport.simulator.entity.Station;
 import com.transport.simulator.entity.Ticket;
 import com.transport.simulator.entity.TicketJourney;
 import com.transport.simulator.enums.TicketJourneyStatus;
+import com.transport.simulator.enums.TicketOperationType;
 import com.transport.simulator.enums.TicketProductType;
 import com.transport.simulator.enums.TicketStatus;
 import com.transport.simulator.repository.StationRepository;
 import com.transport.simulator.repository.TicketJourneyRepository;
 import com.transport.simulator.repository.TicketRepository;
 import com.transport.simulator.service.model.NetworkJourney;
+import com.transport.simulator.service.model.TicketSnapshot;
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Locale;
@@ -25,6 +28,7 @@ public class MultiTripTicketService {
     private final TicketJourneyRepository journeyRepository;
     private final StationRepository stationRepository;
     private final NetworkJourneyPlanningService journeyPlanningService;
+    private final TicketOperationRegistrationService operationRegistrationService;
     private final Clock clock;
 
     public MultiTripTicketService(
@@ -32,12 +36,14 @@ public class MultiTripTicketService {
             TicketJourneyRepository journeyRepository,
             StationRepository stationRepository,
             NetworkJourneyPlanningService journeyPlanningService,
+            TicketOperationRegistrationService operationRegistrationService,
             Clock clock
     ) {
         this.ticketRepository = ticketRepository;
         this.journeyRepository = journeyRepository;
         this.stationRepository = stationRepository;
         this.journeyPlanningService = journeyPlanningService;
+        this.operationRegistrationService = operationRegistrationService;
         this.clock = clock;
     }
 
@@ -51,11 +57,16 @@ public class MultiTripTicketService {
             throw new IllegalStateException("The ticket already has an open journey");
         }
 
+        TicketSnapshot before = TicketSnapshot.from(ticket);
         LocalDateTime now = LocalDateTime.now(clock);
         ticket.consumeTrip(now);
-        return journeyRepository.save(new TicketJourney(
+        TicketJourney journey = journeyRepository.save(new TicketJourney(
                 uniqueCode("RMM-JRN"), ticket, station, now
         ));
+        operationRegistrationService.recordJourney(
+                TicketOperationType.ENTRY_ACCEPTED, ticket, journey, station, before, BigDecimal.ZERO
+        );
+        return journey;
     }
 
     @Transactional
@@ -68,6 +79,7 @@ public class MultiTripTicketService {
             throw new IllegalStateException("The ticket cannot complete its open journey");
         }
 
+        TicketSnapshot before = TicketSnapshot.from(ticket);
         TicketJourney journey = openJourney(ticket)
                 .orElseThrow(() -> new IllegalStateException("The ticket has no open journey"));
         int stationCount = calculateStationCount(journey.getEntryStation(), station);
@@ -77,7 +89,12 @@ public class MultiTripTicketService {
                 ticket.getProduct().getPricePerTrip(),
                 LocalDateTime.now(clock)
         );
-        return journeyRepository.save(journey);
+        TicketJourney persisted = journeyRepository.save(journey);
+        operationRegistrationService.recordJourney(
+                TicketOperationType.EXIT_ACCEPTED, ticket, persisted, station,
+                before, ticket.getProduct().getPricePerTrip()
+        );
+        return persisted;
     }
 
     @Transactional

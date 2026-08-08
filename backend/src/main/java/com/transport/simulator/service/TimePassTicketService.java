@@ -4,12 +4,14 @@ import com.transport.simulator.entity.Station;
 import com.transport.simulator.entity.Ticket;
 import com.transport.simulator.entity.TicketJourney;
 import com.transport.simulator.enums.TicketJourneyStatus;
+import com.transport.simulator.enums.TicketOperationType;
 import com.transport.simulator.enums.TicketProductType;
 import com.transport.simulator.enums.TicketStatus;
 import com.transport.simulator.repository.StationRepository;
 import com.transport.simulator.repository.TicketJourneyRepository;
 import com.transport.simulator.repository.TicketRepository;
 import com.transport.simulator.service.model.NetworkJourney;
+import com.transport.simulator.service.model.TicketSnapshot;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -26,6 +28,7 @@ public class TimePassTicketService {
     private final TicketJourneyRepository journeyRepository;
     private final StationRepository stationRepository;
     private final NetworkJourneyPlanningService journeyPlanningService;
+    private final TicketOperationRegistrationService operationRegistrationService;
     private final Clock clock;
 
     public TimePassTicketService(
@@ -33,12 +36,14 @@ public class TimePassTicketService {
             TicketJourneyRepository journeyRepository,
             StationRepository stationRepository,
             NetworkJourneyPlanningService journeyPlanningService,
+            TicketOperationRegistrationService operationRegistrationService,
             Clock clock
     ) {
         this.ticketRepository = ticketRepository;
         this.journeyRepository = journeyRepository;
         this.stationRepository = stationRepository;
         this.journeyPlanningService = journeyPlanningService;
+        this.operationRegistrationService = operationRegistrationService;
         this.clock = clock;
     }
 
@@ -47,6 +52,7 @@ public class TimePassTicketService {
         Ticket ticket = requiredTicketForUpdate(ticketCode);
         Station station = requiredStation(stationCode);
         requireTimePass(ticket);
+        TicketSnapshot before = TicketSnapshot.from(ticket);
         LocalDateTime now = LocalDateTime.now(clock);
         ticket.refreshTimePassStatus(now);
         if (!ticket.isValidAt(now)) {
@@ -57,9 +63,13 @@ public class TimePassTicketService {
         }
 
         ticket.recordUse(now);
-        return journeyRepository.save(new TicketJourney(
+        TicketJourney journey = journeyRepository.save(new TicketJourney(
                 uniqueCode("RMM-JRN"), ticket, station, now
         ));
+        operationRegistrationService.recordJourney(
+                TicketOperationType.ENTRY_ACCEPTED, ticket, journey, station, before, BigDecimal.ZERO
+        );
+        return journey;
     }
 
     @Transactional
@@ -72,6 +82,7 @@ public class TimePassTicketService {
             throw new IllegalStateException("The ticket cannot complete its open journey");
         }
 
+        TicketSnapshot before = TicketSnapshot.from(ticket);
         TicketJourney journey = openJourney(ticket)
                 .orElseThrow(() -> new IllegalStateException("The ticket has no open journey"));
         LocalDateTime now = LocalDateTime.now(clock);
@@ -79,7 +90,11 @@ public class TimePassTicketService {
         int stationCount = calculateStationCount(journey.getEntryStation(), station);
         journey.close(station, stationCount, BigDecimal.ZERO, now);
         ticket.recordUse(now);
-        return journeyRepository.save(journey);
+        TicketJourney persisted = journeyRepository.save(journey);
+        operationRegistrationService.recordJourney(
+                TicketOperationType.EXIT_ACCEPTED, ticket, persisted, station, before, BigDecimal.ZERO
+        );
+        return persisted;
     }
 
     @Transactional

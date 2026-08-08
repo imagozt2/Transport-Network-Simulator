@@ -167,6 +167,7 @@ public class Purchase extends AuditableEntity {
     public String getCode() { return code; }
     public PurchaseType getType() { return type; }
     public Ticket getTicket() { return ticket; }
+    public PurchaseOrigin getOrigin() { return origin; }
     public PurchaseStatus getStatus() { return status; }
     public BigDecimal getTotalAmount() { return totalAmount; }
     public String getExternalReference() { return externalReference; }
