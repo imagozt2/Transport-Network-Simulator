@@ -35,12 +35,16 @@ services:
   mosquitto:
     image: eclipse-mosquitto:2.0.22-openssl
     container_name: rmm-mosquitto
+    command:
+      - mosquitto
+      - -c
+      - ${MOSQUITTO_CONFIG_FILE:-/mosquitto/config/mosquitto.conf}
     restart: unless-stopped
     stop_grace_period: 30s
     ports:
-      - "127.0.0.1:1883:1883"
+      - "127.0.0.1:${RMM_MQTT_HOST_PORT:-1883}:${RMM_MQTT_PORT:-1883}"
     volumes:
-      - ./infrastructure/mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./infrastructure/mosquitto/config:/mosquitto/config:ro
       - ./infrastructure/mosquitto/runtime:/mosquitto/security:ro
       - mosquitto-data:/mosquitto/data
     healthcheck:
@@ -82,10 +86,15 @@ services:
       DEVICE_EVENT_SIMULATION_INITIAL_DELAY_MS: ${DEVICE_EVENT_SIMULATION_INITIAL_DELAY_MS:-1000}
       DEVICE_EVENT_SIMULATION_INTERVAL_MS: ${DEVICE_EVENT_SIMULATION_INTERVAL_MS:-1000}
       RMM_MQTT_HOST: mosquitto
-      RMM_MQTT_PORT: 1883
-      RMM_MQTT_TLS: "false"
+      RMM_MQTT_PORT: ${RMM_MQTT_PORT:-1883}
+      RMM_MQTT_TLS: ${RMM_MQTT_TLS:-false}
       RMM_MQTT_USERNAME: ${MQTT_BACKEND_USERNAME:-rmm-backend}
-      RMM_MQTT_PASSWORD: ${MQTT_BACKEND_PASSWORD:?Define MQTT_BACKEND_PASSWORD in .env}
+      RMM_MQTT_PASSWORD: ${MQTT_BACKEND_PASSWORD:-}
+      RMM_MQTT_CA_CERTIFICATE: /app/mqtt-certificates/ca.crt
+      RMM_MQTT_CLIENT_CERTIFICATE: /app/mqtt-certificates/clients/rmm-backend.crt
+      RMM_MQTT_CLIENT_PRIVATE_KEY: /app/mqtt-certificates/clients/rmm-backend.key
+    volumes:
+      - ./infrastructure/mosquitto/runtime/certificates:/app/mqtt-certificates:ro
     ports:
       - "127.0.0.1:8080:8080"
     depends_on:

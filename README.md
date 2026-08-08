@@ -223,6 +223,9 @@ Los scripts de `database/` se ejecutan automáticamente solo cuando el volumen d
 La configuración y prueba manual del broker se describen en la
 [guía de Mosquitto](infrastructure/mosquitto/README.md).
 
+Cuando exista material criptográfico aprovisionado, el archivo `.env.tls.example` permite sustituir
+el listener local por MQTT sobre TLS con certificados de cliente obligatorios.
+
 ## Endpoints disponibles
 
 | Método | Ruta | Descripción |

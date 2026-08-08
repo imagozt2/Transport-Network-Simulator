@@ -114,6 +114,60 @@ Docker utiliza su controlador `local` y conserva como máximo cinco archivos de 
 evita que el broker consuma espacio en disco indefinidamente; estos logs pertenecen a diagnóstico y
 no sustituyen los eventos operativos persistidos por el backend.
 
+## Listener TLS
+
+`config/mosquitto-tls.conf` define un modo seguro alternativo en el puerto `8883` con estas
+propiedades:
+
+- TLS 1.2 como versión mínima, manteniendo la negociación de TLS 1.3 cuando esté disponible;
+- certificado de servidor para el broker;
+- validación obligatoria del certificado de cada cliente;
+- acceso anónimo y autenticación por contraseña deshabilitados;
+- identidad MQTT obtenida del `CN` del certificado para aplicar las ACL existentes.
+
+El material criptográfico se suministra fuera de Git con esta estructura:
+
+```text
+infrastructure/mosquitto/runtime/certificates/
+├── ca.crt
+├── broker.crt
+├── broker.key
+└── clients/
+    ├── rmm-backend.crt
+    ├── rmm-backend.key
+    ├── RMM-SALE-ST046-01.crt
+    ├── RMM-SALE-ST046-01.key
+    └── RMM-VAL-ST046-ENT-01.*
+```
+
+El certificado del broker debe admitir autenticación de servidor y contener los nombres usados para
+conectarse, como `mosquitto` dentro de Docker y `localhost` o `127.0.0.1` desde el equipo. Cada
+certificado cliente debe admitir autenticación de cliente, utilizar como `CN` exactamente su usuario
+MQTT e incluir además la SAN URI definida en el
+[contrato de identidad](../../docs/identidad-maquinas.md).
+
+Antes de iniciar el modo seguro, comprueba que los archivos mínimos existen y no están versionados:
+
+```powershell
+.\infrastructure\mosquitto\scripts\validate-tls-material.ps1
+Copy-Item .env.tls.example .env.tls
+```
+
+Después activa las sustituciones TLS sobre la configuración local habitual:
+
+```powershell
+docker compose --env-file .env --env-file .env.tls up -d --build
+docker compose --env-file .env --env-file .env.tls ps
+```
+
+El broker queda disponible en `mqtts://127.0.0.1:8883`. El backend recibe las rutas de su CA,
+certificado y clave dentro del contenedor. Las aplicaciones Qt deberán recibir sus propios archivos,
+nunca los del backend ni los de otra máquina.
+
+`.env.tls`, los certificados y todas las claves privadas permanecen ignorados por Git. La CA y las
+credenciales deben proceder del mecanismo de aprovisionamiento del entorno; este repositorio no
+genera una autoridad certificadora ni claves privadas de producción.
+
 El acceso anónimo está deshabilitado y el puerto solo se publica en la interfaz local del equipo.
 Las contraseñas cifradas permiten probar el aislamiento por dispositivo, pero no sustituyen la
 identidad mediante certificados prevista para entornos desplegados. TLS y el aprovisionamiento
