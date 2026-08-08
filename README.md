@@ -80,6 +80,7 @@ Transport-Network-Simulator/
 ├── database/            # Esquema, datos iniciales y verificaciones de MySQL
 ├── docs/                # Documentación funcional y contratos de API
 ├── frontend/            # Aplicación web desarrollada con Angular
+├── infrastructure/      # Broker MQTT y recursos de infraestructura local
 └── qt/                  # Máquinas simuladas desarrolladas con Qt y C++
 ```
 
@@ -94,7 +95,8 @@ Para ejecutar el proyecto localmente se necesita:
 - Node.js 20 o posterior;
 - npm;
 - MySQL 8;
-- cliente de MySQL disponible desde la terminal para cargar los scripts.
+- cliente de MySQL disponible desde la terminal para cargar los scripts;
+- Docker Desktop con Docker Compose para ejecutar el broker MQTT local.
 
 ## Inicialización de la base de datos
 
@@ -199,6 +201,18 @@ RMM App y las máquinas Qt disponen de una guía específica con la configuraci�
 ejecución desde los IDE, los comandos de compilación y la ubicación de los artefactos:
 
 - [Ejecución de las aplicaciones cliente](docs/ejecucion-aplicaciones-cliente.md)
+
+### Broker MQTT
+
+El broker local se ejecuta mediante Docker Compose:
+
+```powershell
+docker compose up -d mosquitto
+docker compose ps mosquitto
+```
+
+Mosquitto queda disponible únicamente en `127.0.0.1:1883`. La configuración inicial y su prueba
+manual se describen en la [guía del broker MQTT](infrastructure/mosquitto/README.md).
 
 ## Endpoints disponibles
 

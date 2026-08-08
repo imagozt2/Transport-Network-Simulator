@@ -1,0 +1,31 @@
+name: rmm-local
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2.0.22-openssl
+    container_name: rmm-mosquitto
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:1883:1883"
+    volumes:
+      - ./infrastructure/mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto-data:/mosquitto/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          mosquitto_sub -h 127.0.0.1 -p 1883
+          -t '$$SYS/broker/version' -C 1 -W 5
+      interval: 10s
+      timeout: 6s
+      retries: 5
+      start_period: 10s
+    networks:
+      - rmm-internal
+
+volumes:
+  mosquitto-data:
+
+networks:
+  rmm-internal:
+    name: rmm-internal
