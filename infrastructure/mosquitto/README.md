@@ -34,6 +34,9 @@ Para detener el servicio conservando sus mensajes persistidos:
 docker compose stop mosquitto
 ```
 
+Mosquitto recibe una parada controlada y dispone de hasta 30 segundos para guardar el estado antes
+de que Docker fuerce su finalización.
+
 Para retirar todo el entorno definido por Docker Compose sin borrar sus volúmenes:
 
 ```powershell
@@ -80,9 +83,36 @@ máquina debe ser rechazado por el broker.
 
 ## Persistencia y seguridad
 
-Los datos se conservan en el volumen Docker `rmm-local_mosquitto-data`. `docker compose down` no lo
-elimina; la opción `--volumes` sí lo hace y debe usarse únicamente cuando se quiera reiniciar
-deliberadamente el estado local.
+Los datos se conservan en `mosquitto.db` dentro del volumen Docker `rmm-local_mosquitto-data`. El
+broker guarda periódicamente:
+
+- sesiones persistentes y sus suscripciones;
+- mensajes retenidos;
+- mensajes QoS pendientes para clientes desconectados;
+- estado interno necesario para recuperarse después de un reinicio.
+
+El guardado se realiza cada 30 segundos y durante una parada controlada. Las sesiones que no vuelven
+a conectarse durante 14 días caducan para evitar acumulaciones indefinidas. Cada cliente desconectado
+puede conservar como máximo 1000 mensajes o 10 MiB en cola.
+
+`docker compose restart mosquitto`, `stop`, `down` y la recreación del contenedor conservan el
+volumen. `docker compose down --volumes` sí elimina definitivamente la persistencia y debe utilizarse
+solo cuando se quiera reiniciar deliberadamente el entorno local.
+
+## Logs del broker
+
+Mosquitto escribe en la salida estándar los errores, advertencias, avisos, conexiones, suscripciones
+y cancelaciones de suscripción. Los logs incluyen timestamps con zona horaria, pero no registran los
+payloads ni las contraseñas de los clientes.
+
+```powershell
+docker compose logs mosquitto
+docker compose logs --since 10m -f mosquitto
+```
+
+Docker utiliza su controlador `local` y conserva como máximo cinco archivos de 10 MB. La rotación
+evita que el broker consuma espacio en disco indefinidamente; estos logs pertenecen a diagnóstico y
+no sustituyen los eventos operativos persistidos por el backend.
 
 El acceso anónimo está deshabilitado y el puerto solo se publica en la interfaz local del equipo.
 Las contraseñas cifradas permiten probar el aislamiento por dispositivo, pero no sustituyen la

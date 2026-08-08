@@ -36,6 +36,7 @@ services:
     image: eclipse-mosquitto:2.0.22-openssl
     container_name: rmm-mosquitto
     restart: unless-stopped
+    stop_grace_period: 30s
     ports:
       - "127.0.0.1:1883:1883"
     volumes:
@@ -50,6 +51,11 @@ services:
       timeout: 6s
       retries: 5
       start_period: 10s
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "5"
     networks:
       - rmm-internal
 
