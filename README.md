@@ -202,17 +202,23 @@ ejecución desde los IDE, los comandos de compilación y la ubicación de los ar
 
 - [Ejecución de las aplicaciones cliente](docs/ejecucion-aplicaciones-cliente.md)
 
-### Broker MQTT
+### Entorno Docker
 
-El broker local se ejecuta mediante Docker Compose:
+MySQL, Mosquitto y el backend pueden ejecutarse como un entorno coordinado. Antes del primer inicio,
+crea la configuración local y sustituye todos sus marcadores:
 
 ```powershell
-docker compose up -d mosquitto
-docker compose ps mosquitto
+Copy-Item .env.example .env
+docker compose up -d --build
+docker compose ps
 ```
 
-Mosquitto queda disponible únicamente en `127.0.0.1:1883`. La configuración inicial y su prueba
-manual se describen en la [guía del broker MQTT](infrastructure/mosquitto/README.md).
+El backend queda disponible en `127.0.0.1:8080`, Mosquitto en `127.0.0.1:1883` y MySQL en
+`127.0.0.1:3307`, evitando interferir con una instalación local de MySQL en el puerto `3306`.
+
+Los scripts de `database/` se ejecutan automáticamente solo cuando el volumen de MySQL está vacío.
+La configuración y prueba manual del broker se describen en la
+[guía de Mosquitto](infrastructure/mosquitto/README.md).
 
 ## Endpoints disponibles
 

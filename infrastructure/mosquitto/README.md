@@ -19,11 +19,13 @@ Para detener el servicio conservando sus mensajes persistidos:
 docker compose stop mosquitto
 ```
 
-Para retirar el contenedor y la red sin borrar el volumen:
+Para retirar todo el entorno definido por Docker Compose sin borrar sus volúmenes:
 
 ```powershell
 docker compose down
 ```
+
+Este último comando también retira los contenedores del backend y MySQL si estaban iniciados.
 
 El broker escucha en `127.0.0.1:1883`, de acuerdo con
 [`config/local-services.properties.example`](../../config/local-services.properties.example).
@@ -55,4 +57,3 @@ Esta configuración admite conexiones anónimas exclusivamente para facilitar el
 desarrollo y el puerto solo se publica en la interfaz local del equipo. No debe desplegarse en un
 entorno compartido o de producción. Las identidades individuales, ACL y conexiones TLS descritas en
 [`docs/identidad-maquinas.md`](../../docs/identidad-maquinas.md) se añadirán en fases posteriores.
-
