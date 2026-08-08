@@ -40,13 +40,12 @@ services:
       - "127.0.0.1:1883:1883"
     volumes:
       - ./infrastructure/mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./infrastructure/mosquitto/runtime:/mosquitto/security:ro
       - mosquitto-data:/mosquitto/data
     healthcheck:
       test:
         - CMD-SHELL
-        - >-
-          mosquitto_sub -h 127.0.0.1 -p 1883
-          -t '$$SYS/broker/version' -C 1 -W 5
+        - pidof mosquitto >/dev/null
       interval: 10s
       timeout: 6s
       retries: 5
@@ -79,6 +78,8 @@ services:
       RMM_MQTT_HOST: mosquitto
       RMM_MQTT_PORT: 1883
       RMM_MQTT_TLS: "false"
+      RMM_MQTT_USERNAME: ${MQTT_BACKEND_USERNAME:-rmm-backend}
+      RMM_MQTT_PASSWORD: ${MQTT_BACKEND_PASSWORD:?Define MQTT_BACKEND_PASSWORD in .env}
     ports:
       - "127.0.0.1:8080:8080"
     depends_on:

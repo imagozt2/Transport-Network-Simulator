@@ -209,6 +209,9 @@ crea la configuración local y sustituye todos sus marcadores:
 
 ```powershell
 Copy-Item .env.example .env
+Copy-Item infrastructure/mosquitto/mqtt-users.example `
+  infrastructure/mosquitto/mqtt-users.local
+.\infrastructure\mosquitto\scripts\initialize-security.ps1
 docker compose up -d --build
 docker compose ps
 ```

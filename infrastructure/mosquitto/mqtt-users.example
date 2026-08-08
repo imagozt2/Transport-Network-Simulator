@@ -1,0 +1,7 @@
+# Copia este archivo como mqtt-users.local y sustituye todas las contraseñas.
+# Formato: usuario=contraseña
+rmm-backend=replace_with_a_strong_local_password
+RMM-SALE-ST046-01=replace_with_a_different_strong_local_password
+RMM-VAL-ST046-ENT-01=replace_with_a_different_strong_local_password
+RMM-VAL-ST046-EXT-01=replace_with_a_different_strong_local_password
+

@@ -6,3 +6,6 @@
 /.env.*
 !/.env.example
 
+# Credenciales MQTT locales antes de generar el password file
+/infrastructure/mosquitto/mqtt-users.local
+
