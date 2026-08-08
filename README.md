@@ -96,7 +96,7 @@ Para ejecutar el proyecto localmente se necesita:
 - npm;
 - MySQL 8;
 - cliente de MySQL disponible desde la terminal para cargar los scripts;
-- Docker Desktop con Docker Compose para ejecutar el broker MQTT local.
+- Docker Desktop con Docker Compose para ejecutar la infraestructura local coordinada.
 
 ## Inicialización de la base de datos
 
@@ -226,6 +226,9 @@ La configuración y prueba manual del broker se describen en la
 Cuando exista material criptográfico aprovisionado, el archivo `.env.tls.example` permite sustituir
 el listener local por MQTT sobre TLS con certificados de cliente obligatorios.
 
+La preparación completa, la topología, las comprobaciones de salud, el ciclo de vida de los datos y
+el diagnóstico se recogen en la [guía de infraestructura local](docs/infraestructura-local.md).
+
 ## Endpoints disponibles
 
 | Método | Ruta | Descripción |
@@ -284,6 +287,7 @@ ejecuta las pruebas de Android y Qt y conserva temporalmente sus artefactos de c
 ## Documentación
 
 - [Arquitectura, componentes y responsabilidades del ecosistema RMM](docs/arquitectura-ecosistema.md)
+- [Infraestructura local del ecosistema RMM](docs/infraestructura-local.md)
 - [Ejecución de RMM App y las aplicaciones Qt](docs/ejecucion-aplicaciones-cliente.md)
 - [Ciclo de vida de los billetes RMM](docs/ciclo-vida-billetes.md)
 - [Contrato y firma de los códigos QR](docs/contrato-codigos-qr.md)
