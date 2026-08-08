@@ -152,6 +152,16 @@ WHERE tickets.id IS NULL
    OR (credentials.credential_status = 'REVOKED' AND credentials.revoked_at IS NULL)
    OR (credentials.credential_status <> 'REVOKED' AND credentials.revoked_at IS NOT NULL);
 
+SELECT claims.id, claims.validation_reference, claims.claim_status
+FROM ticket_qr_use_claims claims
+LEFT JOIN ticket_qr_credentials credentials ON credentials.id = claims.credential_id
+WHERE credentials.id IS NULL
+   OR claims.validation_type NOT IN ('ENTRY', 'EXIT')
+   OR claims.claim_status NOT IN ('RECEIVED', 'COMPLETED')
+   OR (claims.claim_status = 'RECEIVED' AND claims.completed_at IS NOT NULL)
+   OR (claims.claim_status = 'COMPLETED' AND claims.completed_at IS NULL)
+   OR claims.completed_at < claims.received_at;
+
 SELECT operations.id, operations.code, operations.operation_type
 FROM ticket_operations operations
 LEFT JOIN tickets ON tickets.id = operations.ticket_id

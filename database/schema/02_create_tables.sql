@@ -639,6 +639,38 @@ CREATE INDEX idx_ticket_qr_credentials_key_status
 CREATE INDEX idx_ticket_qr_credentials_expires_at
     ON ticket_qr_credentials (expires_at);
 
+CREATE TABLE ticket_qr_use_claims (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    validation_reference VARCHAR(150) NOT NULL,
+    credential_id BIGINT NOT NULL,
+    validation_type VARCHAR(20) NOT NULL,
+    device_code VARCHAR(50) NOT NULL,
+    station_code VARCHAR(20) NOT NULL,
+    request_fingerprint CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    claim_status VARCHAR(20) NOT NULL DEFAULT 'RECEIVED',
+    received_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at DATETIME NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_ticket_qr_use_claims_reference UNIQUE (validation_reference),
+    CONSTRAINT fk_ticket_qr_use_claims_credential FOREIGN KEY (credential_id)
+        REFERENCES ticket_qr_credentials (id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT chk_ticket_qr_use_claims_type CHECK (validation_type IN ('ENTRY', 'EXIT')),
+    CONSTRAINT chk_ticket_qr_use_claims_status CHECK (claim_status IN ('RECEIVED', 'COMPLETED')),
+    CONSTRAINT chk_ticket_qr_use_claims_fingerprint CHECK (
+        request_fingerprint REGEXP '^[0-9a-fA-F]{64}$'
+    ),
+    CONSTRAINT chk_ticket_qr_use_claims_completed CHECK (
+        (claim_status = 'RECEIVED' AND completed_at IS NULL)
+        OR (claim_status = 'COMPLETED' AND completed_at IS NOT NULL)
+    )
+);
+
+CREATE INDEX idx_ticket_qr_use_claims_credential_received
+    ON ticket_qr_use_claims (credential_id, received_at);
+CREATE INDEX idx_ticket_qr_use_claims_status_received
+    ON ticket_qr_use_claims (claim_status, received_at);
+
 CREATE TABLE purchases (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     code VARCHAR(80) NOT NULL,
