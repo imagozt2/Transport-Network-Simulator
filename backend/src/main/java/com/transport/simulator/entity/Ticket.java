@@ -157,7 +157,11 @@ public class Ticket extends AuditableEntity {
     }
 
     public void configureMoneyBalance(BigDecimal amount) {
-        balanceAmount = Objects.requireNonNull(amount);
+        if (productType != TicketProductType.SMART_BALANCE) {
+            throw new IllegalStateException("Only smart-balance tickets have a money balance");
+        }
+        requireRechargeAmountWithinProductRange(amount);
+        balanceAmount = amount;
     }
 
     public void assignPassenger(PassengerAccount passenger) {
@@ -300,6 +304,73 @@ public class Ticket extends AuditableEntity {
         }
     }
 
+    public boolean canStartSmartBalanceJourney() {
+        return productType == TicketProductType.SMART_BALANCE
+                && active
+                && status == TicketStatus.ACTIVE
+                && balanceAmount.compareTo(minimumSmartBalanceFare()) >= 0;
+    }
+
+    public BigDecimal calculateSmartBalanceFare(int stations) {
+        if (productType != TicketProductType.SMART_BALANCE) {
+            throw new IllegalStateException("Only smart-balance tickets calculate journey fares");
+        }
+        if (stations <= 0) {
+            throw new IllegalArgumentException("stations must be positive");
+        }
+        return product.getBasePrice().add(
+                product.getPricePerStation().multiply(BigDecimal.valueOf(stations))
+        );
+    }
+
+    public void deductSmartBalanceFare(BigDecimal fare, LocalDateTime at) {
+        if (productType != TicketProductType.SMART_BALANCE || status != TicketStatus.ACTIVE) {
+            throw new IllegalStateException("The ticket cannot pay a smart-balance fare");
+        }
+        Objects.requireNonNull(fare, "fare is required");
+        if (fare.signum() < 0 || balanceAmount.compareTo(fare) < 0) {
+            throw new IllegalStateException("The ticket has insufficient balance for the journey fare");
+        }
+        balanceAmount = balanceAmount.subtract(fare);
+        lastUsedAt = Objects.requireNonNull(at, "at is required");
+        if (balanceAmount.compareTo(minimumSmartBalanceFare()) < 0) {
+            status = TicketStatus.EXHAUSTED;
+            exhaustedAt = at;
+            statusChangedAt = at;
+        }
+    }
+
+    public void rechargeMoneyBalance(BigDecimal amount, LocalDateTime at) {
+        if (productType != TicketProductType.SMART_BALANCE) {
+            throw new IllegalStateException("Only smart-balance tickets accept money recharges");
+        }
+        if (status != TicketStatus.ACTIVE && status != TicketStatus.EXHAUSTED) {
+            throw new IllegalStateException("The ticket cannot be recharged in its current status");
+        }
+        requireRechargeAmountWithinProductRange(amount);
+        balanceAmount = balanceAmount.add(amount);
+        status = TicketStatus.ACTIVE;
+        exhaustedAt = null;
+        statusChangedAt = Objects.requireNonNull(at, "at is required");
+        lastRechargedAt = at;
+    }
+
+    private BigDecimal minimumSmartBalanceFare() {
+        return product.getBasePrice().add(product.getPricePerStation());
+    }
+
+    private void requireRechargeAmountWithinProductRange(BigDecimal amount) {
+        Objects.requireNonNull(amount, "amount is required");
+        if (product.getMinRechargeAmount() == null || product.getMaxRechargeAmount() == null
+                || amount.compareTo(product.getMinRechargeAmount()) < 0
+                || amount.compareTo(product.getMaxRechargeAmount()) > 0) {
+            throw new IllegalArgumentException(
+                    "Recharge amount must be between " + product.getMinRechargeAmount()
+                            + " and " + product.getMaxRechargeAmount()
+            );
+        }
+    }
+
     public Long getId() { return id; }
     public String getCode() { return code; }
     public String getQrToken() { return qrToken; }
@@ -315,6 +386,7 @@ public class Ticket extends AuditableEntity {
     public Integer getPurchasedDays() { return purchasedDays; }
     public LocalDateTime getValidFrom() { return validFrom; }
     public LocalDateTime getValidUntil() { return validUntil; }
+    public BigDecimal getBalanceAmount() { return balanceAmount; }
     public String getCurrency() { return currency; }
     public PassengerAccount getPassengerAccount() { return passengerAccount; }
     public boolean isActive() { return active; }
