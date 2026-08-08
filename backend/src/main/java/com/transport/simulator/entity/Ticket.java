@@ -101,6 +101,9 @@ public class Ticket extends AuditableEntity {
     @Column(name = "exhausted_at")
     private LocalDateTime exhaustedAt;
 
+    @Column(name = "expired_at")
+    private LocalDateTime expiredAt;
+
     @Column(name = "lock_version", nullable = false)
     @Version
     private long lockVersion;
@@ -144,8 +147,12 @@ public class Ticket extends AuditableEntity {
     }
 
     public void configureValidity(int days, LocalDateTime from) {
+        if (productType != TicketProductType.TIME_PASS) {
+            throw new IllegalStateException("Only time passes have a validity period");
+        }
+        requireDaysWithinProductRange(days);
         purchasedDays = days;
-        validFrom = from;
+        validFrom = Objects.requireNonNull(from, "from is required");
         validUntil = from.plusDays(days);
     }
 
@@ -231,6 +238,68 @@ public class Ticket extends AuditableEntity {
         }
     }
 
+    public void refreshTimePassStatus(LocalDateTime at) {
+        if (productType != TicketProductType.TIME_PASS) {
+            throw new IllegalStateException("Only time passes have a validity period");
+        }
+        Objects.requireNonNull(at, "at is required");
+        if (status == TicketStatus.ACTIVE && validUntil != null && at.isAfter(validUntil)) {
+            status = TicketStatus.EXPIRED;
+            expiredAt = at;
+            statusChangedAt = at;
+        }
+    }
+
+    public boolean isValidAt(LocalDateTime at) {
+        Objects.requireNonNull(at, "at is required");
+        return productType == TicketProductType.TIME_PASS
+                && active
+                && status == TicketStatus.ACTIVE
+                && validFrom != null
+                && validUntil != null
+                && !at.isBefore(validFrom)
+                && !at.isAfter(validUntil);
+    }
+
+    public void renewValidity(int days, LocalDateTime at) {
+        if (productType != TicketProductType.TIME_PASS) {
+            throw new IllegalStateException("Only time passes accept validity renewals");
+        }
+        if (status != TicketStatus.ACTIVE && status != TicketStatus.EXPIRED) {
+            throw new IllegalStateException("The ticket cannot be renewed in its current status");
+        }
+        requireDaysWithinProductRange(days);
+        Objects.requireNonNull(at, "at is required");
+        if (status == TicketStatus.ACTIVE && validUntil != null && !at.isAfter(validUntil)) {
+            purchasedDays = Math.addExact(purchasedDays == null ? 0 : purchasedDays, days);
+            validUntil = validUntil.plusDays(days);
+        } else {
+            purchasedDays = days;
+            validFrom = at;
+            validUntil = at.plusDays(days);
+        }
+        status = TicketStatus.ACTIVE;
+        expiredAt = null;
+        statusChangedAt = at;
+        lastRechargedAt = at;
+    }
+
+    public void recordUse(LocalDateTime at) {
+        if (status != TicketStatus.ACTIVE && status != TicketStatus.EXPIRED) {
+            throw new IllegalStateException("The ticket cannot record a use in its current status");
+        }
+        lastUsedAt = Objects.requireNonNull(at, "at is required");
+    }
+
+    private void requireDaysWithinProductRange(int days) {
+        if (product.getMinDays() == null || product.getMaxDays() == null
+                || days < product.getMinDays() || days > product.getMaxDays()) {
+            throw new IllegalArgumentException(
+                    "Days must be between " + product.getMinDays() + " and " + product.getMaxDays()
+            );
+        }
+    }
+
     public Long getId() { return id; }
     public String getCode() { return code; }
     public String getQrToken() { return qrToken; }
@@ -243,6 +312,9 @@ public class Ticket extends AuditableEntity {
     public BigDecimal getRoutePriceAmount() { return routePriceAmount; }
     public Integer getPurchasedTrips() { return purchasedTrips; }
     public Integer getRemainingTrips() { return remainingTrips; }
+    public Integer getPurchasedDays() { return purchasedDays; }
+    public LocalDateTime getValidFrom() { return validFrom; }
+    public LocalDateTime getValidUntil() { return validUntil; }
     public String getCurrency() { return currency; }
     public PassengerAccount getPassengerAccount() { return passengerAccount; }
     public boolean isActive() { return active; }
