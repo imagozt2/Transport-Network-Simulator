@@ -12,6 +12,18 @@ FROM passenger_account_status_changes;
 SELECT COUNT(*) AS compensatory_ticket_issuance_count
 FROM compensatory_ticket_issuances;
 
+SELECT COUNT(*) AS ticket_count
+FROM tickets;
+
+SELECT COUNT(*) AS ticket_support_count
+FROM ticket_supports;
+
+SELECT COUNT(*) AS ticket_qr_credential_count
+FROM ticket_qr_credentials;
+
+SELECT COUNT(*) AS ticket_operation_count
+FROM ticket_operations;
+
 SELECT COUNT(*) AS incident_count
 FROM incidents;
 
@@ -92,6 +104,71 @@ WHERE products.id IS NULL
    OR (products.product_type = 'MULTI_TRIP' AND issuances.selected_trips IS NULL)
    OR (products.product_type = 'TIME_PASS' AND issuances.selected_days IS NULL)
    OR (products.product_type = 'SMART_BALANCE' AND issuances.recharge_amount IS NULL);
+
+SELECT tickets.id, tickets.code, tickets.product_type, tickets.status
+FROM tickets
+LEFT JOIN ticket_products products ON products.id = tickets.product_id
+LEFT JOIN passenger_accounts passengers ON passengers.id = tickets.passenger_user_id
+WHERE products.id IS NULL
+   OR tickets.product_type <> products.product_type
+   OR tickets.status NOT IN ('ACTIVE', 'EXHAUSTED', 'EXPIRED', 'BLOCKED', 'CANCELLED')
+   OR tickets.balance_amount < 0
+   OR tickets.lock_version < 0
+   OR (tickets.passenger_user_id IS NOT NULL AND passengers.id IS NULL);
+
+SELECT supports.id, supports.code, supports.support_type, supports.support_status
+FROM ticket_supports supports
+LEFT JOIN tickets ON tickets.id = supports.ticket_id
+LEFT JOIN devices ON devices.id = supports.issued_by_device_id
+LEFT JOIN passenger_accounts passengers ON passengers.id = supports.passenger_account_id
+LEFT JOIN ticket_supports replacements ON replacements.id = supports.replaced_by_support_id
+WHERE tickets.id IS NULL
+   OR supports.support_type NOT IN ('PHYSICAL', 'DIGITAL')
+   OR supports.support_status NOT IN ('ACTIVE', 'BLOCKED', 'REVOKED', 'SUPERSEDED')
+   OR (supports.issued_by_device_id IS NOT NULL AND devices.id IS NULL)
+   OR (supports.passenger_account_id IS NOT NULL AND passengers.id IS NULL)
+   OR (supports.replaced_by_support_id IS NOT NULL AND replacements.id IS NULL)
+   OR (supports.support_status = 'SUPERSEDED' AND replacements.id IS NULL)
+   OR (supports.support_status <> 'SUPERSEDED' AND replacements.id IS NOT NULL)
+   OR (supports.support_type = 'DIGITAL' AND supports.passenger_account_id IS NULL)
+   OR (supports.support_type = 'PHYSICAL' AND supports.serial_number IS NULL)
+   OR (supports.passenger_account_id IS NOT NULL
+       AND tickets.passenger_user_id IS NOT NULL
+       AND supports.passenger_account_id <> tickets.passenger_user_id);
+
+SELECT credentials.id, credentials.credential_id, credentials.credential_status
+FROM ticket_qr_credentials credentials
+LEFT JOIN tickets ON tickets.id = credentials.ticket_id
+LEFT JOIN ticket_supports supports ON supports.id = credentials.support_id
+LEFT JOIN ticket_qr_credentials replacements
+    ON replacements.id = credentials.superseded_by_credential_id
+WHERE tickets.id IS NULL
+   OR supports.id IS NULL
+   OR supports.ticket_id <> credentials.ticket_id
+   OR credentials.credential_status NOT IN ('ACTIVE', 'REVOKED', 'SUPERSEDED', 'EXPIRED')
+   OR (credentials.superseded_by_credential_id IS NOT NULL AND replacements.id IS NULL)
+   OR (credentials.credential_status = 'SUPERSEDED' AND replacements.id IS NULL)
+   OR (credentials.credential_status <> 'SUPERSEDED' AND replacements.id IS NOT NULL)
+   OR (credentials.credential_status = 'REVOKED' AND credentials.revoked_at IS NULL)
+   OR (credentials.credential_status <> 'REVOKED' AND credentials.revoked_at IS NOT NULL);
+
+SELECT operations.id, operations.code, operations.operation_type
+FROM ticket_operations operations
+LEFT JOIN tickets ON tickets.id = operations.ticket_id
+LEFT JOIN ticket_supports supports ON supports.id = operations.support_id
+LEFT JOIN purchases ON purchases.id = operations.purchase_id
+LEFT JOIN ticket_journeys journeys ON journeys.id = operations.journey_id
+WHERE tickets.id IS NULL
+   OR (operations.support_id IS NOT NULL AND supports.id IS NULL)
+   OR (operations.purchase_id IS NOT NULL AND purchases.id IS NULL)
+   OR (operations.journey_id IS NOT NULL AND journeys.id IS NULL)
+   OR (supports.id IS NOT NULL AND supports.ticket_id <> operations.ticket_id)
+   OR (purchases.id IS NOT NULL AND purchases.ticket_id <> operations.ticket_id)
+   OR (journeys.id IS NOT NULL AND journeys.ticket_id <> operations.ticket_id)
+   OR operations.operation_type NOT IN (
+       'ISSUED', 'RECHARGED', 'ENTRY_ACCEPTED', 'EXIT_ACCEPTED',
+       'BLOCKED', 'UNBLOCKED', 'CANCELLED', 'SUPPORT_LINKED', 'QR_REVOKED'
+   );
 
 SELECT incidents.id, incidents.code, incidents.incident_status, incidents.priority
 FROM incidents

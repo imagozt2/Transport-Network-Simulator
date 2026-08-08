@@ -25,7 +25,6 @@ import com.transport.simulator.repository.ServicePeriodRepository;
 import com.transport.simulator.repository.TransportLineRepository;
 import com.transport.simulator.service.model.ResolvedLineServiceConfiguration;
 import java.time.Clock;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -274,7 +273,7 @@ class ServiceConfigurationServiceTests {
     @Test
     void shouldRejectALineWithoutAServiceLevelForTheCurrentPeriod() {
         ServiceConfigurationService service = createService(Clock.system(SERVICE_ZONE));
-        ServiceCalendar calendar = activeTuesdayCalendar();
+        activeTuesdayCalendar();
         ServicePeriod period = servicePeriod(
                 20L,
                 "MORNING_PEAK",

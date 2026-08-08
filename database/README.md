@@ -34,6 +34,19 @@ incluyen emisiones iniciales: esta tabla contiene exclusivamente actividad admin
 simulada de la aplicación. Los logs pueden asociarse a la emisión mediante
 `operational_logs.compensatory_issuance_id`.
 
+El núcleo de ticketing separa el derecho de transporte de su representación. `tickets` conserva el
+producto aplicado, su estado, saldo o vigencia, titularidad y datos de concurrencia. Un billete puede
+representarse mediante uno o varios registros de `ticket_supports`, físicos o digitales, sin
+duplicar sus derechos. Los soportes físicos admiten un número de serie y vinculación posterior a una
+cuenta; los digitales nacen vinculados al pasajero correspondiente.
+
+`ticket_qr_credentials` mantiene las credenciales QR versionadas asociadas a cada soporte. Solo
+persiste su identificador y huella, nunca el contenido íntegro del QR. Sus estados permiten revocar,
+caducar o sustituir una credencial sin eliminar el billete ni su historial. Los campos `qr_token`,
+`imported_to_android` y `android_imported_at` de `tickets` se conservan temporalmente para mantener
+la compatibilidad con la emisión compensatoria existente; el backend los retirará cuando adopte el
+nuevo modelo de soportes.
+
 `incidents` constituye la base de la herramienta de ticketing del centro de control. Cada incidencia
 incluye categoría, prioridad, estado, operador creador y responsable, fechas del ciclo de vida y
 referencias opcionales a la línea, estación, tren, máquina o cochera afectada. La evolución queda
