@@ -165,5 +165,6 @@ página actual para conservar la coherencia con los filtros.
 - Las mutaciones requieren sesión administrativa y token CSRF.
 - Todo cambio de estado conserva trazabilidad.
 
-Antes de conectar RMM App será necesario definir sus contratos públicos de registro, verificación,
-autenticación, consentimiento, eliminación de cuenta y recuperación de credenciales.
+El registro, la verificación, las sesiones, la recuperación y el aislamiento respecto al centro de
+control se describen en [Autenticación de RMM App](autenticacion-rmm-app.md). La administración de
+esta pantalla no comparte credenciales ni sesiones con esos flujos móviles.
