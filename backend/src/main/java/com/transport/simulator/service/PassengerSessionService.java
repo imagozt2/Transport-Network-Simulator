@@ -20,6 +20,8 @@ import java.time.ZoneOffset;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.Locale;
+import java.util.List;
+import com.transport.simulator.dto.response.passenger.PassengerSessionSummaryResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -127,7 +129,38 @@ public class PassengerSessionService {
         }
         PassengerSession session = sessionRepository.findByIdForUpdate(principal.sessionId())
                 .orElseThrow(this::invalidSession);
+        if (!session.getPassengerAccount().getId().equals(principal.accountId())) {
+            throw invalidSession();
+        }
         session.revoke(now(), "USER_LOGOUT");
+    }
+
+    @Transactional(readOnly = true)
+    public List<PassengerSessionSummaryResponse> sessions(Authentication authentication) {
+        PassengerPrincipal principal = requiredPrincipal(authentication);
+        return sessionRepository
+                .findAllByPassengerAccountIdAndRevokedAtIsNullOrderByLastUsedAtDesc(
+                        principal.accountId()
+                )
+                .stream()
+                .map(session -> PassengerSessionSummaryResponse.from(
+                        session,
+                        principal.sessionId()
+                ))
+                .toList();
+    }
+
+    @Transactional
+    public void revokeSession(String publicSessionId, Authentication authentication) {
+        PassengerPrincipal principal = requiredPrincipal(authentication);
+        PassengerSession session = sessionRepository.findOwnedByPublicIdForUpdate(
+                publicSessionId == null ? "" : publicSessionId.trim(),
+                principal.accountId()
+        ).orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND,
+                "Passenger session not found"
+        ));
+        session.revoke(now(), "USER_REVOKED");
     }
 
     private void requireActive(PassengerAccount account) {
@@ -183,6 +216,15 @@ public class PassengerSessionService {
 
     private ResponseStatusException invalidSession() {
         return new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid passenger session");
+    }
+
+    private PassengerPrincipal requiredPrincipal(Authentication authentication) {
+        if (authentication == null
+                || !authentication.isAuthenticated()
+                || !(authentication.getPrincipal() instanceof PassengerPrincipal principal)) {
+            throw invalidSession();
+        }
+        return principal;
     }
 
     private record TokenPair(

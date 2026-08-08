@@ -89,6 +89,7 @@ CREATE INDEX idx_passenger_accounts_name
 
 CREATE TABLE passenger_sessions (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    public_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
     passenger_account_id BIGINT NOT NULL,
     installation_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
     device_name VARCHAR(100) NOT NULL,
@@ -104,9 +105,13 @@ CREATE TABLE passenger_sessions (
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT uk_passenger_sessions_access_token UNIQUE (access_token_hash),
     CONSTRAINT uk_passenger_sessions_refresh_token UNIQUE (refresh_token_hash),
+    CONSTRAINT uk_passenger_sessions_public_id UNIQUE (public_id),
     CONSTRAINT fk_passenger_sessions_account FOREIGN KEY (passenger_account_id)
         REFERENCES passenger_accounts (id) ON UPDATE CASCADE ON DELETE CASCADE,
     CONSTRAINT chk_passenger_sessions_platform CHECK (platform = 'ANDROID'),
+    CONSTRAINT chk_passenger_sessions_public_id CHECK (
+        public_id REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+    ),
     CONSTRAINT chk_passenger_sessions_access_expiry CHECK (
         access_token_expires_at <= refresh_token_expires_at
     ),

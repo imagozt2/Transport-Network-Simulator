@@ -79,6 +79,7 @@ SELECT sessions.id, sessions.installation_id, sessions.platform
 FROM passenger_sessions sessions
 LEFT JOIN passenger_accounts passengers ON passengers.id = sessions.passenger_account_id
 WHERE passengers.id IS NULL
+   OR sessions.public_id NOT REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
    OR sessions.platform <> 'ANDROID'
    OR sessions.access_token_expires_at > sessions.refresh_token_expires_at
    OR (sessions.revoked_at IS NULL AND sessions.revocation_reason IS NOT NULL)

@@ -14,6 +14,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import java.util.Objects;
+import java.util.UUID;
 
 @Entity
 @Table(name = "passenger_sessions")
@@ -22,6 +23,9 @@ public class PassengerSession extends AuditableEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "public_id", nullable = false, unique = true, length = 36)
+    private String publicId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "passenger_account_id", nullable = false)
@@ -72,6 +76,7 @@ public class PassengerSession extends AuditableEntity {
             LocalDateTime refreshTokenExpiresAt,
             LocalDateTime issuedAt
     ) {
+        this.publicId = UUID.randomUUID().toString();
         this.passengerAccount = Objects.requireNonNull(passengerAccount);
         this.installationId = requireText(installationId);
         this.deviceName = requireText(deviceName);
@@ -129,6 +134,7 @@ public class PassengerSession extends AuditableEntity {
     }
 
     public Long getId() { return id; }
+    public String getPublicId() { return publicId; }
     public PassengerAccount getPassengerAccount() { return passengerAccount; }
     public String getInstallationId() { return installationId; }
     public String getDeviceName() { return deviceName; }

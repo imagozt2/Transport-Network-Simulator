@@ -12,6 +12,8 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
 
     Optional<Ticket> findByCode(String code);
 
+    Optional<Ticket> findByCodeAndPassengerAccountId(String code, Long passengerAccountId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select ticket from Ticket ticket where ticket.code = :code")
     Optional<Ticket> findByCodeForUpdate(@Param("code") String code);

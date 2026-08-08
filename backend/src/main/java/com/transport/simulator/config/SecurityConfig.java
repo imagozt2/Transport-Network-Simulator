@@ -53,7 +53,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/rmm-app/v1/auth/password-recovery-requests").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/rmm-app/v1/auth/password-resets").permitAll()
                         .requestMatchers("/api/rmm-app/v1/**").hasRole("PASSENGER")
-                        .requestMatchers("/api/auth/**").authenticated()
+                        .requestMatchers("/api/auth/**").hasAnyRole("OPERATOR", "ADMINISTRATOR")
                         .requestMatchers(
                                 HttpMethod.PATCH,
                                 "/api/admin/passenger-users/**"
@@ -66,7 +66,7 @@ public class SecurityConfig {
                                 HttpMethod.DELETE,
                                 "/api/admin/passenger-users/**"
                         ).hasRole("ADMINISTRATOR")
-                        .requestMatchers("/api/**").authenticated()
+                        .requestMatchers("/api/**").hasAnyRole("OPERATOR", "ADMINISTRATOR")
                         .anyRequest().permitAll())
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(authenticationEntryPoint)

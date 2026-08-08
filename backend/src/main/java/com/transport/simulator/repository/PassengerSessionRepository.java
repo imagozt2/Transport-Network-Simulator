@@ -3,6 +3,7 @@ package com.transport.simulator.repository;
 import com.transport.simulator.entity.PassengerSession;
 import jakarta.persistence.LockModeType;
 import java.util.Optional;
+import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -21,6 +22,21 @@ public interface PassengerSessionRepository extends JpaRepository<PassengerSessi
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select session from PassengerSession session join fetch session.passengerAccount where session.id = :id")
     Optional<PassengerSession> findByIdForUpdate(@Param("id") Long id);
+
+    List<PassengerSession> findAllByPassengerAccountIdAndRevokedAtIsNullOrderByLastUsedAtDesc(
+            Long accountId
+    );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select session from PassengerSession session
+            join fetch session.passengerAccount
+            where session.publicId = :publicId and session.passengerAccount.id = :accountId
+            """)
+    Optional<PassengerSession> findOwnedByPublicIdForUpdate(
+            @Param("publicId") String publicId,
+            @Param("accountId") Long accountId
+    );
 
     @Modifying
     @Query("""
