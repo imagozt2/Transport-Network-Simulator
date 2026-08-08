@@ -6,8 +6,9 @@ Este documento define cómo nace, se activa, utiliza, recarga, bloquea y termina
 ecosistema RMM. Las reglas son independientes de su representación física o digital: ambos soportes
 referencian un billete cuya autoridad reside en el backend.
 
-El documento fija el comportamiento funcional esperado. La estructura actual de la base de datos se
-adaptará progresivamente a estos estados cuando se implemente el núcleo de billetes.
+El documento fija el comportamiento funcional esperado. El núcleo implementado se describe en
+[Dominio de billetes](dominio-billetes.md), donde se relacionan estas reglas con las entidades,
+servicios y tablas actuales.
 
 ## Conceptos separados
 

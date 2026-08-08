@@ -145,10 +145,13 @@ necesita saber tanto cuánto cuesta el producto como qué datos requiere para ut
 
 ## Alcance actual
 
-La sección implementada es de consulta. Todavía no modifica productos ni emite billetes.
+La sección web mantiene el catálogo como una consulta de solo lectura. El backend incorpora además
+el dominio transaccional de emisión, uso y recarga descrito en
+[Dominio de billetes](dominio-billetes.md); estas operaciones no se ejecutan desde la consulta del
+catálogo.
 
-La emisión administrativa gratuita prevista para incidencias deberá implementarse como una
-operación transaccional independiente. Tendrá que validar:
+La emisión administrativa gratuita para incidencias se mantiene como una operación transaccional
+independiente. Valida:
 
 - que el producto esté activo;
 - que la máquina seleccionada sea una máquina de venta activa;
@@ -156,8 +159,8 @@ operación transaccional independiente. Tendrá que validar:
 - la creación coherente del billete, su QR y el registro de compra con importe cero;
 - la trazabilidad del motivo de la reemisión.
 
-Separar esta operación evita que una consulta del catálogo pueda producir efectos sobre billetes o
-compras.
+Esta separación evita que una consulta del catálogo pueda producir efectos sobre billetes o
+compras y conserva la trazabilidad del operador que solicita la compensación.
 
 ## Pruebas
 
