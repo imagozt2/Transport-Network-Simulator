@@ -54,6 +54,7 @@ import com.transport.simulator.repository.TrainRepository;
 import com.transport.simulator.repository.TransportLineRepository;
 import com.transport.simulator.security.OperatorPrincipal;
 import com.transport.simulator.service.model.NetworkJourney;
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -100,6 +101,8 @@ class ControlCenterFeaturesIntegrationTests {
         when(product.isActive()).thenReturn(true);
         when(product.getCode()).thenReturn("SINGLE_TRIP");
         when(product.getProductType()).thenReturn(TicketProductType.SINGLE_TRIP);
+        when(product.getBasePrice()).thenReturn(new BigDecimal("0.50"));
+        when(product.getPricePerStation()).thenReturn(new BigDecimal("0.05"));
         Device device = mock(Device.class);
         when(device.getCode()).thenReturn("TM-ST001-01");
         when(device.getName()).thenReturn("Máquina de Aeropuerto 1");
