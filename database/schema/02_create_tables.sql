@@ -41,7 +41,10 @@ CREATE TABLE passenger_accounts (
     password_hash VARCHAR(255) NOT NULL,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(150) NOT NULL,
-    account_status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE',
+    account_status VARCHAR(30) NOT NULL DEFAULT 'PENDING_VERIFICATION',
+    preferred_locale VARCHAR(10) NOT NULL DEFAULT 'es-ES',
+    accepted_terms_version VARCHAR(30) NULL,
+    accepted_terms_at DATETIME NULL,
     email_verified_at DATETIME NULL,
     failed_login_attempts INT NOT NULL DEFAULT 0,
     locked_until DATETIME NULL,
@@ -63,7 +66,14 @@ CREATE TABLE passenger_accounts (
         CHAR_LENGTH(TRIM(last_name)) > 0
     ),
     CONSTRAINT chk_passenger_accounts_status CHECK (
-        account_status IN ('ACTIVE', 'BLOCKED', 'DISABLED')
+        account_status IN ('PENDING_VERIFICATION', 'ACTIVE', 'BLOCKED', 'DISABLED')
+    ),
+    CONSTRAINT chk_passenger_accounts_locale CHECK (
+        preferred_locale REGEXP '^[a-z]{2}-[A-Z]{2}$'
+    ),
+    CONSTRAINT chk_passenger_accounts_terms CHECK (
+        (accepted_terms_version IS NULL AND accepted_terms_at IS NULL)
+        OR (CHAR_LENGTH(TRIM(accepted_terms_version)) > 0 AND accepted_terms_at IS NOT NULL)
     ),
     CONSTRAINT chk_passenger_accounts_failed_attempts CHECK (failed_login_attempts >= 0)
 );
@@ -92,10 +102,10 @@ CREATE TABLE passenger_account_status_changes (
         REFERENCES operator_accounts (id)
         ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT chk_passenger_status_changes_previous CHECK (
-        previous_status IN ('ACTIVE', 'BLOCKED', 'DISABLED')
+        previous_status IN ('PENDING_VERIFICATION', 'ACTIVE', 'BLOCKED', 'DISABLED')
     ),
     CONSTRAINT chk_passenger_status_changes_new CHECK (
-        new_status IN ('ACTIVE', 'BLOCKED', 'DISABLED')
+        new_status IN ('PENDING_VERIFICATION', 'ACTIVE', 'BLOCKED', 'DISABLED')
     ),
     CONSTRAINT chk_passenger_status_changes_distinct CHECK (
         previous_status <> new_status

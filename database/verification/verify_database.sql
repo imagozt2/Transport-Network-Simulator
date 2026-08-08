@@ -66,7 +66,7 @@ WHERE public_id NOT REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[
    OR CHAR_LENGTH(password_hash) < 20
    OR CHAR_LENGTH(TRIM(first_name)) = 0
    OR CHAR_LENGTH(TRIM(last_name)) = 0
-   OR account_status NOT IN ('ACTIVE', 'BLOCKED', 'DISABLED')
+   OR account_status NOT IN ('PENDING_VERIFICATION', 'ACTIVE', 'BLOCKED', 'DISABLED')
    OR failed_login_attempts < 0;
 
 SELECT status_changes.id
@@ -78,8 +78,8 @@ LEFT JOIN operator_accounts operators
 WHERE passengers.id IS NULL
    OR operators.id IS NULL
    OR status_changes.previous_status = status_changes.new_status
-   OR status_changes.previous_status NOT IN ('ACTIVE', 'BLOCKED', 'DISABLED')
-   OR status_changes.new_status NOT IN ('ACTIVE', 'BLOCKED', 'DISABLED');
+   OR status_changes.previous_status NOT IN ('PENDING_VERIFICATION', 'ACTIVE', 'BLOCKED', 'DISABLED')
+   OR status_changes.new_status NOT IN ('PENDING_VERIFICATION', 'ACTIVE', 'BLOCKED', 'DISABLED');
 
 SELECT issuances.id, issuances.code, products.product_type, devices.code AS device_code,
        devices.device_type, issuances.issuance_status

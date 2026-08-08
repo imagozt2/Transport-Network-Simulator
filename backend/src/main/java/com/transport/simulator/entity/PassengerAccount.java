@@ -49,6 +49,15 @@ public class PassengerAccount extends AuditableEntity {
     @Column(name = "email_verified_at")
     private LocalDateTime emailVerifiedAt;
 
+    @Column(name = "preferred_locale", nullable = false, length = 10)
+    private String preferredLocale;
+
+    @Column(name = "accepted_terms_version", length = 30)
+    private String acceptedTermsVersion;
+
+    @Column(name = "accepted_terms_at")
+    private LocalDateTime acceptedTermsAt;
+
     @Column(name = "failed_login_attempts", nullable = false)
     private int failedLoginAttempts;
 
@@ -82,6 +91,30 @@ public class PassengerAccount extends AuditableEntity {
         this.firstName = requireText(firstName);
         this.lastName = requireText(lastName);
         this.status = PassengerAccountStatus.ACTIVE;
+        this.preferredLocale = "es-ES";
+    }
+
+    public static PassengerAccount register(
+            String publicId,
+            String email,
+            String passwordHash,
+            String firstName,
+            String lastName,
+            String preferredLocale,
+            String acceptedTermsVersion,
+            LocalDateTime acceptedTermsAt
+    ) {
+        PassengerAccount account = new PassengerAccount(
+                publicId, email, passwordHash, firstName, lastName
+        );
+        account.status = PassengerAccountStatus.PENDING_VERIFICATION;
+        account.preferredLocale = requireText(preferredLocale);
+        account.acceptedTermsVersion = requireText(acceptedTermsVersion);
+        account.acceptedTermsAt = Objects.requireNonNull(
+                acceptedTermsAt,
+                "acceptedTermsAt is required"
+        );
+        return account;
     }
 
     public PassengerAccountStatus changeStatus(PassengerAccountStatus newStatus) {
@@ -134,6 +167,10 @@ public class PassengerAccount extends AuditableEntity {
     public LocalDateTime getEmailVerifiedAt() {
         return emailVerifiedAt;
     }
+
+    public String getPreferredLocale() { return preferredLocale; }
+    public String getAcceptedTermsVersion() { return acceptedTermsVersion; }
+    public LocalDateTime getAcceptedTermsAt() { return acceptedTermsAt; }
 
     public int getFailedLoginAttempts() {
         return failedLoginAttempts;

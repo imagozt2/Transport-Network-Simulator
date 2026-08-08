@@ -33,13 +33,15 @@ public class SecurityConfig {
                 .cors(cors -> {
                 })
                 .csrf(csrf -> csrf
+                        .ignoringRequestMatchers("/api/rmm-app/v1/**")
                         .csrfTokenRepository(csrfRepository))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(
                                 "/api/health",
                                 "/api/auth/csrf",
-                                "/api/auth/login"
+                                "/api/auth/login",
+                                "/api/rmm-app/v1/auth/register"
                         ).permitAll()
                         .requestMatchers("/api/auth/**").authenticated()
                         .requestMatchers(
