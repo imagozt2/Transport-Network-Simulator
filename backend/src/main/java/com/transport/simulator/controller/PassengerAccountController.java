@@ -4,6 +4,8 @@ import com.transport.simulator.dto.response.passenger.PassengerRegistrationUserR
 import com.transport.simulator.dto.response.passenger.PassengerSessionSummaryResponse;
 import com.transport.simulator.service.PassengerResourceAccessService;
 import com.transport.simulator.service.PassengerSessionService;
+import com.transport.simulator.service.PassengerMobileDeviceService;
+import com.transport.simulator.dto.response.passenger.PassengerMobileDeviceResponse;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -20,13 +22,16 @@ public class PassengerAccountController {
 
     private final PassengerResourceAccessService accessService;
     private final PassengerSessionService sessionService;
+    private final PassengerMobileDeviceService deviceService;
 
     public PassengerAccountController(
             PassengerResourceAccessService accessService,
-            PassengerSessionService sessionService
+            PassengerSessionService sessionService,
+            PassengerMobileDeviceService deviceService
     ) {
         this.accessService = accessService;
         this.sessionService = sessionService;
+        this.deviceService = deviceService;
     }
 
     @GetMapping
@@ -46,5 +51,16 @@ public class PassengerAccountController {
             Authentication authentication
     ) {
         sessionService.revokeSession(sessionId, authentication);
+    }
+
+    @GetMapping("/devices")
+    public List<PassengerMobileDeviceResponse> devices(Authentication authentication) {
+        return deviceService.devices(authentication);
+    }
+
+    @DeleteMapping("/devices/{deviceId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void revokeDevice(@PathVariable String deviceId, Authentication authentication) {
+        deviceService.revoke(deviceId, authentication);
     }
 }

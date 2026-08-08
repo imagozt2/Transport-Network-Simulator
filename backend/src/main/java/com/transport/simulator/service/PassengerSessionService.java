@@ -6,9 +6,11 @@ import com.transport.simulator.dto.response.passenger.PassengerRegistrationUserR
 import com.transport.simulator.dto.response.passenger.PassengerSessionResponse;
 import com.transport.simulator.entity.PassengerAccount;
 import com.transport.simulator.entity.PassengerSession;
+import com.transport.simulator.entity.PassengerMobileDevice;
 import com.transport.simulator.enums.PassengerAccountStatus;
 import com.transport.simulator.repository.PassengerAccountRepository;
 import com.transport.simulator.repository.PassengerSessionRepository;
+import com.transport.simulator.repository.PassengerMobileDeviceRepository;
 import com.transport.simulator.security.PassengerPrincipal;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -39,6 +41,7 @@ public class PassengerSessionService {
 
     private final PassengerAccountRepository accountRepository;
     private final PassengerSessionRepository sessionRepository;
+    private final PassengerMobileDeviceRepository deviceRepository;
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
     private final Duration accessTokenLifetime;
@@ -48,6 +51,7 @@ public class PassengerSessionService {
     public PassengerSessionService(
             PassengerAccountRepository accountRepository,
             PassengerSessionRepository sessionRepository,
+            PassengerMobileDeviceRepository deviceRepository,
             PasswordEncoder passwordEncoder,
             Clock clock,
             @Value("${app.rmm-app.session.access-token-lifetime}") Duration accessTokenLifetime,
@@ -55,6 +59,7 @@ public class PassengerSessionService {
     ) {
         this.accountRepository = accountRepository;
         this.sessionRepository = sessionRepository;
+        this.deviceRepository = deviceRepository;
         this.passwordEncoder = passwordEncoder;
         this.clock = clock;
         this.accessTokenLifetime = accessTokenLifetime;
@@ -84,12 +89,19 @@ public class PassengerSessionService {
         account.registerSuccessfulLogin(now);
         accountRepository.save(account);
 
+        PassengerMobileDevice device = deviceRepository
+                .findByInstallationIdForUpdate(request.device().installationId())
+                .map(existing -> reuseDevice(existing, account, request.device().name(),
+                        request.device().platform(), now))
+                .orElseGet(() -> deviceRepository.save(new PassengerMobileDevice(
+                        account, request.device().installationId(), request.device().name(),
+                        request.device().platform(), now
+                )));
+        sessionRepository.revokeAllActiveByMobileDeviceId(device.getId(), now, "DEVICE_REAUTHENTICATED");
+
         TokenPair tokens = newTokenPair(now);
         PassengerSession session = sessionRepository.save(new PassengerSession(
-                account,
-                request.device().installationId(),
-                request.device().name(),
-                request.device().platform(),
+                device,
                 hash(tokens.accessToken()),
                 hash(tokens.refreshToken()),
                 tokens.accessExpiresAt(),
@@ -109,6 +121,9 @@ public class PassengerSessionService {
             throw invalidSession();
         }
         requireActive(session.getPassengerAccount());
+        session.getMobileDevice().recordUse(
+                session.getDeviceName(), session.getPlatform(), now
+        );
 
         TokenPair tokens = newTokenPair(now);
         session.rotate(
@@ -139,7 +154,7 @@ public class PassengerSessionService {
     public List<PassengerSessionSummaryResponse> sessions(Authentication authentication) {
         PassengerPrincipal principal = requiredPrincipal(authentication);
         return sessionRepository
-                .findAllByPassengerAccountIdAndRevokedAtIsNullOrderByLastUsedAtDesc(
+                .findAllByMobileDevicePassengerAccountIdAndRevokedAtIsNullOrderByLastUsedAtDesc(
                         principal.accountId()
                 )
                 .stream()
@@ -167,6 +182,17 @@ public class PassengerSessionService {
         if (account.getStatus() != PassengerAccountStatus.ACTIVE) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Passenger account is not active");
         }
+    }
+
+    private PassengerMobileDevice reuseDevice(PassengerMobileDevice device, PassengerAccount account,
+            String name, com.transport.simulator.enums.PassengerDevicePlatform platform,
+            LocalDateTime now) {
+        if (!device.getPassengerAccount().getId().equals(account.getId()) || !device.isActive()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Mobile device is not available for this passenger account");
+        }
+        device.recordUse(name, platform, now);
+        return device;
     }
 
     private TokenPair newTokenPair(LocalDateTime now) {

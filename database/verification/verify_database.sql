@@ -9,6 +9,9 @@ FROM passenger_accounts;
 SELECT COUNT(*) AS passenger_session_count
 FROM passenger_sessions;
 
+SELECT COUNT(*) AS passenger_mobile_device_count
+FROM passenger_mobile_devices;
+
 SELECT COUNT(*) AS passenger_account_token_count
 FROM passenger_account_tokens;
 
@@ -75,12 +78,21 @@ WHERE public_id NOT REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[
    OR account_status NOT IN ('PENDING_VERIFICATION', 'ACTIVE', 'BLOCKED', 'DISABLED')
    OR failed_login_attempts < 0;
 
-SELECT sessions.id, sessions.installation_id, sessions.platform
-FROM passenger_sessions sessions
-LEFT JOIN passenger_accounts passengers ON passengers.id = sessions.passenger_account_id
+SELECT devices.id, devices.installation_id, devices.platform, devices.device_status
+FROM passenger_mobile_devices devices
+LEFT JOIN passenger_accounts passengers ON passengers.id = devices.passenger_account_id
 WHERE passengers.id IS NULL
+   OR devices.public_id NOT REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+   OR devices.platform <> 'ANDROID'
+   OR devices.device_status NOT IN ('ACTIVE', 'REVOKED')
+   OR (devices.device_status = 'ACTIVE' AND devices.revoked_at IS NOT NULL)
+   OR (devices.device_status = 'REVOKED' AND devices.revoked_at IS NULL);
+
+SELECT sessions.id, devices.installation_id, devices.platform
+FROM passenger_sessions sessions
+LEFT JOIN passenger_mobile_devices devices ON devices.id = sessions.mobile_device_id
+WHERE devices.id IS NULL
    OR sessions.public_id NOT REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
-   OR sessions.platform <> 'ANDROID'
    OR sessions.access_token_expires_at > sessions.refresh_token_expires_at
    OR (sessions.revoked_at IS NULL AND sessions.revocation_reason IS NOT NULL)
    OR (sessions.revoked_at IS NOT NULL

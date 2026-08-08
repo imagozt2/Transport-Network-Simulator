@@ -1,10 +1,7 @@
 package com.transport.simulator.entity;
 
-import com.transport.simulator.enums.PassengerDevicePlatform;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -28,18 +25,8 @@ public class PassengerSession extends AuditableEntity {
     private String publicId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "passenger_account_id", nullable = false)
-    private PassengerAccount passengerAccount;
-
-    @Column(name = "installation_id", nullable = false, length = 36)
-    private String installationId;
-
-    @Column(name = "device_name", nullable = false, length = 100)
-    private String deviceName;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private PassengerDevicePlatform platform;
+    @JoinColumn(name = "mobile_device_id", nullable = false)
+    private PassengerMobileDevice mobileDevice;
 
     @Column(name = "access_token_hash", nullable = false, unique = true, length = 64)
     private String accessTokenHash;
@@ -66,10 +53,7 @@ public class PassengerSession extends AuditableEntity {
     }
 
     public PassengerSession(
-            PassengerAccount passengerAccount,
-            String installationId,
-            String deviceName,
-            PassengerDevicePlatform platform,
+            PassengerMobileDevice mobileDevice,
             String accessTokenHash,
             String refreshTokenHash,
             LocalDateTime accessTokenExpiresAt,
@@ -77,10 +61,7 @@ public class PassengerSession extends AuditableEntity {
             LocalDateTime issuedAt
     ) {
         this.publicId = UUID.randomUUID().toString();
-        this.passengerAccount = Objects.requireNonNull(passengerAccount);
-        this.installationId = requireText(installationId);
-        this.deviceName = requireText(deviceName);
-        this.platform = Objects.requireNonNull(platform);
+        this.mobileDevice = Objects.requireNonNull(mobileDevice);
         this.accessTokenHash = requireText(accessTokenHash);
         this.refreshTokenHash = requireText(refreshTokenHash);
         this.accessTokenExpiresAt = Objects.requireNonNull(accessTokenExpiresAt);
@@ -95,7 +76,8 @@ public class PassengerSession extends AuditableEntity {
     public boolean canRefresh(LocalDateTime now, String requestedInstallationId) {
         return revokedAt == null
                 && refreshTokenExpiresAt.isAfter(now)
-                && installationId.equals(requestedInstallationId);
+                && mobileDevice.isActive()
+                && mobileDevice.getInstallationId().equals(requestedInstallationId);
     }
 
     public void rotate(
@@ -135,10 +117,11 @@ public class PassengerSession extends AuditableEntity {
 
     public Long getId() { return id; }
     public String getPublicId() { return publicId; }
-    public PassengerAccount getPassengerAccount() { return passengerAccount; }
-    public String getInstallationId() { return installationId; }
-    public String getDeviceName() { return deviceName; }
-    public PassengerDevicePlatform getPlatform() { return platform; }
+    public PassengerMobileDevice getMobileDevice() { return mobileDevice; }
+    public PassengerAccount getPassengerAccount() { return mobileDevice.getPassengerAccount(); }
+    public String getInstallationId() { return mobileDevice.getInstallationId(); }
+    public String getDeviceName() { return mobileDevice.getDeviceName(); }
+    public com.transport.simulator.enums.PassengerDevicePlatform getPlatform() { return mobileDevice.getPlatform(); }
     public LocalDateTime getAccessTokenExpiresAt() { return accessTokenExpiresAt; }
     public LocalDateTime getRefreshTokenExpiresAt() { return refreshTokenExpiresAt; }
     public LocalDateTime getLastUsedAt() { return lastUsedAt; }

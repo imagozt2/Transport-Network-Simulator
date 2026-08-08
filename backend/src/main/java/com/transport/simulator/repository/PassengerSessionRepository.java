@@ -12,26 +12,27 @@ import org.springframework.data.repository.query.Param;
 
 public interface PassengerSessionRepository extends JpaRepository<PassengerSession, Long> {
 
-    @Query("select session from PassengerSession session join fetch session.passengerAccount where session.accessTokenHash = :hash")
+    @Query("select session from PassengerSession session join fetch session.mobileDevice device join fetch device.passengerAccount where session.accessTokenHash = :hash")
     Optional<PassengerSession> findByAccessTokenHash(@Param("hash") String hash);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select session from PassengerSession session join fetch session.passengerAccount where session.refreshTokenHash = :hash")
+    @Query("select session from PassengerSession session join fetch session.mobileDevice device join fetch device.passengerAccount where session.refreshTokenHash = :hash")
     Optional<PassengerSession> findByRefreshTokenHashForUpdate(@Param("hash") String hash);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select session from PassengerSession session join fetch session.passengerAccount where session.id = :id")
+    @Query("select session from PassengerSession session join fetch session.mobileDevice device join fetch device.passengerAccount where session.id = :id")
     Optional<PassengerSession> findByIdForUpdate(@Param("id") Long id);
 
-    List<PassengerSession> findAllByPassengerAccountIdAndRevokedAtIsNullOrderByLastUsedAtDesc(
+    List<PassengerSession> findAllByMobileDevicePassengerAccountIdAndRevokedAtIsNullOrderByLastUsedAtDesc(
             Long accountId
     );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             select session from PassengerSession session
-            join fetch session.passengerAccount
-            where session.publicId = :publicId and session.passengerAccount.id = :accountId
+            join fetch session.mobileDevice device
+            join fetch device.passengerAccount
+            where session.publicId = :publicId and device.passengerAccount.id = :accountId
             """)
     Optional<PassengerSession> findOwnedByPublicIdForUpdate(
             @Param("publicId") String publicId,
@@ -42,11 +43,16 @@ public interface PassengerSessionRepository extends JpaRepository<PassengerSessi
     @Query("""
             update PassengerSession session
             set session.revokedAt = :revokedAt, session.revocationReason = :reason
-            where session.passengerAccount.id = :accountId and session.revokedAt is null
+            where session.mobileDevice.passengerAccount.id = :accountId and session.revokedAt is null
             """)
     int revokeAllActiveByAccountId(
             @Param("accountId") Long accountId,
             @Param("revokedAt") java.time.LocalDateTime revokedAt,
             @Param("reason") String reason
     );
+
+    @Modifying
+    @Query("update PassengerSession session set session.revokedAt = :revokedAt, session.revocationReason = :reason where session.mobileDevice.id = :deviceId and session.revokedAt is null")
+    int revokeAllActiveByMobileDeviceId(@Param("deviceId") Long deviceId,
+            @Param("revokedAt") java.time.LocalDateTime revokedAt, @Param("reason") String reason);
 }
