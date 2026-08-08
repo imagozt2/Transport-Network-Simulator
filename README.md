@@ -291,7 +291,7 @@ ejecuta las pruebas de Android y Qt y conserva temporalmente sus artefactos de c
 - [Ejecución de RMM App y las aplicaciones Qt](docs/ejecucion-aplicaciones-cliente.md)
 - [Ciclo de vida de los billetes RMM](docs/ciclo-vida-billetes.md)
 - [Dominio de billetes y reglas de los productos](docs/dominio-billetes.md)
-- [Contrato y firma de los códigos QR](docs/contrato-codigos-qr.md)
+- [Seguridad, contrato y firma de los códigos QR](docs/contrato-codigos-qr.md)
 - [Contratos REST para RMM App](docs/contratos-rest-rmm-app.md)
 - [Topics y mensajes MQTT del ecosistema RMM](docs/contrato-mqtt.md)
 - [Identidad y autenticación de las máquinas RMM](docs/identidad-maquinas.md)

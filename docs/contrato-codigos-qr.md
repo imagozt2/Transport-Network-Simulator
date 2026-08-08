@@ -255,6 +255,134 @@ nuevo JWS y conserva la trazabilidad entre credenciales.
 Una clave comprometida se revoca inmediatamente. Las credenciales afectadas se sustituyen o exigen
 validación online según la respuesta de seguridad acordada.
 
+## Implementación en el backend
+
+La implementación se encuentra en `com.transport.simulator.ticketing.qr` y separa expresamente la
+construcción del contenido, la firma, la verificación y la protección frente a reintentos:
+
+| Componente | Responsabilidad |
+| --- | --- |
+| `TicketQrPayloadFactory` | Construye los claims mínimos a partir del soporte y la credencial. |
+| `TicketQrPayloadCodec` | Serializa y deserializa el payload JSON UTF-8. |
+| `TicketQrSigner` | Genera la cabecera protegida, firma con Ed25519 y construye el valor exterior. |
+| `TicketQrKeyRing` | Selecciona la clave activa y conserva las claves públicas retiradas. |
+| `TicketQrVerifier` | Comprueba formato, firma, claims temporales y estado persistido. |
+| `TicketQrUseGuard` | Registra referencias idempotentes y detecta reutilizaciones incompatibles. |
+
+La firma y la verificación utilizan directamente los proveedores criptográficos de Java 21. No se
+emplean secretos simétricos ni se permite que el algoritmo indicado por el propio token seleccione
+libremente el verificador.
+
+### Configuración criptográfica
+
+El repositorio no contiene claves reales ni valores predeterminados. El entorno de ejecución debe
+proporcionar:
+
+| Variable | Contenido |
+| --- | --- |
+| `TICKET_QR_SIGNING_KEY_ID` | Identificador versionado de la clave activa, por ejemplo `rmm-ticket-2026-01`. |
+| `TICKET_QR_SIGNING_PRIVATE_KEY` | Clave privada Ed25519 en PKCS#8, PEM o Base64 DER. |
+| `TICKET_QR_SIGNING_PUBLIC_KEY` | Clave pública correspondiente en X.509, PEM o Base64 DER. |
+| `TICKET_QR_RETIRED_PUBLIC_KEYS` | Claves públicas anteriores que todavía pueden verificar credenciales. |
+| `TICKET_QR_ALLOWED_CLOCK_SKEW_SECONDS` | Tolerancia temporal; por defecto, 60 segundos. |
+| `TICKET_QR_MAXIMUM_LENGTH` | Longitud máxima aceptada; por defecto, 4096 caracteres. |
+
+Las claves retiradas se expresan como entradas separadas por punto y coma:
+
+```text
+rmm-ticket-2025-01=BASE64_X509;rmm-ticket-2025-02=BASE64_X509
+```
+
+La clave privada se carga únicamente cuando se solicita una firma. Por ello, una instancia dedicada
+solo a consultas puede arrancar sin material privado, pero cualquier intento de emisión fallará de
+forma controlada hasta que se aprovisione el secreto.
+
+### Datos persistidos
+
+`ticket_qr_credentials` conserva la autoridad sobre cada credencial:
+
+- `credential_id` corresponde al claim `jti`;
+- `signing_key_id` corresponde al `kid` protegido;
+- `token_fingerprint` contiene SHA-256 del valor exterior completo;
+- `credential_status` controla activación, revocación, sustitución y caducidad;
+- `issued_at` y `expires_at` deben coincidir con `iat` y `exp`;
+- `ticket_id` y `support_id` vinculan el QR con su billete y soporte reales.
+
+No se persiste la clave privada. La huella permite detectar sustituciones del token sin utilizar su
+contenido completo como identificador interno.
+
+`ticket_qr_use_claims` protege el procesamiento de validaciones. Cada petición aporta una
+`validation_reference` única y se registra junto con una huella canónica de credencial, operación,
+máquina y estación. El valor QR completo tampoco se almacena en esta tabla.
+
+### Secuencia de verificación
+
+`TicketQrVerifier` aplica las comprobaciones en este orden:
+
+1. limita la longitud y reconoce el prefijo y la versión exterior;
+2. exige exactamente tres segmentos JWS no vacíos;
+3. valida `alg`, `kid` y `typ`;
+4. obtiene una clave pública confiable mediante `kid`;
+5. verifica la firma antes de interpretar el payload;
+6. valida emisor, audiencia, versión, formatos, `iat` y `exp`;
+7. busca `jti` y contrasta huella, billete, soporte, clave y fechas;
+8. rechaza credenciales revocadas, sustituidas o caducadas.
+
+Los fallos se clasifican mediante `TicketQrVerificationFailure`:
+
+| Grupo | Resultados principales |
+| --- | --- |
+| Formato | `MALFORMED_QR`, `UNSUPPORTED_VERSION`, `INVALID_HEADER`, `INVALID_PAYLOAD` |
+| Criptografía | `UNTRUSTED_KEY`, `INVALID_SIGNATURE`, `VERIFICATION_NOT_CONFIGURED` |
+| Tiempo | `NOT_YET_VALID`, `EXPIRED` |
+| Persistencia | `CREDENTIAL_NOT_FOUND`, `CREDENTIAL_INCONSISTENT` |
+| Ciclo de vida | `CREDENTIAL_REVOKED`, `CREDENTIAL_SUPERSEDED` |
+
+Estos códigos son internos y estables. Las APIs futuras podrán traducirlos a decisiones aptas para
+las máquinas sin revelar si un código concreto pertenece a un usuario o billete existente.
+
+### Rotación operativa
+
+El `kid` funciona como versión de la clave. Para una rotación ordinaria:
+
+1. se genera el nuevo par Ed25519 fuera del repositorio;
+2. se distribuye la nueva clave pública a los verificadores;
+3. se cambia `TICKET_QR_SIGNING_KEY_ID` y el par activo;
+4. se incorpora la clave pública anterior a `TICKET_QR_RETIRED_PUBLIC_KEYS`;
+5. se reinicia de forma controlada el servicio para cargar el nuevo anillo;
+6. se conserva la clave retirada mientras queden credenciales vigentes firmadas con ella.
+
+Una clave retirada verifica, pero nunca vuelve a firmar. Ante una filtración debe eliminarse del
+anillo de confianza y deben revocarse o sustituirse las credenciales afectadas.
+
+### Idempotencia y duplicación
+
+Un QR físico puede permanecer estable durante varios trayectos, por lo que escanearlo no lo consume
+automáticamente. La protección se aplica a cada operación de validación:
+
+- la primera referencia crea una reserva `RECEIVED`;
+- repetir la referencia con los mismos datos produce `IDEMPOTENT_RETRY`;
+- cambiar credencial, tipo, máquina o estación con la misma referencia produce un rechazo;
+- al finalizar la decisión, la reserva pasa a `COMPLETED`;
+- un bloqueo pesimista serializa las operaciones concurrentes sobre la credencial.
+
+De esta manera, los reintentos causados por pérdida de red no descuentan dos veces saldo o viajes,
+pero una misma credencial puede realizar posteriormente otra entrada o salida legítima con una
+referencia nueva.
+
+### Cobertura automatizada
+
+`TicketQrSecurityTests` genera un par Ed25519 efímero durante cada ejecución y cubre:
+
+- firma y verificación completas;
+- alteración del payload;
+- caducidad técnica;
+- revocación persistida;
+- reintentos idempotentes;
+- reutilización de una referencia con datos distintos.
+
+Las claves generadas para las pruebas solo existen en memoria y nunca se escriben en el repositorio.
+
 ## Funcionamiento sin conexión
 
 La versión inicial requiere una decisión online del backend. La verificación local de la firma puede
