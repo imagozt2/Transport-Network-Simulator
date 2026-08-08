@@ -100,11 +100,25 @@ try {
 
     Write-Host "Comprobando el aislamiento entre identidades..."
     $foreignTopic = "rmm/v1/devices/$validatorUsername/status"
+    Invoke-Docker -Arguments @(
+        "exec", "--detach", $containerName, "sh", "-c",
+        "mosquitto_sub -h 127.0.0.1 -u '$backendUsername' -P '$backendPassword' -t '$foreignTopic' -C 1 -W 10 > /tmp/isolation-message"
+    )
+    Start-Sleep -Milliseconds 500
+
+    # mosquitto_pub puede devolver código 0 para una publicación QoS 0 aunque el broker la descarte
+    # por las ACL. Por eso se comprueba qué mensaje entrega realmente el broker al suscriptor.
     & docker exec $containerName mosquitto_pub -h 127.0.0.1 `
-        -u $saleUsername -P $salePassword -t $foreignTopic -m '{"state":"AVAILABLE"}' 2>$null
-    if ($LASTEXITCODE -eq 0) {
-        throw "Una máquina ha podido publicar en el topic de otra identidad"
-    }
+        -u $saleUsername -P $salePassword -q 1 -t $foreignTopic `
+        -m '{"source":"UNAUTHORIZED_SALE_DEVICE"}' 2>$null
+
+    Invoke-Docker -Arguments @(
+        "exec", $containerName, "mosquitto_pub", "-h", "127.0.0.1",
+        "-u", $validatorUsername, "-P", $validatorPassword, "-q", "1",
+        "-t", $foreignTopic, "-m", '{"source":"AUTHORIZED_VALIDATOR"}'
+    )
+    Wait-ForContainerFile -Path "/tmp/isolation-message" `
+        -ExpectedContent '{"source":"AUTHORIZED_VALIDATOR"}'
 
     Write-Host "Comprobando la reconexión y la cola persistente QoS 1..."
     $commandsTopic = "rmm/v1/devices/$saleUsername/commands"
