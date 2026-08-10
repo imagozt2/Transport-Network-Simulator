@@ -60,6 +60,7 @@ fun TicketsScreen(
     var multiTripProduct by remember { mutableStateOf<PassengerTicketProduct?>(null) }
     var timePassProduct by remember { mutableStateOf<PassengerTicketProduct?>(null) }
     var smartBalanceProduct by remember { mutableStateOf<PassengerTicketProduct?>(null) }
+    var purchaseDraft by remember { mutableStateOf<TicketPurchaseDraft?>(null) }
 
     LaunchedEffect(session.accessToken, reloadKey) {
         state = TicketCatalogUiState.Loading
@@ -87,24 +88,47 @@ fun TicketsScreen(
             session = session,
             product = product,
             onDismiss = { singleTripProduct = null },
+            onConfigured = { draft ->
+                singleTripProduct = null
+                purchaseDraft = draft
+            },
         )
     }
     multiTripProduct?.let { product ->
         MultiTripConfigurationDialog(
             product = product,
             onDismiss = { multiTripProduct = null },
+            onConfigured = { draft ->
+                multiTripProduct = null
+                purchaseDraft = draft
+            },
         )
     }
     timePassProduct?.let { product ->
         TimePassConfigurationDialog(
             product = product,
             onDismiss = { timePassProduct = null },
+            onConfigured = { draft ->
+                timePassProduct = null
+                purchaseDraft = draft
+            },
         )
     }
     smartBalanceProduct?.let { product ->
         SmartBalanceConfigurationDialog(
             product = product,
             onDismiss = { smartBalanceProduct = null },
+            onConfigured = { draft ->
+                smartBalanceProduct = null
+                purchaseDraft = draft
+            },
+        )
+    }
+    purchaseDraft?.let { draft ->
+        TicketPurchaseConfirmationDialog(
+            session = session,
+            draft = draft,
+            onDismiss = { purchaseDraft = null },
         )
     }
 }

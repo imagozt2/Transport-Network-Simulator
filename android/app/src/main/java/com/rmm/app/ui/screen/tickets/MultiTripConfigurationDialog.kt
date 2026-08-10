@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.rmm.app.R
 import com.rmm.app.core.ticketcatalog.PassengerTicketProduct
+import com.rmm.app.core.ticketpurchase.PassengerTicketPurchaseConfiguration
 import java.math.BigDecimal
 import java.text.NumberFormat
 import java.util.Currency
@@ -33,6 +34,7 @@ import java.util.Locale
 internal fun MultiTripConfigurationDialog(
     product: PassengerTicketProduct,
     onDismiss: () -> Unit,
+    onConfigured: (TicketPurchaseDraft) -> Unit,
 ) {
     val minimum = product.minTrips ?: 1
     val maximum = product.maxTrips ?: minimum
@@ -113,6 +115,20 @@ internal fun MultiTripConfigurationDialog(
                             stringResource(R.string.ticket_estimated_price_notice),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        androidx.compose.material3.Button(
+                            onClick = {
+                                onConfigured(
+                                    TicketPurchaseDraft(
+                                        product = product,
+                                        configuration = PassengerTicketPurchaseConfiguration(tripCount = tripCount),
+                                        totalAmount = product.pricePerTrip * BigDecimal.valueOf(tripCount.toLong()),
+                                    ),
+                                )
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(stringResource(R.string.ticket_continue_purchase))
+                        }
                     }
                 }
             }

@@ -41,6 +41,7 @@ import com.rmm.app.core.networkcatalog.PassengerNetworkRepository
 import com.rmm.app.core.networkcatalog.PassengerNetworkStation
 import com.rmm.app.core.session.PassengerSession
 import com.rmm.app.core.ticketcatalog.PassengerTicketProduct
+import com.rmm.app.core.ticketpurchase.PassengerTicketPurchaseConfiguration
 import com.rmm.app.ui.screen.journeys.StationSearch
 import java.math.BigDecimal
 import java.text.NumberFormat
@@ -68,6 +69,7 @@ internal fun SingleTripConfigurationDialog(
     session: PassengerSession,
     product: PassengerTicketProduct,
     onDismiss: () -> Unit,
+    onConfigured: (TicketPurchaseDraft) -> Unit,
 ) {
     val repository = remember { PassengerNetworkRepository() }
     var reloadKey by rememberSaveable { mutableIntStateOf(0) }
@@ -124,6 +126,7 @@ internal fun SingleTripConfigurationDialog(
                         destinationCode = previousOrigin
                     },
                     onDismiss = onDismiss,
+                    onConfigured = onConfigured,
                 )
             }
         }
@@ -159,6 +162,7 @@ private fun SingleTripForm(
     onSelectDestination: () -> Unit,
     onSwap: () -> Unit,
     onDismiss: () -> Unit,
+    onConfigured: (TicketPurchaseDraft) -> Unit,
 ) {
     val stations = remember(catalog.stations) { catalog.stations.associateBy { it.code } }
     Column(
@@ -190,7 +194,25 @@ private fun SingleTripForm(
                 Text(stringResource(R.string.ticket_calculating_price))
             }
             SingleTripEstimateState.Error -> Text(stringResource(R.string.ticket_price_error), color = MaterialTheme.colorScheme.error)
-            is SingleTripEstimateState.Content -> SingleTripEstimate(product, estimateState.journey)
+            is SingleTripEstimateState.Content -> SingleTripEstimate(
+                product = product,
+                journey = estimateState.journey,
+                onContinue = {
+                    onConfigured(
+                        TicketPurchaseDraft(
+                            product = product,
+                            configuration = PassengerTicketPurchaseConfiguration(
+                                originStationCode = estimateState.journey.origin.code,
+                                destinationStationCode = estimateState.journey.destination.code,
+                            ),
+                            totalAmount = product.basePrice + product.pricePerStation *
+                                BigDecimal.valueOf(estimateState.journey.stationCount.toLong()),
+                            originName = estimateState.journey.origin.name,
+                            destinationName = estimateState.journey.destination.name,
+                        ),
+                    )
+                },
+            )
         }
     }
 }
@@ -207,7 +229,11 @@ private fun StationField(label: String, station: PassengerNetworkStation?, onCli
 }
 
 @Composable
-private fun SingleTripEstimate(product: PassengerTicketProduct, journey: PassengerNetworkJourney) {
+private fun SingleTripEstimate(
+    product: PassengerTicketProduct,
+    journey: PassengerNetworkJourney,
+    onContinue: () -> Unit,
+) {
     val price = product.basePrice + product.pricePerStation * BigDecimal.valueOf(journey.stationCount.toLong())
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -217,6 +243,9 @@ private fun SingleTripEstimate(product: PassengerTicketProduct, journey: Passeng
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(stringResource(R.string.journeys_station_count, journey.stationCount))
                 Text(stringResource(R.string.journeys_duration_minutes, ceil(journey.estimatedDurationSeconds / 60.0).toInt()))
+            }
+            Button(onClick = onContinue, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.ticket_continue_purchase))
             }
         }
     }

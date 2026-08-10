@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.rmm.app.R
 import com.rmm.app.core.ticketcatalog.PassengerTicketProduct
+import com.rmm.app.core.ticketpurchase.PassengerTicketPurchaseConfiguration
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.NumberFormat
@@ -38,6 +39,7 @@ import java.util.Locale
 internal fun SmartBalanceConfigurationDialog(
     product: PassengerTicketProduct,
     onDismiss: () -> Unit,
+    onConfigured: (TicketPurchaseDraft) -> Unit,
 ) {
     val minimum = product.minRechargeAmount ?: BigDecimal.ONE
     val maximum = product.maxRechargeAmount ?: minimum
@@ -132,6 +134,20 @@ internal fun SmartBalanceConfigurationDialog(
                                 stringResource(R.string.ticket_estimated_price_notice),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
+                            androidx.compose.material3.Button(
+                                onClick = {
+                                    onConfigured(
+                                        TicketPurchaseDraft(
+                                            product = product,
+                                            configuration = PassengerTicketPurchaseConfiguration(rechargeAmount = amount),
+                                            totalAmount = amount,
+                                        ),
+                                    )
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(stringResource(R.string.ticket_continue_purchase))
+                            }
                         }
                     }
                 }
