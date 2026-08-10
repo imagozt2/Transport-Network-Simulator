@@ -24,6 +24,10 @@ el módulo `app` en el emulador configurado.
 La guía conjunta de puesta en marcha, instalación del APK y servicios necesarios está disponible en
 [`../docs/ejecucion-aplicaciones-cliente.md`](../docs/ejecucion-aplicaciones-cliente.md).
 
+La estructura interna, los flujos de autenticación, la seguridad de la sesión y las reglas para
+ampliar el cliente se describen en la
+[`arquitectura de RMM App`](../docs/arquitectura-rmm-app.md).
+
 ## Comprobación desde PowerShell
 
 ```powershell
