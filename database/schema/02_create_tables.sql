@@ -294,17 +294,161 @@ CREATE TABLE devices (
     station_id BIGINT NOT NULL,
     status VARCHAR(30) NOT NULL DEFAULT 'OFFLINE',
     last_connection_at DATETIME NULL,
+    mqtt_presence VARCHAR(20) NULL,
+    operational_state VARCHAR(30) NULL,
+    service_mode VARCHAR(30) NULL,
+    software_version VARCHAR(50) NULL,
+    uptime_seconds BIGINT NULL,
+    last_presence_at DATETIME NULL,
+    last_status_at DATETIME NULL,
     active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT uk_devices_code UNIQUE (code),
     CONSTRAINT fk_devices_station FOREIGN KEY (station_id) REFERENCES stations (id)
-        ON UPDATE CASCADE ON DELETE RESTRICT
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT chk_devices_mqtt_presence CHECK (
+        mqtt_presence IS NULL OR mqtt_presence IN ('ONLINE', 'OFFLINE')
+    ),
+    CONSTRAINT chk_devices_operational_state CHECK (
+        operational_state IS NULL OR operational_state IN (
+            'AVAILABLE', 'BUSY', 'DEGRADED', 'OUT_OF_SERVICE', 'MAINTENANCE'
+        )
+    ),
+    CONSTRAINT chk_devices_uptime CHECK (uptime_seconds IS NULL OR uptime_seconds >= 0)
 );
 
 CREATE INDEX idx_devices_station ON devices (station_id);
 CREATE INDEX idx_devices_type_status ON devices (device_type, status);
 CREATE INDEX idx_devices_active ON devices (active);
+
+CREATE TABLE device_mqtt_identities (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    device_id BIGINT NOT NULL,
+    instance_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    mqtt_client_id VARCHAR(100) NOT NULL,
+    authentication_mode VARCHAR(20) NOT NULL,
+    identity_status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+    certificate_serial VARCHAR(128) NULL,
+    valid_from DATETIME NOT NULL,
+    valid_until DATETIME NULL,
+    last_authenticated_at DATETIME NULL,
+    revoked_at DATETIME NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_device_mqtt_identities_device UNIQUE (device_id),
+    CONSTRAINT uk_device_mqtt_identities_instance UNIQUE (instance_id),
+    CONSTRAINT uk_device_mqtt_identities_client UNIQUE (mqtt_client_id),
+    CONSTRAINT uk_device_mqtt_identities_certificate UNIQUE (certificate_serial),
+    CONSTRAINT fk_device_mqtt_identities_device FOREIGN KEY (device_id) REFERENCES devices (id)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT chk_device_mqtt_identities_instance CHECK (
+        instance_id REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+    ),
+    CONSTRAINT chk_device_mqtt_identities_authentication CHECK (
+        authentication_mode IN ('PASSWORD', 'MTLS')
+    ),
+    CONSTRAINT chk_device_mqtt_identities_status CHECK (
+        identity_status IN ('ACTIVE', 'REVOKED', 'EXPIRED')
+    ),
+    CONSTRAINT chk_device_mqtt_identities_validity CHECK (
+        valid_until IS NULL OR valid_until > valid_from
+    ),
+    CONSTRAINT chk_device_mqtt_identities_revocation CHECK (
+        (identity_status = 'REVOKED' AND revoked_at IS NOT NULL)
+        OR (identity_status <> 'REVOKED' AND revoked_at IS NULL)
+    ),
+    CONSTRAINT chk_device_mqtt_identities_certificate CHECK (
+        (authentication_mode = 'PASSWORD' AND certificate_serial IS NULL)
+        OR (authentication_mode = 'MTLS' AND CHAR_LENGTH(TRIM(certificate_serial)) > 0)
+    )
+);
+
+CREATE INDEX idx_device_mqtt_identities_status_validity
+    ON device_mqtt_identities (identity_status, valid_until);
+
+CREATE TABLE device_mqtt_commands (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    command_id VARCHAR(80) NOT NULL,
+    message_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    device_id BIGINT NOT NULL,
+    command_type VARCHAR(50) NOT NULL,
+    command_status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+    payload_json JSON NOT NULL,
+    requested_at DATETIME NOT NULL,
+    expires_at DATETIME NOT NULL,
+    published_at DATETIME NULL,
+    publication_attempts INT NOT NULL DEFAULT 0,
+    last_publication_error VARCHAR(500) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_device_mqtt_commands_command UNIQUE (command_id),
+    CONSTRAINT uk_device_mqtt_commands_message UNIQUE (message_id),
+    CONSTRAINT fk_device_mqtt_commands_device FOREIGN KEY (device_id) REFERENCES devices (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT chk_device_mqtt_commands_message CHECK (
+        message_id REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+    ),
+    CONSTRAINT chk_device_mqtt_commands_type CHECK (
+        command_type IN ('TICKET_ISSUE', 'CONFIGURATION_REFRESH', 'STATUS_REQUEST', 'RESTART')
+    ),
+    CONSTRAINT chk_device_mqtt_commands_status CHECK (
+        command_status IN ('PENDING', 'PUBLISHED', 'PUBLISH_FAILED', 'RECEIVED', 'PROCESSING',
+            'COMPLETED', 'FAILED', 'REJECTED', 'EXPIRED')
+    ),
+    CONSTRAINT chk_device_mqtt_commands_expiry CHECK (expires_at > requested_at),
+    CONSTRAINT chk_device_mqtt_commands_attempts CHECK (publication_attempts >= 0),
+    CONSTRAINT chk_device_mqtt_commands_publication CHECK (
+        (command_status = 'PENDING' AND published_at IS NULL)
+        OR command_status <> 'PENDING'
+    )
+);
+
+CREATE INDEX idx_device_mqtt_commands_device_requested
+    ON device_mqtt_commands (device_id, requested_at);
+CREATE INDEX idx_device_mqtt_commands_status_expiry
+    ON device_mqtt_commands (command_status, expires_at);
+
+CREATE TABLE mqtt_inbound_messages (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    message_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    device_id BIGINT NOT NULL,
+    topic VARCHAR(255) NOT NULL,
+    payload_fingerprint CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    processing_status VARCHAR(20) NOT NULL DEFAULT 'PROCESSING',
+    processing_attempts INT NOT NULL DEFAULT 1,
+    duplicate_count INT NOT NULL DEFAULT 0,
+    received_at DATETIME NOT NULL,
+    processed_at DATETIME NULL,
+    last_duplicate_at DATETIME NULL,
+    last_error VARCHAR(500) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_mqtt_inbound_messages_message UNIQUE (message_id),
+    CONSTRAINT fk_mqtt_inbound_messages_device FOREIGN KEY (device_id) REFERENCES devices (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT chk_mqtt_inbound_messages_id CHECK (
+        message_id REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+    ),
+    CONSTRAINT chk_mqtt_inbound_messages_fingerprint CHECK (
+        payload_fingerprint REGEXP '^[0-9a-fA-F]{64}$'
+    ),
+    CONSTRAINT chk_mqtt_inbound_messages_status CHECK (
+        processing_status IN ('PROCESSING', 'PROCESSED', 'REJECTED', 'FAILED')
+    ),
+    CONSTRAINT chk_mqtt_inbound_messages_counts CHECK (
+        processing_attempts > 0 AND duplicate_count >= 0
+    ),
+    CONSTRAINT chk_mqtt_inbound_messages_processed CHECK (
+        (processing_status = 'PROCESSED' AND processed_at IS NOT NULL)
+        OR processing_status <> 'PROCESSED'
+    )
+);
+
+CREATE INDEX idx_mqtt_inbound_messages_device_received
+    ON mqtt_inbound_messages (device_id, received_at);
+CREATE INDEX idx_mqtt_inbound_messages_status_received
+    ON mqtt_inbound_messages (processing_status, received_at);
 
 CREATE TABLE train_models (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,

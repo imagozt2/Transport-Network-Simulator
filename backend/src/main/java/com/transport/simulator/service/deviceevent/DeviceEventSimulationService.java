@@ -36,8 +36,11 @@ class DeviceEventSimulationService {
     }
 
     public int runCycle() {
-        List<Device> activeDevices = deviceRepository.findAllByActiveTrueOrderByCodeAsc();
-        if (activeDevices.isEmpty()) {
+        List<Device> simulatedDevices = deviceRepository.findAllByActiveTrueOrderByCodeAsc()
+                .stream()
+                .filter(device -> !device.isMqttManaged())
+                .toList();
+        if (simulatedDevices.isEmpty()) {
             return 0;
         }
 
@@ -45,13 +48,13 @@ class DeviceEventSimulationService {
         DeviceStatus expectedStatus = serviceOpen ? DeviceStatus.ONLINE : DeviceStatus.OFFLINE;
         List<DeviceEvent> events = new ArrayList<>();
 
-        activeDevices.stream()
+        simulatedDevices.stream()
                 .filter(device -> device.getStatus() != expectedStatus)
                 .map(device -> eventGenerator.generateServiceState(device, serviceOpen))
                 .forEach(events::add);
 
         if (serviceOpen) {
-            events.add(generateOperationalEvent(activeDevices));
+            events.add(generateOperationalEvent(simulatedDevices));
         }
 
         events.forEach(eventRegistrationService::register);

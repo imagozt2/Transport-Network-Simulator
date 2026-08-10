@@ -12,6 +12,15 @@ FROM passenger_sessions;
 SELECT COUNT(*) AS passenger_mobile_device_count
 FROM passenger_mobile_devices;
 
+SELECT COUNT(*) AS device_mqtt_identity_count
+FROM device_mqtt_identities;
+
+SELECT COUNT(*) AS device_mqtt_command_count
+FROM device_mqtt_commands;
+
+SELECT COUNT(*) AS mqtt_inbound_message_count
+FROM mqtt_inbound_messages;
+
 SELECT COUNT(*) AS passenger_account_token_count
 FROM passenger_account_tokens;
 
@@ -47,6 +56,7 @@ UNION ALL SELECT 'transport_lines', COUNT(*), 6 FROM transport_lines
 UNION ALL SELECT 'line_stations', COUNT(*), 88 FROM line_stations
 UNION ALL SELECT 'station_connections', COUNT(*), 82 FROM station_connections
 UNION ALL SELECT 'devices', COUNT(*), 622 FROM devices
+UNION ALL SELECT 'device_mqtt_identities', COUNT(*), 622 FROM device_mqtt_identities
 UNION ALL SELECT 'train_models', COUNT(*), 4 FROM train_models
 UNION ALL SELECT 'depots', COUNT(*), 12 FROM depots
 UNION ALL SELECT 'trains', COUNT(*), 242 FROM trains
@@ -58,6 +68,17 @@ UNION ALL SELECT 'service_periods', COUNT(*), 15 FROM service_periods
 UNION ALL SELECT 'line_service_levels', COUNT(*), 90 FROM line_service_levels
 UNION ALL SELECT 'line_depots', COUNT(*), 12 FROM line_depots
 UNION ALL SELECT 'ticket_products', COUNT(*), 4 FROM ticket_products;
+
+SELECT id, code, status, mqtt_presence, operational_state
+FROM devices
+WHERE (mqtt_presence IS NOT NULL AND mqtt_presence NOT IN ('ONLINE', 'OFFLINE'))
+   OR (operational_state IS NOT NULL AND operational_state NOT IN (
+       'AVAILABLE', 'BUSY', 'DEGRADED', 'OUT_OF_SERVICE', 'MAINTENANCE'
+   ))
+   OR uptime_seconds < 0
+   OR (mqtt_presence = 'OFFLINE' AND status <> 'OFFLINE')
+   OR (operational_state = 'MAINTENANCE' AND mqtt_presence = 'ONLINE'
+       AND status <> 'MAINTENANCE');
 
 SELECT id, username, email, operator_role, account_status
 FROM operator_accounts
@@ -77,6 +98,45 @@ WHERE public_id NOT REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[
    OR CHAR_LENGTH(TRIM(last_name)) = 0
    OR account_status NOT IN ('PENDING_VERIFICATION', 'ACTIVE', 'BLOCKED', 'DISABLED')
    OR failed_login_attempts < 0;
+
+SELECT identities.id, identities.instance_id, identities.mqtt_client_id,
+       identities.authentication_mode, identities.identity_status
+FROM device_mqtt_identities identities
+LEFT JOIN devices ON devices.id = identities.device_id
+WHERE devices.id IS NULL
+   OR devices.active = FALSE
+   OR identities.mqtt_client_id <> devices.code
+   OR identities.instance_id NOT REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+   OR identities.authentication_mode NOT IN ('PASSWORD', 'MTLS')
+   OR identities.identity_status NOT IN ('ACTIVE', 'REVOKED', 'EXPIRED')
+   OR (identities.authentication_mode = 'PASSWORD' AND identities.certificate_serial IS NOT NULL)
+   OR (identities.authentication_mode = 'MTLS' AND identities.certificate_serial IS NULL)
+   OR (identities.identity_status = 'REVOKED' AND identities.revoked_at IS NULL)
+   OR (identities.identity_status <> 'REVOKED' AND identities.revoked_at IS NOT NULL)
+   OR (identities.valid_until IS NOT NULL AND identities.valid_until <= identities.valid_from);
+
+SELECT commands.id, commands.command_id, commands.command_type, commands.command_status
+FROM device_mqtt_commands commands
+LEFT JOIN devices ON devices.id = commands.device_id
+WHERE devices.id IS NULL
+   OR commands.message_id NOT REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+   OR commands.command_type NOT IN ('TICKET_ISSUE', 'CONFIGURATION_REFRESH', 'STATUS_REQUEST', 'RESTART')
+   OR commands.command_status NOT IN ('PENDING', 'PUBLISHED', 'PUBLISH_FAILED', 'RECEIVED',
+       'PROCESSING', 'COMPLETED', 'FAILED', 'REJECTED', 'EXPIRED')
+   OR commands.expires_at <= commands.requested_at
+   OR commands.publication_attempts < 0
+   OR (commands.command_status = 'PENDING' AND commands.published_at IS NOT NULL);
+
+SELECT messages.id, messages.message_id, messages.processing_status
+FROM mqtt_inbound_messages messages
+LEFT JOIN devices ON devices.id = messages.device_id
+WHERE devices.id IS NULL
+   OR messages.message_id NOT REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+   OR messages.payload_fingerprint NOT REGEXP '^[0-9a-fA-F]{64}$'
+   OR messages.processing_status NOT IN ('PROCESSING', 'PROCESSED', 'REJECTED', 'FAILED')
+   OR messages.processing_attempts <= 0
+   OR messages.duplicate_count < 0
+   OR (messages.processing_status = 'PROCESSED' AND messages.processed_at IS NULL);
 
 SELECT devices.id, devices.installation_id, devices.platform, devices.device_status
 FROM passenger_mobile_devices devices
@@ -220,14 +280,14 @@ SELECT incidents.id, incidents.code, incidents.incident_status, incidents.priori
 FROM incidents
 LEFT JOIN operator_accounts creators ON creators.id = incidents.created_by_operator_id
 LEFT JOIN operator_accounts assignees ON assignees.id = incidents.assigned_to_operator_id
-LEFT JOIN transport_lines lines ON lines.id = incidents.affected_line_id
+LEFT JOIN transport_lines affected_line ON affected_line.id = incidents.affected_line_id
 LEFT JOIN stations ON stations.id = incidents.affected_station_id
 LEFT JOIN trains ON trains.id = incidents.affected_train_id
 LEFT JOIN devices ON devices.id = incidents.affected_device_id
 LEFT JOIN depots ON depots.id = incidents.affected_depot_id
 WHERE creators.id IS NULL
    OR (incidents.assigned_to_operator_id IS NOT NULL AND assignees.id IS NULL)
-   OR (incidents.affected_line_id IS NOT NULL AND lines.id IS NULL)
+   OR (incidents.affected_line_id IS NOT NULL AND affected_line.id IS NULL)
    OR (incidents.affected_station_id IS NOT NULL AND stations.id IS NULL)
    OR (incidents.affected_train_id IS NOT NULL AND trains.id IS NULL)
    OR (incidents.affected_device_id IS NOT NULL AND devices.id IS NULL)
