@@ -20,6 +20,29 @@ data class PassengerJourneyHistory(
     val favorites: List<SavedPassengerJourney> = emptyList(),
 )
 
+internal fun PassengerJourneyHistory.recording(
+    journey: SavedPassengerJourney,
+    maximumRecent: Int = 10,
+): PassengerJourneyHistory = copy(
+    recent = (listOf(journey) + recent.filterNot { it.routeKey == journey.routeKey })
+        .take(maximumRecent),
+)
+
+internal fun PassengerJourneyHistory.togglingFavorite(
+    journey: SavedPassengerJourney,
+    maximumFavorites: Int = 20,
+): PassengerJourneyHistory {
+    val alreadyFavorite = favorites.any { it.routeKey == journey.routeKey }
+    return copy(
+        favorites = if (alreadyFavorite) {
+            favorites.filterNot { it.routeKey == journey.routeKey }
+        } else {
+            (listOf(journey) + favorites.filterNot { it.routeKey == journey.routeKey })
+                .take(maximumFavorites)
+        },
+    )
+}
+
 interface PassengerJourneyHistoryStore {
     fun load(): PassengerJourneyHistory
     fun record(journey: SavedPassengerJourney): PassengerJourneyHistory
@@ -50,29 +73,12 @@ class SharedPreferencesPassengerJourneyHistoryStore(
 
     override fun record(journey: SavedPassengerJourney): PassengerJourneyHistory = synchronized(lock) {
         val current = load()
-        save(
-            current.copy(
-                recent = listOf(journey) + current.recent
-                    .filterNot { it.routeKey == journey.routeKey }
-                    .take(MAX_RECENT - 1),
-            ),
-        )
+        save(current.recording(journey, MAX_RECENT))
     }
 
     override fun toggleFavorite(journey: SavedPassengerJourney): PassengerJourneyHistory = synchronized(lock) {
         val current = load()
-        val alreadyFavorite = current.favorites.any { it.routeKey == journey.routeKey }
-        save(
-            current.copy(
-                favorites = if (alreadyFavorite) {
-                    current.favorites.filterNot { it.routeKey == journey.routeKey }
-                } else {
-                    listOf(journey) + current.favorites
-                        .filterNot { it.routeKey == journey.routeKey }
-                        .take(MAX_FAVORITES - 1)
-                },
-            ),
-        )
+        save(current.togglingFavorite(journey, MAX_FAVORITES))
     }
 
     private fun save(history: PassengerJourneyHistory): PassengerJourneyHistory {

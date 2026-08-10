@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -209,19 +208,15 @@ internal fun JourneyPlanner(
                         },
                     )
                 }
-                itemsIndexed(
-                    current.journey.segments,
-                    key = { _, segment -> "${segment.lineCode}-${segment.stations.firstOrNull()?.code}" },
-                ) { index, segment ->
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        JourneySegmentCard(segment)
-                        if (index < current.journey.segments.lastIndex) {
-                            JourneyTransferCard(
-                                stationName = segment.stations.last().name,
-                                fromLine = segment,
-                                toLine = current.journey.segments[index + 1],
-                            )
-                        }
+                val presentation = buildJourneyPresentation(current.journey)
+                items(presentation, key = JourneyPresentationStep::key) { step ->
+                    when (step) {
+                        is JourneyPresentationStep.Segment -> JourneySegmentCard(step.value)
+                        is JourneyPresentationStep.Transfer -> JourneyTransferCard(
+                            stationName = step.station.name,
+                            fromLine = step.from,
+                            toLine = step.to,
+                        )
                     }
                 }
             }
