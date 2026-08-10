@@ -12,7 +12,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
@@ -40,7 +43,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.platform.LocalContext
 import com.rmm.app.R
+import com.rmm.app.core.journeys.PassengerJourneyHistory
+import com.rmm.app.core.journeys.SavedPassengerJourney
+import com.rmm.app.core.journeys.SharedPreferencesPassengerJourneyHistoryStore
 import com.rmm.app.core.network.ApiResult
 import com.rmm.app.core.networkcatalog.NetworkCatalog
 import com.rmm.app.core.networkcatalog.PassengerNetworkJourney
@@ -68,16 +75,24 @@ internal fun JourneyPlanner(
     repository: PassengerNetworkRepository,
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val historyStore = remember(session.user.publicId) {
+        SharedPreferencesPassengerJourneyHistoryStore(context, session.user.publicId)
+    }
     var originCode by rememberSaveable { mutableStateOf<String?>(null) }
     var destinationCode by rememberSaveable { mutableStateOf<String?>(null) }
     var picker by remember { mutableStateOf<PickerTarget?>(null) }
     var sameStationError by remember { mutableStateOf(false) }
     var state by remember { mutableStateOf<JourneyUiState>(JourneyUiState.Empty) }
+    var history by remember(historyStore) { mutableStateOf(historyStore.load()) }
     val stationsByCode = remember(catalog.stations) { catalog.stations.associateBy { it.code } }
 
-    fun calculate() {
-        val origin = originCode ?: return
-        val destination = destinationCode ?: return
+    fun calculate(
+        selectedOrigin: String? = originCode,
+        selectedDestination: String? = destinationCode,
+    ) {
+        val origin = selectedOrigin ?: return
+        val destination = selectedDestination ?: return
         if (origin == destination) {
             sameStationError = true
             return
@@ -86,7 +101,11 @@ internal fun JourneyPlanner(
         scope.launch {
             state = JourneyUiState.Loading
             state = when (val result = repository.journey(session, origin, destination)) {
-                is ApiResult.Success -> JourneyUiState.Content(result.value)
+                is ApiResult.Success -> {
+                    val journey = result.value
+                    history = historyStore.record(journey.toSavedJourney())
+                    JourneyUiState.Content(journey)
+                }
                 is ApiResult.Failure -> JourneyUiState.Error
             }
         }
@@ -103,6 +122,18 @@ internal fun JourneyPlanner(
                 stringResource(R.string.journeys_planner_description),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+        if (history.favorites.isNotEmpty() || history.recent.isNotEmpty()) {
+            item {
+                SavedJourneys(
+                    history = history,
+                    onJourneySelected = { saved ->
+                        originCode = saved.originCode
+                        destinationCode = saved.destinationCode
+                        calculate(saved.originCode, saved.destinationCode)
+                    },
+                )
+            }
         }
         item {
             StationSelector(
@@ -168,7 +199,16 @@ internal fun JourneyPlanner(
                 }
             }
             is JourneyUiState.Content -> {
-                item { JourneySummary(current.journey) }
+                item {
+                    val savedJourney = current.journey.toSavedJourney()
+                    JourneySummary(
+                        journey = current.journey,
+                        favorite = history.favorites.any { it.routeKey == savedJourney.routeKey },
+                        onToggleFavorite = {
+                            history = historyStore.toggleFavorite(savedJourney)
+                        },
+                    )
+                }
                 itemsIndexed(
                     current.journey.segments,
                     key = { _, segment -> "${segment.lineCode}-${segment.stations.firstOrNull()?.code}" },
@@ -265,7 +305,11 @@ private fun StationPickerDialog(
 }
 
 @Composable
-private fun JourneySummary(journey: PassengerNetworkJourney) {
+private fun JourneySummary(
+    journey: PassengerNetworkJourney,
+    favorite: Boolean,
+    onToggleFavorite: () -> Unit,
+) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(stringResource(R.string.journeys_result_title), style = MaterialTheme.typography.titleMedium)
@@ -282,6 +326,69 @@ private fun JourneySummary(journey: PassengerNetworkJourney) {
                 Text(pluralStringResource(R.plurals.journeys_result_transfers, journey.transferCount, journey.transferCount))
             }
             Text("${journey.origin.name} — ${journey.destination.name}")
+            OutlinedButton(onClick = onToggleFavorite) {
+                Text(
+                    stringResource(
+                        if (favorite) R.string.journeys_remove_favorite
+                        else R.string.journeys_add_favorite,
+                    ),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SavedJourneys(
+    history: PassengerJourneyHistory,
+    onJourneySelected: (SavedPassengerJourney) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        if (history.favorites.isNotEmpty()) {
+            Text(stringResource(R.string.journeys_favorites), style = MaterialTheme.typography.titleMedium)
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                items(history.favorites, key = SavedPassengerJourney::routeKey) { journey ->
+                    SavedJourneyRow(journey, favorite = true, onClick = { onJourneySelected(journey) })
+                }
+            }
+        }
+        if (history.recent.isNotEmpty()) {
+            Text(stringResource(R.string.journeys_recent), style = MaterialTheme.typography.titleMedium)
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                items(history.recent, key = SavedPassengerJourney::routeKey) { journey ->
+                    SavedJourneyRow(journey, favorite = false, onClick = { onJourneySelected(journey) })
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SavedJourneyRow(
+    journey: SavedPassengerJourney,
+    favorite: Boolean,
+    onClick: () -> Unit,
+) {
+    Card(onClick = onClick, modifier = Modifier.width(300.dp)) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(if (favorite) "★" else "↻", style = MaterialTheme.typography.titleLarge)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "${journey.originName} → ${journey.destinationName}",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    "${journey.originCode} · ${journey.destinationCode}",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            }
+            Text(stringResource(R.string.journeys_repeat), style = MaterialTheme.typography.labelLarge)
         }
     }
 }
@@ -406,3 +513,11 @@ private fun String?.asComposeColor(fallback: Color): Color = try {
 } catch (_: IllegalArgumentException) {
     fallback
 }
+
+private fun PassengerNetworkJourney.toSavedJourney() = SavedPassengerJourney(
+    originCode = origin.code,
+    originName = origin.name,
+    destinationCode = destination.code,
+    destinationName = destination.name,
+    savedAtEpochMillis = System.currentTimeMillis(),
+)

@@ -67,6 +67,11 @@
     <string name="journeys_segment_duration">%1$d min</string>
     <string name="journeys_transfer_at">Transbordo en %1$s</string>
     <string name="journeys_transfer_instruction">Cambia de %1$s a %2$s</string>
+    <string name="journeys_favorites">Trayectos favoritos</string>
+    <string name="journeys_recent">Trayectos recientes</string>
+    <string name="journeys_add_favorite">Guardar como favorito</string>
+    <string name="journeys_remove_favorite">Quitar de favoritos</string>
+    <string name="journeys_repeat">Repetir</string>
     <plurals name="journeys_result_stations">
         <item quantity="one">%1$d estación</item>
         <item quantity="other">%1$d estaciones</item>
