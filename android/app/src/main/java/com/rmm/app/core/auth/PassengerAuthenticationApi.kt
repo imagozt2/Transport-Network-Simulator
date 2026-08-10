@@ -2,6 +2,8 @@ package com.rmm.app.core.auth
 
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.DELETE
+import retrofit2.http.Header
 import retrofit2.http.POST
 
 interface PassengerAuthenticationApi {
@@ -14,6 +16,11 @@ interface PassengerAuthenticationApi {
     suspend fun login(
         @Body request: PassengerLoginRequest,
     ): Response<PassengerSessionResponse>
+
+    @DELETE("auth/sessions/current")
+    suspend fun logout(
+        @Header("Authorization") authorization: String,
+    ): Response<Unit>
 }
 
 data class PassengerRegistrationRequest(

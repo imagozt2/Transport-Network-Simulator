@@ -32,5 +32,15 @@
     <string name="auth_network_error">No se ha podido conectar con RMM. Revisa tu conexión.</string>
     <string name="auth_request_error">No se ha podido completar la operación.</string>
     <string name="auth_session_storage_error">La sesión se ha iniciado, pero no se ha podido guardar de forma segura.</string>
+    <string name="account_information">Información de la cuenta</string>
+    <string name="account_status">Estado</string>
+    <string name="account_language">Idioma preferido</string>
+    <string name="account_identifier">Identificador de pasajero</string>
+    <string name="account_logout">Cerrar sesión</string>
+    <string name="account_logout_confirmation_title">¿Quieres cerrar la sesión?</string>
+    <string name="account_logout_confirmation_description">Tendrás que volver a identificarte para acceder a tus billetes y trayectos.</string>
+    <string name="account_logout_confirm">Cerrar sesión</string>
+    <string name="account_logout_cancel">Cancelar</string>
+    <string name="account_logout_storage_error">No se han podido eliminar de forma segura las credenciales locales.</string>
 </resources>
 

@@ -20,11 +20,17 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.rmm.app.R
+import com.rmm.app.core.session.PassengerSession
 import com.rmm.app.ui.screen.NavigationDestinationScreen
 import com.rmm.app.ui.component.RMMTopAppBar
+import com.rmm.app.ui.screen.account.AccountScreen
 
 @Composable
-fun RMMNavigation(modifier: Modifier = Modifier) {
+fun RMMNavigation(
+    session: PassengerSession,
+    onLoggedOut: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val navController = rememberNavController()
     val currentEntry by navController.currentBackStackEntryAsState()
     val currentDestination = currentEntry?.destination
@@ -76,6 +82,8 @@ fun RMMNavigation(modifier: Modifier = Modifier) {
     ) { contentPadding ->
         RMMNavHost(
             navController = navController,
+            session = session,
+            onLoggedOut = onLoggedOut,
             modifier = Modifier.padding(contentPadding),
         )
     }
@@ -84,6 +92,8 @@ fun RMMNavigation(modifier: Modifier = Modifier) {
 @Composable
 private fun RMMNavHost(
     navController: NavHostController,
+    session: PassengerSession,
+    onLoggedOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     NavHost(
@@ -110,9 +120,9 @@ private fun RMMNavHost(
             )
         }
         composable(RMMTopLevelDestination.ACCOUNT.route) {
-            NavigationDestinationScreen(
-                titleResource = R.string.account_title,
-                descriptionResource = R.string.account_description,
+            AccountScreen(
+                session = session,
+                onLoggedOut = onLoggedOut,
             )
         }
     }

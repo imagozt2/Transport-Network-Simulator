@@ -45,7 +45,11 @@ fun RMMApp(modifier: Modifier = Modifier) {
             modifier = modifier.fillMaxSize(),
         )
     } else {
-        RMMNavigation(modifier = modifier.fillMaxSize())
+        RMMNavigation(
+            session = checkNotNull(session),
+            onLoggedOut = { session = null },
+            modifier = modifier.fillMaxSize(),
+        )
     }
 }
 

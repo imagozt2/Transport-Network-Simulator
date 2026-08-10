@@ -58,6 +58,22 @@ class PassengerAuthenticationRepository(context: Context) {
         }
     }
 
+    suspend fun logout(session: PassengerSession): LogoutResult {
+        val remoteResult = calls.executeEmpty {
+            api.logout(authorization = "Bearer ${session.accessToken}")
+        }
+
+        return try {
+            sessionStore.clear()
+            when (remoteResult) {
+                is ApiResult.Success -> LogoutResult.Completed
+                is ApiResult.Failure -> LogoutResult.CompletedLocally
+            }
+        } catch (_: Exception) {
+            LogoutResult.LocalStorageFailure
+        }
+    }
+
     private fun PassengerSessionResponse.toDomain(installationId: String) = PassengerSession(
         accessToken = accessToken,
         accessTokenExpiresAt = Instant.parse(accessTokenExpiresAt),
@@ -79,4 +95,10 @@ sealed interface AuthenticationResult {
     data class Authenticated(val session: PassengerSession) : AuthenticationResult
     data class Failure(val reason: ApiFailure) : AuthenticationResult
     data object StorageFailure : AuthenticationResult
+}
+
+enum class LogoutResult {
+    Completed,
+    CompletedLocally,
+    LocalStorageFailure,
 }
