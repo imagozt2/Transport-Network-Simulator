@@ -28,6 +28,10 @@ La estructura interna, los flujos de autenticación, la seguridad de la sesión 
 ampliar el cliente se describen en la
 [`arquitectura de RMM App`](../docs/arquitectura-rmm-app.md).
 
+La consulta del mapa, la búsqueda de estaciones, el planificador y los trayectos guardados se
+documentan en la guía de
+[`consulta de la red en RMM App`](../docs/consulta-red-rmm-app.md).
+
 ## Comprobación desde PowerShell
 
 ```powershell

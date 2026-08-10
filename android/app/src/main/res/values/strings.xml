@@ -42,5 +42,66 @@
     <string name="account_logout_confirm">Cerrar sesión</string>
     <string name="account_logout_cancel">Cancelar</string>
     <string name="account_logout_storage_error">No se han podido eliminar de forma segura las credenciales locales.</string>
+    <string name="journeys_network_title">Explora la red</string>
+    <string name="journeys_network_description">Consulta las líneas y estaciones de RMM.</string>
+    <string name="journeys_lines_tab">Líneas</string>
+    <string name="journeys_stations_tab">Estaciones</string>
+    <string name="journeys_map_tab">Mapa</string>
+    <string name="journeys_route_tab">Ruta</string>
+    <string name="journeys_planner_title">Calcula tu trayecto</string>
+    <string name="journeys_planner_description">Selecciona una estación de origen y otra de destino.</string>
+    <string name="journeys_origin">Origen</string>
+    <string name="journeys_destination">Destino</string>
+    <string name="journeys_select_station">Seleccionar estación</string>
+    <string name="journeys_change_station">Cambiar estación</string>
+    <string name="journeys_swap_stations">Intercambiar</string>
+    <string name="journeys_calculate">Calcular trayecto</string>
+    <string name="journeys_select_origin_title">Selecciona el origen</string>
+    <string name="journeys_select_destination_title">Selecciona el destino</string>
+    <string name="journeys_close_picker">Cerrar selector</string>
+    <string name="journeys_same_station_error">El origen y el destino deben ser estaciones distintas.</string>
+    <string name="journeys_calculation_error">No se ha podido calcular el trayecto.</string>
+    <string name="journeys_result_title">Trayecto recomendado</string>
+    <string name="journeys_duration_minutes">~%1$d min</string>
+    <string name="journeys_direction">Dirección %1$s</string>
+    <string name="journeys_segment_duration">%1$d min</string>
+    <string name="journeys_transfer_at">Transbordo en %1$s</string>
+    <string name="journeys_transfer_instruction">Cambia de %1$s a %2$s</string>
+    <string name="journeys_favorites">Trayectos favoritos</string>
+    <string name="journeys_recent">Trayectos recientes</string>
+    <string name="journeys_add_favorite">Guardar como favorito</string>
+    <string name="journeys_remove_favorite">Quitar de favoritos</string>
+    <string name="journeys_repeat">Repetir</string>
+    <plurals name="journeys_result_stations">
+        <item quantity="one">%1$d estación</item>
+        <item quantity="other">%1$d estaciones</item>
+    </plurals>
+    <plurals name="journeys_result_transfers">
+        <item quantity="one">%1$d transbordo</item>
+        <item quantity="other">%1$d transbordos</item>
+    </plurals>
+    <plurals name="journeys_segment_stops">
+        <item quantity="one">%1$d parada</item>
+        <item quantity="other">%1$d paradas</item>
+    </plurals>
+    <string name="journeys_map_content_description">Mapa de la red de metro con seis líneas y sus estaciones.</string>
+    <string name="journeys_map_gesture_hint">Amplía para ver los nombres</string>
+    <string name="journeys_map_reset">Restablecer</string>
+    <string name="journeys_search_station">Buscar por nombre o código</string>
+    <string name="journeys_clear_search">Borrar búsqueda</string>
+    <string name="journeys_all_lines">Todas</string>
+    <string name="journeys_station_selected">Estación seleccionada</string>
+    <string name="journeys_station_count">%1$d estaciones</string>
+    <string name="journeys_terminals_unavailable">Terminales no disponibles</string>
+    <string name="journeys_no_lines">No hay líneas disponibles.</string>
+    <string name="journeys_no_stations">No se han encontrado estaciones.</string>
+    <string name="journeys_network_offline">No se ha podido conectar con la red de RMM.</string>
+    <string name="journeys_network_http_error">La red de transporte no está disponible en este momento.</string>
+    <string name="journeys_network_unknown_error">No se han podido cargar las líneas y estaciones.</string>
+    <string name="action_retry">Reintentar</string>
+    <plurals name="journeys_search_results">
+        <item quantity="one">%1$d estación encontrada</item>
+        <item quantity="other">%1$d estaciones encontradas</item>
+    </plurals>
 </resources>
 

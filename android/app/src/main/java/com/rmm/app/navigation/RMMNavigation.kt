@@ -24,6 +24,7 @@ import com.rmm.app.core.session.PassengerSession
 import com.rmm.app.ui.screen.NavigationDestinationScreen
 import com.rmm.app.ui.component.RMMTopAppBar
 import com.rmm.app.ui.screen.account.AccountScreen
+import com.rmm.app.ui.screen.journeys.JourneysScreen
 
 @Composable
 fun RMMNavigation(
@@ -114,10 +115,7 @@ private fun RMMNavHost(
             )
         }
         composable(RMMTopLevelDestination.JOURNEYS.route) {
-            NavigationDestinationScreen(
-                titleResource = R.string.journeys_title,
-                descriptionResource = R.string.journeys_description,
-            )
+            JourneysScreen(session = session)
         }
         composable(RMMTopLevelDestination.ACCOUNT.route) {
             AccountScreen(

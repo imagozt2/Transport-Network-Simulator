@@ -335,6 +335,8 @@ GET /api/rmm-app/v1/network/journeys?origin=ST046&destination=ST002
       "lineName": "Línea 6",
       "lineColor": "#F57900",
       "directionTerminal": { "code": "ST049", "name": "HUB Industrial Este" },
+      "stopCount": 2,
+      "travelSeconds": 360,
       "stations": [
         { "code": "ST046", "name": "El Espigón" },
         { "code": "ST020", "name": "La Galería" },
@@ -347,6 +349,10 @@ GET /api/rmm-app/v1/network/journeys?origin=ST046&destination=ST002
 
 La última estación de un segmento coincide con la primera del siguiente cuando existe transbordo.
 `directionTerminal` siempre identifica el terminal real de la línea en ese sentido.
+
+RMM App conserva recientes y favoritos como referencias locales por pasajero. Al seleccionarlos
+vuelve a consultar este endpoint para no presentar una ruta obsoleta. Consulta
+[Consulta de la red y planificación de trayectos](consulta-red-rmm-app.md).
 
 ## Catálogo de títulos
 
