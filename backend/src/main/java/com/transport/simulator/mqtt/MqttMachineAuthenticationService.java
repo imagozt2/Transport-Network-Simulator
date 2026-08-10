@@ -47,6 +47,7 @@ public class MqttMachineAuthenticationService {
         identity.recordAuthentication(now);
         return new AuthenticatedMqttMachine(identity.getDevice().getId(),
                 identity.getDevice().getCode(), identity.getDevice().getType(),
+                identity.getDevice().getStation().getCode(),
                 identity.getInstanceId(), identity.getMqttClientId());
     }
 

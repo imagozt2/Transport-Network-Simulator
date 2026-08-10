@@ -6,6 +6,7 @@ public record AuthenticatedMqttMachine(
         Long deviceId,
         String deviceCode,
         DeviceType deviceType,
+        String stationCode,
         String instanceId,
         String mqttClientId
 ) {
