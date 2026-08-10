@@ -33,5 +33,6 @@ cd android
 
 El APK de depuración se genera en `app/build/outputs/apk/debug/app-debug.apk`.
 
-La aplicación contiene por ahora únicamente la identidad visual mínima. Las capas de navegación,
-datos, dominio y seguridad se incorporarán de forma progresiva.
+La aplicación obtiene el entorno y la URL de la API durante la compilación. Los builds de depuración
+permiten la URL HTTP del emulador; cualquier otro build exige HTTPS. El cliente común utiliza
+Retrofit y OkHttp, añade únicamente cabeceras públicas y no registra cuerpos ni credenciales.
