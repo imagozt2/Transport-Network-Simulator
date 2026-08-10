@@ -39,6 +39,10 @@
     <string name="ticket_price_error">No se ha podido calcular el precio del trayecto.</string>
     <string name="ticket_configuration_ready">Configuración preparada</string>
     <string name="ticket_estimated_price_notice">El backend confirmará este importe al realizar la compra.</string>
+    <string name="ticket_multi_trip_configuration">Configura el número de viajes de tu bono.</string>
+    <string name="ticket_choose_trip_count">Selecciona entre %1$d y %2$d viajes.</string>
+    <string name="ticket_trips">viajes</string>
+    <string name="ticket_multi_trip_price_detail">%1$s por viaje × %2$d viajes</string>
     <string name="journeys_title">Trayectos</string>
     <string name="journeys_description">Planifica tus desplazamientos por la red de RMM</string>
     <string name="account_title">Mi cuenta</string>

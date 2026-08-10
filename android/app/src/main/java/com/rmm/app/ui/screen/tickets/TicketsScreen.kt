@@ -57,6 +57,7 @@ fun TicketsScreen(
     var reloadKey by rememberSaveable { mutableIntStateOf(0) }
     var state by remember { mutableStateOf<TicketCatalogUiState>(TicketCatalogUiState.Loading) }
     var singleTripProduct by remember { mutableStateOf<PassengerTicketProduct?>(null) }
+    var multiTripProduct by remember { mutableStateOf<PassengerTicketProduct?>(null) }
 
     LaunchedEffect(session.accessToken, reloadKey) {
         state = TicketCatalogUiState.Loading
@@ -73,6 +74,7 @@ fun TicketsScreen(
             products = current.products,
             modifier = modifier,
             onConfigureSingleTrip = { singleTripProduct = it },
+            onConfigureMultiTrip = { multiTripProduct = it },
         )
     }
 
@@ -83,6 +85,12 @@ fun TicketsScreen(
             onDismiss = { singleTripProduct = null },
         )
     }
+    multiTripProduct?.let { product ->
+        MultiTripConfigurationDialog(
+            product = product,
+            onDismiss = { multiTripProduct = null },
+        )
+    }
 }
 
 @Composable
@@ -90,6 +98,7 @@ private fun TicketCatalog(
     products: List<PassengerTicketProduct>,
     modifier: Modifier,
     onConfigureSingleTrip: (PassengerTicketProduct) -> Unit,
+    onConfigureMultiTrip: (PassengerTicketProduct) -> Unit,
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -115,10 +124,10 @@ private fun TicketCatalog(
             items(products, key = PassengerTicketProduct::code) { product ->
                 TicketProductCard(
                     product = product,
-                    onConfigure = if (product.type == "SINGLE_TRIP") {
-                        { onConfigureSingleTrip(product) }
-                    } else {
-                        null
+                    onConfigure = when (product.type) {
+                        "SINGLE_TRIP" -> { { onConfigureSingleTrip(product) } }
+                        "MULTI_TRIP" -> { { onConfigureMultiTrip(product) } }
+                        else -> null
                     },
                 )
             }
