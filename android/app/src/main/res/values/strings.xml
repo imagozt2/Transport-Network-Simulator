@@ -2,5 +2,17 @@
 <resources>
     <string name="app_name">RMM App</string>
     <string name="app_subtitle">Red de Metro de Macegocia</string>
+    <string name="navigation_home">Inicio</string>
+    <string name="navigation_tickets">Billetes</string>
+    <string name="navigation_journeys">Trayectos</string>
+    <string name="navigation_account">Cuenta</string>
+    <string name="home_title">Inicio</string>
+    <string name="home_description">Tu red de metro en un solo lugar</string>
+    <string name="tickets_title">Mis billetes</string>
+    <string name="tickets_description">Compra, registra y consulta tus títulos de transporte</string>
+    <string name="journeys_title">Trayectos</string>
+    <string name="journeys_description">Planifica tus desplazamientos por la red de RMM</string>
+    <string name="account_title">Mi cuenta</string>
+    <string name="account_description">Gestiona tu perfil, dispositivos y preferencias</string>
 </resources>
 
