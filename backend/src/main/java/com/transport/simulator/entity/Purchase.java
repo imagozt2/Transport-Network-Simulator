@@ -138,6 +138,33 @@ public class Purchase extends AuditableEntity {
         return purchase;
     }
 
+    public static Purchase completedPurchase(
+            String code,
+            Ticket ticket,
+            PaymentMethod paymentMethod,
+            String externalReference,
+            PassengerAccount passenger,
+            BigDecimal totalAmount,
+            LocalDateTime completedAt
+    ) {
+        Purchase purchase = new Purchase();
+        purchase.code = requireText(code, "code");
+        purchase.ticket = Objects.requireNonNull(ticket, "ticket is required");
+        purchase.product = ticket.getProduct();
+        purchase.type = PurchaseType.PURCHASE;
+        purchase.origin = PurchaseOrigin.RMM_APP;
+        purchase.status = PurchaseStatus.COMPLETED;
+        purchase.paymentMethod = Objects.requireNonNull(paymentMethod, "paymentMethod is required");
+        purchase.externalReference = requireText(externalReference, "externalReference");
+        purchase.passengerAccount = Objects.requireNonNull(passenger, "passenger is required");
+        purchase.subtotalAmount = requireNonNegative(totalAmount);
+        purchase.totalAmount = totalAmount;
+        purchase.currency = ticket.getCurrency();
+        purchase.requestedAt = Objects.requireNonNull(completedAt, "completedAt is required");
+        purchase.completedAt = completedAt;
+        return purchase;
+    }
+
     public void configureSingleTrip(Station origin, Station destination, int stations) {
         originStation = Objects.requireNonNull(origin);
         destinationStation = Objects.requireNonNull(destination);
@@ -169,6 +196,10 @@ public class Purchase extends AuditableEntity {
     public Ticket getTicket() { return ticket; }
     public PurchaseOrigin getOrigin() { return origin; }
     public PurchaseStatus getStatus() { return status; }
+    public TicketProduct getProduct() { return product; }
+    public PaymentMethod getPaymentMethod() { return paymentMethod; }
+    public PassengerAccount getPassengerAccount() { return passengerAccount; }
+    public LocalDateTime getRequestedAt() { return requestedAt; }
     public BigDecimal getTotalAmount() { return totalAmount; }
     public String getExternalReference() { return externalReference; }
     public LocalDateTime getCompletedAt() { return completedAt; }
