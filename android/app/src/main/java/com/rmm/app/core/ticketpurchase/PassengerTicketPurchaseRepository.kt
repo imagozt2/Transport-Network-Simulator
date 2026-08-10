@@ -4,9 +4,10 @@ import com.rmm.app.core.network.ApiResult
 import com.rmm.app.core.network.RMMApiClient
 import com.rmm.app.core.session.PassengerSession
 
-class PassengerTicketPurchaseRepository {
-    private val api = RMMApiClient.create(PassengerTicketPurchaseApi::class.java)
-    private val calls = RMMApiClient.calls()
+class PassengerTicketPurchaseRepository(
+    private val api: PassengerTicketPurchaseApi = RMMApiClient.create(PassengerTicketPurchaseApi::class.java),
+    private val calls: com.rmm.app.core.network.RMMApiCallExecutor = RMMApiClient.calls(),
+) {
 
     suspend fun purchase(
         session: PassengerSession,
