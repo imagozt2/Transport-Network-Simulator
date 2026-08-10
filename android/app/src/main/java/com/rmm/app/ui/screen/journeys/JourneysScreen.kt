@@ -47,7 +47,7 @@ import com.rmm.app.core.networkcatalog.PassengerNetworkRepository
 import com.rmm.app.core.networkcatalog.PassengerNetworkStation
 import com.rmm.app.core.session.PassengerSession
 
-private enum class CatalogTab { LINES, STATIONS }
+private enum class CatalogTab { MAP, LINES, STATIONS }
 
 private sealed interface CatalogUiState {
     data object Loading : CatalogUiState
@@ -62,7 +62,7 @@ fun JourneysScreen(
 ) {
     val repository = remember { PassengerNetworkRepository() }
     var reloadKey by rememberSaveable { mutableIntStateOf(0) }
-    var selectedTab by rememberSaveable { mutableStateOf(CatalogTab.LINES) }
+    var selectedTab by rememberSaveable { mutableStateOf(CatalogTab.MAP) }
     var state by remember { mutableStateOf<CatalogUiState>(CatalogUiState.Loading) }
 
     LaunchedEffect(session.accessToken, reloadKey) {
@@ -83,6 +83,11 @@ fun JourneysScreen(
             Spacer(Modifier.height(16.dp))
             TabRow(selectedTabIndex = selectedTab.ordinal) {
                 Tab(
+                    selected = selectedTab == CatalogTab.MAP,
+                    onClick = { selectedTab = CatalogTab.MAP },
+                    text = { Text(stringResource(R.string.journeys_map_tab)) },
+                )
+                Tab(
                     selected = selectedTab == CatalogTab.LINES,
                     onClick = { selectedTab = CatalogTab.LINES },
                     text = { Text(stringResource(R.string.journeys_lines_tab)) },
@@ -99,6 +104,7 @@ fun JourneysScreen(
             CatalogUiState.Loading -> LoadingState()
             is CatalogUiState.Error -> ErrorState(current.failure) { reloadKey++ }
             is CatalogUiState.Content -> when (selectedTab) {
+                CatalogTab.MAP -> NetworkMapView(current.catalog)
                 CatalogTab.LINES -> LinesList(current.catalog)
                 CatalogTab.STATIONS -> StationsList(current.catalog)
             }
