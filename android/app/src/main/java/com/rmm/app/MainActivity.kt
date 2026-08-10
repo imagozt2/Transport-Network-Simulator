@@ -16,6 +16,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import com.rmm.app.core.session.PassengerSessionStorage
 import com.rmm.app.navigation.RMMNavigation
+import com.rmm.app.navigation.RMMRootDestination
+import com.rmm.app.navigation.resolveRootDestination
 import com.rmm.app.ui.screen.authentication.AuthenticationScreen
 import com.rmm.app.ui.theme.RMMAppTheme
 
@@ -39,17 +41,20 @@ fun RMMApp(modifier: Modifier = Modifier) {
     val sessionStore = remember(context) { PassengerSessionStorage.get(context) }
     var session by remember { mutableStateOf(sessionStore.load()) }
 
-    if (session == null) {
-        AuthenticationScreen(
-            onAuthenticated = { authenticatedSession -> session = authenticatedSession },
-            modifier = modifier.fillMaxSize(),
-        )
-    } else {
-        RMMNavigation(
-            session = checkNotNull(session),
-            onLoggedOut = { session = null },
-            modifier = modifier.fillMaxSize(),
-        )
+    when (resolveRootDestination(session)) {
+        RMMRootDestination.AUTHENTICATION -> {
+            AuthenticationScreen(
+                onAuthenticated = { authenticatedSession -> session = authenticatedSession },
+                modifier = modifier.fillMaxSize(),
+            )
+        }
+        RMMRootDestination.APPLICATION -> {
+            RMMNavigation(
+                session = checkNotNull(session),
+                onLoggedOut = { session = null },
+                modifier = modifier.fillMaxSize(),
+            )
+        }
     }
 }
 
