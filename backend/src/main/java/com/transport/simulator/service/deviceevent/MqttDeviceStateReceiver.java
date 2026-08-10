@@ -8,14 +8,11 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 
 @Component
 public class MqttDeviceStateReceiver {
-    private static final Logger LOGGER = LoggerFactory.getLogger(MqttDeviceStateReceiver.class);
     private final MqttDeviceStateService stateService;
     private final ObjectMapper objectMapper;
 
@@ -27,13 +24,8 @@ public class MqttDeviceStateReceiver {
     }
 
     private void receive(AuthenticatedMqttMessage message) {
-        try {
-            if (message.topic().endsWith("/presence")) receivePresence(message);
-            else if (message.topic().endsWith("/status")) receiveStatus(message);
-        } catch (RuntimeException exception) {
-            LOGGER.warn("Rejected MQTT state from machine {} on topic {}: {}",
-                    message.machine().deviceCode(), message.topic(), exception.getMessage());
-        }
+        if (message.topic().endsWith("/presence")) receivePresence(message);
+        else if (message.topic().endsWith("/status")) receiveStatus(message);
     }
 
     private void receivePresence(AuthenticatedMqttMessage message) {

@@ -12,14 +12,11 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 
 @Component
 public class MqttTicketOperationEventReceiver {
-    private static final Logger LOGGER = LoggerFactory.getLogger(MqttTicketOperationEventReceiver.class);
     private static final Set<DeviceEventType> SALE_AND_VALIDATION_EVENTS = EnumSet.of(
             DeviceEventType.TICKET_PURCHASE_REQUESTED,
             DeviceEventType.TICKET_PURCHASE_COMPLETED,
@@ -41,15 +38,10 @@ public class MqttTicketOperationEventReceiver {
     }
 
     private void receive(AuthenticatedMqttMessage authenticated) {
-        try {
-            if (authenticated.topic().endsWith("/requests/validations")) {
-                receiveValidationRequest(authenticated);
-            } else if (authenticated.topic().contains("/events/operation")) {
-                receiveOperationEvent(authenticated);
-            }
-        } catch (RuntimeException exception) {
-            LOGGER.warn("Rejected ticket operation event from machine {} on topic {}: {}",
-                    authenticated.machine().deviceCode(), authenticated.topic(), exception.getMessage());
+        if (authenticated.topic().endsWith("/requests/validations")) {
+            receiveValidationRequest(authenticated);
+        } else if (authenticated.topic().contains("/events/operation")) {
+            receiveOperationEvent(authenticated);
         }
     }
 

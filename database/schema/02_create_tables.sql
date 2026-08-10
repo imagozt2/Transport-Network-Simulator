@@ -409,6 +409,47 @@ CREATE INDEX idx_device_mqtt_commands_device_requested
 CREATE INDEX idx_device_mqtt_commands_status_expiry
     ON device_mqtt_commands (command_status, expires_at);
 
+CREATE TABLE mqtt_inbound_messages (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    message_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    device_id BIGINT NOT NULL,
+    topic VARCHAR(255) NOT NULL,
+    payload_fingerprint CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    processing_status VARCHAR(20) NOT NULL DEFAULT 'PROCESSING',
+    processing_attempts INT NOT NULL DEFAULT 1,
+    duplicate_count INT NOT NULL DEFAULT 0,
+    received_at DATETIME NOT NULL,
+    processed_at DATETIME NULL,
+    last_duplicate_at DATETIME NULL,
+    last_error VARCHAR(500) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_mqtt_inbound_messages_message UNIQUE (message_id),
+    CONSTRAINT fk_mqtt_inbound_messages_device FOREIGN KEY (device_id) REFERENCES devices (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT chk_mqtt_inbound_messages_id CHECK (
+        message_id REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+    ),
+    CONSTRAINT chk_mqtt_inbound_messages_fingerprint CHECK (
+        payload_fingerprint REGEXP '^[0-9a-fA-F]{64}$'
+    ),
+    CONSTRAINT chk_mqtt_inbound_messages_status CHECK (
+        processing_status IN ('PROCESSING', 'PROCESSED', 'REJECTED', 'FAILED')
+    ),
+    CONSTRAINT chk_mqtt_inbound_messages_counts CHECK (
+        processing_attempts > 0 AND duplicate_count >= 0
+    ),
+    CONSTRAINT chk_mqtt_inbound_messages_processed CHECK (
+        (processing_status = 'PROCESSED' AND processed_at IS NOT NULL)
+        OR processing_status <> 'PROCESSED'
+    )
+);
+
+CREATE INDEX idx_mqtt_inbound_messages_device_received
+    ON mqtt_inbound_messages (device_id, received_at);
+CREATE INDEX idx_mqtt_inbound_messages_status_received
+    ON mqtt_inbound_messages (processing_status, received_at);
+
 CREATE TABLE train_models (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     manufacturer VARCHAR(100) NOT NULL,

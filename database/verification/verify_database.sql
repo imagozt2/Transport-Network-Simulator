@@ -18,6 +18,9 @@ FROM device_mqtt_identities;
 SELECT COUNT(*) AS device_mqtt_command_count
 FROM device_mqtt_commands;
 
+SELECT COUNT(*) AS mqtt_inbound_message_count
+FROM mqtt_inbound_messages;
+
 SELECT COUNT(*) AS passenger_account_token_count
 FROM passenger_account_tokens;
 
@@ -123,6 +126,17 @@ WHERE devices.id IS NULL
    OR commands.expires_at <= commands.requested_at
    OR commands.publication_attempts < 0
    OR (commands.command_status = 'PENDING' AND commands.published_at IS NOT NULL);
+
+SELECT messages.id, messages.message_id, messages.processing_status
+FROM mqtt_inbound_messages messages
+LEFT JOIN devices ON devices.id = messages.device_id
+WHERE devices.id IS NULL
+   OR messages.message_id NOT REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+   OR messages.payload_fingerprint NOT REGEXP '^[0-9a-fA-F]{64}$'
+   OR messages.processing_status NOT IN ('PROCESSING', 'PROCESSED', 'REJECTED', 'FAILED')
+   OR messages.processing_attempts <= 0
+   OR messages.duplicate_count < 0
+   OR (messages.processing_status = 'PROCESSED' AND messages.processed_at IS NULL);
 
 SELECT devices.id, devices.installation_id, devices.platform, devices.device_status
 FROM passenger_mobile_devices devices
