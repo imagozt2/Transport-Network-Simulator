@@ -18,6 +18,7 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.SmartLifecycle;
 
 public class ControlCenterMqttClient implements SmartLifecycle, MqttCallbackExtended {
@@ -27,13 +28,16 @@ public class ControlCenterMqttClient implements SmartLifecycle, MqttCallbackExte
     private final MqttAsyncClient client;
     private final MqttConnectOptions connectOptions;
     private final Clock clock;
+    private final ApplicationEventPublisher eventPublisher;
     private final Map<String, Subscription> subscriptions = new ConcurrentHashMap<>();
     private final AtomicReference<MqttConnectionSnapshot> snapshot;
     private volatile boolean running;
 
-    public ControlCenterMqttClient(MqttClientProperties properties, Clock clock) throws MqttException {
+    public ControlCenterMqttClient(MqttClientProperties properties, Clock clock,
+            ApplicationEventPublisher eventPublisher) throws MqttException {
         this.properties = properties;
         this.clock = clock;
+        this.eventPublisher = eventPublisher;
         properties.validate();
         this.client = new MqttAsyncClient(properties.serverUri(), properties.clientId(),
                 new MemoryPersistence());
@@ -47,7 +51,12 @@ public class ControlCenterMqttClient implements SmartLifecycle, MqttCallbackExte
     @Override
     public void start() {
         running = true;
-        if (!properties.enabled() || client.isConnected()) return;
+        connectIfNecessary();
+    }
+
+    public synchronized void connectIfNecessary() {
+        if (!properties.enabled() || !running || client.isConnected()
+                || snapshot.get().state() == MqttConnectionState.CONNECTING) return;
         update(MqttConnectionState.CONNECTING, null);
         try {
             client.connect(connectOptions, null, new IMqttActionListener() {
@@ -107,6 +116,7 @@ public class ControlCenterMqttClient implements SmartLifecycle, MqttCallbackExte
     public void connectComplete(boolean reconnect, String serverUri) {
         update(MqttConnectionState.CONNECTED, null);
         restoreSubscriptions();
+        eventPublisher.publishEvent(new MqttConnectedEvent(reconnect, serverUri, now()));
         LOGGER.info("MQTT client {} connected to {}{}", properties.clientId(), serverUri,
                 reconnect ? " after reconnection" : "");
     }

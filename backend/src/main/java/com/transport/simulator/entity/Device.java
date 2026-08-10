@@ -111,10 +111,22 @@ public class Device extends AuditableEntity {
         this.softwareVersion = normalize(softwareVersion);
         this.uptimeSeconds = uptimeSeconds;
         lastStatusAt = occurredAt;
-        if (mqttPresence != DeviceMqttPresence.OFFLINE) {
-            status = aggregateOperationalStatus();
-            recordConnection(occurredAt);
+        mqttPresence = DeviceMqttPresence.ONLINE;
+        status = aggregateOperationalStatus();
+        recordConnection(occurredAt);
+        return true;
+    }
+
+    public boolean markDisconnectedWhenStale(LocalDateTime staleBefore) {
+        Objects.requireNonNull(staleBefore);
+        if (mqttPresence != DeviceMqttPresence.ONLINE) return false;
+        LocalDateTime latestMessageAt = lastPresenceAt;
+        if (lastStatusAt != null && (latestMessageAt == null || lastStatusAt.isAfter(latestMessageAt))) {
+            latestMessageAt = lastStatusAt;
         }
+        if (latestMessageAt == null || !latestMessageAt.isBefore(staleBefore)) return false;
+        mqttPresence = DeviceMqttPresence.OFFLINE;
+        status = DeviceStatus.OFFLINE;
         return true;
     }
 

@@ -39,8 +39,17 @@ public class MqttDeviceCommandPublisher {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void publish(DeviceMqttCommandCreated event) {
+        publishWithinTransaction(event.commandDatabaseId());
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void republish(Long commandDatabaseId) {
+        publishWithinTransaction(commandDatabaseId);
+    }
+
+    private void publishWithinTransaction(Long commandDatabaseId) {
         DeviceMqttCommand command = commandRepository
-                .findByIdForPublication(event.commandDatabaseId())
+                .findByIdForPublication(commandDatabaseId)
                 .orElseThrow(() -> new IllegalStateException("MQTT command no longer exists"));
         LocalDateTime now = LocalDateTime.now(clock);
         if (!command.canPublish(now)) {

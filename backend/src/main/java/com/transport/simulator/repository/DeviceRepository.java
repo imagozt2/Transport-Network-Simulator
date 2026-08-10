@@ -1,6 +1,7 @@
 package com.transport.simulator.repository;
 
 import com.transport.simulator.entity.Device;
+import com.transport.simulator.enums.DeviceMqttPresence;
 import com.transport.simulator.repository.projection.DeviceStatusCountProjection;
 import com.transport.simulator.repository.projection.DeviceTypeCountProjection;
 import com.transport.simulator.repository.projection.StationDeviceSummaryProjection;
@@ -18,6 +19,8 @@ public interface DeviceRepository extends JpaRepository<Device, Long> {
     long countByActiveTrue();
 
     Optional<Device> findByCodeAndActiveTrue(String code);
+
+    List<Device> findAllByMqttPresenceAndActiveTrue(DeviceMqttPresence mqttPresence);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select device from Device device join fetch device.station where device.id = :id and device.active = true")

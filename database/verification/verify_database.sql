@@ -280,14 +280,14 @@ SELECT incidents.id, incidents.code, incidents.incident_status, incidents.priori
 FROM incidents
 LEFT JOIN operator_accounts creators ON creators.id = incidents.created_by_operator_id
 LEFT JOIN operator_accounts assignees ON assignees.id = incidents.assigned_to_operator_id
-LEFT JOIN transport_lines lines ON lines.id = incidents.affected_line_id
+LEFT JOIN transport_lines affected_line ON affected_line.id = incidents.affected_line_id
 LEFT JOIN stations ON stations.id = incidents.affected_station_id
 LEFT JOIN trains ON trains.id = incidents.affected_train_id
 LEFT JOIN devices ON devices.id = incidents.affected_device_id
 LEFT JOIN depots ON depots.id = incidents.affected_depot_id
 WHERE creators.id IS NULL
    OR (incidents.assigned_to_operator_id IS NOT NULL AND assignees.id IS NULL)
-   OR (incidents.affected_line_id IS NOT NULL AND lines.id IS NULL)
+   OR (incidents.affected_line_id IS NOT NULL AND affected_line.id IS NULL)
    OR (incidents.affected_station_id IS NOT NULL AND stations.id IS NULL)
    OR (incidents.affected_train_id IS NOT NULL AND trains.id IS NULL)
    OR (incidents.affected_device_id IS NOT NULL AND devices.id IS NULL)
