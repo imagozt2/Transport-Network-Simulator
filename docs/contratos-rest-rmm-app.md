@@ -366,7 +366,7 @@ Cada producto incluye código, nombre localizado, tipo, reglas, límites, precio
 respuesta no obliga al cliente a reproducir el cálculo definitivo; los importes mostrados se
 confirman nuevamente al solicitar la compra.
 
-### Simular un precio
+### Simular un precio (contrato futuro)
 
 ```http
 POST /api/rmm-app/v1/ticket-products/{productCode}/quotes
@@ -403,7 +403,10 @@ Respuesta:
 }
 ```
 
-La cotización es temporal. Una compra rechaza un `quoteId` vencido o perteneciente a otro usuario.
+Este endpoint todavía no forma parte de la implementación. La versión actual calcula una estimación
+en Android con el catálogo y el backend recalcula el importe definitivo al comprar. Cuando se
+incorpore la cotización remota, será temporal y una compra rechazará un `quoteId` vencido o
+perteneciente a otro usuario.
 
 ## Compras
 
@@ -416,7 +419,6 @@ Idempotency-Key: 39463e20-110c-4a6f-9f09-74943422cc11
 
 ```json
 {
-  "quoteId": "8ed95103-2ee3-4d89-88de-86c063c8f930",
   "productCode": "SINGLE_TRIP",
   "configuration": {
     "originStationCode": "ST046",
@@ -435,8 +437,8 @@ Los campos permitidos en `configuration` dependen del producto:
 | `TIME_PASS` | `dayCount` |
 | `SMART_BALANCE` | `rechargeAmount` |
 
-Una propiedad ajena al producto se rechaza. El backend compara la solicitud con la cotización y
-vuelve a comprobar las reglas antes de emitir.
+Una propiedad ajena al producto se rechaza. El backend vuelve a comprobar las reglas y calcula el
+importe definitivo antes de emitir.
 
 Respuesta `201 Created` cuando finaliza inmediatamente:
 
@@ -453,8 +455,8 @@ Respuesta `201 Created` cuando finaliza inmediatamente:
 }
 ```
 
-Una operación asíncrona devuelve `202 Accepted`, estado `PROCESSING` y cabecera `Location` con la
-ruta de consulta.
+La implementación actual completa la emisión de forma síncrona. Una evolución asíncrona podrá
+devolver `202 Accepted`, estado `PROCESSING` y una cabecera `Location`.
 
 ### Consultar una compra
 
@@ -465,7 +467,7 @@ GET /api/rmm-app/v1/purchases/{purchaseCode}
 Solo el pasajero propietario puede consultarla. Los estados corresponden al ciclo de compra
 documentado: `REQUESTED`, `PENDING_PAYMENT`, `PROCESSING`, `COMPLETED`, `FAILED` o `CANCELLED`.
 
-### Consultar compras propias
+### Consultar compras propias (contrato futuro)
 
 ```http
 GET /api/rmm-app/v1/purchases?status=COMPLETED&limit=20&cursor=...

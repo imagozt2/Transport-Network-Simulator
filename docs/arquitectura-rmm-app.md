@@ -8,8 +8,7 @@ usuarios, sesiones, billetes, precios, trayectos y códigos QR.
 
 Esta guía describe la base Android implementada actualmente: identidad visual, navegación principal,
 configuración de entornos, cliente HTTP, registro, inicio y cierre de sesión, almacenamiento seguro,
-consulta de la red, planificación de trayectos y pruebas. La pantalla de billetes continúa preparada
-para fases posteriores.
+consulta de la red, planificación de trayectos, compra simulada de billetes y pruebas.
 
 ## Tecnologías y requisitos
 
@@ -65,7 +64,9 @@ com.rmm.app/
 │   ├── journeys/                   # Historial local y favoritos de trayectos
 │   ├── network/                    # Retrofit, OkHttp y resultados tipados
 │   ├── networkcatalog/             # Catálogo público y planificador REST
-│   └── session/                    # Modelo y persistencia cifrada de sesión
+│   ├── session/                    # Modelo y persistencia cifrada de sesión
+│   ├── ticketcatalog/              # Productos y reglas tarifarias públicas
+│   └── ticketpurchase/             # Contrato y repositorio de compra
 ├── navigation/                     # Destinos raíz y navegación inferior
 └── ui/
     ├── component/                  # Componentes visuales compartidos
@@ -222,6 +223,10 @@ La sección Trayectos ya integra el catálogo de líneas y estaciones, el mapa, 
 remoto de recorridos. Su funcionamiento y persistencia local se describen en
 [Consulta de la red y planificación de trayectos](consulta-red-rmm-app.md).
 
+La sección Billetes integra el catálogo de títulos, los cuatro configuradores, la confirmación con
+pago simulado y la presentación del billete recién emitido. El flujo, la idempotencia y sus límites
+se describen en [Compra de billetes desde RMM App](compra-billetes-rmm-app.md).
+
 ## Pruebas y CI
 
 Los tests JVM se encuentran en `android/app/src/test/java/com/rmm/app` y cubren actualmente:
@@ -233,7 +238,8 @@ Los tests JVM se encuentran en `android/app/src/test/java/com/rmm/app` y cubren 
 - rechazo de identidades de instalación inválidas;
 - conservación de problemas HTTP y clasificación de DNS y timeout;
 - búsquedas de estaciones, representación de tramos y continuidad de transbordos;
-- coherencia geométrica del mapa, trayectos recientes y favoritos.
+- coherencia geométrica del mapa, trayectos recientes y favoritos;
+- precios de los cuatro productos, solicitudes de compra y errores de emisión.
 
 Se ejecutan junto con la compilación mediante:
 
@@ -262,6 +268,7 @@ tests como artefactos. Las pruebas no necesitan un backend, una base de datos ni
 - [Contratos REST de RMM App](contratos-rest-rmm-app.md)
 - [Autenticación de pasajeros](autenticacion-rmm-app.md)
 - [Consulta de la red y planificación de trayectos](consulta-red-rmm-app.md)
+- [Compra de billetes desde RMM App](compra-billetes-rmm-app.md)
 - [Flujos online y sin conexión](flujos-conectividad.md)
 - [Configuración y ejecución de aplicaciones cliente](ejecucion-aplicaciones-cliente.md)
 

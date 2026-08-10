@@ -32,6 +32,10 @@ La consulta del mapa, la búsqueda de estaciones, el planificador y los trayecto
 documentan en la guía de
 [`consulta de la red en RMM App`](../docs/consulta-red-rmm-app.md).
 
+El catálogo, la configuración de productos, la compra simulada y la presentación del billete emitido
+se describen en la guía de
+[`compra de billetes desde RMM App`](../docs/compra-billetes-rmm-app.md).
+
 ## Comprobación desde PowerShell
 
 ```powershell
