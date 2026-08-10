@@ -58,6 +58,7 @@ fun TicketsScreen(
     var state by remember { mutableStateOf<TicketCatalogUiState>(TicketCatalogUiState.Loading) }
     var singleTripProduct by remember { mutableStateOf<PassengerTicketProduct?>(null) }
     var multiTripProduct by remember { mutableStateOf<PassengerTicketProduct?>(null) }
+    var timePassProduct by remember { mutableStateOf<PassengerTicketProduct?>(null) }
 
     LaunchedEffect(session.accessToken, reloadKey) {
         state = TicketCatalogUiState.Loading
@@ -75,6 +76,7 @@ fun TicketsScreen(
             modifier = modifier,
             onConfigureSingleTrip = { singleTripProduct = it },
             onConfigureMultiTrip = { multiTripProduct = it },
+            onConfigureTimePass = { timePassProduct = it },
         )
     }
 
@@ -91,6 +93,12 @@ fun TicketsScreen(
             onDismiss = { multiTripProduct = null },
         )
     }
+    timePassProduct?.let { product ->
+        TimePassConfigurationDialog(
+            product = product,
+            onDismiss = { timePassProduct = null },
+        )
+    }
 }
 
 @Composable
@@ -99,6 +107,7 @@ private fun TicketCatalog(
     modifier: Modifier,
     onConfigureSingleTrip: (PassengerTicketProduct) -> Unit,
     onConfigureMultiTrip: (PassengerTicketProduct) -> Unit,
+    onConfigureTimePass: (PassengerTicketProduct) -> Unit,
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -127,6 +136,7 @@ private fun TicketCatalog(
                     onConfigure = when (product.type) {
                         "SINGLE_TRIP" -> { { onConfigureSingleTrip(product) } }
                         "MULTI_TRIP" -> { { onConfigureMultiTrip(product) } }
+                        "TIME_PASS" -> { { onConfigureTimePass(product) } }
                         else -> null
                     },
                 )

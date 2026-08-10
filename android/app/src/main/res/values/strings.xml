@@ -43,6 +43,11 @@
     <string name="ticket_choose_trip_count">Selecciona entre %1$d y %2$d viajes.</string>
     <string name="ticket_trips">viajes</string>
     <string name="ticket_multi_trip_price_detail">%1$s por viaje × %2$d viajes</string>
+    <string name="ticket_time_pass_configuration">Configura la duración de tu abono.</string>
+    <string name="ticket_choose_day_count">Selecciona entre %1$d y %2$d días.</string>
+    <string name="ticket_days">días</string>
+    <string name="ticket_time_pass_price_detail">%1$s por día × %2$d días</string>
+    <string name="ticket_time_pass_validity_notice">El abono será válido durante %1$d días desde su emisión.</string>
     <string name="journeys_title">Trayectos</string>
     <string name="journeys_description">Planifica tus desplazamientos por la red de RMM</string>
     <string name="account_title">Mi cuenta</string>
