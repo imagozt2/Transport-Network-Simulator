@@ -1,13 +1,20 @@
 package com.rmm.app.ui.screen.journeys
 
+import android.graphics.Color.parseColor
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -25,6 +32,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -159,8 +169,20 @@ internal fun JourneyPlanner(
             }
             is JourneyUiState.Content -> {
                 item { JourneySummary(current.journey) }
-                items(current.journey.segments, key = { "${it.lineCode}-${it.stations.firstOrNull()?.code}" }) {
-                    JourneySegmentCard(it)
+                itemsIndexed(
+                    current.journey.segments,
+                    key = { _, segment -> "${segment.lineCode}-${segment.stations.firstOrNull()?.code}" },
+                ) { index, segment ->
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        JourneySegmentCard(segment)
+                        if (index < current.journey.segments.lastIndex) {
+                            JourneyTransferCard(
+                                stationName = segment.stations.last().name,
+                                fromLine = segment,
+                                toLine = current.journey.segments[index + 1],
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -266,6 +288,7 @@ private fun JourneySummary(journey: PassengerNetworkJourney) {
 
 @Composable
 private fun JourneySegmentCard(segment: PassengerNetworkJourneySegment) {
+    val lineColor = segment.lineColor.asComposeColor(MaterialTheme.colorScheme.primary)
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
@@ -276,7 +299,11 @@ private fun JourneySegmentCard(segment: PassengerNetworkJourneySegment) {
                 LineBadge(segment.lineCode, segment.lineColor)
                 Column(modifier = Modifier.weight(1f)) {
                     Text(segment.lineName, style = MaterialTheme.typography.titleMedium)
-                    Text(stringResource(R.string.journeys_direction, segment.directionTerminal.name))
+                    Text(
+                        stringResource(R.string.journeys_direction, segment.directionTerminal.name),
+                        color = lineColor,
+                        fontWeight = FontWeight.Bold,
+                    )
                 }
                 Text(stringResource(R.string.journeys_segment_duration, ceil(segment.travelSeconds / 60.0).toInt()))
             }
@@ -285,10 +312,97 @@ private fun JourneySegmentCard(segment: PassengerNetworkJourneySegment) {
                 pluralStringResource(R.plurals.journeys_segment_stops, segment.stopCount, segment.stopCount),
                 style = MaterialTheme.typography.labelLarge,
             )
-            Text(
-                segment.stations.joinToString("  ·  ") { it.name },
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            segment.stations.forEachIndexed { index, station ->
+                JourneyStationRow(
+                    code = station.code,
+                    name = station.name,
+                    lineColor = lineColor,
+                    first = index == 0,
+                    last = index == segment.stations.lastIndex,
+                )
+            }
         }
     }
+}
+
+@Composable
+private fun JourneyStationRow(
+    code: String,
+    name: String,
+    lineColor: Color,
+    first: Boolean,
+    last: Boolean,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 48.dp)
+            .drawBehind {
+                val railX = 12.dp.toPx()
+                val centerY = size.height / 2
+                drawLine(
+                    color = lineColor,
+                    start = Offset(railX, if (first) centerY else 0f),
+                    end = Offset(railX, if (last) centerY else size.height),
+                    strokeWidth = 3.dp.toPx(),
+                )
+            },
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(modifier = Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier
+                    .size(if (first || last) 24.dp else 16.dp)
+                    .background(MaterialTheme.colorScheme.surface, CircleShape)
+                    .border(3.dp, lineColor, CircleShape),
+            )
+        }
+        Column {
+            Text(name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+            Text(code, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun JourneyTransferCard(
+    stationName: String,
+    fromLine: PassengerNetworkJourneySegment,
+    toLine: PassengerNetworkJourneySegment,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        shape = MaterialTheme.shapes.medium,
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(
+                    stringResource(R.string.journeys_transfer_at, stationName),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    stringResource(R.string.journeys_transfer_instruction, fromLine.lineCode, toLine.lineCode),
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                LineBadge(fromLine.lineCode, fromLine.lineColor)
+                Text("→", style = MaterialTheme.typography.titleLarge)
+                LineBadge(toLine.lineCode, toLine.lineColor)
+            }
+        }
+    }
+}
+
+private fun String?.asComposeColor(fallback: Color): Color = try {
+    if (isNullOrBlank()) fallback else Color(parseColor(this))
+} catch (_: IllegalArgumentException) {
+    fallback
 }
