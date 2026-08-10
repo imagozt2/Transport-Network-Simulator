@@ -306,6 +306,51 @@ CREATE INDEX idx_devices_station ON devices (station_id);
 CREATE INDEX idx_devices_type_status ON devices (device_type, status);
 CREATE INDEX idx_devices_active ON devices (active);
 
+CREATE TABLE device_mqtt_identities (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    device_id BIGINT NOT NULL,
+    instance_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    mqtt_client_id VARCHAR(100) NOT NULL,
+    authentication_mode VARCHAR(20) NOT NULL,
+    identity_status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+    certificate_serial VARCHAR(128) NULL,
+    valid_from DATETIME NOT NULL,
+    valid_until DATETIME NULL,
+    last_authenticated_at DATETIME NULL,
+    revoked_at DATETIME NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_device_mqtt_identities_device UNIQUE (device_id),
+    CONSTRAINT uk_device_mqtt_identities_instance UNIQUE (instance_id),
+    CONSTRAINT uk_device_mqtt_identities_client UNIQUE (mqtt_client_id),
+    CONSTRAINT uk_device_mqtt_identities_certificate UNIQUE (certificate_serial),
+    CONSTRAINT fk_device_mqtt_identities_device FOREIGN KEY (device_id) REFERENCES devices (id)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT chk_device_mqtt_identities_instance CHECK (
+        instance_id REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+    ),
+    CONSTRAINT chk_device_mqtt_identities_authentication CHECK (
+        authentication_mode IN ('PASSWORD', 'MTLS')
+    ),
+    CONSTRAINT chk_device_mqtt_identities_status CHECK (
+        identity_status IN ('ACTIVE', 'REVOKED', 'EXPIRED')
+    ),
+    CONSTRAINT chk_device_mqtt_identities_validity CHECK (
+        valid_until IS NULL OR valid_until > valid_from
+    ),
+    CONSTRAINT chk_device_mqtt_identities_revocation CHECK (
+        (identity_status = 'REVOKED' AND revoked_at IS NOT NULL)
+        OR (identity_status <> 'REVOKED' AND revoked_at IS NULL)
+    ),
+    CONSTRAINT chk_device_mqtt_identities_certificate CHECK (
+        (authentication_mode = 'PASSWORD' AND certificate_serial IS NULL)
+        OR (authentication_mode = 'MTLS' AND CHAR_LENGTH(TRIM(certificate_serial)) > 0)
+    )
+);
+
+CREATE INDEX idx_device_mqtt_identities_status_validity
+    ON device_mqtt_identities (identity_status, valid_until);
+
 CREATE TABLE train_models (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     manufacturer VARCHAR(100) NOT NULL,

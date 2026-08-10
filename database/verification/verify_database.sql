@@ -12,6 +12,9 @@ FROM passenger_sessions;
 SELECT COUNT(*) AS passenger_mobile_device_count
 FROM passenger_mobile_devices;
 
+SELECT COUNT(*) AS device_mqtt_identity_count
+FROM device_mqtt_identities;
+
 SELECT COUNT(*) AS passenger_account_token_count
 FROM passenger_account_tokens;
 
@@ -47,6 +50,7 @@ UNION ALL SELECT 'transport_lines', COUNT(*), 6 FROM transport_lines
 UNION ALL SELECT 'line_stations', COUNT(*), 88 FROM line_stations
 UNION ALL SELECT 'station_connections', COUNT(*), 82 FROM station_connections
 UNION ALL SELECT 'devices', COUNT(*), 622 FROM devices
+UNION ALL SELECT 'device_mqtt_identities', COUNT(*), 622 FROM device_mqtt_identities
 UNION ALL SELECT 'train_models', COUNT(*), 4 FROM train_models
 UNION ALL SELECT 'depots', COUNT(*), 12 FROM depots
 UNION ALL SELECT 'trains', COUNT(*), 242 FROM trains
@@ -77,6 +81,22 @@ WHERE public_id NOT REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[
    OR CHAR_LENGTH(TRIM(last_name)) = 0
    OR account_status NOT IN ('PENDING_VERIFICATION', 'ACTIVE', 'BLOCKED', 'DISABLED')
    OR failed_login_attempts < 0;
+
+SELECT identities.id, identities.instance_id, identities.mqtt_client_id,
+       identities.authentication_mode, identities.identity_status
+FROM device_mqtt_identities identities
+LEFT JOIN devices ON devices.id = identities.device_id
+WHERE devices.id IS NULL
+   OR devices.active = FALSE
+   OR identities.mqtt_client_id <> devices.code
+   OR identities.instance_id NOT REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+   OR identities.authentication_mode NOT IN ('PASSWORD', 'MTLS')
+   OR identities.identity_status NOT IN ('ACTIVE', 'REVOKED', 'EXPIRED')
+   OR (identities.authentication_mode = 'PASSWORD' AND identities.certificate_serial IS NOT NULL)
+   OR (identities.authentication_mode = 'MTLS' AND identities.certificate_serial IS NULL)
+   OR (identities.identity_status = 'REVOKED' AND identities.revoked_at IS NULL)
+   OR (identities.identity_status <> 'REVOKED' AND identities.revoked_at IS NOT NULL)
+   OR (identities.valid_until IS NOT NULL AND identities.valid_until <= identities.valid_from);
 
 SELECT devices.id, devices.installation_id, devices.platform, devices.device_status
 FROM passenger_mobile_devices devices

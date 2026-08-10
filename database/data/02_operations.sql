@@ -54,6 +54,15 @@ JOIN seed_numbers numbers ON numbers.n <= CASE
 ON DUPLICATE KEY UPDATE
     name = VALUES(name), station_id = VALUES(station_id), status = VALUES(status), active = VALUES(active);
 
+INSERT INTO device_mqtt_identities (
+    device_id, instance_id, mqtt_client_id, authentication_mode,
+    identity_status, valid_from
+)
+SELECT devices.id, UUID(), devices.code, 'PASSWORD', 'ACTIVE', UTC_TIMESTAMP()
+FROM devices
+ON DUPLICATE KEY UPDATE
+    mqtt_client_id = VALUES(mqtt_client_id);
+
 INSERT INTO train_models (
     manufacturer, model_name, series, car_count, capacity_passengers, max_speed_kmh, active
 ) VALUES
