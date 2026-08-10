@@ -2,5 +2,45 @@
 <resources>
     <string name="app_name">RMM App</string>
     <string name="app_subtitle">Red de Metro de Macegocia</string>
+    <string name="navigation_home">Inicio</string>
+    <string name="navigation_tickets">Billetes</string>
+    <string name="navigation_journeys">Trayectos</string>
+    <string name="navigation_account">Cuenta</string>
+    <string name="home_title">Inicio</string>
+    <string name="home_description">Tu red de metro en un solo lugar</string>
+    <string name="tickets_title">Mis billetes</string>
+    <string name="tickets_description">Compra, registra y consulta tus títulos de transporte</string>
+    <string name="journeys_title">Trayectos</string>
+    <string name="journeys_description">Planifica tus desplazamientos por la red de RMM</string>
+    <string name="account_title">Mi cuenta</string>
+    <string name="account_description">Gestiona tu perfil, dispositivos y preferencias</string>
+    <string name="auth_welcome">Bienvenido a RMM</string>
+    <string name="auth_login_tab">Iniciar sesión</string>
+    <string name="auth_register_tab">Crear cuenta</string>
+    <string name="auth_login_title">Accede a tu cuenta</string>
+    <string name="auth_register_title">Crea tu cuenta de pasajero</string>
+    <string name="auth_email">Correo electrónico</string>
+    <string name="auth_password">Contraseña</string>
+    <string name="auth_password_confirmation">Repite la contraseña</string>
+    <string name="auth_first_name">Nombre</string>
+    <string name="auth_last_name">Apellidos</string>
+    <string name="auth_terms_acceptance">Acepto los términos y condiciones vigentes</string>
+    <string name="auth_login_action">Iniciar sesión</string>
+    <string name="auth_register_action">Crear cuenta</string>
+    <string name="auth_registration_success">Cuenta creada para %1$s. Verifica tu correo antes de iniciar sesión.</string>
+    <string name="auth_invalid_credentials">El correo o la contraseña no son correctos.</string>
+    <string name="auth_network_error">No se ha podido conectar con RMM. Revisa tu conexión.</string>
+    <string name="auth_request_error">No se ha podido completar la operación.</string>
+    <string name="auth_session_storage_error">La sesión se ha iniciado, pero no se ha podido guardar de forma segura.</string>
+    <string name="account_information">Información de la cuenta</string>
+    <string name="account_status">Estado</string>
+    <string name="account_language">Idioma preferido</string>
+    <string name="account_identifier">Identificador de pasajero</string>
+    <string name="account_logout">Cerrar sesión</string>
+    <string name="account_logout_confirmation_title">¿Quieres cerrar la sesión?</string>
+    <string name="account_logout_confirmation_description">Tendrás que volver a identificarte para acceder a tus billetes y trayectos.</string>
+    <string name="account_logout_confirm">Cerrar sesión</string>
+    <string name="account_logout_cancel">Cancelar</string>
+    <string name="account_logout_storage_error">No se han podido eliminar de forma segura las credenciales locales.</string>
 </resources>
 

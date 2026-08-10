@@ -14,21 +14,33 @@ import androidx.compose.ui.platform.LocalContext
 private val LightColorScheme = lightColorScheme(
     primary = RMMBlue,
     onPrimary = Color.White,
+    primaryContainer = RMMBlueContainer,
+    onPrimaryContainer = RMMNavy,
     secondary = RMMBlueDark,
+    onSecondary = Color.White,
     background = RMMSurface,
     onBackground = RMMNavy,
     surface = Color.White,
     onSurface = RMMNavy,
+    surfaceVariant = RMMSurfaceVariant,
+    onSurfaceVariant = RMMSlate,
+    outline = RMMOutline,
 )
 
 private val DarkColorScheme = darkColorScheme(
     primary = RMMBlue,
     onPrimary = Color.White,
-    secondary = RMMBlueDark,
+    primaryContainer = RMMBlueContainerDark,
+    onPrimaryContainer = Color(0xFFDCEEFF),
+    secondary = Color(0xFF72BFFF),
+    onSecondary = RMMNavy,
     background = RMMNavy,
     onBackground = Color.White,
-    surface = Color(0xFF182235),
+    surface = RMMDarkSurface,
     onSurface = Color.White,
+    surfaceVariant = RMMDarkSurfaceVariant,
+    onSurfaceVariant = Color(0xFFC4CEDA),
+    outline = RMMDarkOutline,
 )
 
 @Composable
@@ -49,6 +61,7 @@ fun RMMAppTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = RMMTypography,
+        shapes = RMMShapes,
         content = content,
     )
 }

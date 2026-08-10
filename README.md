@@ -201,6 +201,7 @@ RMM App y las máquinas Qt disponen de una guía específica con la configuraci�
 ejecución desde los IDE, los comandos de compilación y la ubicación de los artefactos:
 
 - [Ejecución de las aplicaciones cliente](docs/ejecucion-aplicaciones-cliente.md)
+- [Arquitectura de RMM App](docs/arquitectura-rmm-app.md)
 
 ### Entorno Docker
 

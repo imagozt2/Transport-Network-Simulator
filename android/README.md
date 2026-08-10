@@ -24,6 +24,10 @@ el módulo `app` en el emulador configurado.
 La guía conjunta de puesta en marcha, instalación del APK y servicios necesarios está disponible en
 [`../docs/ejecucion-aplicaciones-cliente.md`](../docs/ejecucion-aplicaciones-cliente.md).
 
+La estructura interna, los flujos de autenticación, la seguridad de la sesión y las reglas para
+ampliar el cliente se describen en la
+[`arquitectura de RMM App`](../docs/arquitectura-rmm-app.md).
+
 ## Comprobación desde PowerShell
 
 ```powershell
@@ -33,5 +37,9 @@ cd android
 
 El APK de depuración se genera en `app/build/outputs/apk/debug/app-debug.apk`.
 
-La aplicación contiene por ahora únicamente la identidad visual mínima. Las capas de navegación,
-datos, dominio y seguridad se incorporarán de forma progresiva.
+La aplicación obtiene el entorno y la URL de la API durante la compilación. Los builds de depuración
+permiten la URL HTTP del emulador; cualquier otro build exige HTTPS. El cliente común utiliza
+Retrofit y OkHttp, añade únicamente cabeceras públicas y no registra cuerpos ni credenciales. Las
+llamadas devuelven resultados tipados que distinguen respuestas HTTP, problemas de conectividad,
+errores de serialización y respuestas inválidas sin mostrar directamente excepciones técnicas en la
+interfaz.
