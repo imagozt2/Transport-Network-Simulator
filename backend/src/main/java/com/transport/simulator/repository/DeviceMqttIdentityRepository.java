@@ -12,4 +12,7 @@ public interface DeviceMqttIdentityRepository extends JpaRepository<DeviceMqttId
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select identity from DeviceMqttIdentity identity join fetch identity.device device join fetch device.station where identity.mqttClientId = :clientId")
     Optional<DeviceMqttIdentity> findByClientIdForAuthentication(@Param("clientId") String clientId);
+
+    @Query("select identity from DeviceMqttIdentity identity join fetch identity.device where identity.device.id = :deviceId")
+    Optional<DeviceMqttIdentity> findByDeviceId(@Param("deviceId") Long deviceId);
 }

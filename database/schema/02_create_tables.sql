@@ -351,6 +351,48 @@ CREATE TABLE device_mqtt_identities (
 CREATE INDEX idx_device_mqtt_identities_status_validity
     ON device_mqtt_identities (identity_status, valid_until);
 
+CREATE TABLE device_mqtt_commands (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    command_id VARCHAR(80) NOT NULL,
+    message_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    device_id BIGINT NOT NULL,
+    command_type VARCHAR(50) NOT NULL,
+    command_status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+    payload_json JSON NOT NULL,
+    requested_at DATETIME NOT NULL,
+    expires_at DATETIME NOT NULL,
+    published_at DATETIME NULL,
+    publication_attempts INT NOT NULL DEFAULT 0,
+    last_publication_error VARCHAR(500) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_device_mqtt_commands_command UNIQUE (command_id),
+    CONSTRAINT uk_device_mqtt_commands_message UNIQUE (message_id),
+    CONSTRAINT fk_device_mqtt_commands_device FOREIGN KEY (device_id) REFERENCES devices (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT chk_device_mqtt_commands_message CHECK (
+        message_id REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+    ),
+    CONSTRAINT chk_device_mqtt_commands_type CHECK (
+        command_type IN ('TICKET_ISSUE', 'CONFIGURATION_REFRESH', 'STATUS_REQUEST', 'RESTART')
+    ),
+    CONSTRAINT chk_device_mqtt_commands_status CHECK (
+        command_status IN ('PENDING', 'PUBLISHED', 'PUBLISH_FAILED', 'RECEIVED', 'PROCESSING',
+            'COMPLETED', 'FAILED', 'REJECTED', 'EXPIRED')
+    ),
+    CONSTRAINT chk_device_mqtt_commands_expiry CHECK (expires_at > requested_at),
+    CONSTRAINT chk_device_mqtt_commands_attempts CHECK (publication_attempts >= 0),
+    CONSTRAINT chk_device_mqtt_commands_publication CHECK (
+        (command_status = 'PENDING' AND published_at IS NULL)
+        OR command_status <> 'PENDING'
+    )
+);
+
+CREATE INDEX idx_device_mqtt_commands_device_requested
+    ON device_mqtt_commands (device_id, requested_at);
+CREATE INDEX idx_device_mqtt_commands_status_expiry
+    ON device_mqtt_commands (command_status, expires_at);
+
 CREATE TABLE train_models (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     manufacturer VARCHAR(100) NOT NULL,

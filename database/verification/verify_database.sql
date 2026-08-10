@@ -15,6 +15,9 @@ FROM passenger_mobile_devices;
 SELECT COUNT(*) AS device_mqtt_identity_count
 FROM device_mqtt_identities;
 
+SELECT COUNT(*) AS device_mqtt_command_count
+FROM device_mqtt_commands;
+
 SELECT COUNT(*) AS passenger_account_token_count
 FROM passenger_account_tokens;
 
@@ -97,6 +100,18 @@ WHERE devices.id IS NULL
    OR (identities.identity_status = 'REVOKED' AND identities.revoked_at IS NULL)
    OR (identities.identity_status <> 'REVOKED' AND identities.revoked_at IS NOT NULL)
    OR (identities.valid_until IS NOT NULL AND identities.valid_until <= identities.valid_from);
+
+SELECT commands.id, commands.command_id, commands.command_type, commands.command_status
+FROM device_mqtt_commands commands
+LEFT JOIN devices ON devices.id = commands.device_id
+WHERE devices.id IS NULL
+   OR commands.message_id NOT REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+   OR commands.command_type NOT IN ('TICKET_ISSUE', 'CONFIGURATION_REFRESH', 'STATUS_REQUEST', 'RESTART')
+   OR commands.command_status NOT IN ('PENDING', 'PUBLISHED', 'PUBLISH_FAILED', 'RECEIVED',
+       'PROCESSING', 'COMPLETED', 'FAILED', 'REJECTED', 'EXPIRED')
+   OR commands.expires_at <= commands.requested_at
+   OR commands.publication_attempts < 0
+   OR (commands.command_status = 'PENDING' AND commands.published_at IS NOT NULL);
 
 SELECT devices.id, devices.installation_id, devices.platform, devices.device_status
 FROM passenger_mobile_devices devices
