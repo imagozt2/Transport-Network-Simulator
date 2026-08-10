@@ -133,10 +133,11 @@ La simulación no incluye:
 - circulación de la flota histórica;
 - persistencia continua de posiciones;
 - generación de logs ferroviarios;
-- conexión efectiva con un broker MQTT.
+- simulación de averías reales recibidas por MQTT.
 
-La futura integración MQTT reutilizará el contrato de entrada y el registro de eventos ya preparados,
-sin cambiar el funcionamiento determinista del motor ferroviario.
+La [integración MQTT del backend](integracion-mqtt-backend.md) reutiliza el contrato de entrada y el
+registro de eventos sin cambiar el funcionamiento determinista del motor ferroviario. Cuando una
+máquina queda gestionada por MQTT, el simulador deja de modificar su estado.
 
 ## Pruebas recomendadas
 

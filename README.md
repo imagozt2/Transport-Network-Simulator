@@ -301,6 +301,7 @@ ejecuta las pruebas de Android y Qt y conserva temporalmente sus artefactos de c
 - [Contratos REST para RMM App](docs/contratos-rest-rmm-app.md)
 - [Autenticación, sesiones y dispositivos de RMM App](docs/autenticacion-rmm-app.md)
 - [Topics y mensajes MQTT del ecosistema RMM](docs/contrato-mqtt.md)
+- [Integración MQTT del backend](docs/integracion-mqtt-backend.md)
 - [Identidad y autenticación de las máquinas RMM](docs/identidad-maquinas.md)
 - [Flujos online y sin conexión del ecosistema RMM](docs/flujos-conectividad.md)
 - [Integración final de la aplicación web](docs/integracion-aplicacion-web.md)
