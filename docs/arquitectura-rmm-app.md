@@ -7,8 +7,9 @@ los datos y operaciones de la cuenta, pero el backend Spring Boot continúa sien
 usuarios, sesiones, billetes, precios, trayectos y códigos QR.
 
 Esta guía describe la base Android implementada actualmente: identidad visual, navegación principal,
-configuración de entornos, cliente HTTP, registro, inicio y cierre de sesión, almacenamiento seguro y
-pruebas. Las pantallas de billetes y trayectos todavía son destinos preparados para fases posteriores.
+configuración de entornos, cliente HTTP, registro, inicio y cierre de sesión, almacenamiento seguro,
+consulta de la red, planificación de trayectos y pruebas. La pantalla de billetes continúa preparada
+para fases posteriores.
 
 ## Tecnologías y requisitos
 
@@ -61,7 +62,9 @@ com.rmm.app/
 ├── core/
 │   ├── auth/                       # Contratos y flujos de autenticación
 │   ├── environment/                # Entorno y URL versionada de la API
+│   ├── journeys/                   # Historial local y favoritos de trayectos
 │   ├── network/                    # Retrofit, OkHttp y resultados tipados
+│   ├── networkcatalog/             # Catálogo público y planificador REST
 │   └── session/                    # Modelo y persistencia cifrada de sesión
 ├── navigation/                     # Destinos raíz y navegación inferior
 └── ui/
@@ -215,6 +218,10 @@ compactas y con el teclado abierto.
 Cuando las funciones de billetes y trayectos incorporen más estados y casos de uso, deberán introducir
 modelos de estado o `ViewModel` específicos en lugar de concentrar esa lógica en los composables.
 
+La sección Trayectos ya integra el catálogo de líneas y estaciones, el mapa, la búsqueda y el cálculo
+remoto de recorridos. Su funcionamiento y persistencia local se describen en
+[Consulta de la red y planificación de trayectos](consulta-red-rmm-app.md).
+
 ## Pruebas y CI
 
 Los tests JVM se encuentran en `android/app/src/test/java/com/rmm/app` y cubren actualmente:
@@ -224,7 +231,9 @@ Los tests JVM se encuentran en `android/app/src/test/java/com/rmm/app` y cubren 
 - contrato y unicidad de las rutas principales;
 - caducidad, margen de seguridad y renovación de la sesión;
 - rechazo de identidades de instalación inválidas;
-- conservación de problemas HTTP y clasificación de DNS y timeout.
+- conservación de problemas HTTP y clasificación de DNS y timeout;
+- búsquedas de estaciones, representación de tramos y continuidad de transbordos;
+- coherencia geométrica del mapa, trayectos recientes y favoritos.
 
 Se ejecutan junto con la compilación mediante:
 
@@ -252,6 +261,7 @@ tests como artefactos. Las pruebas no necesitan un backend, una base de datos ni
 - [Arquitectura general del ecosistema](arquitectura-ecosistema.md)
 - [Contratos REST de RMM App](contratos-rest-rmm-app.md)
 - [Autenticación de pasajeros](autenticacion-rmm-app.md)
+- [Consulta de la red y planificación de trayectos](consulta-red-rmm-app.md)
 - [Flujos online y sin conexión](flujos-conectividad.md)
 - [Configuración y ejecución de aplicaciones cliente](ejecucion-aplicaciones-cliente.md)
 
