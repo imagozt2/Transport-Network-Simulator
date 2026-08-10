@@ -48,6 +48,11 @@
     <string name="ticket_days">días</string>
     <string name="ticket_time_pass_price_detail">%1$s por día × %2$d días</string>
     <string name="ticket_time_pass_validity_notice">El abono será válido durante %1$d días desde su emisión.</string>
+    <string name="ticket_smart_balance_configuration">Configura el saldo inicial de tu tarjeta.</string>
+    <string name="ticket_choose_recharge_amount">Introduce un importe entre %1$s y %2$s.</string>
+    <string name="ticket_recharge_amount">Importe de la recarga</string>
+    <string name="ticket_recharge_amount_error">Introduce un importe válido dentro de los límites permitidos.</string>
+    <string name="ticket_smart_balance_initial_balance">Este será el saldo disponible tras la emisión.</string>
     <string name="journeys_title">Trayectos</string>
     <string name="journeys_description">Planifica tus desplazamientos por la red de RMM</string>
     <string name="account_title">Mi cuenta</string>
