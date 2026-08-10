@@ -65,6 +65,11 @@
     <string name="ticket_purchase_code">Compra: %1$s</string>
     <string name="ticket_purchase_ticket_code">Billete: %1$s</string>
     <string name="ticket_purchase_done">Volver al catálogo</string>
+    <string name="ticket_purchase_success_description">Tu billete digital ya está disponible.</string>
+    <string name="ticket_issued_title">Billete emitido</string>
+    <string name="ticket_issued_active">Activo</string>
+    <string name="ticket_issued_identifier">Identificador</string>
+    <string name="ticket_issued_at">Emitido</string>
     <string name="ticket_purchase_single_summary">De %1$s a %2$s</string>
     <string name="ticket_purchase_multi_summary">%1$d viajes</string>
     <string name="ticket_purchase_time_summary">%1$d días de validez</string>
