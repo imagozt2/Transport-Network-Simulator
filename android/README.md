@@ -35,4 +35,7 @@ El APK de depuración se genera en `app/build/outputs/apk/debug/app-debug.apk`.
 
 La aplicación obtiene el entorno y la URL de la API durante la compilación. Los builds de depuración
 permiten la URL HTTP del emulador; cualquier otro build exige HTTPS. El cliente común utiliza
-Retrofit y OkHttp, añade únicamente cabeceras públicas y no registra cuerpos ni credenciales.
+Retrofit y OkHttp, añade únicamente cabeceras públicas y no registra cuerpos ni credenciales. Las
+llamadas devuelven resultados tipados que distinguen respuestas HTTP, problemas de conectividad,
+errores de serialización y respuestas inválidas sin mostrar directamente excepciones técnicas en la
+interfaz.
