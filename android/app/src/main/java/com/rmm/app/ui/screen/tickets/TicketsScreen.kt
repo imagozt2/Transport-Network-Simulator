@@ -56,6 +56,7 @@ fun TicketsScreen(
     val repository = remember { PassengerTicketCatalogRepository() }
     var reloadKey by rememberSaveable { mutableIntStateOf(0) }
     var state by remember { mutableStateOf<TicketCatalogUiState>(TicketCatalogUiState.Loading) }
+    var singleTripProduct by remember { mutableStateOf<PassengerTicketProduct?>(null) }
 
     LaunchedEffect(session.accessToken, reloadKey) {
         state = TicketCatalogUiState.Loading
@@ -68,12 +69,28 @@ fun TicketsScreen(
     when (val current = state) {
         TicketCatalogUiState.Loading -> CatalogLoading(modifier)
         is TicketCatalogUiState.Error -> CatalogError(current.failure, modifier) { reloadKey++ }
-        is TicketCatalogUiState.Content -> TicketCatalog(current.products, modifier)
+        is TicketCatalogUiState.Content -> TicketCatalog(
+            products = current.products,
+            modifier = modifier,
+            onConfigureSingleTrip = { singleTripProduct = it },
+        )
+    }
+
+    singleTripProduct?.let { product ->
+        SingleTripConfigurationDialog(
+            session = session,
+            product = product,
+            onDismiss = { singleTripProduct = null },
+        )
     }
 }
 
 @Composable
-private fun TicketCatalog(products: List<PassengerTicketProduct>, modifier: Modifier) {
+private fun TicketCatalog(
+    products: List<PassengerTicketProduct>,
+    modifier: Modifier,
+    onConfigureSingleTrip: (PassengerTicketProduct) -> Unit,
+) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp),
@@ -96,14 +113,21 @@ private fun TicketCatalog(products: List<PassengerTicketProduct>, modifier: Modi
             }
         } else {
             items(products, key = PassengerTicketProduct::code) { product ->
-                TicketProductCard(product)
+                TicketProductCard(
+                    product = product,
+                    onConfigure = if (product.type == "SINGLE_TRIP") {
+                        { onConfigureSingleTrip(product) }
+                    } else {
+                        null
+                    },
+                )
             }
         }
     }
 }
 
 @Composable
-private fun TicketProductCard(product: PassengerTicketProduct) {
+private fun TicketProductCard(product: PassengerTicketProduct, onConfigure: (() -> Unit)?) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -151,6 +175,11 @@ private fun TicketProductCard(product: PassengerTicketProduct) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 product.rules().forEach { rule -> RuleLabel(rule) }
                 if (product.rechargeable) RuleLabel(stringResource(R.string.ticket_catalog_rechargeable))
+            }
+            onConfigure?.let {
+                Button(onClick = it, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.ticket_configure))
+                }
             }
         }
     }

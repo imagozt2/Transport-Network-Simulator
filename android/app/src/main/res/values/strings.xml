@@ -29,6 +29,16 @@
     <string name="ticket_rule_trip_range">De %1$d a %2$d viajes</string>
     <string name="ticket_rule_day_range">De %1$d a %2$d días</string>
     <string name="ticket_rule_recharge_range">Recarga de %1$s a %2$s</string>
+    <string name="ticket_configure">Configurar</string>
+    <string name="ticket_single_trip_configuration">Configura las estaciones del billete sencillo.</string>
+    <string name="ticket_close_configuration">Cerrar</string>
+    <string name="ticket_select_origin">Selecciona la estación de origen</string>
+    <string name="ticket_select_destination">Selecciona la estación de destino</string>
+    <string name="ticket_select_route_hint">Selecciona dos estaciones diferentes para calcular el precio.</string>
+    <string name="ticket_calculating_price">Calculando trayecto y precio…</string>
+    <string name="ticket_price_error">No se ha podido calcular el precio del trayecto.</string>
+    <string name="ticket_configuration_ready">Configuración preparada</string>
+    <string name="ticket_estimated_price_notice">El backend confirmará este importe al realizar la compra.</string>
     <string name="journeys_title">Trayectos</string>
     <string name="journeys_description">Planifica tus desplazamientos por la red de RMM</string>
     <string name="account_title">Mi cuenta</string>
