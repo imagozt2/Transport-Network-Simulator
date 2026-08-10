@@ -294,12 +294,28 @@ CREATE TABLE devices (
     station_id BIGINT NOT NULL,
     status VARCHAR(30) NOT NULL DEFAULT 'OFFLINE',
     last_connection_at DATETIME NULL,
+    mqtt_presence VARCHAR(20) NULL,
+    operational_state VARCHAR(30) NULL,
+    service_mode VARCHAR(30) NULL,
+    software_version VARCHAR(50) NULL,
+    uptime_seconds BIGINT NULL,
+    last_presence_at DATETIME NULL,
+    last_status_at DATETIME NULL,
     active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT uk_devices_code UNIQUE (code),
     CONSTRAINT fk_devices_station FOREIGN KEY (station_id) REFERENCES stations (id)
-        ON UPDATE CASCADE ON DELETE RESTRICT
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT chk_devices_mqtt_presence CHECK (
+        mqtt_presence IS NULL OR mqtt_presence IN ('ONLINE', 'OFFLINE')
+    ),
+    CONSTRAINT chk_devices_operational_state CHECK (
+        operational_state IS NULL OR operational_state IN (
+            'AVAILABLE', 'BUSY', 'DEGRADED', 'OUT_OF_SERVICE', 'MAINTENANCE'
+        )
+    ),
+    CONSTRAINT chk_devices_uptime CHECK (uptime_seconds IS NULL OR uptime_seconds >= 0)
 );
 
 CREATE INDEX idx_devices_station ON devices (station_id);

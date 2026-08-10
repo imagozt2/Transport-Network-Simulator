@@ -66,6 +66,17 @@ UNION ALL SELECT 'line_service_levels', COUNT(*), 90 FROM line_service_levels
 UNION ALL SELECT 'line_depots', COUNT(*), 12 FROM line_depots
 UNION ALL SELECT 'ticket_products', COUNT(*), 4 FROM ticket_products;
 
+SELECT id, code, status, mqtt_presence, operational_state
+FROM devices
+WHERE (mqtt_presence IS NOT NULL AND mqtt_presence NOT IN ('ONLINE', 'OFFLINE'))
+   OR (operational_state IS NOT NULL AND operational_state NOT IN (
+       'AVAILABLE', 'BUSY', 'DEGRADED', 'OUT_OF_SERVICE', 'MAINTENANCE'
+   ))
+   OR uptime_seconds < 0
+   OR (mqtt_presence = 'OFFLINE' AND status <> 'OFFLINE')
+   OR (operational_state = 'MAINTENANCE' AND mqtt_presence = 'ONLINE'
+       AND status <> 'MAINTENANCE');
+
 SELECT id, username, email, operator_role, account_status
 FROM operator_accounts
 WHERE CHAR_LENGTH(TRIM(username)) < 3
