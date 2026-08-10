@@ -4,11 +4,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -18,17 +21,26 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.rmm.app.R
 import com.rmm.app.ui.screen.NavigationDestinationScreen
+import com.rmm.app.ui.component.RMMTopAppBar
 
 @Composable
 fun RMMNavigation(modifier: Modifier = Modifier) {
     val navController = rememberNavController()
     val currentEntry by navController.currentBackStackEntryAsState()
     val currentDestination = currentEntry?.destination
+    val selectedDestination = RMMTopLevelDestination.entries.firstOrNull { destination ->
+        currentDestination?.hierarchy?.any { it.route == destination.route } == true
+    } ?: RMMTopLevelDestination.HOME
 
     Scaffold(
         modifier = modifier,
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = { RMMTopAppBar(selectedDestination.labelResource) },
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surface,
+                tonalElevation = 0.dp,
+            ) {
                 RMMTopLevelDestination.entries.forEach { destination ->
                     val selected = currentDestination?.hierarchy
                         ?.any { it.route == destination.route } == true
@@ -50,6 +62,13 @@ fun RMMNavigation(modifier: Modifier = Modifier) {
                             )
                         },
                         label = { androidx.compose.material3.Text(stringResource(destination.labelResource)) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
                     )
                 }
             }
