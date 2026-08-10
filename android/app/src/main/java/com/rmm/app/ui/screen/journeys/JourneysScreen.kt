@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,7 +18,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -44,7 +42,6 @@ import com.rmm.app.core.networkcatalog.NetworkCatalog
 import com.rmm.app.core.networkcatalog.NetworkCatalogResult
 import com.rmm.app.core.networkcatalog.PassengerNetworkLine
 import com.rmm.app.core.networkcatalog.PassengerNetworkRepository
-import com.rmm.app.core.networkcatalog.PassengerNetworkStation
 import com.rmm.app.core.session.PassengerSession
 
 private enum class CatalogTab { MAP, LINES, STATIONS }
@@ -63,6 +60,7 @@ fun JourneysScreen(
     val repository = remember { PassengerNetworkRepository() }
     var reloadKey by rememberSaveable { mutableIntStateOf(0) }
     var selectedTab by rememberSaveable { mutableStateOf(CatalogTab.MAP) }
+    var selectedStationCode by rememberSaveable { mutableStateOf<String?>(null) }
     var state by remember { mutableStateOf<CatalogUiState>(CatalogUiState.Loading) }
 
     LaunchedEffect(session.accessToken, reloadKey) {
@@ -106,7 +104,13 @@ fun JourneysScreen(
             is CatalogUiState.Content -> when (selectedTab) {
                 CatalogTab.MAP -> NetworkMapView(current.catalog)
                 CatalogTab.LINES -> LinesList(current.catalog)
-                CatalogTab.STATIONS -> StationsList(current.catalog)
+                CatalogTab.STATIONS -> StationSearch(
+                    catalog = current.catalog,
+                    selectedStationCode = selectedStationCode,
+                    onStationSelected = { station ->
+                        selectedStationCode = station.code
+                    },
+                )
             }
         }
     }
@@ -188,65 +192,7 @@ private fun LinesList(catalog: NetworkCatalog) {
 }
 
 @Composable
-private fun StationsList(catalog: NetworkCatalog) {
-    var query by rememberSaveable { mutableStateOf("") }
-    val filteredStations = remember(catalog.stations, query) {
-        catalog.stations.filter { station ->
-            query.isBlank()
-                || station.name.contains(query.trim(), ignoreCase = true)
-                || station.code.contains(query.trim(), ignoreCase = true)
-        }
-    }
-    val lineColors = remember(catalog.lines) { catalog.lines.associate { it.code to it.color } }
-
-    Column(modifier = Modifier.fillMaxSize()) {
-        OutlinedTextField(
-            value = query,
-            onValueChange = { query = it },
-            label = { Text(stringResource(R.string.journeys_search_station)) },
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp),
-        )
-        Spacer(Modifier.height(8.dp))
-        if (filteredStations.isEmpty()) {
-            EmptyState(R.string.journeys_no_stations)
-        } else {
-            LazyColumn(
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                items(filteredStations, key = PassengerNetworkStation::code) { station ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(station.name, style = MaterialTheme.typography.titleMedium)
-                                Text(
-                                    station.code,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    style = MaterialTheme.typography.labelMedium,
-                                )
-                            }
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                station.lineCodes.forEach { lineCode ->
-                                    LineBadge(lineCode, lineColors[lineCode])
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun LineBadge(code: String, color: String?) {
+internal fun LineBadge(code: String, color: String?) {
     val background = color.toColorOr(MaterialTheme.colorScheme.primary)
     Box(
         modifier = Modifier
@@ -265,7 +211,7 @@ private fun LineBadge(code: String, color: String?) {
 }
 
 @Composable
-private fun EmptyState(message: Int) {
+internal fun EmptyState(message: Int) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(
             stringResource(message),
