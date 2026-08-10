@@ -17,6 +17,13 @@ interface PassengerNetworkApi {
         @Query("query") query: String? = null,
         @Query("lineCode") lineCode: String? = null,
     ): Response<PassengerNetworkStationsResponse>
+
+    @GET("network/journeys")
+    suspend fun journey(
+        @Header("Authorization") authorization: String,
+        @Query("origin") origin: String,
+        @Query("destination") destination: String,
+    ): Response<PassengerNetworkJourney>
 }
 
 data class PassengerNetworkLinesResponse(
@@ -40,4 +47,28 @@ data class PassengerNetworkStation(
     val name: String,
     val lineCodes: List<String> = emptyList(),
     val active: Boolean,
+)
+
+data class PassengerNetworkJourney(
+    val origin: PassengerNetworkJourneyStation,
+    val destination: PassengerNetworkJourneyStation,
+    val stationCount: Int,
+    val transferCount: Int,
+    val estimatedDurationSeconds: Int,
+    val segments: List<PassengerNetworkJourneySegment> = emptyList(),
+)
+
+data class PassengerNetworkJourneySegment(
+    val lineCode: String,
+    val lineName: String,
+    val lineColor: String,
+    val directionTerminal: PassengerNetworkJourneyStation,
+    val stopCount: Int,
+    val travelSeconds: Int,
+    val stations: List<PassengerNetworkJourneyStation> = emptyList(),
+)
+
+data class PassengerNetworkJourneyStation(
+    val code: String,
+    val name: String,
 )

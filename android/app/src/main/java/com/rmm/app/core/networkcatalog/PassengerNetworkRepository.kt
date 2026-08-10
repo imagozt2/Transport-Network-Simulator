@@ -28,6 +28,18 @@ class PassengerNetworkRepository {
             ),
         )
     }
+
+    suspend fun journey(
+        session: PassengerSession,
+        originCode: String,
+        destinationCode: String,
+    ): ApiResult<PassengerNetworkJourney> = calls.execute {
+        api.journey(
+            authorization = "Bearer ${session.accessToken}",
+            origin = originCode,
+            destination = destinationCode,
+        )
+    }
 }
 
 data class NetworkCatalog(

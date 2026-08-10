@@ -44,7 +44,7 @@ import com.rmm.app.core.networkcatalog.PassengerNetworkLine
 import com.rmm.app.core.networkcatalog.PassengerNetworkRepository
 import com.rmm.app.core.session.PassengerSession
 
-private enum class CatalogTab { MAP, LINES, STATIONS }
+private enum class CatalogTab { MAP, ROUTE, LINES, STATIONS }
 
 private sealed interface CatalogUiState {
     data object Loading : CatalogUiState
@@ -81,6 +81,11 @@ fun JourneysScreen(
             Spacer(Modifier.height(16.dp))
             TabRow(selectedTabIndex = selectedTab.ordinal) {
                 Tab(
+                    selected = selectedTab == CatalogTab.ROUTE,
+                    onClick = { selectedTab = CatalogTab.ROUTE },
+                    text = { Text(stringResource(R.string.journeys_route_tab)) },
+                )
+                Tab(
                     selected = selectedTab == CatalogTab.MAP,
                     onClick = { selectedTab = CatalogTab.MAP },
                     text = { Text(stringResource(R.string.journeys_map_tab)) },
@@ -103,6 +108,11 @@ fun JourneysScreen(
             is CatalogUiState.Error -> ErrorState(current.failure) { reloadKey++ }
             is CatalogUiState.Content -> when (selectedTab) {
                 CatalogTab.MAP -> NetworkMapView(current.catalog)
+                CatalogTab.ROUTE -> JourneyPlanner(
+                    session = session,
+                    catalog = current.catalog,
+                    repository = repository,
+                )
                 CatalogTab.LINES -> LinesList(current.catalog)
                 CatalogTab.STATIONS -> StationSearch(
                     catalog = current.catalog,

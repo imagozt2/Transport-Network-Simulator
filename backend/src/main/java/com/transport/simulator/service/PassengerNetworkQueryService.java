@@ -5,12 +5,16 @@ import com.transport.simulator.dto.response.networkmap.NetworkMapResponse;
 import com.transport.simulator.dto.response.networkmap.NetworkMapStationResponse;
 import com.transport.simulator.dto.response.passengernetwork.PassengerNetworkLineResponse;
 import com.transport.simulator.dto.response.passengernetwork.PassengerNetworkLinesResponse;
+import com.transport.simulator.dto.response.passengernetwork.PassengerNetworkJourneyResponse;
+import com.transport.simulator.dto.response.passengernetwork.PassengerNetworkJourneySegmentResponse;
+import com.transport.simulator.dto.response.passengernetwork.PassengerNetworkJourneyStationResponse;
 import com.transport.simulator.dto.response.passengernetwork.PassengerNetworkStationResponse;
 import com.transport.simulator.dto.response.passengernetwork.PassengerNetworkStationsResponse;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import com.transport.simulator.service.model.NetworkJourney;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,9 +23,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class PassengerNetworkQueryService {
 
     private final NetworkMapQueryService networkMapQueryService;
+    private final NetworkJourneyPlanningService journeyPlanningService;
 
-    public PassengerNetworkQueryService(NetworkMapQueryService networkMapQueryService) {
+    public PassengerNetworkQueryService(
+            NetworkMapQueryService networkMapQueryService,
+            NetworkJourneyPlanningService journeyPlanningService
+    ) {
         this.networkMapQueryService = networkMapQueryService;
+        this.journeyPlanningService = journeyPlanningService;
     }
 
     public PassengerNetworkLinesResponse lines() {
@@ -52,6 +61,63 @@ public class PassengerNetworkQueryService {
                 .toList();
 
         return new PassengerNetworkStationsResponse(matches);
+    }
+
+    public PassengerNetworkJourneyResponse journey(String originCode, String destinationCode) {
+        NetworkJourney journey = journeyPlanningService.calculate(originCode, destinationCode);
+        Map<String, NetworkMapLineResponse> linesByCode = networkMapQueryService.getNetworkMap()
+                .lines().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        NetworkMapLineResponse::code,
+                        line -> line
+                ));
+
+        return new PassengerNetworkJourneyResponse(
+                toJourneyStation(journey.origin()),
+                toJourneyStation(journey.destination()),
+                journey.stationCount(),
+                journey.transferCount(),
+                journey.estimatedDurationSeconds(),
+                journey.segments().stream()
+                        .map(segment -> toJourneySegment(segment, linesByCode.get(segment.lineCode())))
+                        .toList()
+        );
+    }
+
+    private PassengerNetworkJourneySegmentResponse toJourneySegment(
+            NetworkJourney.LineSegment segment,
+            NetworkMapLineResponse line
+    ) {
+        if (line == null) {
+            throw new ServiceConfigurationException(
+                    "Missing active line " + segment.lineCode() + " while presenting journey"
+            );
+        }
+        List<String> route = line.stations().stream().map(NetworkMapStationResponse::code).toList();
+        int originIndex = route.indexOf(segment.origin().code());
+        int destinationIndex = route.indexOf(segment.destination().code());
+        if (originIndex < 0 || destinationIndex < 0 || route.isEmpty()) {
+            throw new ServiceConfigurationException(
+                    "Journey segment does not match line " + segment.lineCode()
+            );
+        }
+        NetworkMapStationResponse terminal = destinationIndex >= originIndex
+                ? line.stations().getLast()
+                : line.stations().getFirst();
+
+        return new PassengerNetworkJourneySegmentResponse(
+                segment.lineCode(),
+                segment.lineName(),
+                segment.lineColor(),
+                new PassengerNetworkJourneyStationResponse(terminal.code(), terminal.name()),
+                segment.stopCount(),
+                segment.travelSeconds(),
+                segment.stations().stream().map(this::toJourneyStation).toList()
+        );
+    }
+
+    private PassengerNetworkJourneyStationResponse toJourneyStation(NetworkJourney.Station station) {
+        return new PassengerNetworkJourneyStationResponse(station.code(), station.name());
     }
 
     private PassengerNetworkLineResponse toLine(NetworkMapLineResponse line) {
