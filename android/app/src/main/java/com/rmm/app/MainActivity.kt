@@ -7,9 +7,16 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import com.rmm.app.core.session.PassengerSessionStorage
 import com.rmm.app.navigation.RMMNavigation
+import com.rmm.app.ui.screen.authentication.AuthenticationScreen
 import com.rmm.app.ui.theme.RMMAppTheme
 
 class MainActivity : ComponentActivity() {
@@ -28,7 +35,18 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun RMMApp(modifier: Modifier = Modifier) {
-    RMMNavigation(modifier = modifier.fillMaxSize())
+    val context = LocalContext.current
+    val sessionStore = remember(context) { PassengerSessionStorage.get(context) }
+    var session by remember { mutableStateOf(sessionStore.load()) }
+
+    if (session == null) {
+        AuthenticationScreen(
+            onAuthenticated = { authenticatedSession -> session = authenticatedSession },
+            modifier = modifier.fillMaxSize(),
+        )
+    } else {
+        RMMNavigation(modifier = modifier.fillMaxSize())
+    }
 }
 
 @Preview(showBackground = true)
