@@ -45,6 +45,10 @@ public class TicketJourney extends AuditableEntity {
     @JoinColumn(name = "entry_validation_id")
     private TicketValidation entryValidation;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "exit_validation_id")
+    private TicketValidation exitValidation;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 40)
     private TicketJourneyStatus status;
@@ -116,6 +120,19 @@ public class TicketJourney extends AuditableEntity {
         entryValidation = validation;
     }
 
+    public void attachExitValidation(TicketValidation validation) {
+        Objects.requireNonNull(validation, "validation is required");
+        if (exitValidation != null && exitValidation != validation) {
+            throw new IllegalStateException("The journey already has an exit validation");
+        }
+        if (validation.getType() != TicketQrValidationType.EXIT
+                || validation.getJourney() != this
+                || status != TicketJourneyStatus.CLOSED) {
+            throw new IllegalArgumentException("The validation does not belong to this journey exit");
+        }
+        exitValidation = validation;
+    }
+
     private static String requireText(String value, String field) {
         if (value == null || value.isBlank()) {
             throw new IllegalArgumentException(field + " is required");
@@ -129,6 +146,7 @@ public class TicketJourney extends AuditableEntity {
     public Station getEntryStation() { return entryStation; }
     public Station getExitStation() { return exitStation; }
     public TicketValidation getEntryValidation() { return entryValidation; }
+    public TicketValidation getExitValidation() { return exitValidation; }
     public TicketJourneyStatus getStatus() { return status; }
     public Integer getStationCount() { return stationCount; }
     public BigDecimal getFareAmount() { return fareAmount; }

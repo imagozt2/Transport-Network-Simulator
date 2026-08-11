@@ -7,7 +7,6 @@ import com.transport.simulator.entity.TicketJourney;
 import com.transport.simulator.entity.TicketValidation;
 import com.transport.simulator.enums.DeviceType;
 import com.transport.simulator.enums.TicketQrValidationType;
-import com.transport.simulator.enums.TicketStatus;
 import com.transport.simulator.repository.DeviceRepository;
 import com.transport.simulator.repository.StationRepository;
 import com.transport.simulator.repository.TicketValidationRepository;
@@ -38,10 +37,7 @@ public class TicketValidationService {
     private final TicketQrVerifier qrVerifier;
     private final TicketQrUseGuard useGuard;
     private final TicketEntryValidationService entryValidationService;
-    private final SingleTripTicketService singleTripService;
-    private final MultiTripTicketService multiTripService;
-    private final TimePassTicketService timePassService;
-    private final SmartBalanceTicketService smartBalanceService;
+    private final TicketExitValidationService exitValidationService;
     private final TransactionTemplate transactions;
     private final Clock clock;
 
@@ -49,8 +45,7 @@ public class TicketValidationService {
             StationRepository stationRepository, TicketValidationRepository validationRepository,
             TicketQrVerifier qrVerifier, TicketQrUseGuard useGuard,
             TicketEntryValidationService entryValidationService,
-            SingleTripTicketService singleTripService, MultiTripTicketService multiTripService,
-            TimePassTicketService timePassService, SmartBalanceTicketService smartBalanceService,
+            TicketExitValidationService exitValidationService,
             PlatformTransactionManager transactionManager, Clock clock) {
         this.deviceRepository = deviceRepository;
         this.stationRepository = stationRepository;
@@ -58,10 +53,7 @@ public class TicketValidationService {
         this.qrVerifier = qrVerifier;
         this.useGuard = useGuard;
         this.entryValidationService = entryValidationService;
-        this.singleTripService = singleTripService;
-        this.multiTripService = multiTripService;
-        this.timePassService = timePassService;
-        this.smartBalanceService = smartBalanceService;
+        this.exitValidationService = exitValidationService;
         this.transactions = new TransactionTemplate(transactionManager);
         this.clock = clock;
     }
@@ -112,6 +104,8 @@ public class TicketValidationService {
                 LocalDateTime.now(clock)));
         if (request.direction() == TicketQrValidationType.ENTRY) {
             journey.attachEntryValidation(validation);
+        } else {
+            journey.attachExitValidation(validation);
         }
         useGuard.complete(request.validationReference());
         return TicketValidationDecision.from(validation);
@@ -138,13 +132,7 @@ public class TicketValidationService {
         if (direction == TicketQrValidationType.ENTRY) {
             return entryValidationService.enter(ticket, stationCode);
         }
-        requireUsableStatus(ticket);
-        return switch (ticket.getProductType()) {
-            case SINGLE_TRIP -> singleTripService.exit(ticket.getCode(), stationCode);
-            case MULTI_TRIP -> multiTripService.exit(ticket.getCode(), stationCode);
-            case TIME_PASS -> timePassService.exit(ticket.getCode(), stationCode);
-            case SMART_BALANCE -> smartBalanceService.exit(ticket.getCode(), stationCode);
-        };
+        return exitValidationService.exit(ticket, stationCode);
     }
 
     private Device requiredDevice(long id, TicketValidationRequest request) {
@@ -163,13 +151,6 @@ public class TicketValidationService {
     private Station requiredStation(String code) {
         return stationRepository.findByCodeAndActiveTrue(code)
                 .orElseThrow(() -> new IllegalArgumentException("Active station not found"));
-    }
-
-    private void requireUsableStatus(Ticket ticket) {
-        if (!ticket.isActive() || ticket.getStatus() == TicketStatus.BLOCKED
-                || ticket.getStatus() == TicketStatus.CANCELLED) {
-            throw new IllegalStateException("The ticket is inactive or blocked");
-        }
     }
 
     private TicketValidationRequest normalized(TicketValidationRequest request, String reference) {
