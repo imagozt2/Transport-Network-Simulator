@@ -1,6 +1,7 @@
 package com.transport.simulator.service.deviceevent;
 
 import com.transport.simulator.enums.DeviceEventType;
+import com.transport.simulator.enums.DeviceEventSource;
 import com.transport.simulator.enums.LogOrigin;
 import com.transport.simulator.enums.LogSeverity;
 import java.time.LocalDateTime;
@@ -9,6 +10,7 @@ import java.util.Objects;
 public record DeviceEvent(
         String deviceCode,
         LogOrigin origin,
+        DeviceEventSource source,
         DeviceEventType type,
         LogSeverity severity,
         String message,
@@ -20,6 +22,7 @@ public record DeviceEvent(
     public DeviceEvent {
         deviceCode = requireText(deviceCode, "deviceCode");
         origin = Objects.requireNonNull(origin, "origin is required");
+        source = Objects.requireNonNull(source, "source is required");
         type = Objects.requireNonNull(type, "type is required");
         severity = Objects.requireNonNull(severity, "severity is required");
         message = requireText(message, "message");

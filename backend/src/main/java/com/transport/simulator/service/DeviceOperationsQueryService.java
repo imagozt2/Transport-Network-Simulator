@@ -109,6 +109,7 @@ public class DeviceOperationsQueryService {
                 event.getSeverity(),
                 event.getMessage(),
                 event.getOrigin(),
+                event.getSource(),
                 event.getOccurredAt()
         );
     }

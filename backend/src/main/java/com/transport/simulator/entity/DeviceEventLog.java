@@ -1,6 +1,7 @@
 package com.transport.simulator.entity;
 
 import com.transport.simulator.enums.DeviceEventType;
+import com.transport.simulator.enums.DeviceEventSource;
 import com.transport.simulator.enums.LogOrigin;
 import com.transport.simulator.enums.LogSeverity;
 import jakarta.persistence.Column;
@@ -28,6 +29,10 @@ public class DeviceEventLog {
     @Enumerated(EnumType.STRING)
     @Column(name = "log_origin", nullable = false, length = 50)
     private LogOrigin origin;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "event_source", nullable = false, length = 30)
+    private DeviceEventSource source;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "event_type", nullable = false, length = 80)
@@ -77,6 +82,7 @@ public class DeviceEventLog {
 
     public DeviceEventLog(
             LogOrigin origin,
+            DeviceEventSource source,
             DeviceEventType eventType,
             LogSeverity severity,
             String message,
@@ -86,6 +92,7 @@ public class DeviceEventLog {
             String payloadJson
     ) {
         this.origin = origin;
+        this.source = source;
         this.eventType = eventType;
         this.severity = severity;
         this.message = message;
@@ -119,6 +126,10 @@ public class DeviceEventLog {
 
     public LogOrigin getOrigin() {
         return origin;
+    }
+
+    public DeviceEventSource getSource() {
+        return source;
     }
 
     public DeviceEventType getEventType() {

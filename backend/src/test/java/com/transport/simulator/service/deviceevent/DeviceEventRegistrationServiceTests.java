@@ -11,6 +11,7 @@ import com.transport.simulator.entity.Device;
 import com.transport.simulator.entity.DeviceEventLog;
 import com.transport.simulator.entity.Station;
 import com.transport.simulator.enums.DeviceEventType;
+import com.transport.simulator.enums.DeviceEventSource;
 import com.transport.simulator.enums.DeviceStatus;
 import com.transport.simulator.enums.DeviceType;
 import com.transport.simulator.enums.LogOrigin;
@@ -70,6 +71,7 @@ class DeviceEventRegistrationServiceTests {
         assertThat(savedLog.getDevice()).isSameAs(device);
         assertThat(savedLog.getStation()).isSameAs(device.getStation());
         assertThat(savedLog.getOrigin()).isEqualTo(LogOrigin.DEVICE_SIMULATION);
+        assertThat(savedLog.getSource()).isEqualTo(DeviceEventSource.SIMULATED);
         assertThat(savedLog.getEventType()).isEqualTo(DeviceEventType.DEVICE_ONLINE);
     }
 
@@ -154,6 +156,7 @@ class DeviceEventRegistrationServiceTests {
         return new DeviceEvent(
                 "TVM-ST001-01",
                 LogOrigin.DEVICE_SIMULATION,
+                com.transport.simulator.enums.DeviceEventSource.SIMULATED,
                 type,
                 severity,
                 message,

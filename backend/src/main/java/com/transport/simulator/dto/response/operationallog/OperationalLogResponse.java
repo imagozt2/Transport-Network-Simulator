@@ -2,6 +2,7 @@ package com.transport.simulator.dto.response.operationallog;
 
 import com.transport.simulator.entity.DeviceEventLog;
 import com.transport.simulator.enums.DeviceEventType;
+import com.transport.simulator.enums.DeviceEventSource;
 import com.transport.simulator.enums.LogOrigin;
 import com.transport.simulator.enums.LogSeverity;
 import com.transport.simulator.enums.TicketProductType;
@@ -10,6 +11,7 @@ import java.time.LocalDateTime;
 public record OperationalLogResponse(
         Long id,
         LogOrigin origin,
+        DeviceEventSource source,
         DeviceEventType eventType,
         LogSeverity severity,
         String message,
@@ -31,6 +33,7 @@ public record OperationalLogResponse(
         return new OperationalLogResponse(
                 eventLog.getId(),
                 eventLog.getOrigin(),
+                eventLog.getSource(),
                 eventLog.getEventType(),
                 eventLog.getSeverity(),
                 eventLog.getMessage(),

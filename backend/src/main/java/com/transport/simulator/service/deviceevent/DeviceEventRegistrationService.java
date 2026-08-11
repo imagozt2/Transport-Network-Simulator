@@ -36,6 +36,7 @@ class DeviceEventRegistrationService {
 
         DeviceEventLog log = new DeviceEventLog(
                 event.origin(),
+                event.source(),
                 event.type(),
                 event.severity(),
                 event.message(),
