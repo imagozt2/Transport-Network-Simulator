@@ -31,6 +31,7 @@ import com.rmm.app.core.network.ApiFailure
 import com.rmm.app.core.network.ApiResult
 import com.rmm.app.core.session.PassengerSession
 import com.rmm.app.core.ticketwallet.PassengerTicketWalletRepository
+import com.rmm.app.core.ticketwallet.parsePhysicalTicketQr
 import kotlinx.coroutines.launch
 
 @Composable
@@ -54,9 +55,7 @@ internal fun PhysicalTicketScannerButton(
         onClick = {
             scanner.startScan()
                 .addOnSuccessListener { barcode ->
-                    barcode.rawValue
-                        ?.trim()
-                        ?.takeIf { it.startsWith("RMM:TICKET:") && it.length <= 4096 }
+                    parsePhysicalTicketQr(barcode.rawValue)
                         ?.let(onScanned)
                         ?: onError()
                 }
