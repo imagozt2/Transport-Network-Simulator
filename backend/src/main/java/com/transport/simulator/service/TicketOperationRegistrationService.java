@@ -72,6 +72,21 @@ public class TicketOperationRegistrationService {
         return repository.save(operation);
     }
 
+    public TicketOperation recordSupportLink(
+            Ticket ticket,
+            TicketSupport support,
+            PassengerAccount passenger,
+            String externalReference
+    ) {
+        TicketOperation operation = create(
+                ticket, TicketOperationType.SUPPORT_LINKED, TicketOperationSource.RMM_APP,
+                TicketSnapshot.from(ticket), TicketSnapshot.from(ticket), null
+        );
+        operation.relateToSupport(support);
+        operation.recordContext(null, passenger, externalReference);
+        return repository.save(operation);
+    }
+
     private TicketOperation create(
             Ticket ticket,
             TicketOperationType type,

@@ -128,6 +128,19 @@ public class TicketSupport extends AuditableEntity {
         return value.trim();
     }
 
+    public void linkToPassenger(PassengerAccount passenger, LocalDateTime at) {
+        if (type != TicketSupportType.PHYSICAL || status != TicketSupportStatus.ACTIVE) {
+            throw new IllegalStateException("Only an active physical support can be linked");
+        }
+        if (passengerAccount != null) {
+            throw new IllegalStateException("Ticket support is already linked");
+        }
+        passengerAccount = Objects.requireNonNull(passenger, "passenger is required");
+        linkedAt = Objects.requireNonNull(at, "linkedAt is required");
+        linkingCodeHash = null;
+        linkingCodeExpiresAt = null;
+    }
+
     public Long getId() { return id; }
     public String getCode() { return code; }
     public Ticket getTicket() { return ticket; }

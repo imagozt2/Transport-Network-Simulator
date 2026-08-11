@@ -20,6 +20,7 @@ import java.util.Objects;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Service
 public class TicketIssuanceService {
@@ -29,17 +30,20 @@ public class TicketIssuanceService {
     private final TicketRepository ticketRepository;
     private final TicketSupportRepository supportRepository;
     private final TicketOperationRegistrationService operationRegistrationService;
+    private final PasswordEncoder passwordEncoder;
     private final Clock clock;
 
     public TicketIssuanceService(
             TicketRepository ticketRepository,
             TicketSupportRepository supportRepository,
             TicketOperationRegistrationService operationRegistrationService,
+            PasswordEncoder passwordEncoder,
             Clock clock
     ) {
         this.ticketRepository = ticketRepository;
         this.supportRepository = supportRepository;
         this.operationRegistrationService = operationRegistrationService;
+        this.passwordEncoder = passwordEncoder;
         this.clock = clock;
     }
 
@@ -49,7 +53,7 @@ public class TicketIssuanceService {
             TicketIssuanceParameters parameters,
             Device issuingDevice,
             String serialNumber,
-            String linkingCodeHash
+            String linkingCode
     ) {
         requireActiveProduct(product);
         Objects.requireNonNull(issuingDevice, "issuingDevice is required");
@@ -66,7 +70,8 @@ public class TicketIssuanceService {
         Ticket ticket = createTicket(product, parameters, null, now);
         TicketSupport support = TicketSupport.physical(
                 uniqueCode("RMM-SUP"), ticket, normalizedSerial, issuingDevice,
-                linkingCodeHash, now.plusMinutes(PHYSICAL_LINK_VALIDITY_MINUTES), now
+                passwordEncoder.encode(normalizeLinkCode(linkingCode)),
+                now.plusMinutes(PHYSICAL_LINK_VALIDITY_MINUTES), now
         );
         return persist(ticket, support);
     }
@@ -198,5 +203,16 @@ public class TicketIssuanceService {
             throw new IllegalArgumentException(field + " is required");
         }
         return value.trim();
+    }
+
+    private String normalizeLinkCode(String value) {
+        String code = requireText(value, "linkingCode")
+                .replace("-", "")
+                .replace(" ", "")
+                .toUpperCase(Locale.ROOT);
+        if (code.length() < 4 || code.length() > 32) {
+            throw new IllegalArgumentException("linkingCode must contain between 4 and 32 characters");
+        }
+        return code;
     }
 }
