@@ -63,6 +63,7 @@ forman parte del código del frontend.
 | Estaciones | Máquinas | `stationCode` |
 | Estaciones | Logs | `stationCode` |
 | Máquinas | Logs | `deviceCode` |
+| Logs | Incidencias | `affectedDeviceId`, categoría y contexto del evento |
 | Cocheras | Trenes | `depotCode` |
 | Panel General | Líneas | `lineCode` |
 | Panel General | Estaciones | `stationCode` |
@@ -139,6 +140,7 @@ configurada. Las pruebas unitarias e integradas que usan dobles de repositorio n
 
 ## Límites actuales
 
-La aplicación web y sus contratos HTTP están integrados, pero todavía quedan fuera del repositorio
-los simuladores externos de compra y validación en C++, la comunicación MQTT efectiva, la aplicación
-Android de pasajeros y las pruebas end-to-end con navegador y backend reales.
+La aplicación web, RMM App, las máquinas Qt y la comunicación MQTT están integradas en el
+repositorio. Permanecen fuera del alcance de las pruebas automáticas actuales los escenarios
+end-to-end que levanten conjuntamente navegador, dispositivos cliente, broker, backend y base de
+datos reales.

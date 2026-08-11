@@ -10,7 +10,7 @@ generan logs simulados.
 ## Flujo general
 
 ```text
-generador automático                   futuro consumidor MQTT
+generador automático                   consumidor MQTT real
          │                                      │
          └──────────────┬───────────────────────┘
                         ▼
@@ -89,7 +89,7 @@ Antes de generar actividad ordinaria se sincronizan todas las máquinas con el h
 
 El simulador automático no genera `DEVICE_ERROR`, `TICKET_PURCHASE_FAILED`,
 `VALIDATION_FAILED` ni transiciones de mantenimiento. Estos valores permanecen en el contrato para
-eventos reales que puedan recibirse en el futuro mediante MQTT.
+los eventos reales recibidos mediante MQTT.
 
 ## Transiciones de estado
 
