@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -54,6 +55,7 @@ class AuthenticatedMqttMessageRouterTests {
         receiver.accept(topic, payload);
 
         assertThat(received).hasValue(1);
+        verify(idempotencyService, times(2)).claim(messageId, 21L, topic, payload);
         verify(idempotencyService).complete(messageId);
     }
 }
