@@ -1,6 +1,8 @@
 #pragma once
 
+#include <QByteArray>
 #include <QObject>
+#include <QQueue>
 #include <QString>
 
 class QMqttClient;
@@ -33,6 +35,7 @@ public:
         const QString &issuanceCode);
 
 signals:
+    void connectionStateChanged(bool connected, int retryDelaySeconds);
     void submitted(const QString &requestReference);
     void failed(const QString &reason);
     void ticketIssued(
@@ -50,6 +53,16 @@ signals:
         const QString &linkingCode);
 
 private:
+    struct QueuedMessage
+    {
+        QString topic;
+        QByteArray payload;
+    };
+
+    void connectToBroker();
+    void scheduleReconnect();
+    void flushQueuedMessages();
+    void publishOrQueue(const QString &topic, const QByteArray &payload);
     void publishPending();
     void publishCommandAcknowledgement(
         const QString &commandId,
@@ -60,9 +73,14 @@ private:
 
     QMqttClient *m_client;
     QTimer *m_timeout;
+    QTimer *m_reconnectTimer;
+    QTimer *m_publishRetryTimer;
+    QQueue<QueuedMessage> m_queuedMessages;
     QByteArray m_pendingPayload;
     QString m_pendingReference;
     QString m_awaitedReference;
     QString m_deviceCode;
     qint32 m_packetId = -1;
+    int m_reconnectAttempt = 0;
+    int m_publishAttempt = 0;
 };

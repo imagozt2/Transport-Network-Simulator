@@ -281,6 +281,25 @@ MainWindow::MainWindow(QWidget *parent)
                                               : QStringLiteral("Request sent"));
         m_connectionState->setToolTip(reference);
     });
+    connect(m_issuanceClient, &TicketIssuanceRequestClient::connectionStateChanged, this,
+            [this](bool connected, int retryDelaySeconds) {
+        if (connected) {
+            m_connectionState->setText(
+                m_language == UiLanguage::Spanish ? QStringLiteral("Servicios conectados")
+                                                  : QStringLiteral("Services connected"));
+            m_connectionState->setToolTip(QString());
+            return;
+        }
+        m_connectionState->setText(
+            m_language == UiLanguage::Spanish ? QStringLiteral("Reconectando serviciosâ€¦")
+                                              : QStringLiteral("Reconnecting servicesâ€¦"));
+        m_connectionState->setToolTip(
+            retryDelaySeconds > 0
+                ? (m_language == UiLanguage::Spanish
+                    ? QStringLiteral("Nuevo intento en %1 s").arg(retryDelaySeconds)
+                    : QStringLiteral("Retrying in %1 s").arg(retryDelaySeconds))
+                : QString());
+    });
     connect(m_issuanceClient, &TicketIssuanceRequestClient::ticketIssued, this,
             [this](const QString &ticketCode, const QByteArray &qrPng,
                    const QString &qrValue, const QString &linkingCode,

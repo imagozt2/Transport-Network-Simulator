@@ -14,7 +14,11 @@
 #include <QUuid>
 
 TicketIssuanceRequestClient::TicketIssuanceRequestClient(QObject *parent)
-    : QObject(parent), m_client(new QMqttClient(this)), m_timeout(new QTimer(this))
+    : QObject(parent),
+      m_client(new QMqttClient(this)),
+      m_timeout(new QTimer(this)),
+      m_reconnectTimer(new QTimer(this)),
+      m_publishRetryTimer(new QTimer(this))
 {
     const auto environment = QProcessEnvironment::systemEnvironment();
     m_deviceCode = environment.value(
@@ -26,13 +30,27 @@ TicketIssuanceRequestClient::TicketIssuanceRequestClient(QObject *parent)
     m_client->setClientId(m_deviceCode);
     m_client->setUsername(m_deviceCode);
     m_client->setPassword(environment.value(QStringLiteral("RMM_TICKET_MACHINE_MQTT_PASSWORD")));
+    m_client->setCleanSession(false);
+    m_client->setKeepAlive(20);
     m_timeout->setSingleShot(true);
-    m_timeout->setInterval(10000);
+    m_timeout->setInterval(45000);
+    m_reconnectTimer->setSingleShot(true);
+    m_publishRetryTimer->setSingleShot(true);
+    m_publishRetryTimer->setInterval(1500);
 
     connect(m_client, &QMqttClient::connected, this, [this] {
+        m_reconnectAttempt = 0;
+        m_reconnectTimer->stop();
+        emit connectionStateChanged(true, 0);
         m_client->subscribe(
             QMqttTopicFilter(QStringLiteral("rmm/v1/devices/%1/commands").arg(m_deviceCode)), 1);
+        flushQueuedMessages();
         publishPending();
+    });
+    connect(m_client, &QMqttClient::disconnected, this, [this] {
+        m_packetId = -1;
+        emit connectionStateChanged(false, 0);
+        scheduleReconnect();
     });
     connect(m_client, &QMqttClient::messageReceived, this,
             [this](const QByteArray &message, const QMqttTopicName &) {
@@ -117,17 +135,81 @@ TicketIssuanceRequestClient::TicketIssuanceRequestClient(QObject *parent)
         m_pendingPayload.clear();
         m_pendingReference.clear();
         m_packetId = -1;
+        m_publishAttempt = 0;
+        m_publishRetryTimer->stop();
         m_timeout->start();
         emit submitted(reference);
     });
     connect(m_client, &QMqttClient::errorChanged, this, [this](QMqttClient::ClientError error) {
-        if (error != QMqttClient::NoError && !m_pendingReference.isEmpty()) {
-            fail(QStringLiteral("MQTT_CONNECTION_ERROR"));
+        if (error != QMqttClient::NoError) {
+            scheduleReconnect();
+        }
+    });
+    connect(m_reconnectTimer, &QTimer::timeout, this,
+            &TicketIssuanceRequestClient::connectToBroker);
+    connect(m_publishRetryTimer, &QTimer::timeout, this, [this] {
+        if (m_client->state() == QMqttClient::Connected) {
+            publishPending();
+        } else {
+            scheduleReconnect();
         }
     });
     connect(m_timeout, &QTimer::timeout, this, [this] {
         fail(QStringLiteral("MQTT_TIMEOUT"));
     });
+
+    if (!m_client->password().isEmpty()) {
+        connectToBroker();
+    }
+}
+
+void TicketIssuanceRequestClient::connectToBroker()
+{
+    if (m_client->password().isEmpty() || m_client->state() != QMqttClient::Disconnected) {
+        return;
+    }
+    if (rmm::config::mqttTlsEnabled) {
+        m_client->connectToHostEncrypted(QSslConfiguration::defaultConfiguration());
+    } else {
+        m_client->connectToHost();
+    }
+}
+
+void TicketIssuanceRequestClient::scheduleReconnect()
+{
+    if (m_client->password().isEmpty() || m_reconnectTimer->isActive()
+            || m_client->state() == QMqttClient::Connected
+            || m_client->state() == QMqttClient::Connecting) {
+        return;
+    }
+    const int delaySeconds = qMin(30, 1 << qMin(m_reconnectAttempt, 5));
+    ++m_reconnectAttempt;
+    m_reconnectTimer->start(delaySeconds * 1000);
+    emit connectionStateChanged(false, delaySeconds);
+}
+
+void TicketIssuanceRequestClient::publishOrQueue(
+    const QString &topic,
+    const QByteArray &payload)
+{
+    if (m_client->state() == QMqttClient::Connected
+            && m_client->publish(QMqttTopicName(topic), payload, 1, false) >= 0) {
+        return;
+    }
+    m_queuedMessages.enqueue({topic, payload});
+    scheduleReconnect();
+}
+
+void TicketIssuanceRequestClient::flushQueuedMessages()
+{
+    while (!m_queuedMessages.isEmpty() && m_client->state() == QMqttClient::Connected) {
+        const auto &message = m_queuedMessages.head();
+        if (m_client->publish(QMqttTopicName(message.topic), message.payload, 1, false) < 0) {
+            scheduleReconnect();
+            return;
+        }
+        m_queuedMessages.dequeue();
+    }
 }
 
 void TicketIssuanceRequestClient::completeCompensatoryIssuance(
@@ -148,7 +230,6 @@ void TicketIssuanceRequestClient::publishCommandAcknowledgement(
     const QString &status,
     const QString &resultCode)
 {
-    if (m_client->state() != QMqttClient::Connected) return;
     const QString now = QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs);
     QJsonObject payload{
         {QStringLiteral("commandId"), commandId},
@@ -167,9 +248,9 @@ void TicketIssuanceRequestClient::publishCommandAcknowledgement(
         {QStringLiteral("sentAt"), now},
         {QStringLiteral("payload"), payload},
     };
-    m_client->publish(
-        QMqttTopicName(QStringLiteral("rmm/v1/devices/%1/acks").arg(m_deviceCode)),
-        QJsonDocument(envelope).toJson(QJsonDocument::Compact), 1, false);
+    publishOrQueue(
+        QStringLiteral("rmm/v1/devices/%1/acks").arg(m_deviceCode),
+        QJsonDocument(envelope).toJson(QJsonDocument::Compact));
 }
 
 void TicketIssuanceRequestClient::publishOperationEvent(
@@ -178,7 +259,7 @@ void TicketIssuanceRequestClient::publishOperationEvent(
     const QString &ticketCode,
     const QString &resultCode)
 {
-    if (m_client->state() != QMqttClient::Connected || eventCode.isEmpty()) {
+    if (eventCode.isEmpty()) {
         return;
     }
     QJsonObject details;
@@ -211,8 +292,7 @@ void TicketIssuanceRequestClient::publishOperationEvent(
         {QStringLiteral("payload"), payload},
     };
     const QString topic = QStringLiteral("rmm/v1/devices/%1/events/operation").arg(m_deviceCode);
-    m_client->publish(
-        QMqttTopicName(topic), QJsonDocument(envelope).toJson(QJsonDocument::Compact), 1, false);
+    publishOrQueue(topic, QJsonDocument(envelope).toJson(QJsonDocument::Compact));
 }
 
 void TicketIssuanceRequestClient::submit(const TicketIssuanceRequest &request)
@@ -260,10 +340,9 @@ void TicketIssuanceRequestClient::submit(const TicketIssuanceRequest &request)
     m_timeout->start();
     if (m_client->state() == QMqttClient::Connected) {
         publishPending();
-    } else if (rmm::config::mqttTlsEnabled) {
-        m_client->connectToHostEncrypted(QSslConfiguration::defaultConfiguration());
     } else {
-        m_client->connectToHost();
+        connectToBroker();
+        scheduleReconnect();
     }
 }
 
@@ -275,7 +354,13 @@ void TicketIssuanceRequestClient::publishPending()
     const QString topic = QStringLiteral("rmm/v1/devices/%1/requests/purchases").arg(m_deviceCode);
     m_packetId = m_client->publish(topic, m_pendingPayload, 1, false);
     if (m_packetId < 0) {
-        fail(QStringLiteral("MQTT_PUBLICATION_ERROR"));
+        m_packetId = -1;
+        if (++m_publishAttempt <= 3) {
+            m_publishRetryTimer->start();
+        } else {
+            m_publishAttempt = 0;
+            m_client->disconnectFromHost();
+        }
     }
 }
 
@@ -286,9 +371,11 @@ void TicketIssuanceRequestClient::fail(const QString &reason)
             QStringLiteral("TICKET_PURCHASE_FAILED"), m_awaitedReference, QString(), reason);
     }
     m_timeout->stop();
+    m_publishRetryTimer->stop();
     m_pendingPayload.clear();
     m_pendingReference.clear();
     m_awaitedReference.clear();
     m_packetId = -1;
+    m_publishAttempt = 0;
     emit failed(reason);
 }
