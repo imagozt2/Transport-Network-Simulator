@@ -1040,6 +1040,7 @@ CREATE TABLE ticket_journeys (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     code VARCHAR(80) NOT NULL,
     ticket_id BIGINT NOT NULL,
+    passenger_account_id BIGINT NULL,
     entry_validation_id BIGINT NULL,
     exit_validation_id BIGINT NULL,
     entry_station_id BIGINT NOT NULL,
@@ -1052,21 +1053,52 @@ CREATE TABLE ticket_journeys (
     closed_at DATETIME NULL,
     forced_closed_at DATETIME NULL,
     cancelled_at DATETIME NULL,
+    duration_seconds INT GENERATED ALWAYS AS (
+        CASE
+            WHEN closed_at IS NOT NULL THEN TIMESTAMPDIFF(SECOND, opened_at, closed_at)
+            WHEN forced_closed_at IS NOT NULL THEN TIMESTAMPDIFF(SECOND, opened_at, forced_closed_at)
+            ELSE NULL
+        END
+    ) STORED,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT uk_ticket_journeys_code UNIQUE (code),
     CONSTRAINT fk_ticket_journeys_ticket FOREIGN KEY (ticket_id) REFERENCES tickets (id)
         ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_ticket_journeys_passenger FOREIGN KEY (passenger_account_id)
+        REFERENCES passenger_accounts (id) ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT fk_ticket_journeys_entry_station FOREIGN KEY (entry_station_id) REFERENCES stations (id)
         ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT fk_ticket_journeys_exit_station FOREIGN KEY (exit_station_id) REFERENCES stations (id)
         ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT chk_ticket_journeys_station_count CHECK (station_count IS NULL OR station_count > 0),
     CONSTRAINT chk_ticket_journeys_fare CHECK (fare_amount IS NULL OR fare_amount >= 0),
-    CONSTRAINT chk_ticket_journeys_closed_at CHECK (closed_at IS NULL OR closed_at >= opened_at)
+    CONSTRAINT chk_ticket_journeys_status CHECK (
+        status IN ('OPEN', 'CLOSED', 'FORCED_CLOSED', 'CANCELLED')
+    ),
+    CONSTRAINT chk_ticket_journeys_lifecycle CHECK (
+        (status = 'OPEN' AND station_count IS NULL AND fare_amount IS NULL AND closed_at IS NULL
+            AND forced_closed_at IS NULL AND cancelled_at IS NULL)
+        OR (status = 'CLOSED' AND station_count IS NOT NULL AND fare_amount IS NOT NULL
+            AND closed_at IS NOT NULL
+            AND forced_closed_at IS NULL AND cancelled_at IS NULL)
+        OR (status = 'FORCED_CLOSED' AND forced_closed_at IS NOT NULL
+            AND closed_at IS NULL AND cancelled_at IS NULL)
+        OR (status = 'CANCELLED' AND cancelled_at IS NOT NULL AND closed_at IS NULL
+            AND forced_closed_at IS NULL AND station_count IS NULL AND fare_amount IS NULL)
+    ),
+    CONSTRAINT chk_ticket_journeys_closed_at CHECK (closed_at IS NULL OR closed_at >= opened_at),
+    CONSTRAINT chk_ticket_journeys_forced_closed_at CHECK (
+        forced_closed_at IS NULL OR forced_closed_at >= opened_at
+    ),
+    CONSTRAINT chk_ticket_journeys_cancelled_at CHECK (
+        cancelled_at IS NULL OR cancelled_at >= opened_at
+    )
 );
 
 CREATE INDEX idx_ticket_journeys_ticket ON ticket_journeys (ticket_id);
+CREATE INDEX idx_ticket_journeys_passenger_closed
+    ON ticket_journeys (passenger_account_id, closed_at);
 CREATE INDEX idx_ticket_journeys_entry_station ON ticket_journeys (entry_station_id);
 CREATE INDEX idx_ticket_journeys_exit_station ON ticket_journeys (exit_station_id);
 CREATE INDEX idx_ticket_journeys_status_opened ON ticket_journeys (status, opened_at);

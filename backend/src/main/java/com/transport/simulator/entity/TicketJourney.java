@@ -33,6 +33,10 @@ public class TicketJourney extends AuditableEntity {
     @JoinColumn(name = "ticket_id", nullable = false)
     private Ticket ticket;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "passenger_account_id")
+    private PassengerAccount passengerAccount;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "entry_station_id", nullable = false)
     private Station entryStation;
@@ -68,6 +72,15 @@ public class TicketJourney extends AuditableEntity {
     @Column(name = "closed_at")
     private LocalDateTime closedAt;
 
+    @Column(name = "forced_closed_at")
+    private LocalDateTime forcedClosedAt;
+
+    @Column(name = "cancelled_at")
+    private LocalDateTime cancelledAt;
+
+    @Column(name = "duration_seconds", insertable = false, updatable = false)
+    private Integer durationSeconds;
+
     protected TicketJourney() {
     }
 
@@ -79,6 +92,7 @@ public class TicketJourney extends AuditableEntity {
     ) {
         this.code = requireText(code, "code");
         this.ticket = Objects.requireNonNull(ticket, "ticket is required");
+        passengerAccount = ticket.getPassengerAccount();
         this.entryStation = Objects.requireNonNull(entryStation, "entryStation is required");
         this.openedAt = Objects.requireNonNull(openedAt, "openedAt is required");
         status = TicketJourneyStatus.OPEN;
@@ -106,6 +120,27 @@ public class TicketJourney extends AuditableEntity {
         fareAmount = Objects.requireNonNull(fare, "fare is required");
         this.closedAt = closedAt;
         status = TicketJourneyStatus.CLOSED;
+    }
+
+    public void forceClose(LocalDateTime forcedClosedAt) {
+        if (status != TicketJourneyStatus.OPEN) {
+            throw new IllegalStateException("Only an open journey can be force-closed");
+        }
+        Objects.requireNonNull(forcedClosedAt, "forcedClosedAt is required");
+        if (forcedClosedAt.isBefore(openedAt)) {
+            throw new IllegalArgumentException("forcedClosedAt cannot precede openedAt");
+        }
+        this.forcedClosedAt = forcedClosedAt;
+        status = TicketJourneyStatus.FORCED_CLOSED;
+    }
+
+    public void assignPassenger(PassengerAccount passenger) {
+        Objects.requireNonNull(passenger, "passenger is required");
+        if (passengerAccount != null && passengerAccount != passenger
+                && !Objects.equals(passengerAccount.getId(), passenger.getId())) {
+            throw new IllegalStateException("The journey already belongs to another passenger");
+        }
+        passengerAccount = passenger;
     }
 
     public void attachEntryValidation(TicketValidation validation) {
@@ -143,6 +178,7 @@ public class TicketJourney extends AuditableEntity {
     public Long getId() { return id; }
     public String getCode() { return code; }
     public Ticket getTicket() { return ticket; }
+    public PassengerAccount getPassengerAccount() { return passengerAccount; }
     public Station getEntryStation() { return entryStation; }
     public Station getExitStation() { return exitStation; }
     public TicketValidation getEntryValidation() { return entryValidation; }
@@ -153,4 +189,12 @@ public class TicketJourney extends AuditableEntity {
     public String getCurrency() { return currency; }
     public LocalDateTime getOpenedAt() { return openedAt; }
     public LocalDateTime getClosedAt() { return closedAt; }
+    public LocalDateTime getForcedClosedAt() { return forcedClosedAt; }
+    public LocalDateTime getCancelledAt() { return cancelledAt; }
+    public Integer getDurationSeconds() { return durationSeconds; }
+
+    public boolean isAnomalous() {
+        return status == TicketJourneyStatus.FORCED_CLOSED
+                || status == TicketJourneyStatus.CANCELLED;
+    }
 }

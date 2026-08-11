@@ -40,6 +40,10 @@ La consulta de derechos y estados, la presentación segura del QR, el registro d
 el historial paginado se documentan en la guía de
 [`cartera de billetes de RMM App`](../docs/cartera-rmm-app.md).
 
+El historial ferroviario construido desde las validaciones, su paginación, sus anomalías y el
+detalle de cada desplazamiento se describen en
+[`historial de desplazamientos de RMM App`](../docs/historial-desplazamientos-rmm-app.md).
+
 ## Comprobación desde PowerShell
 
 ```powershell

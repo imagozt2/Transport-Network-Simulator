@@ -125,7 +125,7 @@ obligatoriamente un proceso que actualice todos los registros en el instante de 
 | --- | --- |
 | `OPEN` | Existe una entrada aceptada y todavía no hay salida. |
 | `CLOSED` | La salida fue aceptada y el trayecto terminó normalmente. |
-| `FORCED_CLOSED` | Un proceso administrativo cerró un trayecto incompleto. |
+| `FORCED_CLOSED` | El backend regularizó un trayecto incompleto sin inventar una salida. |
 | `CANCELLED` | La apertura se anuló sin constituir un trayecto cobrable. |
 
 ```text
@@ -137,6 +137,8 @@ entrada aceptada ──► OPEN ──► CLOSED
 Reglas comunes:
 
 - un billete solo puede tener un trayecto `OPEN` simultáneamente;
+- una nueva entrada fuerza el cierre anómalo de la entrada anterior sin salida;
+- los trayectos que superan el límite temporal también se cierran periódicamente;
 - una salida exige un trayecto abierto del mismo billete;
 - entrada y salida conservan estación, máquina, instante y referencia idempotente;
 - las validaciones rechazadas se registran, pero no abren ni cierran trayectos;
@@ -218,8 +220,9 @@ Ciclo de uso:
 5. Si el saldo restante no permite otra entrada, el billete pasa a `EXHAUSTED`.
 6. Una recarga suma saldo de forma atómica y lo devuelve a `ACTIVE`.
 
-Antes de implementar este producto se concretará la regularización de trayectos sin salida y la
-tarifa aplicable cuando el saldo disponible sea inferior al coste calculado.
+Los trayectos sin salida quedan como `FORCED_CLOSED`, sin destino ni cargo inventados. Si el saldo
+no cubre el coste calculado en una salida real, la transacción se rechaza y conserva el trayecto
+abierto hasta que pueda regularizarse.
 
 ## Validaciones aceptadas y rechazadas
 

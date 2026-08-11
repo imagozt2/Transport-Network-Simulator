@@ -10,7 +10,6 @@ import com.transport.simulator.enums.TicketStatus;
 import com.transport.simulator.repository.StationRepository;
 import com.transport.simulator.repository.TicketJourneyRepository;
 import com.transport.simulator.repository.TicketRepository;
-import com.transport.simulator.service.model.NetworkJourney;
 import com.transport.simulator.service.model.TicketSnapshot;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -27,7 +26,7 @@ public class SmartBalanceTicketService {
     private final TicketRepository ticketRepository;
     private final TicketJourneyRepository journeyRepository;
     private final StationRepository stationRepository;
-    private final NetworkJourneyPlanningService journeyPlanningService;
+    private final TicketJourneySettlementService settlementService;
     private final TicketOperationRegistrationService operationRegistrationService;
     private final Clock clock;
 
@@ -35,14 +34,14 @@ public class SmartBalanceTicketService {
             TicketRepository ticketRepository,
             TicketJourneyRepository journeyRepository,
             StationRepository stationRepository,
-            NetworkJourneyPlanningService journeyPlanningService,
+            TicketJourneySettlementService settlementService,
             TicketOperationRegistrationService operationRegistrationService,
             Clock clock
     ) {
         this.ticketRepository = ticketRepository;
         this.journeyRepository = journeyRepository;
         this.stationRepository = stationRepository;
-        this.journeyPlanningService = journeyPlanningService;
+        this.settlementService = settlementService;
         this.operationRegistrationService = operationRegistrationService;
         this.clock = clock;
     }
@@ -83,14 +82,14 @@ public class SmartBalanceTicketService {
         TicketSnapshot before = TicketSnapshot.from(ticket);
         TicketJourney journey = openJourney(ticket)
                 .orElseThrow(() -> new IllegalStateException("The ticket has no open journey"));
-        int stationCount = calculateStationCount(journey.getEntryStation(), station);
-        BigDecimal fare = ticket.calculateSmartBalanceFare(stationCount);
+        var settlement = settlementService.calculate(ticket, journey.getEntryStation(), station);
+        BigDecimal fare = settlement.fareAmount();
         LocalDateTime now = LocalDateTime.now(clock);
 
         // El saldo se modifica antes de cerrar el trayecto. Si no es suficiente, la excepción
         // conserva ambas operaciones sin cambios gracias a la transacción.
         ticket.deductSmartBalanceFare(fare, now);
-        journey.close(station, stationCount, fare, now);
+        journey.close(station, settlement.stationCount(), fare, now);
         TicketJourney persisted = journeyRepository.save(journey);
         operationRegistrationService.recordJourney(
                 TicketOperationType.EXIT_ACCEPTED, ticket, persisted, station, before, fare
@@ -106,14 +105,6 @@ public class SmartBalanceTicketService {
         // pueda regularizarse sin cancelar ni duplicar el viaje abierto.
         ticket.rechargeMoneyBalance(amount, LocalDateTime.now(clock));
         return ticket;
-    }
-
-    private int calculateStationCount(Station origin, Station destination) {
-        if (origin.getCode().equals(destination.getCode())) {
-            return 1;
-        }
-        NetworkJourney route = journeyPlanningService.calculate(origin.getCode(), destination.getCode());
-        return route.stationCount();
     }
 
     private Ticket requiredTicketForUpdate(String code) {

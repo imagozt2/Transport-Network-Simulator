@@ -19,7 +19,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
+import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -44,7 +44,7 @@ import com.rmm.app.core.networkcatalog.PassengerNetworkLine
 import com.rmm.app.core.networkcatalog.PassengerNetworkRepository
 import com.rmm.app.core.session.PassengerSession
 
-private enum class CatalogTab { MAP, ROUTE, LINES, STATIONS }
+private enum class CatalogTab { ROUTE, MAP, LINES, STATIONS, HISTORY }
 
 private sealed interface CatalogUiState {
     data object Loading : CatalogUiState
@@ -79,7 +79,7 @@ fun JourneysScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(16.dp))
-            TabRow(selectedTabIndex = selectedTab.ordinal) {
+            ScrollableTabRow(selectedTabIndex = selectedTab.ordinal, edgePadding = 0.dp) {
                 Tab(
                     selected = selectedTab == CatalogTab.ROUTE,
                     onClick = { selectedTab = CatalogTab.ROUTE },
@@ -100,10 +100,17 @@ fun JourneysScreen(
                     onClick = { selectedTab = CatalogTab.STATIONS },
                     text = { Text(stringResource(R.string.journeys_stations_tab)) },
                 )
+                Tab(
+                    selected = selectedTab == CatalogTab.HISTORY,
+                    onClick = { selectedTab = CatalogTab.HISTORY },
+                    text = { Text(stringResource(R.string.journey_history_tab)) },
+                )
             }
         }
 
-        when (val current = state) {
+        if (selectedTab == CatalogTab.HISTORY) {
+            JourneyHistorySection(session = session, modifier = Modifier.fillMaxSize())
+        } else when (val current = state) {
             CatalogUiState.Loading -> LoadingState()
             is CatalogUiState.Error -> ErrorState(current.failure) { reloadKey++ }
             is CatalogUiState.Content -> when (selectedTab) {
@@ -121,20 +128,21 @@ fun JourneysScreen(
                         selectedStationCode = station.code
                     },
                 )
+                CatalogTab.HISTORY -> Unit
             }
         }
     }
 }
 
 @Composable
-private fun LoadingState() {
+internal fun LoadingState() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         CircularProgressIndicator()
     }
 }
 
 @Composable
-private fun ErrorState(failure: ApiFailure, retry: () -> Unit) {
+internal fun ErrorState(failure: ApiFailure, retry: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()

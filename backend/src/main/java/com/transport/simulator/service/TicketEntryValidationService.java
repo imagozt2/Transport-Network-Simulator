@@ -2,39 +2,36 @@ package com.transport.simulator.service;
 
 import com.transport.simulator.entity.Ticket;
 import com.transport.simulator.entity.TicketJourney;
-import com.transport.simulator.enums.TicketJourneyStatus;
 import com.transport.simulator.enums.TicketStatus;
-import com.transport.simulator.repository.TicketJourneyRepository;
 import java.util.Objects;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class TicketEntryValidationService {
 
-    private final TicketJourneyRepository journeyRepository;
     private final SingleTripTicketService singleTripService;
     private final MultiTripTicketService multiTripService;
     private final TimePassTicketService timePassService;
     private final SmartBalanceTicketService smartBalanceService;
+    private final TicketJourneyAnomalyService anomalyService;
 
-    public TicketEntryValidationService(TicketJourneyRepository journeyRepository,
-            SingleTripTicketService singleTripService, MultiTripTicketService multiTripService,
-            TimePassTicketService timePassService, SmartBalanceTicketService smartBalanceService) {
-        this.journeyRepository = journeyRepository;
+    public TicketEntryValidationService(SingleTripTicketService singleTripService,
+            MultiTripTicketService multiTripService,
+            TimePassTicketService timePassService, SmartBalanceTicketService smartBalanceService,
+            TicketJourneyAnomalyService anomalyService) {
         this.singleTripService = singleTripService;
         this.multiTripService = multiTripService;
         this.timePassService = timePassService;
         this.smartBalanceService = smartBalanceService;
+        this.anomalyService = anomalyService;
     }
 
+    @Transactional
     public TicketJourney enter(Ticket ticket, String stationCode) {
         Objects.requireNonNull(ticket, "ticket is required");
-        if (journeyRepository.findFirstByTicketAndStatusOrderByOpenedAtDesc(
-                ticket, TicketJourneyStatus.OPEN).isPresent()) {
-            throw new TicketValidationRejectionException(
-                    "ENTRY_ALREADY_OPEN", "The ticket already has an open journey");
-        }
         requireUsableForEntry(ticket);
+        anomalyService.forceCloseJourneyWithoutExit(ticket);
 
         return switch (ticket.getProductType()) {
             case SINGLE_TRIP -> singleTripService.enter(ticket.getCode(), stationCode);

@@ -21,6 +21,7 @@ import com.transport.simulator.enums.TicketStatus;
 import com.transport.simulator.enums.TicketSupportStatus;
 import com.transport.simulator.enums.TicketSupportType;
 import com.transport.simulator.repository.TicketOperationRepository;
+import com.transport.simulator.repository.TicketJourneyRepository;
 import com.transport.simulator.ticketing.qr.TicketQrVerificationException;
 import com.transport.simulator.ticketing.qr.TicketQrVerificationFailure;
 import com.transport.simulator.ticketing.qr.TicketQrVerifier;
@@ -56,6 +57,7 @@ class PassengerTicketLinkServiceTests {
     @Mock private PassengerTicketQueryService queryService;
     @Mock private TicketQrVerifier qrVerifier;
     @Mock private TicketOperationRepository operationRepository;
+    @Mock private TicketJourneyRepository journeyRepository;
     @Mock private TicketOperationRegistrationService registrationService;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private Authentication authentication;
@@ -71,7 +73,7 @@ class PassengerTicketLinkServiceTests {
     void setUp() {
         service = new PassengerTicketLinkService(
                 accessService, queryService, qrVerifier, operationRepository,
-                registrationService, passwordEncoder, CLOCK
+                journeyRepository, registrationService, passwordEncoder, CLOCK
         );
     }
 
