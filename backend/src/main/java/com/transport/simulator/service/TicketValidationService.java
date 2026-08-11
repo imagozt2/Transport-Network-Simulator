@@ -6,7 +6,6 @@ import com.transport.simulator.entity.Ticket;
 import com.transport.simulator.entity.TicketJourney;
 import com.transport.simulator.entity.TicketValidation;
 import com.transport.simulator.enums.DeviceType;
-import com.transport.simulator.enums.TicketProductType;
 import com.transport.simulator.enums.TicketQrValidationType;
 import com.transport.simulator.enums.TicketStatus;
 import com.transport.simulator.repository.DeviceRepository;
@@ -38,6 +37,7 @@ public class TicketValidationService {
     private final TicketValidationRepository validationRepository;
     private final TicketQrVerifier qrVerifier;
     private final TicketQrUseGuard useGuard;
+    private final TicketEntryValidationService entryValidationService;
     private final SingleTripTicketService singleTripService;
     private final MultiTripTicketService multiTripService;
     private final TimePassTicketService timePassService;
@@ -48,6 +48,7 @@ public class TicketValidationService {
     public TicketValidationService(DeviceRepository deviceRepository,
             StationRepository stationRepository, TicketValidationRepository validationRepository,
             TicketQrVerifier qrVerifier, TicketQrUseGuard useGuard,
+            TicketEntryValidationService entryValidationService,
             SingleTripTicketService singleTripService, MultiTripTicketService multiTripService,
             TimePassTicketService timePassService, SmartBalanceTicketService smartBalanceService,
             PlatformTransactionManager transactionManager, Clock clock) {
@@ -56,6 +57,7 @@ public class TicketValidationService {
         this.validationRepository = validationRepository;
         this.qrVerifier = qrVerifier;
         this.useGuard = useGuard;
+        this.entryValidationService = entryValidationService;
         this.singleTripService = singleTripService;
         this.multiTripService = multiTripService;
         this.timePassService = timePassService;
@@ -80,6 +82,8 @@ public class TicketValidationService {
             return rejected(deviceId, request, qrReason(exception.getFailure()), exception.getMessage());
         } catch (TicketQrReferenceReuseException exception) {
             return rejected(deviceId, request, "DUPLICATE_REFERENCE", exception.getMessage());
+        } catch (TicketValidationRejectionException exception) {
+            return rejected(deviceId, request, exception.getReasonCode(), exception.getMessage());
         } catch (IllegalArgumentException | IllegalStateException exception) {
             return rejected(deviceId, request, domainReason(exception), exception.getMessage());
         }
@@ -99,15 +103,16 @@ public class TicketValidationService {
         }
 
         Ticket ticket = verified.credential().getTicket();
-        requireUsableStatus(ticket);
         TicketSnapshot before = TicketSnapshot.from(ticket);
-        TicketJourney journey = apply(ticket.getProductType(), request.direction(),
-                ticket.getCode(), station.getCode());
+        TicketJourney journey = apply(ticket, request.direction(), station.getCode());
         TicketSnapshot after = TicketSnapshot.from(ticket);
         TicketValidation validation = validationRepository.save(TicketValidation.accepted(
                 uniqueCode(), request.validationReference(), request.direction(), ticket, journey,
                 station, device, verified.credential().getCredentialId().toString(), before, after,
                 LocalDateTime.now(clock)));
+        if (request.direction() == TicketQrValidationType.ENTRY) {
+            journey.attachEntryValidation(validation);
+        }
         useGuard.complete(request.validationReference());
         return TicketValidationDecision.from(validation);
     }
@@ -128,21 +133,17 @@ public class TicketValidationService {
                         })));
     }
 
-    private TicketJourney apply(TicketProductType productType, TicketQrValidationType direction,
-            String ticketCode, String stationCode) {
-        return switch (productType) {
-            case SINGLE_TRIP -> direction == TicketQrValidationType.ENTRY
-                    ? singleTripService.enter(ticketCode, stationCode)
-                    : singleTripService.exit(ticketCode, stationCode);
-            case MULTI_TRIP -> direction == TicketQrValidationType.ENTRY
-                    ? multiTripService.enter(ticketCode, stationCode)
-                    : multiTripService.exit(ticketCode, stationCode);
-            case TIME_PASS -> direction == TicketQrValidationType.ENTRY
-                    ? timePassService.enter(ticketCode, stationCode)
-                    : timePassService.exit(ticketCode, stationCode);
-            case SMART_BALANCE -> direction == TicketQrValidationType.ENTRY
-                    ? smartBalanceService.enter(ticketCode, stationCode)
-                    : smartBalanceService.exit(ticketCode, stationCode);
+    private TicketJourney apply(Ticket ticket, TicketQrValidationType direction,
+            String stationCode) {
+        if (direction == TicketQrValidationType.ENTRY) {
+            return entryValidationService.enter(ticket, stationCode);
+        }
+        requireUsableStatus(ticket);
+        return switch (ticket.getProductType()) {
+            case SINGLE_TRIP -> singleTripService.exit(ticket.getCode(), stationCode);
+            case MULTI_TRIP -> multiTripService.exit(ticket.getCode(), stationCode);
+            case TIME_PASS -> timePassService.exit(ticket.getCode(), stationCode);
+            case SMART_BALANCE -> smartBalanceService.exit(ticket.getCode(), stationCode);
         };
     }
 
@@ -199,10 +200,10 @@ public class TicketValidationService {
         if (message.contains("no open journey")) return "ENTRY_REQUIRED";
         if (message.contains("insufficient balance")) return "INSUFFICIENT_BALANCE";
         if (message.contains("validity") || message.contains("expired")) return "EXPIRED";
-        if (message.contains("trip") || message.contains("exhausted")) return "EXHAUSTED";
         if (message.contains("station") || message.contains("origin") || message.contains("destination")) {
             return "WRONG_STATION";
         }
+        if (message.contains("no trip") || message.contains("exhausted")) return "EXHAUSTED";
         if (message.contains("device") || message.contains("context")) return "WRONG_DEVICE";
         return "INACTIVE";
     }
