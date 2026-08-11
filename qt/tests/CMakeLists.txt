@@ -42,3 +42,30 @@ add_test(
 set_tests_properties(rmm-ticket-machine-purchase-issuance-events PROPERTIES
     ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>"
 )
+
+qt_add_executable(rmm-validator-protocol-tests
+    validatorprotocoltest.cpp
+    ../ticket-validator/src/validationresult.cpp
+    ../ticket-validator/src/validationresult.h
+    ../ticket-validator/src/validatorprotocol.cpp
+    ../ticket-validator/src/validatorprotocol.h
+)
+
+target_include_directories(rmm-validator-protocol-tests
+    PRIVATE ../ticket-validator/src
+)
+
+target_link_libraries(rmm-validator-protocol-tests
+    PRIVATE
+        Qt6::Core
+        Qt6::Test
+)
+
+add_test(
+    NAME rmm-validator-entries-exits-rejections-duplicates
+    COMMAND rmm-validator-protocol-tests
+)
+
+set_tests_properties(rmm-validator-entries-exits-rejections-duplicates PROPERTIES
+    ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>"
+)
