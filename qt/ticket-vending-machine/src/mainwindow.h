@@ -1,9 +1,12 @@
 #pragma once
 
 #include <QMainWindow>
+#include "ticketcatalogclient.h"
 
 class QLabel;
 class QPushButton;
+class QStackedWidget;
+class QVBoxLayout;
 
 enum class UiLanguage
 {
@@ -27,11 +30,18 @@ signals:
 private:
     [[nodiscard]] QWidget *createHeader();
     [[nodiscard]] QWidget *createMainPanel();
+    [[nodiscard]] QWidget *createCatalogPanel();
     [[nodiscard]] QWidget *createFooter();
     void configureWindow();
     void showLanguageSelector();
     void setLanguage(UiLanguage language);
     void retranslateUi();
+    void showCatalog();
+    void showHome();
+    void renderCatalog();
+    [[nodiscard]] QString productName(const TicketProduct &product) const;
+    [[nodiscard]] QString productTariff(const TicketProduct &product) const;
+    [[nodiscard]] QString productRules(const TicketProduct &product) const;
 
     UiLanguage m_language = UiLanguage::Spanish;
     QLabel *m_brandMark = nullptr;
@@ -46,4 +56,15 @@ private:
     QPushButton *m_rechargeButton = nullptr;
     QPushButton *m_accessibilityButton = nullptr;
     QPushButton *m_languageButton = nullptr;
+    QStackedWidget *m_contentStack = nullptr;
+    QWidget *m_homePanel = nullptr;
+    QWidget *m_catalogPanel = nullptr;
+    QLabel *m_catalogTitle = nullptr;
+    QLabel *m_catalogHint = nullptr;
+    QLabel *m_catalogState = nullptr;
+    QPushButton *m_catalogBackButton = nullptr;
+    QPushButton *m_catalogRetryButton = nullptr;
+    QVBoxLayout *m_catalogList = nullptr;
+    TicketCatalogClient *m_catalogClient = nullptr;
+    QVector<TicketProduct> m_products;
 };

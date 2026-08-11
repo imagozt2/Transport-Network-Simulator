@@ -3,10 +3,13 @@
 #include <QFrame>
 #include <QDialog>
 #include <QHBoxLayout>
+#include <QLocale>
 #include <QLabel>
 #include <QPushButton>
 #include <QSizePolicy>
 #include <QSettings>
+#include <QScrollArea>
+#include <QStackedWidget>
 #include <QVBoxLayout>
 #include <QWidget>
 
@@ -131,6 +134,37 @@ constexpr auto windowStyle = R"(
         border-color: #2294f2;
         background-color: #eaf5fe;
     }
+    QPushButton#backAction, QPushButton#retryAction {
+        min-height: 48px;
+        padding: 8px 18px;
+        border: 1px solid #cbd5e1;
+        border-radius: 14px;
+        background-color: #ffffff;
+        font-size: 15px;
+        font-weight: 700;
+    }
+    QPushButton#retryAction {
+        background-color: #0f172a;
+        color: #ffffff;
+    }
+    QFrame#productCard {
+        background-color: #f8fafc;
+        border: 1px solid #dbe3ec;
+        border-radius: 16px;
+    }
+    QLabel#productName {
+        font-size: 20px;
+        font-weight: 800;
+    }
+    QLabel#productCode, QLabel#productRules {
+        color: #64748b;
+        font-size: 13px;
+    }
+    QLabel#productTariff {
+        color: #0875c1;
+        font-size: 18px;
+        font-weight: 800;
+    }
 )";
 }
 
@@ -140,11 +174,17 @@ MainWindow::MainWindow(QWidget *parent)
     configureWindow();
 
     auto *centralWidget = new QWidget(this);
+    m_catalogClient = new TicketCatalogClient(this);
     auto *layout = new QVBoxLayout(centralWidget);
     layout->setContentsMargins(28, 24, 28, 22);
     layout->setSpacing(18);
     layout->addWidget(createHeader());
-    layout->addWidget(createMainPanel(), 1);
+    m_contentStack = new QStackedWidget(centralWidget);
+    m_homePanel = createMainPanel();
+    m_catalogPanel = createCatalogPanel();
+    m_contentStack->addWidget(m_homePanel);
+    m_contentStack->addWidget(m_catalogPanel);
+    layout->addWidget(m_contentStack, 1);
     layout->addWidget(createFooter());
 
     setCentralWidget(centralWidget);
@@ -154,6 +194,19 @@ MainWindow::MainWindow(QWidget *parent)
         ? UiLanguage::English
         : UiLanguage::Spanish;
     connect(this, &MainWindow::languageRequested, this, &MainWindow::showLanguageSelector);
+    connect(this, &MainWindow::purchaseRequested, this, &MainWindow::showCatalog);
+    connect(m_catalogClient, &TicketCatalogClient::loaded, this, [this](const auto &products) {
+        m_products = products;
+        renderCatalog();
+    });
+    connect(m_catalogClient, &TicketCatalogClient::failed, this, [this] {
+        m_catalogState->setText(
+            m_language == UiLanguage::Spanish
+                ? QStringLiteral("No se han podido consultar los títulos y tarifas.")
+                : QStringLiteral("Ticket products and fares could not be loaded."));
+        m_catalogState->show();
+        m_catalogRetryButton->show();
+    });
     retranslateUi();
 }
 
@@ -275,6 +328,68 @@ QWidget *MainWindow::createFooter()
     return footer;
 }
 
+QWidget *MainWindow::createCatalogPanel()
+{
+    auto *panel = new QFrame(this);
+    panel->setObjectName(QStringLiteral("mainPanel"));
+    auto *layout = new QVBoxLayout(panel);
+    layout->setContentsMargins(34, 28, 34, 30);
+    layout->setSpacing(14);
+
+    auto *heading = new QWidget(panel);
+    auto *headingLayout = new QHBoxLayout(heading);
+    headingLayout->setContentsMargins(0, 0, 0, 0);
+    m_catalogBackButton = new QPushButton(heading);
+    m_catalogBackButton->setObjectName(QStringLiteral("backAction"));
+    m_catalogBackButton->setCursor(Qt::PointingHandCursor);
+    auto *titles = new QWidget(heading);
+    auto *titlesLayout = new QVBoxLayout(titles);
+    titlesLayout->setContentsMargins(0, 0, 0, 0);
+    m_catalogTitle = new QLabel(titles);
+    m_catalogTitle->setObjectName(QStringLiteral("screenTitle"));
+    m_catalogHint = new QLabel(titles);
+    m_catalogHint->setObjectName(QStringLiteral("screenHint"));
+    m_catalogHint->setWordWrap(true);
+    titlesLayout->addWidget(m_catalogTitle);
+    titlesLayout->addWidget(m_catalogHint);
+    headingLayout->addWidget(m_catalogBackButton, 0, Qt::AlignTop);
+    headingLayout->addWidget(titles, 1);
+
+    m_catalogState = new QLabel(panel);
+    m_catalogState->setObjectName(QStringLiteral("screenHint"));
+    m_catalogState->setAlignment(Qt::AlignCenter);
+    m_catalogRetryButton = new QPushButton(panel);
+    m_catalogRetryButton->setObjectName(QStringLiteral("retryAction"));
+    m_catalogRetryButton->setCursor(Qt::PointingHandCursor);
+    m_catalogRetryButton->hide();
+
+    auto *scrollArea = new QScrollArea(panel);
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setFrameShape(QFrame::NoFrame);
+    auto *catalogContent = new QWidget(scrollArea);
+    m_catalogList = new QVBoxLayout(catalogContent);
+    m_catalogList->setContentsMargins(0, 0, 8, 0);
+    m_catalogList->setSpacing(12);
+    m_catalogList->addStretch();
+    scrollArea->setWidget(catalogContent);
+
+    connect(m_catalogBackButton, &QPushButton::clicked, this, &MainWindow::showHome);
+    connect(m_catalogRetryButton, &QPushButton::clicked, m_catalogClient, [this] {
+        m_catalogRetryButton->hide();
+        m_catalogState->show();
+        m_catalogState->setText(
+            m_language == UiLanguage::Spanish ? QStringLiteral("Consultando tarifas…")
+                                              : QStringLiteral("Loading fares…"));
+        m_catalogClient->load();
+    });
+
+    layout->addWidget(heading);
+    layout->addWidget(m_catalogState);
+    layout->addWidget(m_catalogRetryButton, 0, Qt::AlignCenter);
+    layout->addWidget(scrollArea, 1);
+    return panel;
+}
+
 void MainWindow::showLanguageSelector()
 {
     QDialog dialog(this);
@@ -357,6 +472,148 @@ void MainWindow::setLanguage(UiLanguage language)
     retranslateUi();
 }
 
+void MainWindow::showCatalog()
+{
+    m_contentStack->setCurrentWidget(m_catalogPanel);
+    m_products.clear();
+    renderCatalog();
+    m_catalogState->setText(
+        m_language == UiLanguage::Spanish ? QStringLiteral("Consultando tarifas…")
+                                          : QStringLiteral("Loading fares…"));
+    m_catalogState->show();
+    m_catalogRetryButton->hide();
+    m_catalogClient->load();
+}
+
+void MainWindow::showHome()
+{
+    m_contentStack->setCurrentWidget(m_homePanel);
+}
+
+void MainWindow::renderCatalog()
+{
+    while (auto *item = m_catalogList->takeAt(0)) {
+        delete item->widget();
+        delete item;
+    }
+    if (m_products.isEmpty()) {
+        m_catalogState->setText(
+            m_language == UiLanguage::Spanish ? QStringLiteral("No hay títulos disponibles.")
+                                              : QStringLiteral("No ticket products are available."));
+        m_catalogState->show();
+        m_catalogList->addStretch();
+        return;
+    }
+
+    m_catalogState->hide();
+    m_catalogRetryButton->hide();
+    for (const auto &product : m_products) {
+        auto *card = new QFrame(m_catalogPanel);
+        card->setObjectName(QStringLiteral("productCard"));
+        auto *layout = new QVBoxLayout(card);
+        layout->setContentsMargins(20, 16, 20, 16);
+        layout->setSpacing(5);
+        auto *header = new QWidget(card);
+        auto *headerLayout = new QHBoxLayout(header);
+        headerLayout->setContentsMargins(0, 0, 0, 0);
+        auto *name = new QLabel(productName(product), header);
+        name->setObjectName(QStringLiteral("productName"));
+        auto *code = new QLabel(product.code, header);
+        code->setObjectName(QStringLiteral("productCode"));
+        headerLayout->addWidget(name);
+        headerLayout->addStretch();
+        headerLayout->addWidget(code);
+        auto *tariff = new QLabel(productTariff(product), card);
+        tariff->setObjectName(QStringLiteral("productTariff"));
+        auto *rules = new QLabel(productRules(product), card);
+        rules->setObjectName(QStringLiteral("productRules"));
+        rules->setWordWrap(true);
+        layout->addWidget(header);
+        layout->addWidget(tariff);
+        layout->addWidget(rules);
+        m_catalogList->addWidget(card);
+    }
+    m_catalogList->addStretch();
+}
+
+QString MainWindow::productName(const TicketProduct &product) const
+{
+    const bool spanish = m_language == UiLanguage::Spanish;
+    if (product.type == QStringLiteral("SINGLE_TRIP")) {
+        return spanish ? QStringLiteral("Billete sencillo") : QStringLiteral("Single ticket");
+    }
+    if (product.type == QStringLiteral("MULTI_TRIP")) {
+        return spanish ? QStringLiteral("Billete multiviaje") : QStringLiteral("Multi-trip ticket");
+    }
+    if (product.type == QStringLiteral("TIME_PASS")) {
+        return spanish ? QStringLiteral("Abono temporal") : QStringLiteral("Time pass");
+    }
+    if (product.type == QStringLiteral("SMART_BALANCE")) {
+        return spanish ? QStringLiteral("Saldo inteligente") : QStringLiteral("Smart balance");
+    }
+    return product.name;
+}
+
+QString MainWindow::productTariff(const TicketProduct &product) const
+{
+    const bool spanish = m_language == UiLanguage::Spanish;
+    const QLocale locale = spanish ? QLocale(QLocale::Spanish, QLocale::Spain)
+                                   : QLocale(QLocale::English, QLocale::UnitedKingdom);
+    const auto money = [&locale, &product](double value) {
+        return locale.toCurrencyString(value, product.currency);
+    };
+    if (product.type == QStringLiteral("SINGLE_TRIP") && product.basePrice && product.pricePerStation) {
+        return spanish
+            ? QStringLiteral("%1 de base + %2 por estación").arg(money(*product.basePrice), money(*product.pricePerStation))
+            : QStringLiteral("%1 base fare + %2 per station").arg(money(*product.basePrice), money(*product.pricePerStation));
+    }
+    if (product.type == QStringLiteral("MULTI_TRIP") && product.pricePerTrip) {
+        return spanish ? QStringLiteral("%1 por viaje").arg(money(*product.pricePerTrip))
+                       : QStringLiteral("%1 per trip").arg(money(*product.pricePerTrip));
+    }
+    if (product.type == QStringLiteral("TIME_PASS") && product.pricePerDay) {
+        return spanish ? QStringLiteral("%1 por día").arg(money(*product.pricePerDay))
+                       : QStringLiteral("%1 per day").arg(money(*product.pricePerDay));
+    }
+    if (product.type == QStringLiteral("SMART_BALANCE") && product.basePrice && product.pricePerStation) {
+        return spanish
+            ? QStringLiteral("%1 de base + %2 por estación").arg(money(*product.basePrice), money(*product.pricePerStation))
+            : QStringLiteral("%1 base fare + %2 per station").arg(money(*product.basePrice), money(*product.pricePerStation));
+    }
+    return spanish ? QStringLiteral("Tarifa disponible al configurar")
+                   : QStringLiteral("Fare available during configuration");
+}
+
+QString MainWindow::productRules(const TicketProduct &product) const
+{
+    const bool spanish = m_language == UiLanguage::Spanish;
+    if (product.type == QStringLiteral("SINGLE_TRIP")) {
+        return spanish ? QStringLiteral("Selecciona una estación de origen y otra de destino.")
+                       : QStringLiteral("Choose an origin and a destination station.");
+    }
+    if (product.type == QStringLiteral("MULTI_TRIP") && product.minTrips && product.maxTrips) {
+        return spanish ? QStringLiteral("Entre %1 y %2 viajes.").arg(*product.minTrips).arg(*product.maxTrips)
+                       : QStringLiteral("Between %1 and %2 trips.").arg(*product.minTrips).arg(*product.maxTrips);
+    }
+    if (product.type == QStringLiteral("TIME_PASS") && product.minDays && product.maxDays) {
+        return spanish ? QStringLiteral("Validez de %1 a %2 días.").arg(*product.minDays).arg(*product.maxDays)
+                       : QStringLiteral("Valid for %1 to %2 days.").arg(*product.minDays).arg(*product.maxDays);
+    }
+    if (product.type == QStringLiteral("SMART_BALANCE")
+        && product.minRechargeAmount && product.maxRechargeAmount) {
+        const QLocale locale = spanish ? QLocale(QLocale::Spanish, QLocale::Spain)
+                                       : QLocale(QLocale::English, QLocale::UnitedKingdom);
+        return spanish
+            ? QStringLiteral("Recarga entre %1 y %2.")
+                  .arg(locale.toCurrencyString(*product.minRechargeAmount, product.currency),
+                       locale.toCurrencyString(*product.maxRechargeAmount, product.currency))
+            : QStringLiteral("Recharge between %1 and %2.")
+                  .arg(locale.toCurrencyString(*product.minRechargeAmount, product.currency),
+                       locale.toCurrencyString(*product.maxRechargeAmount, product.currency));
+    }
+    return QString();
+}
+
 void MainWindow::retranslateUi()
 {
     const bool spanish = m_language == UiLanguage::Spanish;
@@ -405,4 +662,14 @@ void MainWindow::retranslateUi()
     m_languageButton->setAccessibleName(
         spanish ? QStringLiteral("Cambiar idioma. Idioma actual: español")
                 : QStringLiteral("Change language. Current language: English"));
+    m_catalogTitle->setText(
+        spanish ? QStringLiteral("Títulos y tarifas") : QStringLiteral("Tickets and fares"));
+    m_catalogHint->setText(
+        spanish ? QStringLiteral("Consulta los productos disponibles. El precio final dependerá de la configuración elegida.")
+                : QStringLiteral("Browse the available products. The final price depends on your chosen configuration."));
+    m_catalogBackButton->setText(spanish ? QStringLiteral("← Volver") : QStringLiteral("← Back"));
+    m_catalogRetryButton->setText(spanish ? QStringLiteral("Reintentar") : QStringLiteral("Try again"));
+    if (!m_products.isEmpty()) {
+        renderCatalog();
+    }
 }
