@@ -5,6 +5,8 @@ import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.Path
+import retrofit2.http.Body
+import retrofit2.http.POST
 import retrofit2.http.Query
 
 interface PassengerTicketWalletApi {
@@ -22,7 +24,18 @@ interface PassengerTicketWalletApi {
         @Header("Authorization") authorization: String,
         @Path("ticketCode") ticketCode: String,
     ): Response<PassengerTicketQr>
+
+    @POST("ticket-links")
+    suspend fun linkPhysicalTicket(
+        @Header("Authorization") authorization: String,
+        @Header("Idempotency-Key") idempotencyKey: String,
+        @Body request: PassengerTicketLinkRequest,
+    ): Response<PassengerLinkedTicket>
 }
+
+data class PassengerTicketLinkRequest(val qrValue: String, val linkCode: String)
+
+data class PassengerLinkedTicket(val code: String)
 
 data class PassengerTicketQr(
     val ticketCode: String,

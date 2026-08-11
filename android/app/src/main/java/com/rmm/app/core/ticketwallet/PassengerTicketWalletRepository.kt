@@ -4,6 +4,7 @@ import com.rmm.app.core.network.ApiResult
 import com.rmm.app.core.network.RMMApiCallExecutor
 import com.rmm.app.core.network.RMMApiClient
 import com.rmm.app.core.session.PassengerSession
+import java.util.UUID
 
 class PassengerTicketWalletRepository(
     private val api: PassengerTicketWalletApi = RMMApiClient.create(PassengerTicketWalletApi::class.java),
@@ -30,5 +31,18 @@ class PassengerTicketWalletRepository(
         ticketCode: String,
     ): ApiResult<PassengerTicketQr> = calls.execute {
         api.ticketQr("Bearer ${session.accessToken}", ticketCode)
+    }
+
+    suspend fun linkPhysicalTicket(
+        session: PassengerSession,
+        qrValue: String,
+        linkCode: String,
+        idempotencyKey: String = UUID.randomUUID().toString(),
+    ): ApiResult<PassengerLinkedTicket> = calls.execute {
+        api.linkPhysicalTicket(
+            authorization = "Bearer ${session.accessToken}",
+            idempotencyKey = idempotencyKey,
+            request = PassengerTicketLinkRequest(qrValue, linkCode),
+        )
     }
 }

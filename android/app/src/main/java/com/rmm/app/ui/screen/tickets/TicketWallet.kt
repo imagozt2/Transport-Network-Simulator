@@ -70,6 +70,8 @@ internal fun TicketWallet(
     var selectedStatus by rememberSaveable { mutableStateOf<String?>(null) }
     var state by remember { mutableStateOf<TicketWalletUiState>(TicketWalletUiState.Loading) }
     var qrTicketCode by remember { mutableStateOf<String?>(null) }
+    var physicalQrValue by remember { mutableStateOf<String?>(null) }
+    var scannerError by remember { mutableStateOf(false) }
     val filters = listOf(
         WalletFilter(null, R.string.ticket_wallet_filter_all),
         WalletFilter("ACTIVE", R.string.ticket_wallet_filter_active),
@@ -91,6 +93,21 @@ internal fun TicketWallet(
     }
 
     Column(modifier = modifier.fillMaxSize()) {
+        PhysicalTicketScannerButton(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+            onScanned = { value ->
+                scannerError = false
+                physicalQrValue = value
+            },
+            onError = { scannerError = true },
+        )
+        if (scannerError) {
+            Text(
+                stringResource(R.string.ticket_link_scan_error),
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
         LazyRow(
             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 20.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -137,6 +154,19 @@ internal fun TicketWallet(
             session = session,
             repository = repository,
             onDismiss = { qrTicketCode = null },
+        )
+    }
+    physicalQrValue?.let { qrValue ->
+        PhysicalTicketLinkDialog(
+            qrValue = qrValue,
+            session = session,
+            repository = repository,
+            onDismiss = { physicalQrValue = null },
+            onLinked = {
+                physicalQrValue = null
+                selectedStatus = null
+                reloadKey++
+            },
         )
     }
 }
