@@ -23,6 +23,11 @@ class TicketIssuanceRequestClient final : public QObject
 public:
     explicit TicketIssuanceRequestClient(QObject *parent = nullptr);
     void submit(const TicketIssuanceRequest &request);
+    void publishOperationEvent(
+        const QString &eventCode,
+        const QString &purchaseReference,
+        const QString &ticketCode,
+        const QString &resultCode = QString());
 
 signals:
     void submitted(const QString &requestReference);
@@ -31,7 +36,8 @@ signals:
         const QString &ticketCode,
         const QByteArray &qrPng,
         const QString &qrValue,
-        const QString &linkingCode);
+        const QString &linkingCode,
+        const QString &purchaseReference);
 
 private:
     void publishPending();

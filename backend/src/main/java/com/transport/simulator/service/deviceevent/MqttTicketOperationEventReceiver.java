@@ -24,6 +24,7 @@ public class MqttTicketOperationEventReceiver {
             DeviceEventType.TICKET_PURCHASE_REQUESTED,
             DeviceEventType.TICKET_PURCHASE_COMPLETED,
             DeviceEventType.TICKET_PURCHASE_FAILED,
+            DeviceEventType.QR_TICKET_GENERATED,
             DeviceEventType.VALIDATION_REQUESTED,
             DeviceEventType.VALIDATION_ACCEPTED,
             DeviceEventType.VALIDATION_REJECTED,
@@ -231,6 +232,7 @@ public class MqttTicketOperationEventReceiver {
             case TICKET_PURCHASE_REQUESTED -> "Venta de título solicitada";
             case TICKET_PURCHASE_COMPLETED -> "Venta de título completada";
             case TICKET_PURCHASE_FAILED -> "Venta de título rechazada";
+            case QR_TICKET_GENERATED -> "Código QR de billete generado";
             case VALIDATION_REQUESTED -> "Validación de billete solicitada";
             case VALIDATION_ACCEPTED -> "Validación de billete aceptada";
             case VALIDATION_REJECTED -> "Validación de billete rechazada";
@@ -243,6 +245,7 @@ public class MqttTicketOperationEventReceiver {
         boolean purchase = type == DeviceEventType.TICKET_PURCHASE_REQUESTED
                 || type == DeviceEventType.TICKET_PURCHASE_COMPLETED
                 || type == DeviceEventType.TICKET_PURCHASE_FAILED;
+        purchase = purchase || type == DeviceEventType.QR_TICKET_GENERATED;
         if (purchase && machine.deviceType() != DeviceType.TICKET_MACHINE) {
             throw new IllegalArgumentException("A validator cannot report ticket sales");
         }

@@ -58,10 +58,14 @@ TicketIssuanceRequestClient::TicketIssuanceRequestClient(QObject *parent)
             return;
         }
         m_timeout->stop();
+        const QString purchaseReference = m_awaitedReference;
         m_awaitedReference.clear();
+        publishOperationEvent(
+            QStringLiteral("QR_TICKET_GENERATED"), purchaseReference, ticketCode,
+            QStringLiteral("QR_PRESENTED"));
         emit ticketIssued(
             ticketCode, png, qrValue,
-            ticket.value(QStringLiteral("linkingCode")).toString());
+            ticket.value(QStringLiteral("linkingCode")).toString(), purchaseReference);
     });
     connect(m_client, &QMqttClient::messageSent, this, [this](qint32 packetId) {
         if (m_packetId < 0 || packetId != m_packetId) {
@@ -83,6 +87,49 @@ TicketIssuanceRequestClient::TicketIssuanceRequestClient(QObject *parent)
     connect(m_timeout, &QTimer::timeout, this, [this] {
         fail(QStringLiteral("MQTT_TIMEOUT"));
     });
+}
+
+void TicketIssuanceRequestClient::publishOperationEvent(
+    const QString &eventCode,
+    const QString &purchaseReference,
+    const QString &ticketCode,
+    const QString &resultCode)
+{
+    if (m_client->state() != QMqttClient::Connected || eventCode.isEmpty()) {
+        return;
+    }
+    QJsonObject details;
+    if (!purchaseReference.isEmpty()) {
+        details.insert(QStringLiteral("purchaseReference"), purchaseReference);
+    }
+    if (!ticketCode.isEmpty()) {
+        details.insert(QStringLiteral("ticketCode"), ticketCode);
+    }
+    if (!resultCode.isEmpty()) {
+        details.insert(QStringLiteral("resultCode"), resultCode);
+    }
+    QJsonObject payload{
+        {QStringLiteral("eventCode"), eventCode},
+        {QStringLiteral("severity"),
+         eventCode == QStringLiteral("TICKET_PURCHASE_FAILED")
+            ? QStringLiteral("ERROR") : QStringLiteral("INFO")},
+        {QStringLiteral("details"), details},
+    };
+    const QString now = QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs);
+    QJsonObject envelope{
+        {QStringLiteral("schemaVersion"), 1},
+        {QStringLiteral("messageId"), QUuid::createUuid().toString(QUuid::WithoutBraces)},
+        {QStringLiteral("correlationId"), purchaseReference.isEmpty()
+            ? QJsonValue::Null : QJsonValue(purchaseReference)},
+        {QStringLiteral("type"), QStringLiteral("device.operation-event")},
+        {QStringLiteral("deviceCode"), m_deviceCode},
+        {QStringLiteral("occurredAt"), now},
+        {QStringLiteral("sentAt"), now},
+        {QStringLiteral("payload"), payload},
+    };
+    const QString topic = QStringLiteral("rmm/v1/devices/%1/events/operation").arg(m_deviceCode);
+    m_client->publish(
+        QMqttTopicName(topic), QJsonDocument(envelope).toJson(QJsonDocument::Compact), 1, false);
 }
 
 void TicketIssuanceRequestClient::submit(const TicketIssuanceRequest &request)
@@ -151,6 +198,10 @@ void TicketIssuanceRequestClient::publishPending()
 
 void TicketIssuanceRequestClient::fail(const QString &reason)
 {
+    if (!m_awaitedReference.isEmpty()) {
+        publishOperationEvent(
+            QStringLiteral("TICKET_PURCHASE_FAILED"), m_awaitedReference, QString(), reason);
+    }
     m_timeout->stop();
     m_pendingPayload.clear();
     m_pendingReference.clear();

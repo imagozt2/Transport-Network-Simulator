@@ -283,7 +283,8 @@ MainWindow::MainWindow(QWidget *parent)
     });
     connect(m_issuanceClient, &TicketIssuanceRequestClient::ticketIssued, this,
             [this](const QString &ticketCode, const QByteArray &qrPng,
-                   const QString &qrValue, const QString &linkingCode) {
+                   const QString &qrValue, const QString &linkingCode,
+                   const QString &purchaseReference) {
         QPixmap qr;
         if (!qr.loadFromData(qrPng, "PNG")) {
             return;
@@ -326,7 +327,12 @@ MainWindow::MainWindow(QWidget *parent)
         finish->setObjectName(QStringLiteral("confirmAction"));
         finish->setCursor(Qt::PointingHandCursor);
         finish->setProperty("qrValue", qrValue);
-        connect(finish, &QPushButton::clicked, &dialog, &QDialog::accept);
+        connect(finish, &QPushButton::clicked, &dialog, [&, this] {
+            m_issuanceClient->publishOperationEvent(
+                QStringLiteral("TICKET_PURCHASE_COMPLETED"),
+                purchaseReference, ticketCode, QStringLiteral("TICKET_PRESENTED"));
+            dialog.accept();
+        });
         layout->addWidget(title);
         layout->addWidget(hint);
         layout->addWidget(qrLabel, 0, Qt::AlignCenter);
