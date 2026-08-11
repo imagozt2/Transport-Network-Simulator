@@ -19,4 +19,6 @@ public interface TicketJourneyRepository extends JpaRepository<TicketJourney, Lo
             Collection<Long> ticketIds,
             TicketJourneyStatus status
     );
+
+    List<TicketJourney> findAllByTicketAndPassengerAccountIsNull(Ticket ticket);
 }

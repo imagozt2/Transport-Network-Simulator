@@ -13,6 +13,7 @@ import com.transport.simulator.enums.TicketStatus;
 import com.transport.simulator.enums.TicketSupportStatus;
 import com.transport.simulator.enums.TicketSupportType;
 import com.transport.simulator.repository.TicketOperationRepository;
+import com.transport.simulator.repository.TicketJourneyRepository;
 import com.transport.simulator.service.model.TicketSnapshot;
 import com.transport.simulator.ticketing.qr.TicketQrVerificationException;
 import com.transport.simulator.ticketing.qr.TicketQrVerifier;
@@ -37,6 +38,7 @@ public class PassengerTicketLinkService {
     private final PassengerTicketQueryService ticketQueryService;
     private final TicketQrVerifier qrVerifier;
     private final TicketOperationRepository operationRepository;
+    private final TicketJourneyRepository journeyRepository;
     private final TicketOperationRegistrationService operationRegistrationService;
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
@@ -46,6 +48,7 @@ public class PassengerTicketLinkService {
             PassengerTicketQueryService ticketQueryService,
             TicketQrVerifier qrVerifier,
             TicketOperationRepository operationRepository,
+            TicketJourneyRepository journeyRepository,
             TicketOperationRegistrationService operationRegistrationService,
             PasswordEncoder passwordEncoder,
             Clock clock
@@ -54,6 +57,7 @@ public class PassengerTicketLinkService {
         this.ticketQueryService = ticketQueryService;
         this.qrVerifier = qrVerifier;
         this.operationRepository = operationRepository;
+        this.journeyRepository = journeyRepository;
         this.operationRegistrationService = operationRegistrationService;
         this.passwordEncoder = passwordEncoder;
         this.clock = clock;
@@ -100,6 +104,8 @@ public class PassengerTicketLinkService {
         LocalDateTime now = LocalDateTime.now(clock);
         TicketSnapshot before = TicketSnapshot.from(ticket);
         ticket.assignPassenger(passenger);
+        journeyRepository.findAllByTicketAndPassengerAccountIsNull(ticket)
+                .forEach(journey -> journey.assignPassenger(passenger));
         support.linkToPassenger(passenger, now);
         operationRegistrationService.recordSupportLink(
                 ticket, support, passenger, operationReference
