@@ -555,6 +555,43 @@ Respuestas relevantes:
 - `422 INVALID_LINK_CODE` sin revelar qué parte de la prueba falló;
 - `422 TICKET_NOT_LINKABLE` si su estado no permite asociarlo.
 
+### Consultar el historial de un billete
+
+```http
+GET /api/rmm-app/v1/tickets/{ticketCode}/history?limit=20&cursor=...
+```
+
+La consulta exige una sesión de pasajero y aplica la propiedad antes de resolver el cursor. Devuelve
+las operaciones desde la más reciente y no expone referencias externas ni identificadores de
+máquinas:
+
+```json
+{
+  "items": [
+    {
+      "type": "ENTRY_ACCEPTED",
+      "resultingStatus": "ACTIVE",
+      "station": {
+        "code": "ST038",
+        "name": "Acueducto"
+      },
+      "operationAmount": 0.00,
+      "balanceAfter": null,
+      "remainingTripsAfter": 7,
+      "validFromAfter": null,
+      "validUntilAfter": null,
+      "currency": "EUR",
+      "occurredAt": "2026-08-11T12:14:05"
+    }
+  ],
+  "nextCursor": "RMM-TOP-01K2..."
+}
+```
+
+`limit` debe estar entre 1 y 100. `nextCursor` es `null` cuando no quedan operaciones. Un cursor que
+no pertenece al mismo billete devuelve `400 Bad Request`; un billete ajeno conserva la respuesta de
+recurso no encontrado definida por el aislamiento de pasajeros.
+
 ## Recargas
 
 ### Cotizar una recarga

@@ -202,6 +202,7 @@ ejecución desde los IDE, los comandos de compilación y la ubicación de los ar
 
 - [Ejecución de las aplicaciones cliente](docs/ejecucion-aplicaciones-cliente.md)
 - [Arquitectura de RMM App](docs/arquitectura-rmm-app.md)
+- [Cartera de billetes de RMM App](docs/cartera-rmm-app.md)
 
 ### Entorno Docker
 
@@ -245,6 +246,10 @@ el diagnóstico se recogen en la [guía de infraestructura local](docs/infraestr
 | `GET` | `/api/rmm-app/v1/me` | Devuelve la cuenta del pasajero autenticado. |
 | `GET` | `/api/rmm-app/v1/me/sessions` | Lista las sesiones móviles activas de la cuenta. |
 | `GET` | `/api/rmm-app/v1/me/devices` | Lista los dispositivos Android registrados. |
+| `GET` | `/api/rmm-app/v1/tickets` | Lista y filtra los billetes del pasajero autenticado. |
+| `GET` | `/api/rmm-app/v1/tickets/{ticketCode}/qr` | Entrega bajo demanda el QR digital sin permitir caché. |
+| `GET` | `/api/rmm-app/v1/tickets/{ticketCode}/history` | Devuelve el historial paginado de un billete propio. |
+| `POST` | `/api/rmm-app/v1/ticket-links` | Vincula un soporte físico mediante QR y código privado. |
 | `GET` | `/api/dashboard/summary` | Devuelve el resumen persistido legado; el Panel General utiliza las consultas operativas. |
 | `GET` | `/api/network-map` | Devuelve las líneas activas y sus estaciones ordenadas. |
 | `GET` | `/api/network-map/journeys` | Calcula un trayecto entre dos estaciones y devuelve sus tramos ordenados. |
@@ -301,6 +306,7 @@ ejecuta las pruebas de Android y Qt y conserva temporalmente sus artefactos de c
 - [Seguridad, contrato y firma de los códigos QR](docs/contrato-codigos-qr.md)
 - [Contratos REST para RMM App](docs/contratos-rest-rmm-app.md)
 - [Autenticación, sesiones y dispositivos de RMM App](docs/autenticacion-rmm-app.md)
+- [Cartera, QR e historial de billetes en RMM App](docs/cartera-rmm-app.md)
 - [Topics y mensajes MQTT del ecosistema RMM](docs/contrato-mqtt.md)
 - [Integración MQTT del backend](docs/integracion-mqtt-backend.md)
 - [Identidad y autenticación de las máquinas RMM](docs/identidad-maquinas.md)

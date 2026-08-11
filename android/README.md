@@ -36,6 +36,10 @@ El catálogo, la configuración de productos, la compra simulada y la presentaci
 se describen en la guía de
 [`compra de billetes desde RMM App`](../docs/compra-billetes-rmm-app.md).
 
+La consulta de derechos y estados, la presentación segura del QR, el registro de soportes físicos y
+el historial paginado se documentan en la guía de
+[`cartera de billetes de RMM App`](../docs/cartera-rmm-app.md).
+
 ## Comprobación desde PowerShell
 
 ```powershell
