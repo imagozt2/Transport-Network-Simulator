@@ -1,0 +1,52 @@
+package com.rmm.app.core.ticketwallet
+
+import java.math.BigDecimal
+import retrofit2.Response
+import retrofit2.http.GET
+import retrofit2.http.Header
+import retrofit2.http.Query
+
+interface PassengerTicketWalletApi {
+    @GET("tickets")
+    suspend fun tickets(
+        @Header("Authorization") authorization: String,
+        @Query("status") status: String? = null,
+        @Query("productType") productType: String? = null,
+        @Query("limit") limit: Int = 20,
+        @Query("cursor") cursor: String? = null,
+    ): Response<PassengerTicketsResponse>
+}
+
+data class PassengerTicketsResponse(
+    val items: List<PassengerTicketSummary> = emptyList(),
+    val nextCursor: String? = null,
+)
+
+data class PassengerTicketSummary(
+    val code: String,
+    val product: PassengerTicketProductSummary,
+    val medium: String?,
+    val status: String,
+    val originStation: PassengerTicketStation? = null,
+    val destinationStation: PassengerTicketStation? = null,
+    val stationCount: Int? = null,
+    val remainingTrips: Int? = null,
+    val purchasedDays: Int? = null,
+    val balanceAmount: BigDecimal = BigDecimal.ZERO,
+    val currency: String = "EUR",
+    val validFrom: String? = null,
+    val validUntil: String? = null,
+    val openJourney: Boolean = false,
+    val issuedAt: String,
+)
+
+data class PassengerTicketProductSummary(
+    val code: String,
+    val name: String,
+    val type: String,
+)
+
+data class PassengerTicketStation(
+    val code: String,
+    val name: String,
+)
