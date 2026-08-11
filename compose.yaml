@@ -3,7 +3,7 @@ name: rmm-local
 services:
   mysql:
     image: mysql:8.4.10-oraclelinux9
-    container_name: rmm-mysql
+    container_name: ${MYSQL_CONTAINER_NAME:-rmm-mysql}
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Define MYSQL_ROOT_PASSWORD in .env}
@@ -12,7 +12,7 @@ services:
       MYSQL_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD in .env}
       TZ: Europe/Madrid
     ports:
-      - "127.0.0.1:3307:3306"
+      - "127.0.0.1:${MYSQL_HOST_PORT:-3307}:3306"
     volumes:
       - mysql-data:/var/lib/mysql
       - ./database/schema/01_create_database.sql:/docker-entrypoint-initdb.d/01_create_database.sql:ro
@@ -34,7 +34,7 @@ services:
 
   mosquitto:
     image: eclipse-mosquitto:2.0.22-openssl
-    container_name: rmm-mosquitto
+    container_name: ${MOSQUITTO_CONTAINER_NAME:-rmm-mosquitto}
     command:
       - mosquitto
       - -c
@@ -45,7 +45,7 @@ services:
       - "127.0.0.1:${RMM_MQTT_HOST_PORT:-1883}:${RMM_MQTT_PORT:-1883}"
     volumes:
       - ./infrastructure/mosquitto/config:/mosquitto/config:ro
-      - ./infrastructure/mosquitto/runtime:/mosquitto/security:ro
+      - ${MOSQUITTO_RUNTIME_DIRECTORY:-./infrastructure/mosquitto/runtime}:/mosquitto/security:ro
       - mosquitto-data:/mosquitto/data
     healthcheck:
       test:
@@ -67,7 +67,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: rmm-backend
+    container_name: ${BACKEND_CONTAINER_NAME:-rmm-backend}
     restart: unless-stopped
     environment:
       DB_URL: jdbc:mysql://mysql:3306/transport_simulator_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
@@ -97,7 +97,7 @@ services:
     volumes:
       - ./infrastructure/mosquitto/runtime/certificates:/app/mqtt-certificates:ro
     ports:
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:${BACKEND_HOST_PORT:-8080}:8080"
     depends_on:
       mysql:
         condition: service_healthy
@@ -120,4 +120,4 @@ volumes:
 
 networks:
   rmm-internal:
-    name: rmm-internal
+    name: ${RMM_NETWORK_NAME:-rmm-internal}
