@@ -31,11 +31,37 @@ interface PassengerTicketWalletApi {
         @Header("Idempotency-Key") idempotencyKey: String,
         @Body request: PassengerTicketLinkRequest,
     ): Response<PassengerLinkedTicket>
+
+    @GET("tickets/{ticketCode}/history")
+    suspend fun ticketHistory(
+        @Header("Authorization") authorization: String,
+        @Path("ticketCode") ticketCode: String,
+        @Query("limit") limit: Int = 20,
+        @Query("cursor") cursor: String? = null,
+    ): Response<PassengerTicketHistoryResponse>
 }
 
 data class PassengerTicketLinkRequest(val qrValue: String, val linkCode: String)
 
 data class PassengerLinkedTicket(val code: String)
+
+data class PassengerTicketHistoryResponse(
+    val items: List<PassengerTicketHistoryItem> = emptyList(),
+    val nextCursor: String? = null,
+)
+
+data class PassengerTicketHistoryItem(
+    val type: String,
+    val resultingStatus: String,
+    val station: PassengerTicketStation? = null,
+    val operationAmount: BigDecimal? = null,
+    val balanceAfter: BigDecimal? = null,
+    val remainingTripsAfter: Int? = null,
+    val validFromAfter: String? = null,
+    val validUntilAfter: String? = null,
+    val currency: String = "EUR",
+    val occurredAt: String,
+)
 
 data class PassengerTicketQr(
     val ticketCode: String,

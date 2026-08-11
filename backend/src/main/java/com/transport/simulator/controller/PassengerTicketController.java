@@ -3,6 +3,7 @@ package com.transport.simulator.controller;
 import com.transport.simulator.dto.response.passengerticket.PassengerTicketDetailResponse;
 import com.transport.simulator.dto.response.passengerticket.PassengerTicketsResponse;
 import com.transport.simulator.dto.response.passengerticket.PassengerTicketQrResponse;
+import com.transport.simulator.dto.response.passengerticket.PassengerTicketHistoryResponse;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import com.transport.simulator.service.PassengerTicketQueryService;
@@ -51,5 +52,15 @@ public class PassengerTicketController {
                 .cacheControl(CacheControl.noStore())
                 .header("Pragma", "no-cache")
                 .body(ticketQueryService.ticketQr(ticketCode, authentication));
+    }
+
+    @GetMapping("/{ticketCode}/history")
+    public PassengerTicketHistoryResponse history(
+            @PathVariable String ticketCode,
+            @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false) String cursor,
+            Authentication authentication
+    ) {
+        return ticketQueryService.history(ticketCode, limit, cursor, authentication);
     }
 }

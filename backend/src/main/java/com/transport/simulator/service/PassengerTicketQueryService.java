@@ -4,6 +4,9 @@ import com.transport.simulator.dto.response.passengerticket.PassengerTicketDetai
 import com.transport.simulator.dto.response.passengerticket.PassengerTicketSummaryResponse;
 import com.transport.simulator.dto.response.passengerticket.PassengerTicketsResponse;
 import com.transport.simulator.dto.response.passengerticket.PassengerTicketQrResponse;
+import com.transport.simulator.dto.response.passengerticket.PassengerTicketHistoryItemResponse;
+import com.transport.simulator.dto.response.passengerticket.PassengerTicketHistoryResponse;
+import com.transport.simulator.entity.TicketOperation;
 import com.transport.simulator.entity.Ticket;
 import com.transport.simulator.entity.TicketJourney;
 import com.transport.simulator.entity.TicketSupport;
@@ -17,6 +20,7 @@ import com.transport.simulator.repository.TicketJourneyRepository;
 import com.transport.simulator.repository.TicketRepository;
 import com.transport.simulator.repository.TicketSupportRepository;
 import com.transport.simulator.repository.TicketQrCredentialRepository;
+import com.transport.simulator.repository.TicketOperationRepository;
 import com.transport.simulator.security.PassengerPrincipal;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -42,19 +46,22 @@ public class PassengerTicketQueryService {
     private final TicketSupportRepository supportRepository;
     private final TicketJourneyRepository journeyRepository;
     private final TicketQrCredentialRepository qrCredentialRepository;
+    private final TicketOperationRepository operationRepository;
 
     public PassengerTicketQueryService(
             PassengerResourceAccessService accessService,
             TicketRepository ticketRepository,
             TicketSupportRepository supportRepository,
             TicketJourneyRepository journeyRepository,
-            TicketQrCredentialRepository qrCredentialRepository
+            TicketQrCredentialRepository qrCredentialRepository,
+            TicketOperationRepository operationRepository
     ) {
         this.accessService = accessService;
         this.ticketRepository = ticketRepository;
         this.supportRepository = supportRepository;
         this.journeyRepository = journeyRepository;
         this.qrCredentialRepository = qrCredentialRepository;
+        this.operationRepository = operationRepository;
     }
 
     @Transactional(readOnly = true)
@@ -123,6 +130,33 @@ public class PassengerTicketQueryService {
                 ));
         return new PassengerTicketQrResponse(
                 ticket.getCode(), credential.getQrValue(), credential.getCredentialId(), credential.getExpiresAt()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public PassengerTicketHistoryResponse history(
+            String code,
+            Integer limit,
+            String cursor,
+            Authentication authentication
+    ) {
+        Ticket ticket = accessService.ownedTicket(code, authentication);
+        int safeLimit = normalizedLimit(limit);
+        TicketOperation cursorOperation = cursor == null || cursor.isBlank()
+                ? null
+                : operationRepository.findByCodeAndTicketId(cursor, ticket.getId())
+                        .orElseThrow(() -> badRequest("Invalid ticket history cursor"));
+        List<TicketOperation> result = operationRepository.findPassengerHistory(
+                ticket.getId(),
+                cursorOperation == null ? null : cursorOperation.getOccurredAt(),
+                cursorOperation == null ? null : cursorOperation.getId(),
+                PageRequest.of(0, safeLimit + 1)
+        );
+        boolean hasNext = result.size() > safeLimit;
+        List<TicketOperation> page = hasNext ? result.subList(0, safeLimit) : result;
+        return new PassengerTicketHistoryResponse(
+                page.stream().map(PassengerTicketHistoryItemResponse::from).toList(),
+                hasNext && !page.isEmpty() ? page.getLast().getCode() : null
         );
     }
 

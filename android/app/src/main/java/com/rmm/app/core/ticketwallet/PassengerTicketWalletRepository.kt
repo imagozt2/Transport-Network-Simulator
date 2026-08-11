@@ -45,4 +45,16 @@ class PassengerTicketWalletRepository(
             request = PassengerTicketLinkRequest(qrValue, linkCode),
         )
     }
+
+    suspend fun ticketHistory(
+        session: PassengerSession,
+        ticketCode: String,
+        cursor: String? = null,
+    ): ApiResult<PassengerTicketHistoryResponse> = calls.execute {
+        api.ticketHistory(
+            authorization = "Bearer ${session.accessToken}",
+            ticketCode = ticketCode,
+            cursor = cursor,
+        )
+    }
 }

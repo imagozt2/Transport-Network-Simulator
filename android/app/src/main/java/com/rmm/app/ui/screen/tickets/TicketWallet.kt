@@ -72,6 +72,7 @@ internal fun TicketWallet(
     var state by remember { mutableStateOf<TicketWalletUiState>(TicketWalletUiState.Loading) }
     var qrTicketCode by remember { mutableStateOf<String?>(null) }
     var physicalQrValue by remember { mutableStateOf<String?>(null) }
+    var historyTicketCode by remember { mutableStateOf<String?>(null) }
     var scannerError by remember { mutableStateOf(false) }
     val filters = listOf(
         WalletFilter(null, R.string.ticket_wallet_filter_all),
@@ -128,6 +129,7 @@ internal fun TicketWallet(
             is TicketWalletUiState.Content -> WalletContent(
                 state = current,
                 onShowQr = { qrTicketCode = it },
+                onShowHistory = { historyTicketCode = it },
                 onLoadMore = {
                     val cursor = current.nextCursor ?: return@WalletContent
                     scope.launch {
@@ -170,12 +172,21 @@ internal fun TicketWallet(
             },
         )
     }
+    historyTicketCode?.let { ticketCode ->
+        TicketHistoryDialog(
+            ticketCode = ticketCode,
+            session = session,
+            repository = repository,
+            onDismiss = { historyTicketCode = null },
+        )
+    }
 }
 
 @Composable
 private fun WalletContent(
     state: TicketWalletUiState.Content,
     onShowQr: (String) -> Unit,
+    onShowHistory: (String) -> Unit,
     onLoadMore: () -> Unit,
 ) {
     LazyColumn(
@@ -203,7 +214,7 @@ private fun WalletContent(
             }
         } else {
             items(state.tickets, key = PassengerTicketSummary::code) { ticket ->
-                WalletTicketCard(ticket, onShowQr)
+                WalletTicketCard(ticket, onShowQr, onShowHistory)
             }
         }
         state.nextCursor?.let {
@@ -234,7 +245,11 @@ private fun WalletContent(
 }
 
 @Composable
-private fun WalletTicketCard(ticket: PassengerTicketSummary, onShowQr: (String) -> Unit) {
+private fun WalletTicketCard(
+    ticket: PassengerTicketSummary,
+    onShowQr: (String) -> Unit,
+    onShowHistory: (String) -> Unit,
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -329,6 +344,12 @@ private fun WalletTicketCard(ticket: PassengerTicketSummary, onShowQr: (String) 
                 ) {
                     Text(stringResource(R.string.ticket_wallet_show_qr))
                 }
+            }
+            Button(
+                onClick = { onShowHistory(ticket.code) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.ticket_wallet_show_history))
             }
         }
     }
