@@ -391,4 +391,6 @@ public class Ticket extends AuditableEntity {
     public PassengerAccount getPassengerAccount() { return passengerAccount; }
     public boolean isActive() { return active; }
     public LocalDateTime getIssuedAt() { return issuedAt; }
+    public LocalDateTime getLastRechargedAt() { return lastRechargedAt; }
+    public LocalDateTime getLastUsedAt() { return lastUsedAt; }
 }
