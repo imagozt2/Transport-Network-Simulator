@@ -41,7 +41,8 @@ function Wait-ForBackend {
             Start-Sleep -Seconds 2
         }
     }
-    Invoke-Compose -Arguments @("logs", "backend")
+    Invoke-Compose -Arguments @("ps", "--all")
+    Invoke-Compose -Arguments @("logs", "--no-color", "mysql", "mosquitto", "backend")
     throw "El backend no alcanzó un estado saludable con MySQL"
 }
 
@@ -54,7 +55,7 @@ function Wait-ForBackendMqttConnection {
         }
         Start-Sleep -Seconds 1
     }
-    Invoke-Compose -Arguments @("logs", "backend")
+    Invoke-Compose -Arguments @("logs", "--no-color", "mosquitto", "backend")
     throw "El backend no confirmó su conexión autenticada con Mosquitto"
 }
 
@@ -86,7 +87,13 @@ try {
             -UsersFile $usersFile -RuntimeDirectory $runtimeDirectory
     if ($LASTEXITCODE -ne 0) { throw "No se pudo preparar la seguridad MQTT" }
 
-    Invoke-Compose -Arguments @("up", "--detach", "--build", "--wait", "--wait-timeout", "240")
+    try {
+        Invoke-Compose -Arguments @("up", "--detach", "--build")
+    } catch {
+        Invoke-Compose -Arguments @("ps", "--all")
+        Invoke-Compose -Arguments @("logs", "--no-color", "mysql", "mosquitto", "backend")
+        throw
+    }
     Wait-ForBackend -Port $backendPort
 
     Write-Host "Comprobando el esquema y los datos iniciales de MySQL..."

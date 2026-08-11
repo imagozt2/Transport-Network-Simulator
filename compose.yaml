@@ -41,6 +41,9 @@ services:
       - ${MOSQUITTO_CONFIG_FILE:-/mosquitto/config/mosquitto.conf}
     restart: unless-stopped
     stop_grace_period: 30s
+    environment:
+      MQTT_HEALTH_USERNAME: ${MQTT_BACKEND_USERNAME:-rmm-backend}
+      MQTT_HEALTH_PASSWORD: ${MQTT_BACKEND_PASSWORD:-}
     ports:
       - "127.0.0.1:${RMM_MQTT_HOST_PORT:-1883}:${RMM_MQTT_PORT:-1883}"
     volumes:
@@ -50,7 +53,10 @@ services:
     healthcheck:
       test:
         - CMD-SHELL
-        - pidof mosquitto >/dev/null
+        - >-
+          mosquitto_pub -h 127.0.0.1 -p 1883
+          -u "$$MQTT_HEALTH_USERNAME" -P "$$MQTT_HEALTH_PASSWORD"
+          -t rmm/v1/devices/healthcheck/commands -n -q 1
       interval: 10s
       timeout: 6s
       retries: 5
