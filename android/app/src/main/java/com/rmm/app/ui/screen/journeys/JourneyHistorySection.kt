@@ -53,6 +53,7 @@ fun JourneyHistorySection(session: PassengerSession, modifier: Modifier = Modifi
     val repository = remember { PassengerJourneyHistoryRepository() }
     var reloadKey by rememberSaveable { mutableIntStateOf(0) }
     var state by remember { mutableStateOf<JourneyHistoryUiState>(JourneyHistoryUiState.Loading) }
+    var selectedJourney by remember { mutableStateOf<PassengerJourneyHistoryItem?>(null) }
 
     LaunchedEffect(session.accessToken, reloadKey) {
         state = JourneyHistoryUiState.Loading
@@ -79,7 +80,7 @@ fun JourneyHistorySection(session: PassengerSession, modifier: Modifier = Modifi
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     items(current.items, key = PassengerJourneyHistoryItem::code) {
-                        JourneyHistoryCard(it)
+                        JourneyHistoryCard(it, onOpenDetail = { selectedJourney = it })
                     }
                     current.nextCursor?.let { cursor ->
                         item {
@@ -122,11 +123,18 @@ fun JourneyHistorySection(session: PassengerSession, modifier: Modifier = Modifi
             }
         }
     }
+
+    selectedJourney?.let { journey ->
+        JourneyDetailDialog(journey = journey, onDismiss = { selectedJourney = null })
+    }
 }
 
 @Composable
-private fun JourneyHistoryCard(journey: PassengerJourneyHistoryItem) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+private fun JourneyHistoryCard(
+    journey: PassengerJourneyHistoryItem,
+    onOpenDetail: () -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth(), onClick = onOpenDetail) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -169,6 +177,11 @@ private fun JourneyHistoryCard(journey: PassengerJourneyHistoryItem) {
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Text(
+                stringResource(R.string.journey_detail_open),
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.labelLarge,
+            )
         }
     }
 }
@@ -189,6 +202,6 @@ private fun JourneyStatus(journey: PassengerJourneyHistoryItem) {
     }
 }
 
-private fun String.asJourneyDateTime(): String = runCatching {
+internal fun String.asJourneyDateTime(): String = runCatching {
     LocalDateTime.parse(this).format(DateTimeFormatter.ofPattern("dd/MM/yyyy · HH:mm"))
 }.getOrDefault(this)
