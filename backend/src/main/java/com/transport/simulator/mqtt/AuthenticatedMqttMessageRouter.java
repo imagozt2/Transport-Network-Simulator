@@ -29,6 +29,7 @@ public class AuthenticatedMqttMessageRouter {
         mqttClient.subscribe("rmm/v1/devices/+/telemetry", 0, this::route);
         mqttClient.subscribe("rmm/v1/devices/+/events/+", 1, this::route);
         mqttClient.subscribe("rmm/v1/devices/+/requests/validations", 1, this::route);
+        mqttClient.subscribe("rmm/v1/devices/+/requests/purchases", 1, this::route);
         mqttClient.subscribe("rmm/v1/devices/+/acks", 1, this::route);
     }
 

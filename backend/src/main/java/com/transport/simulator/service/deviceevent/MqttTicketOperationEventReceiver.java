@@ -40,9 +40,51 @@ public class MqttTicketOperationEventReceiver {
     private void receive(AuthenticatedMqttMessage authenticated) {
         if (authenticated.topic().endsWith("/requests/validations")) {
             receiveValidationRequest(authenticated);
+        } else if (authenticated.topic().endsWith("/requests/purchases")) {
+            receivePurchaseRequest(authenticated);
         } else if (authenticated.topic().contains("/events/operation")) {
             receiveOperationEvent(authenticated);
         }
+    }
+
+    private void receivePurchaseRequest(AuthenticatedMqttMessage authenticated) {
+        Map<String, Object> envelope = envelope(authenticated.payload());
+        verifyEnvelope(envelope, authenticated.machine());
+        if (!"ticket.purchase-requested".equals(text(envelope, "type"))) {
+            throw new IllegalArgumentException("Unexpected purchase message type");
+        }
+        if (authenticated.machine().deviceType() != DeviceType.TICKET_MACHINE) {
+            throw new IllegalArgumentException("Only a ticket machine can request a purchase");
+        }
+        Map<String, Object> payload = object(envelope, "payload");
+        String reference = text(payload, "purchaseReference");
+        UUID.fromString(reference);
+        String productCode = text(payload, "productCode");
+        if (!"SIMULATED".equals(text(payload, "paymentMethod"))) {
+            throw new IllegalArgumentException("Ticket machines only support simulated payments");
+        }
+        if (!"EUR".equals(text(payload, "currency"))) {
+            throw new IllegalArgumentException("Unsupported purchase currency");
+        }
+        Object paidAmount = payload.get("paidAmount");
+        if (!(paidAmount instanceof Number number) || number.doubleValue() <= 0) {
+            throw new IllegalArgumentException("A positive paidAmount is required");
+        }
+        Map<String, Object> configuration = object(payload, "configuration");
+        if (configuration.isEmpty()) {
+            throw new IllegalArgumentException("Ticket configuration is required");
+        }
+
+        Map<String, Object> safePayload = new LinkedHashMap<>();
+        safePayload.put("purchaseReference", reference);
+        safePayload.put("productCode", productCode);
+        safePayload.put("paymentMethod", "SIMULATED");
+        safePayload.put("paidAmount", number.doubleValue());
+        safePayload.put("currency", "EUR");
+        safePayload.put("configuration", new LinkedHashMap<>(configuration));
+        ingress.receive(message(envelope, authenticated.machine(),
+                DeviceEventType.TICKET_PURCHASE_REQUESTED, LogSeverity.INFO,
+                "Solicitud de emisión de billete recibida", safePayload));
     }
 
     private void receiveOperationEvent(AuthenticatedMqttMessage authenticated) {

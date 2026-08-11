@@ -8,6 +8,8 @@ qt_add_executable(rmm-ticket-vending-machine WIN32
     src/stationcatalogclient.h
     src/journeyquoteclient.cpp
     src/journeyquoteclient.h
+    src/ticketissuancerequestclient.cpp
+    src/ticketissuancerequestclient.h
 )
 
 target_link_libraries(rmm-ticket-vending-machine

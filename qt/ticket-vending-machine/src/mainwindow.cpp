@@ -235,6 +235,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_catalogClient = new TicketCatalogClient(this);
     m_stationClient = new StationCatalogClient(this);
     m_journeyClient = new JourneyQuoteClient(this);
+    m_issuanceClient = new TicketIssuanceRequestClient(this);
     auto *layout = new QVBoxLayout(centralWidget);
     layout->setContentsMargins(28, 24, 28, 22);
     layout->setSpacing(18);
@@ -256,6 +257,54 @@ MainWindow::MainWindow(QWidget *parent)
     connect(this, &MainWindow::languageRequested, this, &MainWindow::showLanguageSelector);
     connect(this, &MainWindow::purchaseRequested, this, &MainWindow::showCatalog);
     connect(this, &MainWindow::configurationSelected, this, &MainWindow::preparePayment);
+    connect(this, &MainWindow::paymentApproved, this,
+            [this](const QString &productCode, const QString &originStationCode,
+                   const QString &destinationStationCode, int quantity,
+                   double rechargeAmount, double paidAmount) {
+        m_connectionState->setText(
+            m_language == UiLanguage::Spanish ? QStringLiteral("Solicitando emisión…")
+                                              : QStringLiteral("Requesting issuance…"));
+        m_issuanceClient->submit(TicketIssuanceRequest{
+            .productCode = productCode,
+            .originStationCode = originStationCode,
+            .destinationStationCode = destinationStationCode,
+            .quantity = quantity,
+            .rechargeAmount = rechargeAmount,
+            .paidAmount = paidAmount,
+        });
+    });
+    connect(m_issuanceClient, &TicketIssuanceRequestClient::submitted, this,
+            [this](const QString &reference) {
+        m_connectionState->setText(
+            m_language == UiLanguage::Spanish ? QStringLiteral("Solicitud enviada")
+                                              : QStringLiteral("Request sent"));
+        QMessageBox::information(
+            this,
+            m_language == UiLanguage::Spanish ? QStringLiteral("Emisión solicitada")
+                                              : QStringLiteral("Issuance requested"),
+            m_language == UiLanguage::Spanish
+                ? QStringLiteral("La solicitud se ha enviado de forma segura.\nReferencia: %1").arg(reference)
+                : QStringLiteral("The request was sent securely.\nReference: %1").arg(reference));
+        showHome();
+    });
+    connect(m_issuanceClient, &TicketIssuanceRequestClient::failed, this,
+            [this](const QString &reason) {
+        m_connectionState->setText(
+            m_language == UiLanguage::Spanish ? QStringLiteral("Conexión no disponible")
+                                              : QStringLiteral("Connection unavailable"));
+        const bool missingCredentials = reason == QStringLiteral("MQTT_CREDENTIALS_MISSING");
+        QMessageBox::warning(
+            this,
+            m_language == UiLanguage::Spanish ? QStringLiteral("No se pudo solicitar la emisión")
+                                              : QStringLiteral("Issuance could not be requested"),
+            m_language == UiLanguage::Spanish
+                ? (missingCredentials
+                    ? QStringLiteral("Falta configurar la credencial MQTT local de esta máquina.")
+                    : QStringLiteral("No se ha podido contactar con el backend. No se ha emitido ningún billete."))
+                : (missingCredentials
+                    ? QStringLiteral("This machine's local MQTT credential is not configured.")
+                    : QStringLiteral("The backend could not be reached. No ticket has been issued.")));
+    });
     connect(m_catalogClient, &TicketCatalogClient::loaded, this, [this](const auto &products) {
         m_products = products;
         renderCatalog();

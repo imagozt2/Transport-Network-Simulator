@@ -4,6 +4,7 @@
 #include "ticketcatalogclient.h"
 #include "stationcatalogclient.h"
 #include "journeyquoteclient.h"
+#include "ticketissuancerequestclient.h"
 #include <optional>
 
 class QLabel;
@@ -92,6 +93,7 @@ private:
     TicketCatalogClient *m_catalogClient = nullptr;
     StationCatalogClient *m_stationClient = nullptr;
     JourneyQuoteClient *m_journeyClient = nullptr;
+    TicketIssuanceRequestClient *m_issuanceClient = nullptr;
     QVector<TicketProduct> m_products;
     QVector<NetworkStation> m_stations;
     bool m_stationLoadFailed = false;
