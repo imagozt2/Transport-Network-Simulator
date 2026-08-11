@@ -301,6 +301,7 @@ CREATE TABLE devices (
     uptime_seconds BIGINT NULL,
     last_presence_at DATETIME NULL,
     last_status_at DATETIME NULL,
+    last_communication_at DATETIME NULL,
     active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -321,6 +322,8 @@ CREATE TABLE devices (
 CREATE INDEX idx_devices_station ON devices (station_id);
 CREATE INDEX idx_devices_type_status ON devices (device_type, status);
 CREATE INDEX idx_devices_active ON devices (active);
+CREATE INDEX idx_devices_mqtt_communication
+    ON devices (mqtt_presence, last_communication_at);
 
 CREATE TABLE device_mqtt_identities (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,

@@ -70,6 +70,9 @@ public class Device extends AuditableEntity {
     @Column(name = "last_status_at")
     private LocalDateTime lastStatusAt;
 
+    @Column(name = "last_communication_at")
+    private LocalDateTime lastCommunicationAt;
+
     @Column(nullable = false)
     private boolean active = true;
 
@@ -89,6 +92,7 @@ public class Device extends AuditableEntity {
         Objects.requireNonNull(presence);
         Objects.requireNonNull(changedAt);
         if (lastPresenceAt != null && changedAt.isBefore(lastPresenceAt)) return false;
+        if (!recordCommunicationTime(changedAt)) return false;
         mqttPresence = presence;
         lastPresenceAt = changedAt;
         if (presence == DeviceMqttPresence.OFFLINE) {
@@ -106,6 +110,7 @@ public class Device extends AuditableEntity {
         Objects.requireNonNull(occurredAt);
         if (uptimeSeconds < 0) throw new IllegalArgumentException("uptimeSeconds cannot be negative");
         if (lastStatusAt != null && occurredAt.isBefore(lastStatusAt)) return false;
+        if (!recordCommunicationTime(occurredAt)) return false;
         operationalState = state;
         this.serviceMode = normalize(serviceMode);
         this.softwareVersion = normalize(softwareVersion);
@@ -120,13 +125,24 @@ public class Device extends AuditableEntity {
     public boolean markDisconnectedWhenStale(LocalDateTime staleBefore) {
         Objects.requireNonNull(staleBefore);
         if (mqttPresence != DeviceMqttPresence.ONLINE) return false;
-        LocalDateTime latestMessageAt = lastPresenceAt;
-        if (lastStatusAt != null && (latestMessageAt == null || lastStatusAt.isAfter(latestMessageAt))) {
-            latestMessageAt = lastStatusAt;
-        }
-        if (latestMessageAt == null || !latestMessageAt.isBefore(staleBefore)) return false;
+        if (lastCommunicationAt == null || !lastCommunicationAt.isBefore(staleBefore)) return false;
         mqttPresence = DeviceMqttPresence.OFFLINE;
         status = DeviceStatus.OFFLINE;
+        return true;
+    }
+
+    public boolean recordMqttCommunication(LocalDateTime occurredAt) {
+        Objects.requireNonNull(occurredAt, "occurredAt is required");
+        if (!recordCommunicationTime(occurredAt)) return false;
+        mqttPresence = DeviceMqttPresence.ONLINE;
+        status = aggregateOperationalStatus();
+        recordConnection(occurredAt);
+        return true;
+    }
+
+    private boolean recordCommunicationTime(LocalDateTime occurredAt) {
+        if (lastCommunicationAt != null && occurredAt.isBefore(lastCommunicationAt)) return false;
+        lastCommunicationAt = occurredAt;
         return true;
     }
 
@@ -176,7 +192,9 @@ public class Device extends AuditableEntity {
         return active;
     }
 
-    public boolean isMqttManaged() { return lastPresenceAt != null || lastStatusAt != null; }
+    public boolean isMqttManaged() {
+        return lastCommunicationAt != null || lastPresenceAt != null || lastStatusAt != null;
+    }
     public DeviceMqttPresence getMqttPresence() { return mqttPresence; }
     public DeviceOperationalState getOperationalState() { return operationalState; }
     public String getServiceMode() { return serviceMode; }
@@ -184,4 +202,5 @@ public class Device extends AuditableEntity {
     public Long getUptimeSeconds() { return uptimeSeconds; }
     public LocalDateTime getLastPresenceAt() { return lastPresenceAt; }
     public LocalDateTime getLastStatusAt() { return lastStatusAt; }
+    public LocalDateTime getLastCommunicationAt() { return lastCommunicationAt; }
 }

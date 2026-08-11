@@ -2,6 +2,8 @@ package com.transport.simulator.service.deviceevent;
 
 import com.transport.simulator.entity.Device;
 import com.transport.simulator.entity.DeviceEventLog;
+import com.transport.simulator.enums.DeviceEventSource;
+import com.transport.simulator.enums.DeviceStatus;
 import com.transport.simulator.repository.DeviceEventLogRepository;
 import com.transport.simulator.repository.DeviceRepository;
 import org.springframework.stereotype.Service;
@@ -29,10 +31,14 @@ class DeviceEventRegistrationService {
         Device device = deviceRepository.findByCodeAndActiveTrue(event.deviceCode())
                 .orElseThrow(() -> new UnknownDeviceException(event.deviceCode()));
 
-        device.recordEvent(
-                statusTransitionPolicy.resolve(device.getStatus(), event),
-                event.occurredAt()
-        );
+        DeviceStatus previousStatus = device.getStatus();
+        if (event.source() != DeviceEventSource.REAL
+                || device.recordMqttCommunication(event.occurredAt())) {
+            device.recordEvent(
+                    statusTransitionPolicy.resolve(previousStatus, event),
+                    event.occurredAt()
+            );
+        }
 
         DeviceEventLog log = new DeviceEventLog(
                 event.origin(),
