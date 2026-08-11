@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "qrreaderdialog.h"
+#include "validatormqttclient.h"
 
 #include <QFrame>
 #include <QHBoxLayout>
@@ -102,6 +103,29 @@ MainWindow::MainWindow(QWidget *parent)
     layout->addWidget(createFooter());
 
     setCentralWidget(centralWidget);
+
+    m_validationClient = new ValidatorMqttClient(m_configuration, this);
+    connect(m_validationClient, &ValidatorMqttClient::connectionStateChanged,
+            this, [this](bool connected) {
+        m_connectionState->setProperty("configurationValid", connected);
+        m_connectionState->setText(connected ? tr("Preparada") : tr("Sin conexión"));
+        m_scanButton->setEnabled(connected && m_configuration.valid);
+        m_connectionState->style()->unpolish(m_connectionState);
+        m_connectionState->style()->polish(m_connectionState);
+    });
+    connect(m_validationClient, &ValidatorMqttClient::validationCompleted,
+            this, &MainWindow::showValidationResult);
+    connect(m_validationClient, &ValidatorMqttClient::validationFailed,
+            this, [this](const QString &reason) {
+        const QString detail = reason == QStringLiteral("MQTT_CREDENTIALS_MISSING")
+            ? tr("Falta configurar la contraseña MQTT de la validadora")
+            : tr("No se ha podido obtener una respuesta del centro de control");
+        setValidationState(QStringLiteral("rejected"),
+                           tr("Validación no disponible"), detail, false);
+        if (reason == QStringLiteral("MQTT_CREDENTIALS_MISSING")) {
+            m_scanButton->setEnabled(false);
+        }
+    });
 }
 
 void MainWindow::configureWindow()
@@ -321,6 +345,7 @@ void MainWindow::readQrCode()
     m_gateState->style()->unpolish(m_gateState);
     m_gateState->style()->polish(m_gateState);
     m_validationState->setFocus(Qt::OtherFocusReason);
+    m_validationClient->submit(m_lastQrValue);
 }
 
 void MainWindow::showValidationResult(const ValidationResult &result)

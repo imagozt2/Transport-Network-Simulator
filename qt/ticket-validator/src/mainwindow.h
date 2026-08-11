@@ -7,6 +7,7 @@
 
 class QLabel;
 class QPushButton;
+class ValidatorMqttClient;
 
 class MainWindow final : public QMainWindow
 {
@@ -32,6 +33,7 @@ private:
     QLabel *m_validationDetail = nullptr;
     QLabel *m_gateState = nullptr;
     QPushButton *m_scanButton = nullptr;
+    ValidatorMqttClient *m_validationClient = nullptr;
     ValidatorConfiguration m_configuration;
     QString m_lastQrValue;
 };
