@@ -14,6 +14,9 @@ import org.springframework.data.repository.query.Param;
 
 public interface DeviceMqttCommandRepository extends JpaRepository<DeviceMqttCommand, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select command from DeviceMqttCommand command join fetch command.device where command.commandId = :commandId")
+    Optional<DeviceMqttCommand> findByCommandIdForAcknowledgement(@Param("commandId") String commandId);
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select command from DeviceMqttCommand command join fetch command.device where command.id = :id")
     Optional<DeviceMqttCommand> findByIdForPublication(@Param("id") Long id);
 

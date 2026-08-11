@@ -54,8 +54,9 @@ La aplicación incluye actualmente:
 - compilación automática del backend, el frontend, RMM App y las aplicaciones Qt mediante GitHub
   Actions.
 
-El proyecto continúa en desarrollo. En fases posteriores se incorporarán nuevas funciones al centro
-de control y simuladores externos para validación y compra de billetes.
+El proyecto continúa en desarrollo. La compra ya está disponible en RMM App y en la máquina de venta
+Qt; las fases posteriores completarán la validación de billetes y ampliarán la integración del
+ecosistema.
 
 ## Tecnologías
 
@@ -301,6 +302,7 @@ ejecuta las pruebas de Android y Qt y conserva temporalmente sus artefactos de c
 - [Arquitectura, componentes y responsabilidades del ecosistema RMM](docs/arquitectura-ecosistema.md)
 - [Infraestructura local del ecosistema RMM](docs/infraestructura-local.md)
 - [Ejecución de RMM App y las aplicaciones Qt](docs/ejecucion-aplicaciones-cliente.md)
+- [Máquina de venta de billetes Qt](docs/maquina-venta.md)
 - [Ciclo de vida de los billetes RMM](docs/ciclo-vida-billetes.md)
 - [Dominio de billetes y reglas de los productos](docs/dominio-billetes.md)
 - [Seguridad, contrato y firma de los códigos QR](docs/contrato-codigos-qr.md)

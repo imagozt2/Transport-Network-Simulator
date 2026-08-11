@@ -3,6 +3,7 @@ package com.transport.simulator.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -26,8 +27,10 @@ import com.transport.simulator.entity.PassengerAccount;
 import com.transport.simulator.entity.Station;
 import com.transport.simulator.entity.Ticket;
 import com.transport.simulator.entity.TicketProduct;
+import com.transport.simulator.entity.TicketQrCredential;
 import com.transport.simulator.entity.TransportLine;
 import com.transport.simulator.enums.CompensatoryIssuanceStatus;
+import com.transport.simulator.enums.DeviceMqttCommandType;
 import com.transport.simulator.enums.DeviceEventType;
 import com.transport.simulator.enums.DeviceStatus;
 import com.transport.simulator.enums.DeviceType;
@@ -36,6 +39,8 @@ import com.transport.simulator.enums.IncidentPriority;
 import com.transport.simulator.enums.IncidentStatus;
 import com.transport.simulator.enums.OperatorRole;
 import com.transport.simulator.enums.TicketProductType;
+import com.transport.simulator.enums.TicketQrCredentialStatus;
+import com.transport.simulator.mqtt.MqttDeviceCommandService;
 import com.transport.simulator.repository.CompensatoryTicketIssuanceRepository;
 import com.transport.simulator.repository.DepotRepository;
 import com.transport.simulator.repository.DeviceEventLogRepository;
@@ -49,10 +54,11 @@ import com.transport.simulator.repository.PassengerAccountRepository;
 import com.transport.simulator.repository.PassengerAccountStatusChangeRepository;
 import com.transport.simulator.repository.StationRepository;
 import com.transport.simulator.repository.TicketProductRepository;
-import com.transport.simulator.repository.TicketRepository;
+import com.transport.simulator.repository.TicketQrCredentialRepository;
 import com.transport.simulator.repository.TrainRepository;
 import com.transport.simulator.repository.TransportLineRepository;
 import com.transport.simulator.security.OperatorPrincipal;
+import com.transport.simulator.service.model.IssuedTicket;
 import com.transport.simulator.service.model.NetworkJourney;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -114,23 +120,37 @@ class ControlCenterFeaturesIntegrationTests {
         TicketProductRepository productRepository = mock(TicketProductRepository.class);
         DeviceRepository deviceRepository = mock(DeviceRepository.class);
         OperatorAccountRepository operatorRepository = mock(OperatorAccountRepository.class);
-        TicketRepository ticketRepository = mock(TicketRepository.class);
+        TicketQrCredentialRepository qrCredentialRepository = mock(TicketQrCredentialRepository.class);
         CompensatoryTicketIssuanceRepository issuanceRepository =
                 mock(CompensatoryTicketIssuanceRepository.class);
         DeviceEventLogRepository logRepository = mock(DeviceEventLogRepository.class);
+        TicketIssuanceService ticketIssuanceService = mock(TicketIssuanceService.class);
+        TicketQrImageService qrImageService = mock(TicketQrImageService.class);
+        MqttDeviceCommandService commandService = mock(MqttDeviceCommandService.class);
+        Ticket ticket = mock(Ticket.class);
+        TicketQrCredential credential = mock(TicketQrCredential.class);
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
         when(deviceRepository.findByCodeAndActiveTrue("TM-ST001-01")).thenReturn(Optional.of(device));
         when(operatorRepository.findById(7L)).thenReturn(Optional.of(operator));
         when(issuanceRepository.save(any(CompensatoryTicketIssuance.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
-        when(ticketRepository.save(any(Ticket.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(logRepository.save(any(DeviceEventLog.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(ticket.getId()).thenReturn(41L);
+        when(ticket.getCode()).thenReturn("RMM-TICKET-041");
+        when(ticketIssuanceService.issuePhysical(any(), any(), any(), any(), any()))
+                .thenReturn(new IssuedTicket(ticket, null));
+        when(credential.getQrValue()).thenReturn("rmm-ticket-qr");
+        when(qrCredentialRepository.findFirstByTicketIdAndStatusOrderByIssuedAtDesc(
+                41L, TicketQrCredentialStatus.ACTIVE))
+                .thenReturn(Optional.of(credential));
+        when(qrImageService.pngBase64("rmm-ticket-qr")).thenReturn("qr-png-base64");
 
         TicketIssuanceEventRegistrationService eventService =
                 new TicketIssuanceEventRegistrationService(logRepository, new ObjectMapper());
         CompensatoryTicketIssuanceService issuanceService = new CompensatoryTicketIssuanceService(
                 productRepository, deviceRepository, stationRepository, operatorRepository,
-                ticketRepository, issuanceRepository, eventService, journeyService, CLOCK
+                qrCredentialRepository, issuanceRepository, eventService, journeyService,
+                ticketIssuanceService, qrImageService, commandService, CLOCK
         );
 
         NetworkJourney plannedJourney = journeyService.calculate("ST001", "ST003");
@@ -147,17 +167,14 @@ class ControlCenterFeaturesIntegrationTests {
                 ArgumentCaptor.forClass(CompensatoryTicketIssuance.class);
         ArgumentCaptor<DeviceEventLog> logs = ArgumentCaptor.forClass(DeviceEventLog.class);
         verify(issuanceRepository).save(issuance.capture());
-        verify(logRepository, times(2)).save(logs.capture());
+        verify(logRepository).save(logs.capture());
         assertThat(plannedJourney.stationCount()).isEqualTo(3);
         assertThat(ReflectionTestUtils.getField(issuance.getValue(), "stationCount")).isEqualTo(3);
-        assertThat(response.status()).isEqualTo(CompensatoryIssuanceStatus.COMPLETED);
+        assertThat(response.status()).isEqualTo(CompensatoryIssuanceStatus.PROCESSING);
         assertThat(response.chargedAmount()).isZero();
         assertThat(response.stationCode()).isEqualTo("ST001");
         assertThat(logs.getAllValues()).extracting(DeviceEventLog::getEventType)
-                .containsExactly(
-                        DeviceEventType.COMPENSATORY_TICKET_ISSUANCE_REQUESTED,
-                        DeviceEventType.COMPENSATORY_TICKET_ISSUED
-                );
+                .containsExactly(DeviceEventType.COMPENSATORY_TICKET_ISSUANCE_REQUESTED);
         assertThat(logs.getAllValues()).allSatisfy(log -> {
             assertThat(log.getOperator()).isSameAs(operator);
             assertThat(log.getDevice()).isSameAs(device);
@@ -165,14 +182,17 @@ class ControlCenterFeaturesIntegrationTests {
             assertThat(log.getCompensatoryIssuance()).isSameAs(issuance.getValue());
             assertThat(log.getExternalReference()).startsWith(issuance.getValue().getCode());
         });
-        assertThat(logs.getAllValues().getLast().getPayloadJson())
-                .contains("SINGLE_TRIP", response.ticketCode(), "TM-ST001-01", "admin");
+        verify(commandService).send(
+                eq("TM-ST001-01"),
+                eq(DeviceMqttCommandType.TICKET_ISSUE),
+                any(), any()
+        );
 
         assertThatThrownBy(() -> issuanceService.issue(1L, request, null))
                 .isInstanceOfSatisfying(ResponseStatusException.class, exception ->
                         assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED));
         verify(issuanceRepository).save(any(CompensatoryTicketIssuance.class));
-        verify(ticketRepository).save(any(Ticket.class));
+        verify(ticketIssuanceService).issuePhysical(any(), any(), any(), any(), any());
     }
 
     @Test

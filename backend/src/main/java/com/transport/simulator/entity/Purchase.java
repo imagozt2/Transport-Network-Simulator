@@ -165,6 +165,34 @@ public class Purchase extends AuditableEntity {
         return purchase;
     }
 
+    public static Purchase completedMachinePurchase(
+            String code,
+            Ticket ticket,
+            PaymentMethod paymentMethod,
+            String externalReference,
+            Device device,
+            BigDecimal totalAmount,
+            LocalDateTime completedAt
+    ) {
+        Purchase purchase = new Purchase();
+        purchase.code = requireText(code, "code");
+        purchase.ticket = Objects.requireNonNull(ticket, "ticket is required");
+        purchase.product = ticket.getProduct();
+        purchase.type = PurchaseType.PURCHASE;
+        purchase.origin = PurchaseOrigin.TICKET_MACHINE;
+        purchase.status = PurchaseStatus.COMPLETED;
+        purchase.paymentMethod = Objects.requireNonNull(paymentMethod, "paymentMethod is required");
+        purchase.externalReference = requireText(externalReference, "externalReference");
+        purchase.device = Objects.requireNonNull(device, "device is required");
+        purchase.station = device.getStation();
+        purchase.subtotalAmount = requireNonNegative(totalAmount);
+        purchase.totalAmount = totalAmount;
+        purchase.currency = ticket.getCurrency();
+        purchase.requestedAt = Objects.requireNonNull(completedAt, "completedAt is required");
+        purchase.completedAt = completedAt;
+        return purchase;
+    }
+
     public void configureSingleTrip(Station origin, Station destination, int stations) {
         originStation = Objects.requireNonNull(origin);
         destinationStation = Objects.requireNonNull(destination);

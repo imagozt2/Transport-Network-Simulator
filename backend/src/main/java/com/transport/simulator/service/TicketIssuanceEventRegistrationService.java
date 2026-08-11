@@ -58,6 +58,20 @@ public class TicketIssuanceEventRegistrationService {
         );
     }
 
+    public DeviceEventLog registerFailed(
+            CompensatoryTicketIssuance issuance,
+            LocalDateTime occurredAt
+    ) {
+        return register(
+                issuance,
+                issuance.getIssuedTicket(),
+                DeviceEventType.TICKET_PURCHASE_FAILED,
+                "No se pudo presentar el billete compensatorio " + issuance.getCode(),
+                "FAILED",
+                occurredAt
+        );
+    }
+
     private DeviceEventLog register(
             CompensatoryTicketIssuance issuance,
             Ticket ticket,

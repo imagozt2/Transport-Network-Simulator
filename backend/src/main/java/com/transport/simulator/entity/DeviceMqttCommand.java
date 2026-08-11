@@ -84,6 +84,39 @@ public class DeviceMqttCommand extends AuditableEntity {
         lastPublicationError = abbreviate(error);
     }
 
+    public void acknowledge(DeviceMqttCommandStatus acknowledgedStatus, LocalDateTime now, String error) {
+        Objects.requireNonNull(now);
+        if (acknowledgedStatus != DeviceMqttCommandStatus.RECEIVED
+                && acknowledgedStatus != DeviceMqttCommandStatus.PROCESSING
+                && acknowledgedStatus != DeviceMqttCommandStatus.COMPLETED
+                && acknowledgedStatus != DeviceMqttCommandStatus.FAILED
+                && acknowledgedStatus != DeviceMqttCommandStatus.REJECTED) {
+            throw new IllegalArgumentException("Unsupported command acknowledgement status");
+        }
+        boolean terminal = status == DeviceMqttCommandStatus.COMPLETED
+                || status == DeviceMqttCommandStatus.FAILED
+                || status == DeviceMqttCommandStatus.REJECTED;
+        if (terminal && acknowledgedStatus != status) {
+            return;
+        }
+        if (acknowledgementOrder(acknowledgedStatus) < acknowledgementOrder(status)) {
+            return;
+        }
+        status = acknowledgedStatus;
+        lastPublicationError = acknowledgedStatus == DeviceMqttCommandStatus.FAILED
+                || acknowledgedStatus == DeviceMqttCommandStatus.REJECTED
+                ? abbreviate(error) : null;
+    }
+
+    private int acknowledgementOrder(DeviceMqttCommandStatus value) {
+        return switch (value) {
+            case PENDING, PUBLISH_FAILED, PUBLISHED -> 0;
+            case RECEIVED -> 1;
+            case PROCESSING -> 2;
+            case COMPLETED, FAILED, REJECTED, EXPIRED -> 3;
+        };
+    }
+
     private static String requireText(String value) {
         if (value == null || value.isBlank()) throw new IllegalArgumentException("Command fields cannot be blank");
         return value.trim();

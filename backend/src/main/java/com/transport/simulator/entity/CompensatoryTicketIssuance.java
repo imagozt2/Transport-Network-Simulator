@@ -80,6 +80,12 @@ public class CompensatoryTicketIssuance extends AuditableEntity {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
+    @Column(name = "failed_at")
+    private LocalDateTime failedAt;
+
+    @Column(name = "failure_reason", length = 500)
+    private String failureReason;
+
     protected CompensatoryTicketIssuance() {
     }
 
@@ -106,10 +112,26 @@ public class CompensatoryTicketIssuance extends AuditableEntity {
     public void configureValidity(Integer days) { selectedDays = days; }
     public void configureMoneyBalance(BigDecimal amount) { rechargeAmount = amount; }
 
-    public void complete(Ticket ticket, LocalDateTime at) {
+    public void beginProcessing(Ticket ticket) {
         issuedTicket = Objects.requireNonNull(ticket);
+        status = CompensatoryIssuanceStatus.PROCESSING;
+    }
+
+    public void complete(LocalDateTime at) {
+        if (status != CompensatoryIssuanceStatus.PROCESSING || issuedTicket == null) {
+            throw new IllegalStateException("Only a processing issuance can be completed");
+        }
         completedAt = Objects.requireNonNull(at);
         status = CompensatoryIssuanceStatus.COMPLETED;
+    }
+
+    public void fail(String reason, LocalDateTime at) {
+        if (status == CompensatoryIssuanceStatus.COMPLETED) {
+            throw new IllegalStateException("A completed issuance cannot fail");
+        }
+        failureReason = Objects.requireNonNull(reason);
+        failedAt = Objects.requireNonNull(at);
+        status = CompensatoryIssuanceStatus.FAILED;
     }
 
     public Long getId() { return id; }
