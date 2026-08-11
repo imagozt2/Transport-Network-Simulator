@@ -7,6 +7,14 @@ import {
 
 export type DeviceType = 'TICKET_MACHINE' | 'ENTRY_VALIDATOR' | 'EXIT_VALIDATOR';
 export type DeviceStatus = 'ONLINE' | 'OFFLINE' | 'MAINTENANCE' | 'ERROR';
+export type DeviceConnectivityState = 'CONNECTED' | 'DISCONNECTED' | 'NOT_MONITORED';
+export type DeviceMqttPresence = 'ONLINE' | 'OFFLINE';
+export type DeviceOperationalState =
+  | 'AVAILABLE'
+  | 'BUSY'
+  | 'DEGRADED'
+  | 'OUT_OF_SERVICE'
+  | 'MAINTENANCE';
 
 export interface DeviceOperationStation {
   id: number;
@@ -24,6 +32,18 @@ export interface DeviceOperationLastEvent {
   occurredAt: string;
 }
 
+export interface DeviceConnectivity {
+  state: DeviceConnectivityState;
+  mqttPresence: DeviceMqttPresence;
+  operationalState: DeviceOperationalState;
+  lastCommunicationAt: string | null;
+  lastPresenceAt: string | null;
+  lastStatusAt: string | null;
+  serviceMode: string | null;
+  softwareVersion: string | null;
+  uptimeSeconds: number | null;
+}
+
 export interface DeviceOperation {
   id: number;
   code: string;
@@ -31,6 +51,7 @@ export interface DeviceOperation {
   type: DeviceType;
   status: DeviceStatus;
   lastConnectionAt: string | null;
+  connectivity: DeviceConnectivity;
   station: DeviceOperationStation;
   lastEvent?: DeviceOperationLastEvent | null;
 }

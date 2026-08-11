@@ -23,6 +23,13 @@ const deviceOperations: DeviceOperationsResponse = {
     type: 'TICKET_MACHINE',
     status: 'ONLINE',
     lastConnectionAt: '2026-07-23T11:59:55+02:00',
+    connectivity: {
+      state: 'CONNECTED', mqttPresence: 'ONLINE', operationalState: 'AVAILABLE',
+      lastCommunicationAt: '2026-07-23T11:59:55+02:00',
+      lastPresenceAt: '2026-07-23T11:59:55+02:00',
+      lastStatusAt: '2026-07-23T11:59:55+02:00', serviceMode: 'REGULAR',
+      softwareVersion: '1.0.0', uptimeSeconds: 3600
+    },
     station: { id: 1, code: 'ST001', name: 'Los Molinos' }
   }]
 };
