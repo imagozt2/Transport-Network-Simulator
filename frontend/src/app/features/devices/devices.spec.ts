@@ -150,6 +150,36 @@ describe('Devices log navigation', () => {
     fixture.destroy();
   });
 
+  it('should filter devices by their real MQTT connectivity', async () => {
+    await TestBed.configureTestingModule({
+      imports: [Devices],
+      providers: [
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { queryParamMap: convertToParamMap({}) } },
+        },
+        {
+          provide: DeviceOperationsService,
+          useValue: { getOperations: () => of(response) },
+        },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(Devices);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+
+    component.setConnectivityFilter('DISCONNECTED');
+
+    expect(component.hasActiveFilters()).toBe(true);
+    expect(component.filteredDevices().map((device) => device.code))
+      .toEqual(['RMM-MB-ST002-001']);
+    component.clearFilters();
+    expect(component.selectedConnectivity).toBe('ALL');
+    expect(component.filteredDevices()).toHaveLength(2);
+    fixture.destroy();
+  });
+
   it('should register the global logs route', () => {
     const layoutRoute = routes.find((route) => route.path === '');
     const logsRoute = layoutRoute?.children?.find((route) => route.path === 'logs');

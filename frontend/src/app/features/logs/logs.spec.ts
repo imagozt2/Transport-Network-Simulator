@@ -37,8 +37,8 @@ const deviceOperations: DeviceOperationsResponse = {
 const logsPage: OperationalLogPage = {
   logs: [{
     id: 100,
-    origin: 'DEVICE_SIMULATION',
-    source: 'SIMULATED',
+    origin: 'MQTT',
+    source: 'REAL',
     eventType: 'TICKET_PURCHASE_COMPLETED',
     severity: 'INFO',
     message: 'Máquina conectada',
@@ -106,10 +106,13 @@ describe('Logs URL filters', () => {
     expect(deviceFilter.selectedOptions[0]?.textContent).toContain('Máquina de billetes 1');
     expect(compiled.querySelector('.logs-table tbody tr')).not.toBeNull();
     expect(compiled.querySelector('.operation-sale')?.textContent).toContain('Venta');
+    expect(compiled.querySelector('.source-real')?.textContent).toContain('Dispositivo real');
     expect(compiled.querySelector('.ticket-cell')?.textContent).toContain('Billete sencillo');
     expect(compiled.querySelector('.ticket-cell')?.textContent).toContain('TCK-2026-0001');
     expect(compiled.querySelector<HTMLAnchorElement>('.incident-link')?.getAttribute('href'))
       .toContain('/incidents?create=true&deviceId=10&deviceCode=RMM-MB-ST001-001');
+    expect(compiled.querySelector<HTMLAnchorElement>('.incident-link')?.getAttribute('href'))
+      .toContain('ticketCode=TCK-2026-0001');
     expect(Array.from(
       compiled.querySelectorAll<HTMLTableCellElement>('.logs-table thead th')
     ).every((heading) => heading.scope === 'col')).toBe(true);
