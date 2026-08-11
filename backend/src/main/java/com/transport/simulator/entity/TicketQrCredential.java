@@ -14,6 +14,8 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "ticket_qr_credentials")
@@ -24,6 +26,7 @@ public class TicketQrCredential extends AuditableEntity {
     private Long id;
 
     @Column(name = "credential_id", nullable = false, unique = true, length = 36)
+    @JdbcTypeCode(SqlTypes.CHAR)
     private UUID credentialId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
