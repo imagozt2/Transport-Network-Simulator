@@ -5,21 +5,31 @@ import com.transport.simulator.entity.PassengerAccount;
 import com.transport.simulator.entity.Ticket;
 import com.transport.simulator.entity.TicketProduct;
 import com.transport.simulator.entity.TicketSupport;
+import com.transport.simulator.entity.TicketQrCredential;
 import com.transport.simulator.enums.DeviceType;
 import com.transport.simulator.enums.DeviceStatus;
 import com.transport.simulator.enums.PassengerAccountStatus;
 import com.transport.simulator.repository.TicketRepository;
 import com.transport.simulator.repository.TicketSupportRepository;
+import com.transport.simulator.repository.TicketQrCredentialRepository;
+import com.transport.simulator.ticketing.qr.SignedTicketQr;
+import com.transport.simulator.ticketing.qr.TicketQrContract;
+import com.transport.simulator.ticketing.qr.TicketQrPayload;
+import com.transport.simulator.ticketing.qr.TicketQrPayloadFactory;
+import com.transport.simulator.ticketing.qr.TicketQrSigner;
 import com.transport.simulator.service.model.IssuedTicket;
 import com.transport.simulator.service.model.TicketIssuanceParameters;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Service
 public class TicketIssuanceService {
@@ -29,17 +39,29 @@ public class TicketIssuanceService {
     private final TicketRepository ticketRepository;
     private final TicketSupportRepository supportRepository;
     private final TicketOperationRegistrationService operationRegistrationService;
+    private final TicketQrCredentialRepository qrCredentialRepository;
+    private final TicketQrPayloadFactory qrPayloadFactory;
+    private final TicketQrSigner qrSigner;
+    private final PasswordEncoder passwordEncoder;
     private final Clock clock;
 
     public TicketIssuanceService(
             TicketRepository ticketRepository,
             TicketSupportRepository supportRepository,
             TicketOperationRegistrationService operationRegistrationService,
+            TicketQrCredentialRepository qrCredentialRepository,
+            TicketQrPayloadFactory qrPayloadFactory,
+            TicketQrSigner qrSigner,
+            PasswordEncoder passwordEncoder,
             Clock clock
     ) {
         this.ticketRepository = ticketRepository;
         this.supportRepository = supportRepository;
         this.operationRegistrationService = operationRegistrationService;
+        this.qrCredentialRepository = qrCredentialRepository;
+        this.qrPayloadFactory = qrPayloadFactory;
+        this.qrSigner = qrSigner;
+        this.passwordEncoder = passwordEncoder;
         this.clock = clock;
     }
 
@@ -49,7 +71,7 @@ public class TicketIssuanceService {
             TicketIssuanceParameters parameters,
             Device issuingDevice,
             String serialNumber,
-            String linkingCodeHash
+            String linkingCode
     ) {
         requireActiveProduct(product);
         Objects.requireNonNull(issuingDevice, "issuingDevice is required");
@@ -66,7 +88,8 @@ public class TicketIssuanceService {
         Ticket ticket = createTicket(product, parameters, null, now);
         TicketSupport support = TicketSupport.physical(
                 uniqueCode("RMM-SUP"), ticket, normalizedSerial, issuingDevice,
-                linkingCodeHash, now.plusMinutes(PHYSICAL_LINK_VALIDITY_MINUTES), now
+                passwordEncoder.encode(normalizeLinkCode(linkingCode)),
+                now.plusMinutes(PHYSICAL_LINK_VALIDITY_MINUTES), now
         );
         return persist(ticket, support);
     }
@@ -158,6 +181,22 @@ public class TicketIssuanceService {
     private IssuedTicket persist(Ticket ticket, TicketSupport support) {
         Ticket persistedTicket = ticketRepository.save(ticket);
         TicketSupport persistedSupport = supportRepository.save(support);
+        UUID credentialId = UUID.fromString(persistedTicket.getQrToken());
+        TicketQrPayload payload = qrPayloadFactory.createWithoutExpiry(persistedSupport, credentialId);
+        SignedTicketQr signedQr = qrSigner.sign(payload);
+        qrCredentialRepository.save(TicketQrCredential.active(
+                credentialId,
+                persistedTicket,
+                persistedSupport,
+                TicketQrContract.WRAPPER_VERSION,
+                signedQr.keyId(),
+                signedQr.fingerprint(),
+                signedQr.value(),
+                LocalDateTime.ofInstant(Instant.ofEpochSecond(payload.issuedAtEpochSecond()), ZoneOffset.UTC),
+                payload.expiresAtEpochSecond() == null
+                        ? null
+                        : LocalDateTime.ofInstant(Instant.ofEpochSecond(payload.expiresAtEpochSecond()), ZoneOffset.UTC)
+        ));
         operationRegistrationService.recordIssuance(persistedTicket, persistedSupport);
         return new IssuedTicket(persistedTicket, persistedSupport);
     }
@@ -198,5 +237,16 @@ public class TicketIssuanceService {
             throw new IllegalArgumentException(field + " is required");
         }
         return value.trim();
+    }
+
+    private String normalizeLinkCode(String value) {
+        String code = requireText(value, "linkingCode")
+                .replace("-", "")
+                .replace(" ", "")
+                .toUpperCase(Locale.ROOT);
+        if (code.length() < 4 || code.length() > 32) {
+            throw new IllegalArgumentException("linkingCode must contain between 4 and 32 characters");
+        }
+        return code;
     }
 }

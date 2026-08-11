@@ -77,14 +77,14 @@ importe definitivo y las fechas de la operación. RMM App muestra inmediatamente
 - identificador público del billete;
 - fecha de emisión, importe y referencia de compra.
 
-Esta vista confirma la emisión actual, pero todavía no constituye la cartera persistente. Al volver
-al catálogo se descarta su estado de presentación; el billete continúa guardado en el backend y se
-recuperará mediante la futura consulta de billetes propios.
+Esta vista confirma la emisión actual. Al volver al catálogo se descarta su estado de presentación;
+el billete continúa guardado en el backend y se recupera desde la cartera mediante la consulta de
+billetes propios.
 
 El valor QR no forma parte de la respuesta de compra. Se obtendrá mediante
-`GET /api/rmm-app/v1/tickets/{ticketCode}/qr`, con autorización y `Cache-Control: no-store`, cuando
-se implemente la cartera. Esta separación evita exponer la credencial verificable en respuestas,
-notificaciones o estados que no la necesitan.
+`GET /api/rmm-app/v1/tickets/{ticketCode}/qr`, con autorización y `Cache-Control: no-store`, solo
+cuando el pasajero abre el diálogo del QR en la cartera. Esta separación evita exponer la credencial
+verificable en respuestas, notificaciones o estados que no la necesitan.
 
 ## Errores y reintentos
 

@@ -227,6 +227,9 @@ La sección Billetes integra el catálogo de títulos, los cuatro configuradores
 pago simulado y la presentación del billete recién emitido. El flujo, la idempotencia y sus límites
 se describen en [Compra de billetes desde RMM App](compra-billetes-rmm-app.md).
 
+La cartera persistente, la obtención bajo demanda de credenciales QR, la vinculación de soportes
+físicos y el historial se describen en [Cartera de billetes de RMM App](cartera-rmm-app.md).
+
 ## Pruebas y CI
 
 Los tests JVM se encuentran en `android/app/src/test/java/com/rmm/app` y cubren actualmente:
@@ -240,6 +243,7 @@ Los tests JVM se encuentran en `android/app/src/test/java/com/rmm/app` y cubren 
 - búsquedas de estaciones, representación de tramos y continuidad de transbordos;
 - coherencia geométrica del mapa, trayectos recientes y favoritos;
 - precios de los cuatro productos, solicitudes de compra y errores de emisión.
+- filtros y paginación de la cartera, vinculación de soportes y lectura previa de QR físicos.
 
 Se ejecutan junto con la compilación mediante:
 
@@ -269,6 +273,7 @@ tests como artefactos. Las pruebas no necesitan un backend, una base de datos ni
 - [Autenticación de pasajeros](autenticacion-rmm-app.md)
 - [Consulta de la red y planificación de trayectos](consulta-red-rmm-app.md)
 - [Compra de billetes desde RMM App](compra-billetes-rmm-app.md)
+- [Cartera de billetes de RMM App](cartera-rmm-app.md)
 - [Flujos online y sin conexión](flujos-conectividad.md)
 - [Configuración y ejecución de aplicaciones cliente](ejecucion-aplicaciones-cliente.md)
 

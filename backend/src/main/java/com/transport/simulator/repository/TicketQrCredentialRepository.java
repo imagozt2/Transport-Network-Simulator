@@ -1,6 +1,7 @@
 package com.transport.simulator.repository;
 
 import com.transport.simulator.entity.TicketQrCredential;
+import com.transport.simulator.enums.TicketQrCredentialStatus;
 import java.util.Optional;
 import java.util.UUID;
 import jakarta.persistence.LockModeType;
@@ -10,6 +11,11 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface TicketQrCredentialRepository extends JpaRepository<TicketQrCredential, Long> {
+
+    Optional<TicketQrCredential> findFirstByTicketIdAndStatusOrderByIssuedAtDesc(
+            Long ticketId,
+            TicketQrCredentialStatus status
+    );
 
     @Query("""
             select credential
