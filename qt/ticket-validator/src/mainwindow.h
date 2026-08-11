@@ -2,6 +2,9 @@
 
 #include <QMainWindow>
 
+class QLabel;
+class QPushButton;
+
 class MainWindow final : public QMainWindow
 {
     Q_OBJECT
@@ -11,7 +14,14 @@ public:
 
 private:
     [[nodiscard]] QWidget *createHeader();
-    [[nodiscard]] QWidget *createWelcomePanel();
+    [[nodiscard]] QWidget *createTurnstilePanel();
+    [[nodiscard]] QWidget *createScannerPanel();
+    [[nodiscard]] QWidget *createDevicePanel();
+    [[nodiscard]] QWidget *createFooter();
     void configureWindow();
-};
 
+    QLabel *m_connectionState = nullptr;
+    QLabel *m_validationState = nullptr;
+    QLabel *m_gateState = nullptr;
+    QPushButton *m_scanButton = nullptr;
+};

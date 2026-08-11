@@ -3,63 +3,63 @@
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QPushButton>
+#include <QSizePolicy>
 #include <QVBoxLayout>
 #include <QWidget>
 
 namespace {
 constexpr auto windowStyle = R"(
-    QMainWindow {
-        background-color: #f4f7fa;
-    }
-    QLabel {
-        color: #0f172a;
-        font-family: "Segoe UI";
-    }
+    QMainWindow { background-color: #f4f7fa; }
+    QLabel { color: #0f172a; font-family: "Segoe UI"; }
     QLabel#brandMark {
-        min-width: 52px;
-        min-height: 52px;
-        max-width: 52px;
-        max-height: 52px;
-        border-radius: 14px;
-        background-color: #2294f2;
-        color: white;
-        font-size: 28px;
-        font-weight: 900;
+        min-width: 52px; min-height: 52px; max-width: 52px; max-height: 52px;
+        border-radius: 14px; background-color: #2294f2; color: white;
+        font-size: 28px; font-weight: 900;
     }
-    QLabel#applicationName {
-        font-size: 22px;
-        font-weight: 700;
-    }
-    QLabel#applicationContext {
-        color: #64748b;
-        font-size: 13px;
-    }
+    QLabel#applicationName { font-size: 22px; font-weight: 700; }
+    QLabel#applicationContext, QLabel#screenDescription,
+    QLabel#detailHint, QLabel#footerText { color: #64748b; font-size: 14px; }
     QLabel#connectionState {
-        padding: 7px 12px;
-        border-radius: 14px;
-        background-color: #e2e8f0;
-        color: #334155;
-        font-size: 12px;
-        font-weight: 700;
+        padding: 7px 12px; border-radius: 14px; background-color: #dcfce7;
+        color: #166534; font-size: 12px; font-weight: 700;
     }
-    QFrame#welcomePanel {
-        border: 1px solid #dbe3ec;
-        border-radius: 18px;
-        background-color: white;
+    QFrame#turnstilePanel, QFrame#scannerPanel, QFrame#devicePanel {
+        border: 1px solid #dbe3ec; border-radius: 18px; background-color: white;
     }
-    QLabel#welcomeTitle {
-        font-size: 30px;
-        font-weight: 800;
+    QFrame#scannerWell {
+        border: 2px solid #bfdbfe; border-radius: 22px; background-color: #eff8ff;
     }
-    QLabel#welcomeDescription {
-        color: #64748b;
-        font-size: 15px;
+    QLabel#scannerMark {
+        min-width: 150px; min-height: 150px; max-width: 150px; max-height: 150px;
+        border: 4px solid #2294f2; border-radius: 24px; background-color: white;
+        color: #0f172a; font-size: 34px; font-weight: 900;
     }
-    QLabel#machineType {
-        color: #0060a8;
-        font-size: 13px;
-        font-weight: 700;
+    QLabel#screenTitle { font-size: 28px; font-weight: 800; }
+    QLabel#eyebrow, QLabel#detailLabel {
+        color: #0060a8; font-size: 12px; font-weight: 700;
     }
+    QLabel#detailValue { font-size: 18px; font-weight: 800; }
+    QLabel#gateState {
+        padding: 12px 16px; border-radius: 12px; background-color: #f1f5f9;
+        color: #334155; font-size: 14px; font-weight: 800;
+    }
+    QLabel#validationState {
+        padding: 14px 18px; border-radius: 14px; background-color: #e0f2fe;
+        color: #075985; font-size: 15px; font-weight: 800;
+    }
+    QPushButton#scanAction {
+        min-height: 52px; padding: 0 28px; border: 0; border-radius: 14px;
+        background-color: #0f172a; color: white; font-family: "Segoe UI";
+        font-size: 15px; font-weight: 800;
+    }
+    QPushButton#scanAction:hover { background-color: #1e293b; }
+    QPushButton#scanAction:pressed { background-color: #020617; }
+    QFrame#directionBadge {
+        border: 0; border-radius: 16px; background-color: #0f172a;
+    }
+    QLabel#directionIcon { color: white; font-size: 26px; font-weight: 900; }
+    QLabel#directionText { color: white; font-size: 14px; font-weight: 800; }
 )";
 }
 
@@ -70,10 +70,11 @@ MainWindow::MainWindow(QWidget *parent)
 
     auto *centralWidget = new QWidget(this);
     auto *layout = new QVBoxLayout(centralWidget);
-    layout->setContentsMargins(32, 28, 32, 32);
-    layout->setSpacing(24);
+    layout->setContentsMargins(30, 24, 30, 20);
+    layout->setSpacing(18);
     layout->addWidget(createHeader());
-    layout->addWidget(createWelcomePanel(), 1);
+    layout->addWidget(createTurnstilePanel(), 1);
+    layout->addWidget(createFooter());
 
     setCentralWidget(centralWidget);
 }
@@ -81,8 +82,8 @@ MainWindow::MainWindow(QWidget *parent)
 void MainWindow::configureWindow()
 {
     setWindowTitle(tr("Máquina validadora · RMM"));
-    setMinimumSize(700, 560);
-    resize(860, 680);
+    setMinimumSize(760, 620);
+    resize(980, 720);
     setStyleSheet(QString::fromUtf8(windowStyle));
 }
 
@@ -101,7 +102,6 @@ QWidget *MainWindow::createHeader()
     auto *identityLayout = new QVBoxLayout(identity);
     identityLayout->setContentsMargins(0, 0, 0, 0);
     identityLayout->setSpacing(2);
-
     auto *name = new QLabel(tr("RMM · Máquina validadora"), identity);
     name->setObjectName(QStringLiteral("applicationName"));
     auto *context = new QLabel(tr("Red de Metro de Macegocia"), identity);
@@ -109,49 +109,149 @@ QWidget *MainWindow::createHeader()
     identityLayout->addWidget(name);
     identityLayout->addWidget(context);
 
-    auto *connectionState = new QLabel(tr("Sin configurar"), header);
-    connectionState->setObjectName(QStringLiteral("connectionState"));
-    connectionState->setAlignment(Qt::AlignCenter);
+    m_connectionState = new QLabel(tr("Preparada"), header);
+    m_connectionState->setObjectName(QStringLiteral("connectionState"));
+    m_connectionState->setAlignment(Qt::AlignCenter);
+    m_connectionState->setAccessibleName(tr("Estado de conexión"));
 
     layout->addWidget(brandMark);
     layout->addWidget(identity);
     layout->addStretch();
-    layout->addWidget(connectionState);
-
+    layout->addWidget(m_connectionState);
     return header;
 }
 
-QWidget *MainWindow::createWelcomePanel()
+QWidget *MainWindow::createTurnstilePanel()
 {
     auto *panel = new QFrame(this);
-    panel->setObjectName(QStringLiteral("welcomePanel"));
-
-    auto *layout = new QVBoxLayout(panel);
-    layout->setContentsMargins(48, 48, 48, 48);
-    layout->setSpacing(12);
-    layout->setAlignment(Qt::AlignCenter);
-
-    auto *machineType = new QLabel(tr("APLICACIÓN QT"), panel);
-    machineType->setObjectName(QStringLiteral("machineType"));
-    machineType->setAlignment(Qt::AlignCenter);
-
-    auto *title = new QLabel(tr("Máquina validadora RMM"), panel);
-    title->setObjectName(QStringLiteral("welcomeTitle"));
-    title->setAlignment(Qt::AlignCenter);
-
-    auto *description = new QLabel(
-        tr("La estructura inicial está preparada para incorporar la lectura y validación de billetes."),
-        panel);
-    description->setObjectName(QStringLiteral("welcomeDescription"));
-    description->setAlignment(Qt::AlignCenter);
-    description->setWordWrap(true);
-
-    layout->addStretch();
-    layout->addWidget(machineType);
-    layout->addWidget(title);
-    layout->addWidget(description);
-    layout->addStretch();
-
+    panel->setObjectName(QStringLiteral("turnstilePanel"));
+    auto *layout = new QHBoxLayout(panel);
+    layout->setContentsMargins(20, 20, 20, 20);
+    layout->setSpacing(18);
+    layout->addWidget(createScannerPanel(), 3);
+    layout->addWidget(createDevicePanel(), 2);
     return panel;
 }
 
+QWidget *MainWindow::createScannerPanel()
+{
+    auto *panel = new QFrame(this);
+    panel->setObjectName(QStringLiteral("scannerPanel"));
+    auto *layout = new QVBoxLayout(panel);
+    layout->setContentsMargins(34, 30, 34, 30);
+    layout->setSpacing(14);
+
+    auto *eyebrow = new QLabel(tr("ACCESO A LA RED"), panel);
+    eyebrow->setObjectName(QStringLiteral("eyebrow"));
+    auto *title = new QLabel(tr("Presenta tu billete"), panel);
+    title->setObjectName(QStringLiteral("screenTitle"));
+    auto *description = new QLabel(
+        tr("Acerca el código QR al lector para comprobar el acceso."), panel);
+    description->setObjectName(QStringLiteral("screenDescription"));
+    description->setWordWrap(true);
+
+    auto *scannerWell = new QFrame(panel);
+    scannerWell->setObjectName(QStringLiteral("scannerWell"));
+    scannerWell->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    auto *scannerLayout = new QVBoxLayout(scannerWell);
+    scannerLayout->setContentsMargins(24, 24, 24, 24);
+    scannerLayout->setAlignment(Qt::AlignCenter);
+    auto *scannerMark = new QLabel(QStringLiteral("QR"), scannerWell);
+    scannerMark->setObjectName(QStringLiteral("scannerMark"));
+    scannerMark->setAlignment(Qt::AlignCenter);
+    scannerMark->setAccessibleName(tr("Zona de lectura del código QR"));
+    scannerLayout->addWidget(scannerMark);
+
+    m_validationState = new QLabel(tr("Esperando un billete"), panel);
+    m_validationState->setObjectName(QStringLiteral("validationState"));
+    m_validationState->setAlignment(Qt::AlignCenter);
+    m_validationState->setAccessibleName(tr("Resultado de la validación"));
+    m_scanButton = new QPushButton(tr("Escanear código QR"), panel);
+    m_scanButton->setObjectName(QStringLiteral("scanAction"));
+    m_scanButton->setCursor(Qt::PointingHandCursor);
+    m_scanButton->setAccessibleDescription(
+        tr("Abre el lector que se incorporará al flujo de validación"));
+
+    layout->addWidget(eyebrow);
+    layout->addWidget(title);
+    layout->addWidget(description);
+    layout->addWidget(scannerWell, 1);
+    layout->addWidget(m_validationState);
+    layout->addWidget(m_scanButton);
+    return panel;
+}
+
+QWidget *MainWindow::createDevicePanel()
+{
+    auto *panel = new QFrame(this);
+    panel->setObjectName(QStringLiteral("devicePanel"));
+    auto *layout = new QVBoxLayout(panel);
+    layout->setContentsMargins(28, 28, 28, 28);
+    layout->setSpacing(18);
+
+    auto addDetail = [panel, layout](const QString &label, const QString &value,
+                                    const QString &hint = QString()) {
+        auto *container = new QWidget(panel);
+        auto *detailLayout = new QVBoxLayout(container);
+        detailLayout->setContentsMargins(0, 0, 0, 0);
+        detailLayout->setSpacing(4);
+        auto *caption = new QLabel(label, container);
+        caption->setObjectName(QStringLiteral("detailLabel"));
+        auto *content = new QLabel(value, container);
+        content->setObjectName(QStringLiteral("detailValue"));
+        detailLayout->addWidget(caption);
+        detailLayout->addWidget(content);
+        if (!hint.isEmpty()) {
+            auto *help = new QLabel(hint, container);
+            help->setObjectName(QStringLiteral("detailHint"));
+            help->setWordWrap(true);
+            detailLayout->addWidget(help);
+        }
+        layout->addWidget(container);
+    };
+
+    auto *eyebrow = new QLabel(tr("CONTEXTO DEL TORNIQUETE"), panel);
+    eyebrow->setObjectName(QStringLiteral("eyebrow"));
+    layout->addWidget(eyebrow);
+
+    auto *direction = new QFrame(panel);
+    direction->setObjectName(QStringLiteral("directionBadge"));
+    auto *directionLayout = new QHBoxLayout(direction);
+    directionLayout->setContentsMargins(16, 13, 16, 13);
+    auto *directionIcon = new QLabel(QStringLiteral("→"), direction);
+    directionIcon->setObjectName(QStringLiteral("directionIcon"));
+    auto *directionText = new QLabel(tr("VALIDACIÓN DE ENTRADA"), direction);
+    directionText->setObjectName(QStringLiteral("directionText"));
+    directionLayout->addWidget(directionIcon);
+    directionLayout->addWidget(directionText);
+    directionLayout->addStretch();
+    layout->addWidget(direction);
+
+    addDetail(tr("ESTACIÓN"), tr("Acueducto"), QStringLiteral("ST038"));
+    addDetail(tr("DISPOSITIVO"), QStringLiteral("RMM-VAL-ST038-ENT-01"));
+    addDetail(tr("SENTIDO DEL PASO"), tr("Entrada a la red"));
+
+    layout->addStretch();
+    m_gateState = new QLabel(tr("Torniquete cerrado"), panel);
+    m_gateState->setObjectName(QStringLiteral("gateState"));
+    m_gateState->setAlignment(Qt::AlignCenter);
+    m_gateState->setAccessibleName(tr("Estado del torniquete"));
+    layout->addWidget(m_gateState);
+    return panel;
+}
+
+QWidget *MainWindow::createFooter()
+{
+    auto *footer = new QWidget(this);
+    auto *layout = new QHBoxLayout(footer);
+    layout->setContentsMargins(4, 0, 4, 0);
+    auto *help = new QLabel(
+        tr("Mantén el QR dentro del lector hasta recibir el resultado."), footer);
+    help->setObjectName(QStringLiteral("footerText"));
+    auto *network = new QLabel(tr("Red de Metro de Macegocia · RMM"), footer);
+    network->setObjectName(QStringLiteral("footerText"));
+    layout->addWidget(help);
+    layout->addStretch();
+    layout->addWidget(network);
+    return footer;
+}
