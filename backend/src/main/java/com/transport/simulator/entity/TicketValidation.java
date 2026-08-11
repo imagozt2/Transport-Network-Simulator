@@ -148,6 +148,12 @@ public class TicketValidation extends AuditableEntity {
     public Station getStation() { return station; }
     public Device getDevice() { return device; }
     public BigDecimal getFareAmount() { return fareAmount; }
+    public BigDecimal getBalanceBefore() { return balanceBefore; }
+    public BigDecimal getBalanceAfter() { return balanceAfter; }
+    public Integer getRemainingTripsBefore() { return remainingTripsBefore; }
+    public Integer getRemainingTripsAfter() { return remainingTripsAfter; }
+    public LocalDateTime getValidFrom() { return validFrom; }
+    public LocalDateTime getValidUntil() { return validUntil; }
     public String getExternalReference() { return externalReference; }
     public LocalDateTime getValidatedAt() { return validatedAt; }
 }

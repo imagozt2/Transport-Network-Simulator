@@ -32,6 +32,11 @@ public class MqttTicketValidationResponsePublisher {
         payload.put("ticketCode", decision.ticketCode());
         payload.put("validAtStationCode", decision.validAtStationCode());
         payload.put("fareAmount", decision.fareAmount());
+        payload.put("remainingBalance", decision.remainingBalance());
+        payload.put("consumedTrips", decision.consumedTrips());
+        payload.put("remainingTrips", decision.remainingTrips());
+        payload.put("validFrom", instant(decision.validFrom()));
+        payload.put("validUntil", instant(decision.validUntil()));
         payload.put("decidedAt", decision.decidedAt().atZone(clock.getZone()).toInstant().toString());
 
         Map<String, Object> envelope = new LinkedHashMap<>();
@@ -49,5 +54,9 @@ public class MqttTicketValidationResponsePublisher {
         } catch (Exception exception) {
             throw new MqttTransportException("Ticket validation decision could not be published", exception);
         }
+    }
+
+    private String instant(java.time.LocalDateTime value) {
+        return value == null ? null : value.atZone(clock.getZone()).toInstant().toString();
     }
 }
