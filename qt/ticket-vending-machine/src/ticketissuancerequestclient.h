@@ -27,6 +27,11 @@ public:
 signals:
     void submitted(const QString &requestReference);
     void failed(const QString &reason);
+    void ticketIssued(
+        const QString &ticketCode,
+        const QByteArray &qrPng,
+        const QString &qrValue,
+        const QString &linkingCode);
 
 private:
     void publishPending();
@@ -36,6 +41,7 @@ private:
     QTimer *m_timeout;
     QByteArray m_pendingPayload;
     QString m_pendingReference;
+    QString m_awaitedReference;
     QString m_deviceCode;
     qint32 m_packetId = -1;
 };

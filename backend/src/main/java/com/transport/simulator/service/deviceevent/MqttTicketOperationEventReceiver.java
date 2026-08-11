@@ -6,6 +6,9 @@ import com.transport.simulator.enums.LogSeverity;
 import com.transport.simulator.mqtt.AuthenticatedMqttMachine;
 import com.transport.simulator.mqtt.AuthenticatedMqttMessage;
 import com.transport.simulator.mqtt.AuthenticatedMqttMessageRouter;
+import com.transport.simulator.service.TicketMachinePurchaseService;
+import com.transport.simulator.service.model.TicketMachinePurchaseRequest;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
@@ -29,11 +32,14 @@ public class MqttTicketOperationEventReceiver {
 
     private final DeviceEventIngress ingress;
     private final ObjectMapper objectMapper;
+    private final TicketMachinePurchaseService purchaseService;
 
     public MqttTicketOperationEventReceiver(AuthenticatedMqttMessageRouter router,
-            DeviceEventIngress ingress, ObjectMapper objectMapper) {
+            DeviceEventIngress ingress, ObjectMapper objectMapper,
+            TicketMachinePurchaseService purchaseService) {
         this.ingress = ingress;
         this.objectMapper = objectMapper;
+        this.purchaseService = purchaseService;
         router.register(this::receive);
     }
 
@@ -85,6 +91,15 @@ public class MqttTicketOperationEventReceiver {
         ingress.receive(message(envelope, authenticated.machine(),
                 DeviceEventType.TICKET_PURCHASE_REQUESTED, LogSeverity.INFO,
                 "Solicitud de emisión de billete recibida", safePayload));
+        purchaseService.purchase(authenticated.machine().deviceId(), new TicketMachinePurchaseRequest(
+                reference,
+                productCode,
+                nullableText(configuration, "originStationCode"),
+                nullableText(configuration, "destinationStationCode"),
+                nullableInteger(configuration, "quantity"),
+                nullableDecimal(configuration, "rechargeAmount"),
+                BigDecimal.valueOf(number.doubleValue())
+        ));
     }
 
     private void receiveOperationEvent(AuthenticatedMqttMessage authenticated) {
@@ -186,6 +201,21 @@ public class MqttTicketOperationEventReceiver {
     private String optionalText(Map<String, Object> source, String field, String fallback) {
         Object value = source.get(field);
         return value instanceof String text && !text.isBlank() ? text.trim() : fallback;
+    }
+
+    private String nullableText(Map<String, Object> source, String field) {
+        Object value = source.get(field);
+        return value instanceof String text && !text.isBlank() ? text.trim() : null;
+    }
+
+    private Integer nullableInteger(Map<String, Object> source, String field) {
+        Object value = source.get(field);
+        return value instanceof Number number ? number.intValue() : null;
+    }
+
+    private BigDecimal nullableDecimal(Map<String, Object> source, String field) {
+        Object value = source.get(field);
+        return value instanceof Number number ? BigDecimal.valueOf(number.doubleValue()) : null;
     }
 
     private <E extends Enum<E>> E enumValue(Class<E> type, String value, String field) {

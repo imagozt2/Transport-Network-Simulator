@@ -6,6 +6,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMqttClient>
+#include <QMqttTopicName>
 #include <QProcessEnvironment>
 #include <QSslConfiguration>
 #include <QTimer>
@@ -27,7 +28,41 @@ TicketIssuanceRequestClient::TicketIssuanceRequestClient(QObject *parent)
     m_timeout->setSingleShot(true);
     m_timeout->setInterval(10000);
 
-    connect(m_client, &QMqttClient::connected, this, &TicketIssuanceRequestClient::publishPending);
+    connect(m_client, &QMqttClient::connected, this, [this] {
+        m_client->subscribe(
+            QMqttTopicFilter(QStringLiteral("rmm/v1/devices/%1/commands").arg(m_deviceCode)), 1);
+        publishPending();
+    });
+    connect(m_client, &QMqttClient::messageReceived, this,
+            [this](const QByteArray &message, const QMqttTopicName &) {
+        const auto document = QJsonDocument::fromJson(message);
+        if (!document.isObject()) {
+            return;
+        }
+        const auto envelope = document.object();
+        if (envelope.value(QStringLiteral("type")).toString()
+                != QStringLiteral("ticket.issue-command")) {
+            return;
+        }
+        const auto payload = envelope.value(QStringLiteral("payload")).toObject();
+        if (payload.value(QStringLiteral("purchaseReference")).toString() != m_awaitedReference) {
+            return;
+        }
+        const auto ticket = payload.value(QStringLiteral("ticket")).toObject();
+        const QByteArray png = QByteArray::fromBase64(
+            ticket.value(QStringLiteral("qrPngBase64")).toString().toLatin1());
+        const QString ticketCode = ticket.value(QStringLiteral("ticketCode")).toString();
+        const QString qrValue = ticket.value(QStringLiteral("qrValue")).toString();
+        if (ticketCode.isEmpty() || qrValue.isEmpty() || png.isEmpty()) {
+            fail(QStringLiteral("INVALID_ISSUANCE_RESPONSE"));
+            return;
+        }
+        m_timeout->stop();
+        m_awaitedReference.clear();
+        emit ticketIssued(
+            ticketCode, png, qrValue,
+            ticket.value(QStringLiteral("linkingCode")).toString());
+    });
     connect(m_client, &QMqttClient::messageSent, this, [this](qint32 packetId) {
         if (m_packetId < 0 || packetId != m_packetId) {
             return;
@@ -37,6 +72,7 @@ TicketIssuanceRequestClient::TicketIssuanceRequestClient(QObject *parent)
         m_pendingPayload.clear();
         m_pendingReference.clear();
         m_packetId = -1;
+        m_timeout->start();
         emit submitted(reference);
     });
     connect(m_client, &QMqttClient::errorChanged, this, [this](QMqttClient::ClientError error) {
@@ -51,7 +87,7 @@ TicketIssuanceRequestClient::TicketIssuanceRequestClient(QObject *parent)
 
 void TicketIssuanceRequestClient::submit(const TicketIssuanceRequest &request)
 {
-    if (!m_pendingReference.isEmpty()) {
+    if (!m_pendingReference.isEmpty() || !m_awaitedReference.isEmpty()) {
         emit failed(QStringLiteral("REQUEST_ALREADY_IN_PROGRESS"));
         return;
     }
@@ -61,6 +97,7 @@ void TicketIssuanceRequestClient::submit(const TicketIssuanceRequest &request)
     }
 
     m_pendingReference = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    m_awaitedReference = m_pendingReference;
     QJsonObject configuration;
     if (!request.originStationCode.isEmpty()) {
         configuration.insert(QStringLiteral("originStationCode"), request.originStationCode);
@@ -117,6 +154,7 @@ void TicketIssuanceRequestClient::fail(const QString &reason)
     m_timeout->stop();
     m_pendingPayload.clear();
     m_pendingReference.clear();
+    m_awaitedReference.clear();
     m_packetId = -1;
     emit failed(reason);
 }

@@ -10,6 +10,7 @@
 #include <QLabel>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QPixmap>
 #include <QSizePolicy>
 #include <QSettings>
 #include <QScrollArea>
@@ -278,13 +279,63 @@ MainWindow::MainWindow(QWidget *parent)
         m_connectionState->setText(
             m_language == UiLanguage::Spanish ? QStringLiteral("Solicitud enviada")
                                               : QStringLiteral("Request sent"));
-        QMessageBox::information(
-            this,
-            m_language == UiLanguage::Spanish ? QStringLiteral("Emisión solicitada")
-                                              : QStringLiteral("Issuance requested"),
-            m_language == UiLanguage::Spanish
-                ? QStringLiteral("La solicitud se ha enviado de forma segura.\nReferencia: %1").arg(reference)
-                : QStringLiteral("The request was sent securely.\nReference: %1").arg(reference));
+        m_connectionState->setToolTip(reference);
+    });
+    connect(m_issuanceClient, &TicketIssuanceRequestClient::ticketIssued, this,
+            [this](const QString &ticketCode, const QByteArray &qrPng,
+                   const QString &qrValue, const QString &linkingCode) {
+        QPixmap qr;
+        if (!qr.loadFromData(qrPng, "PNG")) {
+            return;
+        }
+        const bool spanish = m_language == UiLanguage::Spanish;
+        QDialog dialog(this);
+        dialog.setObjectName(QStringLiteral("configurationDialog"));
+        dialog.setModal(true);
+        dialog.setMinimumWidth(560);
+        dialog.setWindowTitle(spanish ? QStringLiteral("Billete emitido")
+                                      : QStringLiteral("Ticket issued"));
+        auto *layout = new QVBoxLayout(&dialog);
+        layout->setContentsMargins(30, 26, 30, 26);
+        layout->setSpacing(12);
+        auto *title = new QLabel(spanish ? QStringLiteral("Tu billete está listo")
+                                        : QStringLiteral("Your ticket is ready"), &dialog);
+        title->setObjectName(QStringLiteral("dialogTitle"));
+        auto *hint = new QLabel(
+            spanish ? QStringLiteral("Escanea el QR o conserva el soporte físico que simula esta máquina.")
+                    : QStringLiteral("Scan the QR or keep the physical support simulated by this machine."),
+            &dialog);
+        hint->setObjectName(QStringLiteral("screenHint"));
+        hint->setWordWrap(true);
+        auto *qrLabel = new QLabel(&dialog);
+        qrLabel->setAlignment(Qt::AlignCenter);
+        qrLabel->setPixmap(qr);
+        qrLabel->setAccessibleName(spanish ? QStringLiteral("Código QR del billete")
+                                          : QStringLiteral("Ticket QR code"));
+        auto *code = new QLabel(ticketCode, &dialog);
+        code->setObjectName(QStringLiteral("productCode"));
+        code->setAlignment(Qt::AlignCenter);
+        code->setTextInteractionFlags(Qt::TextSelectableByMouse);
+        auto *link = new QLabel(
+            spanish ? QStringLiteral("Código de vinculación: %1").arg(linkingCode)
+                    : QStringLiteral("Linking code: %1").arg(linkingCode), &dialog);
+        link->setObjectName(QStringLiteral("productName"));
+        link->setAlignment(Qt::AlignCenter);
+        auto *finish = new QPushButton(spanish ? QStringLiteral("Finalizar")
+                                              : QStringLiteral("Finish"), &dialog);
+        finish->setObjectName(QStringLiteral("confirmAction"));
+        finish->setCursor(Qt::PointingHandCursor);
+        finish->setProperty("qrValue", qrValue);
+        connect(finish, &QPushButton::clicked, &dialog, &QDialog::accept);
+        layout->addWidget(title);
+        layout->addWidget(hint);
+        layout->addWidget(qrLabel, 0, Qt::AlignCenter);
+        layout->addWidget(code);
+        layout->addWidget(link);
+        layout->addWidget(finish, 0, Qt::AlignRight);
+        m_connectionState->setText(spanish ? QStringLiteral("Billete emitido")
+                                          : QStringLiteral("Ticket issued"));
+        dialog.exec();
         showHome();
     });
     connect(m_issuanceClient, &TicketIssuanceRequestClient::failed, this,
