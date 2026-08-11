@@ -43,13 +43,12 @@ class TicketValidationDirectionServicesTests {
     @Mock MultiTripTicketService multiTripService;
     @Mock TimePassTicketService timePassService;
     @Mock SmartBalanceTicketService smartBalanceService;
+    @Mock TicketJourneyAnomalyService anomalyService;
 
     @Test
     void entryConsumesTheMultiTripThroughItsDomainService() {
         Ticket ticket = ticket(TicketProductType.MULTI_TRIP, TicketStatus.ACTIVE, true);
         TicketJourney journey = mock(TicketJourney.class);
-        when(journeyRepository.findFirstByTicketAndStatusOrderByOpenedAtDesc(
-                ticket, TicketJourneyStatus.OPEN)).thenReturn(Optional.empty());
         when(multiTripService.enter("RMM-TKT-001", "ST038")).thenReturn(journey);
 
         TicketEntryValidationService service = entryService();
@@ -59,16 +58,17 @@ class TicketValidationDirectionServicesTests {
     }
 
     @Test
-    void entryRejectsASecondOpenJourneyWithoutConsumingAnotherTrip() {
+    void entryForceClosesAJourneyWithoutExitBeforeStartingTheNextOne() {
         Ticket ticket = ticket(TicketProductType.MULTI_TRIP, TicketStatus.ACTIVE, true);
-        when(journeyRepository.findFirstByTicketAndStatusOrderByOpenedAtDesc(
-                ticket, TicketJourneyStatus.OPEN)).thenReturn(Optional.of(mock(TicketJourney.class)));
+        TicketJourney abandonedJourney = mock(TicketJourney.class);
+        TicketJourney newJourney = mock(TicketJourney.class);
+        when(anomalyService.forceCloseJourneyWithoutExit(ticket))
+                .thenReturn(Optional.of(abandonedJourney));
+        when(multiTripService.enter("RMM-TKT-001", "ST038")).thenReturn(newJourney);
 
-        assertThatThrownBy(() -> entryService().enter(ticket, "ST038"))
-                .isInstanceOf(TicketValidationRejectionException.class)
-                .extracting(exception -> ((TicketValidationRejectionException) exception).getReasonCode())
-                .isEqualTo("ENTRY_ALREADY_OPEN");
-        verify(multiTripService, never()).enter("RMM-TKT-001", "ST038");
+        assertThat(entryService().enter(ticket, "ST038")).isSameAs(newJourney);
+        verify(anomalyService).forceCloseJourneyWithoutExit(ticket);
+        verify(multiTripService).enter("RMM-TKT-001", "ST038");
     }
 
     @Test
@@ -124,8 +124,8 @@ class TicketValidationDirectionServicesTests {
     }
 
     private TicketEntryValidationService entryService() {
-        return new TicketEntryValidationService(journeyRepository, singleTripService,
-                multiTripService, timePassService, smartBalanceService);
+        return new TicketEntryValidationService(singleTripService, multiTripService,
+                timePassService, smartBalanceService, anomalyService);
     }
 
     private TicketExitValidationService exitService() {

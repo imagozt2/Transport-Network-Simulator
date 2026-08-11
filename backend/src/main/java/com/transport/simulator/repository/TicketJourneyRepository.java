@@ -6,6 +6,7 @@ import com.transport.simulator.enums.TicketJourneyStatus;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDateTime;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface TicketJourneyRepository extends JpaRepository<TicketJourney, Long> {
@@ -21,4 +22,9 @@ public interface TicketJourneyRepository extends JpaRepository<TicketJourney, Lo
     );
 
     List<TicketJourney> findAllByTicketAndPassengerAccountIsNull(Ticket ticket);
+
+    List<TicketJourney> findAllByStatusAndOpenedAtBefore(
+            TicketJourneyStatus status,
+            LocalDateTime openedAt
+    );
 }
