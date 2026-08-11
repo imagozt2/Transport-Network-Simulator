@@ -21,10 +21,12 @@ private:
     [[nodiscard]] QWidget *createDevicePanel();
     [[nodiscard]] QWidget *createFooter();
     void configureWindow();
+    void readQrCode();
 
     QLabel *m_connectionState = nullptr;
     QLabel *m_validationState = nullptr;
     QLabel *m_gateState = nullptr;
     QPushButton *m_scanButton = nullptr;
     ValidatorConfiguration m_configuration;
+    QString m_lastQrValue;
 };

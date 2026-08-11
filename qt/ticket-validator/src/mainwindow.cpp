@@ -1,10 +1,12 @@
 #include "mainwindow.h"
+#include "qrreaderdialog.h"
 
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
 #include <QSizePolicy>
+#include <QStyle>
 #include <QVBoxLayout>
 #include <QWidget>
 
@@ -50,6 +52,9 @@ constexpr auto windowStyle = R"(
     QLabel#validationState {
         padding: 14px 18px; border-radius: 14px; background-color: #e0f2fe;
         color: #075985; font-size: 15px; font-weight: 800;
+    }
+    QLabel#validationState[state="read"] {
+        background-color: #fef3c7; color: #92400e;
     }
     QPushButton#scanAction {
         min-height: 52px; padding: 0 28px; border: 0; border-radius: 14px;
@@ -182,8 +187,9 @@ QWidget *MainWindow::createScannerPanel()
     m_scanButton->setObjectName(QStringLiteral("scanAction"));
     m_scanButton->setCursor(Qt::PointingHandCursor);
     m_scanButton->setAccessibleDescription(
-        tr("Abre el lector que se incorporará al flujo de validación"));
+        tr("Abre el lector de códigos QR del torniquete"));
     m_scanButton->setEnabled(m_configuration.valid);
+    connect(m_scanButton, &QPushButton::clicked, this, &MainWindow::readQrCode);
 
     layout->addWidget(eyebrow);
     layout->addWidget(title);
@@ -273,4 +279,19 @@ QWidget *MainWindow::createFooter()
     layout->addStretch();
     layout->addWidget(network);
     return footer;
+}
+
+void MainWindow::readQrCode()
+{
+    QrReaderDialog reader(this);
+    if (reader.exec() != QDialog::Accepted) {
+        return;
+    }
+
+    m_lastQrValue = reader.qrValue();
+    m_validationState->setProperty("state", QStringLiteral("read"));
+    m_validationState->setText(tr("Código QR leído · Pendiente de verificar"));
+    m_validationState->style()->unpolish(m_validationState);
+    m_validationState->style()->polish(m_validationState);
+    m_validationState->setFocus(Qt::OtherFocusReason);
 }
