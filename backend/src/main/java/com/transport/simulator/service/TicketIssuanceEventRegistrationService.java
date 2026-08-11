@@ -4,6 +4,7 @@ import com.transport.simulator.entity.CompensatoryTicketIssuance;
 import com.transport.simulator.entity.DeviceEventLog;
 import com.transport.simulator.entity.Ticket;
 import com.transport.simulator.enums.DeviceEventType;
+import com.transport.simulator.enums.DeviceEventSource;
 import com.transport.simulator.enums.LogOrigin;
 import com.transport.simulator.enums.LogSeverity;
 import com.transport.simulator.repository.DeviceEventLogRepository;
@@ -82,6 +83,7 @@ public class TicketIssuanceEventRegistrationService {
     ) {
         DeviceEventLog log = new DeviceEventLog(
                 LogOrigin.ADMINISTRATION,
+                DeviceEventSource.ADMINISTRATIVE,
                 eventType,
                 LogSeverity.INFO,
                 message,

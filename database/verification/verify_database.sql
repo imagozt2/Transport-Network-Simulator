@@ -422,3 +422,18 @@ LEFT JOIN line_depots ON line_depots.line_id = transport_line.id
 WHERE transport_line.active = TRUE
 GROUP BY transport_line.id, transport_line.code
 HAVING COUNT(line_depots.id) = 0;
+
+SELECT logs.id, logs.log_origin, logs.event_source
+FROM operational_logs logs
+WHERE logs.event_source NOT IN ('SIMULATED', 'REAL', 'ADMINISTRATIVE')
+   OR (logs.log_origin = 'DEVICE_SIMULATION' AND logs.event_source <> 'SIMULATED')
+   OR (logs.log_origin = 'MQTT' AND logs.event_source <> 'REAL')
+   OR (logs.log_origin = 'ADMINISTRATION' AND logs.event_source <> 'ADMINISTRATIVE');
+
+SELECT devices.id, devices.code, devices.mqtt_presence, devices.last_communication_at
+FROM devices
+WHERE (devices.mqtt_presence IS NOT NULL AND devices.last_communication_at IS NULL)
+   OR (devices.last_presence_at IS NOT NULL
+       AND devices.last_presence_at > devices.last_communication_at)
+   OR (devices.last_status_at IS NOT NULL
+       AND devices.last_status_at > devices.last_communication_at);

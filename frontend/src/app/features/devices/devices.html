@@ -25,6 +25,10 @@
         <span>Online</span>
         <strong>{{ data.summary.byStatus.ONLINE }}</strong>
       </article>
+      <article class="summary-card mqtt-summary">
+        <span>Conectadas por MQTT</span>
+        <strong>{{ connectedMqttDevices() }}</strong>
+      </article>
       <article class="summary-card">
         <span>Offline</span>
         <strong>{{ data.summary.byStatus.OFFLINE }}</strong>
@@ -96,6 +100,18 @@
           }
         </select>
       </label>
+      <label class="filter-field">
+        <span>Conectividad MQTT</span>
+        <select
+          [value]="selectedConnectivity"
+          (change)="setConnectivityFilter($any($event.target).value)"
+        >
+          <option value="ALL">Todas</option>
+          @for (state of connectivityStates; track state) {
+            <option [value]="state">{{ connectivityLabel(state) }}</option>
+          }
+        </select>
+      </label>
     </section>
 
     @if (hasActiveFilters()) {
@@ -128,6 +144,12 @@
                 <span class="status-pill status-{{ device.status.toLowerCase() }}">
                   {{ statusLabel(device.status) }}
                 </span>
+                <span
+                  class="connectivity-pill connectivity-{{ device.connectivity.state.toLowerCase().replace('_', '-') }}"
+                >
+                  <span class="connectivity-dot" aria-hidden="true"></span>
+                  {{ connectivityLabel(device.connectivity.state) }}
+                </span>
               </span>
               <small>{{ device.station.name }} · {{ device.station.code }}</small>
             </span>
@@ -148,6 +170,20 @@
                   <dt>Última conexión</dt>
                   <dd>{{ formatDateTime(device.lastConnectionAt) }}</dd>
                 </div>
+                <div>
+                  <dt>Última comunicación MQTT</dt>
+                  <dd>{{ formatDateTime(device.connectivity.lastCommunicationAt) }}</dd>
+                  @if (device.connectivity.softwareVersion) {
+                    <small>Software {{ device.connectivity.softwareVersion }}</small>
+                  }
+                </div>
+                @if (device.lastEvent; as lastEvent) {
+                  <div>
+                    <dt>Origen del último evento</dt>
+                    <dd>{{ eventSourceLabel(lastEvent.source) }}</dd>
+                    <small>{{ formatDateTime(lastEvent.occurredAt) }}</small>
+                  </div>
+                }
               </dl>
 
               <footer class="device-actions">

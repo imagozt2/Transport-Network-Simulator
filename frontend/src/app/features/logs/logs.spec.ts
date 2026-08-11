@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
 import { DeviceOperationsResponse } from '../../core/models/device-operation.model';
@@ -23,6 +23,13 @@ const deviceOperations: DeviceOperationsResponse = {
     type: 'TICKET_MACHINE',
     status: 'ONLINE',
     lastConnectionAt: '2026-07-23T11:59:55+02:00',
+    connectivity: {
+      state: 'CONNECTED', mqttPresence: 'ONLINE', operationalState: 'AVAILABLE',
+      lastCommunicationAt: '2026-07-23T11:59:55+02:00',
+      lastPresenceAt: '2026-07-23T11:59:55+02:00',
+      lastStatusAt: '2026-07-23T11:59:55+02:00', serviceMode: 'REGULAR',
+      softwareVersion: '1.0.0', uptimeSeconds: 3600
+    },
     station: { id: 1, code: 'ST001', name: 'Los Molinos' }
   }]
 };
@@ -30,8 +37,9 @@ const deviceOperations: DeviceOperationsResponse = {
 const logsPage: OperationalLogPage = {
   logs: [{
     id: 100,
-    origin: 'DEVICE_SIMULATION',
-    eventType: 'DEVICE_ONLINE',
+    origin: 'MQTT',
+    source: 'REAL',
+    eventType: 'TICKET_PURCHASE_COMPLETED',
     severity: 'INFO',
     message: 'Máquina conectada',
     deviceId: 10,
@@ -40,6 +48,9 @@ const logsPage: OperationalLogPage = {
     stationId: 1,
     stationCode: 'ST001',
     stationName: 'Los Molinos',
+    ticketCode: 'TCK-2026-0001',
+    ticketType: 'SINGLE_TRIP',
+    compensatoryIssuanceCode: null,
     externalReference: null,
     occurredAt: '2026-07-23T11:59:55',
     receivedAt: '2026-07-23T11:59:56'
@@ -94,6 +105,14 @@ describe('Logs URL filters', () => {
     expect(deviceFilter.value).toBe('RMM-MB-ST001-001');
     expect(deviceFilter.selectedOptions[0]?.textContent).toContain('Máquina de billetes 1');
     expect(compiled.querySelector('.logs-table tbody tr')).not.toBeNull();
+    expect(compiled.querySelector('.operation-sale')?.textContent).toContain('Venta');
+    expect(compiled.querySelector('.source-real')?.textContent).toContain('Dispositivo real');
+    expect(compiled.querySelector('.ticket-cell')?.textContent).toContain('Billete sencillo');
+    expect(compiled.querySelector('.ticket-cell')?.textContent).toContain('TCK-2026-0001');
+    expect(compiled.querySelector<HTMLAnchorElement>('.incident-link')?.getAttribute('href'))
+      .toContain('/incidents?create=true&deviceId=10&deviceCode=RMM-MB-ST001-001');
+    expect(compiled.querySelector<HTMLAnchorElement>('.incident-link')?.getAttribute('href'))
+      .toContain('ticketCode=TCK-2026-0001');
     expect(Array.from(
       compiled.querySelectorAll<HTMLTableCellElement>('.logs-table thead th')
     ).every((heading) => heading.scope === 'col')).toBe(true);
@@ -301,6 +320,7 @@ async function configure(
   await TestBed.configureTestingModule({
     imports: [Logs],
     providers: [
+      provideRouter([]),
       {
         provide: ActivatedRoute,
         useValue: { snapshot: { queryParamMap: convertToParamMap(queryParams) } }

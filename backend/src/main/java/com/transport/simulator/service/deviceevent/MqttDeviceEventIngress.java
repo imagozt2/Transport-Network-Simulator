@@ -2,6 +2,7 @@ package com.transport.simulator.service.deviceevent;
 
 import com.transport.simulator.entity.DeviceEventLog;
 import com.transport.simulator.enums.LogOrigin;
+import com.transport.simulator.enums.DeviceEventSource;
 import com.transport.simulator.repository.DeviceEventLogRepository;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validator;
@@ -55,6 +56,7 @@ class MqttDeviceEventIngress implements DeviceEventIngress {
         DeviceEvent event = new DeviceEvent(
                 message.deviceCode(),
                 LogOrigin.MQTT,
+                DeviceEventSource.REAL,
                 message.type(),
                 message.severity(),
                 message.message(),

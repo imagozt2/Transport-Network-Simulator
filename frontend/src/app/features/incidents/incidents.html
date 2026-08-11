@@ -336,6 +336,19 @@
           <button type="button" aria-label="Cerrar diálogo" (click)="closeCreateDialog()">×</button>
         </header>
         <form (submit)="$event.preventDefault(); createIncident()">
+          @if (createAffectedDeviceCode || createContextTicketCode) {
+            <aside class="incident-context wide-field" aria-label="Contexto de la incidencia">
+              <strong>Contexto relacionado</strong>
+              <div>
+                @if (createAffectedDeviceCode) {
+                  <span>Máquina {{ createAffectedDeviceCode }}</span>
+                }
+                @if (createContextTicketCode) {
+                  <span>Billete {{ createContextTicketCode }}</span>
+                }
+              </div>
+            </aside>
+          }
           <label class="wide-field"><span>Título</span><input maxlength="150" [value]="createTitle" (input)="createTitle = $any($event.target).value" /></label>
           <label class="wide-field"><span>Descripción</span><textarea rows="5" [value]="createDescription" (input)="createDescription = $any($event.target).value"></textarea></label>
           <label>

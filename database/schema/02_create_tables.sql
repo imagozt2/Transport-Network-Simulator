@@ -301,6 +301,7 @@ CREATE TABLE devices (
     uptime_seconds BIGINT NULL,
     last_presence_at DATETIME NULL,
     last_status_at DATETIME NULL,
+    last_communication_at DATETIME NULL,
     active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -321,6 +322,8 @@ CREATE TABLE devices (
 CREATE INDEX idx_devices_station ON devices (station_id);
 CREATE INDEX idx_devices_type_status ON devices (device_type, status);
 CREATE INDEX idx_devices_active ON devices (active);
+CREATE INDEX idx_devices_mqtt_communication
+    ON devices (mqtt_presence, last_communication_at);
 
 CREATE TABLE device_mqtt_identities (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -1368,6 +1371,7 @@ CREATE INDEX idx_incident_comments_author_created
 CREATE TABLE operational_logs (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     log_origin VARCHAR(50) NOT NULL,
+    event_source VARCHAR(30) NOT NULL,
     event_type VARCHAR(80) NOT NULL,
     severity VARCHAR(30) NOT NULL,
     message VARCHAR(500) NOT NULL,
@@ -1386,6 +1390,14 @@ CREATE TABLE operational_logs (
     payload_json JSON NULL,
     created_at DATETIME NOT NULL,
     received_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_operational_logs_event_source CHECK (
+        event_source IN ('SIMULATED', 'REAL', 'ADMINISTRATIVE')
+    ),
+    CONSTRAINT chk_operational_logs_source_origin CHECK (
+        (log_origin = 'DEVICE_SIMULATION' AND event_source = 'SIMULATED')
+        OR (log_origin = 'MQTT' AND event_source = 'REAL')
+        OR (log_origin = 'ADMINISTRATION' AND event_source = 'ADMINISTRATIVE')
+    ),
     CONSTRAINT fk_operational_logs_device FOREIGN KEY (device_id) REFERENCES devices (id)
         ON UPDATE CASCADE ON DELETE SET NULL,
     CONSTRAINT fk_operational_logs_station FOREIGN KEY (station_id) REFERENCES stations (id)
@@ -1409,6 +1421,7 @@ CREATE TABLE operational_logs (
 );
 
 CREATE INDEX idx_operational_logs_origin_event ON operational_logs (log_origin, event_type);
+CREATE INDEX idx_operational_logs_source_created ON operational_logs (event_source, created_at);
 CREATE INDEX idx_operational_logs_severity_created ON operational_logs (severity, created_at);
 CREATE INDEX idx_operational_logs_device ON operational_logs (device_id);
 CREATE INDEX idx_operational_logs_station ON operational_logs (station_id);

@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import com.transport.simulator.entity.DeviceEventLog;
 import com.transport.simulator.enums.DeviceEventType;
+import com.transport.simulator.enums.DeviceEventSource;
 import com.transport.simulator.enums.LogOrigin;
 import com.transport.simulator.enums.LogSeverity;
 import com.transport.simulator.repository.DeviceEventLogRepository;
@@ -70,6 +71,7 @@ class MqttDeviceEventIngressTests {
         verify(registrationService).register(captor.capture());
         DeviceEvent event = captor.getValue();
         assertThat(event.origin()).isEqualTo(LogOrigin.MQTT);
+        assertThat(event.source()).isEqualTo(DeviceEventSource.REAL);
         assertThat(event.deviceCode()).isEqualTo(message.deviceCode());
         assertThat(event.externalReference()).isEqualTo(message.eventId());
         assertThat(event.occurredAt())

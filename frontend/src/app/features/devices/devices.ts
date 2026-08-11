@@ -2,6 +2,7 @@ import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import {
+  DeviceConnectivityState,
   DeviceOperation,
   DeviceOperationStation,
   DeviceOperationsResponse,
@@ -10,15 +11,19 @@ import {
 } from '../../core/models/device-operation.model';
 import { DeviceOperationsService } from '../../core/services/device-operations.service';
 import {
+  deviceConnectivityLabel,
   deviceStatusLabel,
+  deviceEventSourceLabel,
   deviceTypeLabel,
   deviceTypeShortLabel
 } from '../../core/utils/operation-labels';
 import { PeriodicRefresh } from '../../core/utils/periodic-refresh';
 import { formatDateTime } from '../../core/utils/temporal-formatters';
+import { DeviceEventSource } from '../../core/models/operational-log.types';
 
 type TypeFilter = DeviceType | 'ALL';
 type StatusFilter = DeviceStatus | 'ALL';
+type ConnectivityFilter = DeviceConnectivityState | 'ALL';
 
 @Component({
   selector: 'app-devices',
@@ -37,6 +42,7 @@ export class Devices implements OnInit, OnDestroy {
   searchText = '';
   selectedType: TypeFilter = 'ALL';
   selectedStatus: StatusFilter = 'ALL';
+  selectedConnectivity: ConnectivityFilter = 'ALL';
   selectedStationCode = 'ALL';
   readonly expandedDeviceIds = new Set<number>();
 
@@ -50,6 +56,11 @@ export class Devices implements OnInit, OnDestroy {
     'OFFLINE',
     'MAINTENANCE',
     'ERROR'
+  ];
+  readonly connectivityStates: readonly DeviceConnectivityState[] = [
+    'CONNECTED',
+    'DISCONNECTED',
+    'NOT_MONITORED'
   ];
 
   ngOnInit(): void {
@@ -94,6 +105,10 @@ export class Devices implements OnInit, OnDestroy {
     this.selectedStatus = value as StatusFilter;
   }
 
+  setConnectivityFilter(value: string): void {
+    this.selectedConnectivity = value as ConnectivityFilter;
+  }
+
   setStationFilter(value: string): void {
     this.selectedStationCode = value;
   }
@@ -102,6 +117,7 @@ export class Devices implements OnInit, OnDestroy {
     this.searchText = '';
     this.selectedType = 'ALL';
     this.selectedStatus = 'ALL';
+    this.selectedConnectivity = 'ALL';
     this.selectedStationCode = 'ALL';
   }
 
@@ -109,6 +125,7 @@ export class Devices implements OnInit, OnDestroy {
     return this.searchText.trim().length > 0
       || this.selectedType !== 'ALL'
       || this.selectedStatus !== 'ALL'
+      || this.selectedConnectivity !== 'ALL'
       || this.selectedStationCode !== 'ALL';
   }
 
@@ -138,6 +155,8 @@ export class Devices implements OnInit, OnDestroy {
       return matchesSearch
         && (this.selectedType === 'ALL' || device.type === this.selectedType)
         && (this.selectedStatus === 'ALL' || device.status === this.selectedStatus)
+        && (this.selectedConnectivity === 'ALL'
+          || device.connectivity.state === this.selectedConnectivity)
         && (this.selectedStationCode === 'ALL'
           || device.station.code === this.selectedStationCode);
     });
@@ -163,6 +182,20 @@ export class Devices implements OnInit, OnDestroy {
 
   statusLabel(status: DeviceStatus): string {
     return deviceStatusLabel(status);
+  }
+
+  connectivityLabel(state: DeviceConnectivityState): string {
+    return deviceConnectivityLabel(state);
+  }
+
+  connectedMqttDevices(): number {
+    return this.operations?.devices.filter(
+      (device) => device.connectivity.state === 'CONNECTED'
+    ).length ?? 0;
+  }
+
+  eventSourceLabel(source: DeviceEventSource): string {
+    return deviceEventSourceLabel(source);
   }
 
   formatDateTime(value: string | null): string {

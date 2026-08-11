@@ -132,6 +132,7 @@ class DeviceEventSimulationServiceTests {
         return new DeviceEvent(
                 device.getCode(),
                 LogOrigin.DEVICE_SIMULATION,
+                com.transport.simulator.enums.DeviceEventSource.SIMULATED,
                 DeviceEventType.DEVICE_ONLINE,
                 LogSeverity.INFO,
                 "Conexión simulada",

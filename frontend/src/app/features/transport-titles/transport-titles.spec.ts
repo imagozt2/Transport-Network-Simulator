@@ -114,6 +114,11 @@ describe('TransportTitles', () => {
         devices: [{
           id: 1, code: 'TM-ST001-01', name: 'Máquina Aeropuerto',
           type: 'TICKET_MACHINE', status: 'ONLINE', lastConnectionAt: null,
+          connectivity: {
+            state: 'NOT_MONITORED', mqttPresence: 'OFFLINE', operationalState: 'AVAILABLE',
+            lastCommunicationAt: null, lastPresenceAt: null, lastStatusAt: null,
+            serviceMode: null, softwareVersion: null, uptimeSeconds: null
+          },
           station: { id: 1, code: 'ST001', name: 'Aeropuerto' }
         }]
       }),

@@ -2,6 +2,7 @@ package com.transport.simulator.service.deviceevent;
 
 import com.transport.simulator.entity.Device;
 import com.transport.simulator.enums.DeviceEventType;
+import com.transport.simulator.enums.DeviceEventSource;
 import com.transport.simulator.enums.DeviceType;
 import com.transport.simulator.enums.LogOrigin;
 import com.transport.simulator.enums.LogSeverity;
@@ -45,6 +46,7 @@ class SimulatedDeviceEventGenerator {
         return new DeviceEvent(
                 device.getCode(),
                 LogOrigin.DEVICE_SIMULATION,
+                DeviceEventSource.SIMULATED,
                 definition.type(),
                 definition.severity(),
                 definition.messagePrefix() + device.getName() + ".",

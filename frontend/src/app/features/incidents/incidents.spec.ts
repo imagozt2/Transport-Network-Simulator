@@ -1,5 +1,6 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { convertToParamMap } from '@angular/router';
 import { of } from 'rxjs';
 
 import { Incident, IncidentsPage } from '../../core/models/incident.model';
@@ -111,6 +112,29 @@ describe('Incidents', () => {
         assignedOperatorId: 7,
         affectedDeviceId: 91,
         affectedStationId: 12
+      })
+    );
+  });
+
+  it('should preserve machine and ticket context when creating an incident from a real event', () => {
+    const component = fixture.componentInstance;
+    component['openCreateDialogFromContext'](convertToParamMap({
+      deviceId: '91',
+      deviceCode: 'RMM-VE-ST012-001',
+      ticketCode: 'TCK-2026-0001',
+      eventType: 'VALIDATION_REJECTED',
+      externalReference: 'validation-123'
+    }));
+
+    expect(component.createDialogOpen).toBe(true);
+    expect(component.createCategory).toBe('TICKETING');
+    expect(component.createDescription).toContain('Billete afectado: TCK-2026-0001');
+    component.createIncident();
+    expect(incidentsService.createIncident).toHaveBeenCalledWith(
+      expect.objectContaining({
+        affectedDeviceId: 91,
+        category: 'TICKETING',
+        description: expect.stringContaining('Referencia de operación: validation-123')
       })
     );
   });

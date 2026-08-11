@@ -23,6 +23,7 @@ const response: DeviceOperationsResponse = {
       type: 'TICKET_MACHINE',
       status: 'ONLINE',
       lastConnectionAt: '2026-07-23T11:59:55+02:00',
+      connectivity: connectedMqttState('2026-07-23T11:59:58+02:00'),
       station: { id: 1, code: 'ST001', name: 'Los Molinos' },
     },
     {
@@ -32,10 +33,29 @@ const response: DeviceOperationsResponse = {
       type: 'TICKET_MACHINE',
       status: 'ONLINE',
       lastConnectionAt: '2026-07-23T11:59:55+02:00',
+      connectivity: {
+        ...connectedMqttState('2026-07-23T11:59:55+02:00'),
+        state: 'DISCONNECTED',
+        mqttPresence: 'OFFLINE',
+      },
       station: { id: 2, code: 'ST002', name: 'Cuatro Caminos' },
     },
   ],
 };
+
+function connectedMqttState(lastCommunicationAt: string) {
+  return {
+    state: 'CONNECTED' as const,
+    mqttPresence: 'ONLINE' as const,
+    operationalState: 'AVAILABLE' as const,
+    lastCommunicationAt,
+    lastPresenceAt: lastCommunicationAt,
+    lastStatusAt: lastCommunicationAt,
+    serviceMode: 'REGULAR',
+    softwareVersion: '1.0.0',
+    uptimeSeconds: 3600,
+  };
+}
 
 describe('Devices log navigation', () => {
   it('should link each device card to logs using its stable code', async () => {
@@ -93,8 +113,10 @@ describe('Devices log navigation', () => {
     expect(stationFilter.selectedOptions[0]?.textContent).toContain('Los Molinos');
     expect(compiled.textContent).not.toContain('RMM-MB-ST002-001');
     const summaryCards = Array.from(compiled.querySelectorAll<HTMLElement>('.summary-card'));
-    expect(summaryCards.map((card) => card.querySelector('span')?.textContent?.trim())).toEqual(['Total de máquinas', 'Online', 'Offline', 'En mantenimiento', 'Con error', 'Máquinas de billetes', 'Validadores de entrada', 'Validadores de salida']);
-    expect(summaryCards.map((card) => card.querySelector('strong')?.textContent?.trim())).toEqual(['2', '2', '0', '0', '0', '2', '0', '0']);
+    expect(summaryCards.map((card) => card.querySelector('span')?.textContent?.trim())).toEqual(['Total de máquinas', 'Online', 'Conectadas por MQTT', 'Offline', 'En mantenimiento', 'Con error', 'Máquinas de billetes', 'Validadores de entrada', 'Validadores de salida']);
+    expect(summaryCards.map((card) => card.querySelector('strong')?.textContent?.trim())).toEqual(['2', '2', '1', '0', '0', '0', '2', '0', '0']);
+    expect(compiled.querySelector('.connectivity-pill')?.textContent).toContain('MQTT conectado');
+    expect(compiled.querySelector('.device-details')?.textContent).toContain('Última comunicación MQTT');
     expect(compiled.querySelector('.type-overview')).toBeNull();
     expect(compiled.querySelector('.summary-card small')).toBeNull();
     fixture.destroy();
@@ -125,6 +147,36 @@ describe('Devices log navigation', () => {
     expect(fixture.componentInstance.filteredDevices()).toHaveLength(2);
     const stationFilter = fixture.nativeElement.querySelector('.filters-panel label:nth-of-type(4) select') as HTMLSelectElement;
     expect(stationFilter.value).toBe('ALL');
+    fixture.destroy();
+  });
+
+  it('should filter devices by their real MQTT connectivity', async () => {
+    await TestBed.configureTestingModule({
+      imports: [Devices],
+      providers: [
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { queryParamMap: convertToParamMap({}) } },
+        },
+        {
+          provide: DeviceOperationsService,
+          useValue: { getOperations: () => of(response) },
+        },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(Devices);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+
+    component.setConnectivityFilter('DISCONNECTED');
+
+    expect(component.hasActiveFilters()).toBe(true);
+    expect(component.filteredDevices().map((device) => device.code))
+      .toEqual(['RMM-MB-ST002-001']);
+    component.clearFilters();
+    expect(component.selectedConnectivity).toBe('ALL');
+    expect(component.filteredDevices()).toHaveLength(2);
     fixture.destroy();
   });
 

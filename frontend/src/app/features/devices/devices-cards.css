@@ -11,7 +11,7 @@
 .device-heading { min-width: 0; }
 .device-title-row { min-width: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
 .device-title-row > strong { overflow: hidden; color: #111827; font-size: 16px; line-height: 1.25; text-overflow: ellipsis; }
-.device-code, .type-pill, .status-pill { border-radius: 999px; padding: 5px 8px; white-space: nowrap; font-size: 10px; font-weight: 900; }
+.device-code, .type-pill, .status-pill, .connectivity-pill { border-radius: 999px; padding: 5px 8px; white-space: nowrap; font-size: 10px; font-weight: 900; }
 .device-code { color: #fff; background: #111827; }
 .type-pill { color: #334155; background: #e2e8f0; }
 .device-heading > small { display: block; margin-top: 5px; color: #64748b; font-size: 12px; }
@@ -20,6 +20,11 @@
 .status-offline { color: #475569; background: #e2e8f0; }
 .status-maintenance { color: #92400e; background: #fef3c7; }
 .status-error { color: #991b1b; background: #fee2e2; }
+.connectivity-pill { display: inline-flex; align-items: center; gap: 5px; color: #475569; background: #e2e8f0; }
+.connectivity-connected { color: #075985; background: #e0f2fe; }
+.connectivity-disconnected { color: #475569; background: #e2e8f0; }
+.connectivity-not-monitored { color: #6b7280; background: #f3f4f6; }
+.connectivity-dot { width: 7px; height: 7px; flex: 0 0 auto; border-radius: 50%; background: currentColor; }
 .expand-symbol { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; color: #111827; background: #f1f5f9; font-size: 18px; font-weight: 900; }
 .device-card-body { border-top: 1px solid #e2e8f0; padding: 14px 16px; background: #fbfdff; }
 .device-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin: 0; }

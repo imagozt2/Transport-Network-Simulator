@@ -1,4 +1,5 @@
 import { Component, HostListener, inject, OnInit } from '@angular/core';
+import { ActivatedRoute, ParamMap } from '@angular/router';
 
 import {
   Incident,
@@ -26,6 +27,7 @@ type OptionalCategory = IncidentCategory | 'ALL';
 export class Incidents implements OnInit {
   private readonly incidentsService = inject(IncidentsService);
   private readonly operatorAuthService = inject(OperatorAuthService);
+  private readonly route = inject(ActivatedRoute, { optional: true });
 
   incidents: Incident[] = [];
   summary: IncidentSummary = {
@@ -55,6 +57,9 @@ export class Incidents implements OnInit {
   createAssignToMe = true;
   createSubmitting = false;
   createError = '';
+  createAffectedDeviceId: number | null = null;
+  createAffectedDeviceCode: string | null = null;
+  createContextTicketCode: string | null = null;
   editing = false;
   editTitle = '';
   editDescription = '';
@@ -91,6 +96,9 @@ export class Incidents implements OnInit {
 
   ngOnInit(): void {
     this.loadIncidents(0);
+    if (this.route?.snapshot.queryParamMap.get('create') === 'true') {
+      this.openCreateDialogFromContext(this.route.snapshot.queryParamMap);
+    }
   }
 
   loadIncidents(page = this.currentPage): void {
@@ -164,6 +172,9 @@ export class Incidents implements OnInit {
     this.createPriority = 'MEDIUM';
     this.createAssignToMe = true;
     this.createError = '';
+    this.createAffectedDeviceId = null;
+    this.createAffectedDeviceCode = null;
+    this.createContextTicketCode = null;
     this.createDialogOpen = true;
   }
 
@@ -190,7 +201,7 @@ export class Incidents implements OnInit {
       affectedLineId: null,
       affectedStationId: null,
       affectedTrainId: null,
-      affectedDeviceId: null,
+      affectedDeviceId: this.createAffectedDeviceId,
       affectedDepotId: null
     }).subscribe({
       next: (incident) => {
@@ -433,5 +444,36 @@ export class Incidents implements OnInit {
         this.detailLoading = false;
       }
     });
+  }
+
+  private openCreateDialogFromContext(queryParams: ParamMap): void {
+    const deviceId = this.positiveNumber(queryParams.get('deviceId'));
+    const deviceCode = queryParams.get('deviceCode')?.trim() || null;
+    const ticketCode = queryParams.get('ticketCode')?.trim() || null;
+    const issuanceCode = queryParams.get('issuanceCode')?.trim() || null;
+    const externalReference = queryParams.get('externalReference')?.trim() || null;
+    const eventType = queryParams.get('eventType')?.trim() || null;
+
+    this.openCreateDialog();
+    this.createAffectedDeviceId = deviceId;
+    this.createAffectedDeviceCode = deviceCode;
+    this.createContextTicketCode = ticketCode;
+    this.createCategory = ticketCode || issuanceCode ? 'TICKETING' : 'DEVICE';
+    this.createTitle = ticketCode
+      ? `Incidencia del billete ${ticketCode}`
+      : `Incidencia de la máquina ${deviceCode ?? 'seleccionada'}`;
+    this.createDescription = [
+      deviceCode ? `Máquina afectada: ${deviceCode}` : null,
+      ticketCode ? `Billete afectado: ${ticketCode}` : null,
+      issuanceCode ? `Emisión relacionada: ${issuanceCode}` : null,
+      externalReference ? `Referencia de operación: ${externalReference}` : null,
+      eventType ? `Evento relacionado: ${eventType}` : null
+    ].filter((value): value is string => value !== null).join('\n');
+  }
+
+  private positiveNumber(value: string | null): number | null {
+    if (!value || !/^\d+$/.test(value)) return null;
+    const parsed = Number(value);
+    return parsed > 0 && Number.isSafeInteger(parsed) ? parsed : null;
   }
 }

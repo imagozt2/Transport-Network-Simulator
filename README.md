@@ -23,10 +23,11 @@ La aplicación incluye actualmente:
   situación operativa en tiempo real;
 - una sección de cocheras con ocupación, distribución de flota, navegación contextual a sus trenes
   y ventanas de doce horas para movimientos de entrada y salida;
-- una sección de máquinas con indicadores por estado y tipo, tarjetas compactas, filtros y acceso
-  contextual a sus logs;
-- una pantalla global de logs con filtros combinables —incluido el tipo de máquina— y navegación
-  directa entre páginas;
+- una sección de máquinas con indicadores por estado, tipo y conectividad MQTT, tarjetas compactas,
+  filtros y acceso contextual a sus logs;
+- una pantalla global de logs con filtros combinables, trazabilidad de eventos reales, simulados y
+  administrativos, referencias de billetes, navegación directa entre páginas y creación contextual
+  de incidencias;
 - una sección de títulos de transporte con el catálogo tarifario, sus reglas de uso y filtros por
   producto y estado;
 - emisión compensatoria gratuita de billetes desde máquinas de venta, vinculada al operador y

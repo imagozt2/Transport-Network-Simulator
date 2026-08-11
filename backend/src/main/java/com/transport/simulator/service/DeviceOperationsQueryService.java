@@ -1,6 +1,7 @@
 package com.transport.simulator.service;
 
 import com.transport.simulator.dto.response.deviceoperation.DeviceOperationLastEventResponse;
+import com.transport.simulator.dto.response.deviceoperation.DeviceConnectivityResponse;
 import com.transport.simulator.dto.response.deviceoperation.DeviceOperationResponse;
 import com.transport.simulator.dto.response.deviceoperation.DeviceOperationStationResponse;
 import com.transport.simulator.dto.response.deviceoperation.DeviceOperationSummaryResponse;
@@ -9,6 +10,8 @@ import com.transport.simulator.entity.Device;
 import com.transport.simulator.entity.DeviceEventLog;
 import com.transport.simulator.entity.Station;
 import com.transport.simulator.enums.DeviceStatus;
+import com.transport.simulator.enums.DeviceConnectivityState;
+import com.transport.simulator.enums.DeviceMqttPresence;
 import com.transport.simulator.enums.DeviceType;
 import com.transport.simulator.repository.DeviceEventLogRepository;
 import com.transport.simulator.repository.DeviceRepository;
@@ -89,8 +92,28 @@ public class DeviceOperationsQueryService {
                 device.getType(),
                 device.getStatus(),
                 device.getLastConnectionAt(),
+                toConnectivityResponse(device),
                 toStationResponse(device.getStation()),
                 latestEvent == null ? null : toEventResponse(latestEvent)
+        );
+    }
+
+    private DeviceConnectivityResponse toConnectivityResponse(Device device) {
+        DeviceConnectivityState state = !device.isMqttManaged()
+                ? DeviceConnectivityState.NOT_MONITORED
+                : device.getMqttPresence() == DeviceMqttPresence.ONLINE
+                        ? DeviceConnectivityState.CONNECTED
+                        : DeviceConnectivityState.DISCONNECTED;
+        return new DeviceConnectivityResponse(
+                state,
+                device.getMqttPresence(),
+                device.getOperationalState(),
+                device.getLastCommunicationAt(),
+                device.getLastPresenceAt(),
+                device.getLastStatusAt(),
+                device.getServiceMode(),
+                device.getSoftwareVersion(),
+                device.getUptimeSeconds()
         );
     }
 
@@ -109,6 +132,7 @@ public class DeviceOperationsQueryService {
                 event.getSeverity(),
                 event.getMessage(),
                 event.getOrigin(),
+                event.getSource(),
                 event.getOccurredAt()
         );
     }
