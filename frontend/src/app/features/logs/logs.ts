@@ -5,6 +5,7 @@ import { DeviceOperation, DeviceType } from '../../core/models/device-operation.
 import { OperationalLog } from '../../core/models/operational-log.model';
 import {
   DeviceEventType,
+  DeviceEventSource,
   LogOrigin,
   LogSeverity
 } from '../../core/models/operational-log.types';
@@ -15,6 +16,7 @@ import {
 } from '../../core/services/operational-logs.service';
 import { formatDateTime } from '../../core/utils/temporal-formatters';
 import { deviceTypeLabel } from '../../core/utils/operation-labels';
+import { deviceEventSourceLabel } from '../../core/utils/operation-labels';
 
 type OptionalSeverity = LogSeverity | 'ALL';
 type OptionalOrigin = LogOrigin | 'ALL';
@@ -290,6 +292,10 @@ export class Logs implements OnInit {
 
   originLabel(origin: LogOrigin): string {
     return origin === 'MQTT' ? 'MQTT' : 'Simulación';
+  }
+
+  sourceLabel(source: DeviceEventSource): string {
+    return deviceEventSourceLabel(source);
   }
 
   eventTypeLabel(type: DeviceEventType): string {

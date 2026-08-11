@@ -11,11 +11,13 @@ import {
 import { DeviceOperationsService } from '../../core/services/device-operations.service';
 import {
   deviceStatusLabel,
+  deviceEventSourceLabel,
   deviceTypeLabel,
   deviceTypeShortLabel
 } from '../../core/utils/operation-labels';
 import { PeriodicRefresh } from '../../core/utils/periodic-refresh';
 import { formatDateTime } from '../../core/utils/temporal-formatters';
+import { DeviceEventSource } from '../../core/models/operational-log.types';
 
 type TypeFilter = DeviceType | 'ALL';
 type StatusFilter = DeviceStatus | 'ALL';
@@ -163,6 +165,10 @@ export class Devices implements OnInit, OnDestroy {
 
   statusLabel(status: DeviceStatus): string {
     return deviceStatusLabel(status);
+  }
+
+  eventSourceLabel(source: DeviceEventSource): string {
+    return deviceEventSourceLabel(source);
   }
 
   formatDateTime(value: string | null): string {

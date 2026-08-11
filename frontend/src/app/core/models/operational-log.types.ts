@@ -1,5 +1,6 @@
 export type LogSeverity = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR' | 'CRITICAL';
 export type LogOrigin = 'DEVICE_SIMULATION' | 'MQTT';
+export type DeviceEventSource = 'SIMULATED' | 'REAL' | 'ADMINISTRATIVE';
 
 export type DeviceEventType =
   | 'DEVICE_ONLINE'

@@ -96,7 +96,7 @@
             <thead>
               <tr>
                 <th scope="col">Fecha</th><th scope="col">Severidad</th>
-                <th scope="col">Evento</th><th scope="col">Origen</th>
+                <th scope="col">Evento</th><th scope="col">Procedencia</th><th scope="col">Canal</th>
                 <th scope="col">Máquina</th><th scope="col">Estación</th>
                 <th scope="col">Mensaje</th>
               </tr>
@@ -107,6 +107,7 @@
                   <td class="date-cell"><time [attr.datetime]="log.occurredAt">{{ formatDateTime(log.occurredAt) }}</time></td>
                   <td><span class="severity-pill severity-{{ log.severity.toLowerCase() }}">{{ severityLabel(log.severity) }}</span></td>
                   <td class="event-cell">{{ eventTypeLabel(log.eventType) }}</td>
+                  <td><span class="source-chip source-{{ log.source.toLowerCase() }}">{{ sourceLabel(log.source) }}</span></td>
                   <td><span class="origin-chip">{{ originLabel(log.origin) }}</span></td>
                   <td class="entity-cell">{{ log.deviceCode }} · {{ log.deviceName }}</td>
                   <td class="location-cell">{{ log.stationName }} · {{ log.stationCode }}</td>

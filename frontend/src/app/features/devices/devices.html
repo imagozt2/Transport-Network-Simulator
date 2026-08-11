@@ -148,6 +148,13 @@
                   <dt>Última conexión</dt>
                   <dd>{{ formatDateTime(device.lastConnectionAt) }}</dd>
                 </div>
+                @if (device.lastEvent; as lastEvent) {
+                  <div>
+                    <dt>Origen del último evento</dt>
+                    <dd>{{ eventSourceLabel(lastEvent.source) }}</dd>
+                    <small>{{ formatDateTime(lastEvent.occurredAt) }}</small>
+                  </div>
+                }
               </dl>
 
               <footer class="device-actions">

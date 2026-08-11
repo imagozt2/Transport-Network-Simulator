@@ -3,6 +3,7 @@ import { DeviceStatus, DeviceType } from '../models/device-operation.model';
 import { ServiceOperationPhase, ServicePeriodType } from '../models/line-operation.model';
 import { StationOperationStatus } from '../models/station-operation.model';
 import { FleetRole, TrainStatus } from '../models/train-operation.model';
+import { DeviceEventSource } from '../models/operational-log.types';
 
 const SERVICE_PHASE_LABELS: Readonly<Record<ServiceOperationPhase, string>> = {
   CLOSED: 'Cerrado',
@@ -68,6 +69,12 @@ const DEVICE_TYPE_SHORT_LABELS: Readonly<Record<DeviceType, string>> = {
   EXIT_VALIDATOR: 'VS'
 };
 
+const DEVICE_EVENT_SOURCE_LABELS: Readonly<Record<DeviceEventSource, string>> = {
+  REAL: 'Dispositivo real',
+  SIMULATED: 'Simulación',
+  ADMINISTRATIVE: 'Operador'
+};
+
 export const servicePhaseLabel = (phase: ServiceOperationPhase): string => SERVICE_PHASE_LABELS[phase];
 export const servicePeriodLabel = (period: ServicePeriodType): string => SERVICE_PERIOD_LABELS[period];
 export const stationStatusLabel = (status: StationOperationStatus): string => STATION_STATUS_LABELS[status];
@@ -77,3 +84,4 @@ export const depotStatusLabel = (status: DepotOperationStatus): string => DEPOT_
 export const deviceStatusLabel = (status: DeviceStatus): string => DEVICE_STATUS_LABELS[status];
 export const deviceTypeLabel = (type: DeviceType): string => DEVICE_TYPE_LABELS[type];
 export const deviceTypeShortLabel = (type: DeviceType): string => DEVICE_TYPE_SHORT_LABELS[type];
+export const deviceEventSourceLabel = (source: DeviceEventSource): string => DEVICE_EVENT_SOURCE_LABELS[source];

@@ -1,8 +1,14 @@
-import { DeviceEventType, LogOrigin, LogSeverity } from './operational-log.types';
+import {
+  DeviceEventSource,
+  DeviceEventType,
+  LogOrigin,
+  LogSeverity
+} from './operational-log.types';
 
 export interface OperationalLog {
   id: number;
   origin: LogOrigin;
+  source: DeviceEventSource;
   eventType: DeviceEventType;
   severity: LogSeverity;
   message: string;

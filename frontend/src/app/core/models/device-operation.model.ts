@@ -1,3 +1,10 @@
+import {
+  DeviceEventSource,
+  DeviceEventType,
+  LogOrigin,
+  LogSeverity
+} from './operational-log.types';
+
 export type DeviceType = 'TICKET_MACHINE' | 'ENTRY_VALIDATOR' | 'EXIT_VALIDATOR';
 export type DeviceStatus = 'ONLINE' | 'OFFLINE' | 'MAINTENANCE' | 'ERROR';
 
@@ -5,6 +12,16 @@ export interface DeviceOperationStation {
   id: number;
   code: string;
   name: string;
+}
+
+export interface DeviceOperationLastEvent {
+  id: number;
+  type: DeviceEventType;
+  severity: LogSeverity;
+  message: string;
+  origin: LogOrigin;
+  source: DeviceEventSource;
+  occurredAt: string;
 }
 
 export interface DeviceOperation {
@@ -15,6 +32,7 @@ export interface DeviceOperation {
   status: DeviceStatus;
   lastConnectionAt: string | null;
   station: DeviceOperationStation;
+  lastEvent?: DeviceOperationLastEvent | null;
 }
 
 export interface DeviceOperationSummary {

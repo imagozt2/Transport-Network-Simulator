@@ -31,6 +31,7 @@ const logsPage: OperationalLogPage = {
   logs: [{
     id: 100,
     origin: 'DEVICE_SIMULATION',
+    source: 'SIMULATED',
     eventType: 'DEVICE_ONLINE',
     severity: 'INFO',
     message: 'Máquina conectada',

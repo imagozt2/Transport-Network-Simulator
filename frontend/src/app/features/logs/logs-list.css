@@ -38,12 +38,15 @@
 .entity-cell { min-width: 210px; color: #111827; }
 .location-cell { min-width: 190px; color: #6b7280; }
 .message-cell { min-width: 280px; line-height: 1.45; }
-.severity-pill, .origin-chip { display: inline-flex; border-radius: 999px; padding: 5px 8px; font-size: 10px; font-weight: 900; white-space: nowrap; }
+.severity-pill, .origin-chip, .source-chip { display: inline-flex; border-radius: 999px; padding: 5px 8px; font-size: 10px; font-weight: 900; white-space: nowrap; }
 .severity-pill { color: #334155; background: #e2e8f0; }
 .severity-info { color: #1e40af; background: #dbeafe; }
 .severity-warning { color: #92400e; background: #fef3c7; }
 .severity-error, .severity-critical { color: #991b1b; background: #fee2e2; }
 .origin-chip { color: #374151; background: #f3f4f6; }
+.source-real { color: #075985; background: #e0f2fe; }
+.source-simulated { color: #374151; background: #f3f4f6; }
+.source-administrative { color: #5b21b6; background: #ede9fe; }
 @media (max-width: 700px) {
   .results-header, .pagination-panel { align-items: stretch; flex-direction: column; }
   .pagination-size select { width: 100%; }
