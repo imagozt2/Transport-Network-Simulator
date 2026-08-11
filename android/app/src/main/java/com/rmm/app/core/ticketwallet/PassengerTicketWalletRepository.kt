@@ -24,4 +24,11 @@ class PassengerTicketWalletRepository(
             cursor = cursor,
         )
     }
+
+    suspend fun ticketQr(
+        session: PassengerSession,
+        ticketCode: String,
+    ): ApiResult<PassengerTicketQr> = calls.execute {
+        api.ticketQr("Bearer ${session.accessToken}", ticketCode)
+    }
 }

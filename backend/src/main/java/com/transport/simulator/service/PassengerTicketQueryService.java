@@ -3,6 +3,7 @@ package com.transport.simulator.service;
 import com.transport.simulator.dto.response.passengerticket.PassengerTicketDetailResponse;
 import com.transport.simulator.dto.response.passengerticket.PassengerTicketSummaryResponse;
 import com.transport.simulator.dto.response.passengerticket.PassengerTicketsResponse;
+import com.transport.simulator.dto.response.passengerticket.PassengerTicketQrResponse;
 import com.transport.simulator.entity.Ticket;
 import com.transport.simulator.entity.TicketJourney;
 import com.transport.simulator.entity.TicketSupport;
@@ -11,9 +12,11 @@ import com.transport.simulator.enums.TicketProductType;
 import com.transport.simulator.enums.TicketStatus;
 import com.transport.simulator.enums.TicketSupportStatus;
 import com.transport.simulator.enums.TicketSupportType;
+import com.transport.simulator.enums.TicketQrCredentialStatus;
 import com.transport.simulator.repository.TicketJourneyRepository;
 import com.transport.simulator.repository.TicketRepository;
 import com.transport.simulator.repository.TicketSupportRepository;
+import com.transport.simulator.repository.TicketQrCredentialRepository;
 import com.transport.simulator.security.PassengerPrincipal;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -38,17 +41,20 @@ public class PassengerTicketQueryService {
     private final TicketRepository ticketRepository;
     private final TicketSupportRepository supportRepository;
     private final TicketJourneyRepository journeyRepository;
+    private final TicketQrCredentialRepository qrCredentialRepository;
 
     public PassengerTicketQueryService(
             PassengerResourceAccessService accessService,
             TicketRepository ticketRepository,
             TicketSupportRepository supportRepository,
-            TicketJourneyRepository journeyRepository
+            TicketJourneyRepository journeyRepository,
+            TicketQrCredentialRepository qrCredentialRepository
     ) {
         this.accessService = accessService;
         this.ticketRepository = ticketRepository;
         this.supportRepository = supportRepository;
         this.journeyRepository = journeyRepository;
+        this.qrCredentialRepository = qrCredentialRepository;
     }
 
     @Transactional(readOnly = true)
@@ -102,6 +108,22 @@ public class PassengerTicketQueryService {
                 .findFirstByTicketAndStatusOrderByOpenedAtDesc(ticket, TicketJourneyStatus.OPEN)
                 .orElse(null);
         return PassengerTicketDetailResponse.from(ticket, medium, openJourney);
+    }
+
+    @Transactional(readOnly = true)
+    public PassengerTicketQrResponse ticketQr(String code, Authentication authentication) {
+        Ticket ticket = accessService.ownedTicket(code, authentication);
+        var credential = qrCredentialRepository
+                .findFirstByTicketIdAndStatusOrderByIssuedAtDesc(
+                        ticket.getId(), TicketQrCredentialStatus.ACTIVE
+                )
+                .filter(value -> value.getSupport().getType() == TicketSupportType.DIGITAL)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "No active digital QR credential exists for this ticket"
+                ));
+        return new PassengerTicketQrResponse(
+                ticket.getCode(), credential.getQrValue(), credential.getCredentialId(), credential.getExpiresAt()
+        );
     }
 
     private WalletRelations relations(List<Ticket> tickets) {

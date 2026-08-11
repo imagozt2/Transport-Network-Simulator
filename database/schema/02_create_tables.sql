@@ -842,6 +842,7 @@ CREATE TABLE ticket_qr_credentials (
     wrapper_version INT NOT NULL DEFAULT 1,
     signing_key_id VARCHAR(100) NOT NULL,
     token_fingerprint CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    qr_value VARCHAR(4096) NOT NULL,
     issued_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     expires_at DATETIME NULL,
     revoked_at DATETIME NULL,

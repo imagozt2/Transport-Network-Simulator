@@ -2,6 +2,9 @@ package com.transport.simulator.controller;
 
 import com.transport.simulator.dto.response.passengerticket.PassengerTicketDetailResponse;
 import com.transport.simulator.dto.response.passengerticket.PassengerTicketsResponse;
+import com.transport.simulator.dto.response.passengerticket.PassengerTicketQrResponse;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ResponseEntity;
 import com.transport.simulator.service.PassengerTicketQueryService;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -37,5 +40,16 @@ public class PassengerTicketController {
             Authentication authentication
     ) {
         return ticketQueryService.ticket(ticketCode, authentication);
+    }
+
+    @GetMapping("/{ticketCode}/qr")
+    public ResponseEntity<PassengerTicketQrResponse> ticketQr(
+            @PathVariable String ticketCode,
+            Authentication authentication
+    ) {
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .header("Pragma", "no-cache")
+                .body(ticketQueryService.ticketQr(ticketCode, authentication));
     }
 }

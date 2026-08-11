@@ -69,6 +69,7 @@ internal fun TicketWallet(
     var reloadKey by rememberSaveable { mutableIntStateOf(0) }
     var selectedStatus by rememberSaveable { mutableStateOf<String?>(null) }
     var state by remember { mutableStateOf<TicketWalletUiState>(TicketWalletUiState.Loading) }
+    var qrTicketCode by remember { mutableStateOf<String?>(null) }
     val filters = listOf(
         WalletFilter(null, R.string.ticket_wallet_filter_all),
         WalletFilter("ACTIVE", R.string.ticket_wallet_filter_active),
@@ -108,6 +109,7 @@ internal fun TicketWallet(
             is TicketWalletUiState.Error -> WalletError(current.failure) { reloadKey++ }
             is TicketWalletUiState.Content -> WalletContent(
                 state = current,
+                onShowQr = { qrTicketCode = it },
                 onLoadMore = {
                     val cursor = current.nextCursor ?: return@WalletContent
                     scope.launch {
@@ -128,11 +130,21 @@ internal fun TicketWallet(
             )
         }
     }
+
+    qrTicketCode?.let { ticketCode ->
+        TicketQrDialog(
+            ticketCode = ticketCode,
+            session = session,
+            repository = repository,
+            onDismiss = { qrTicketCode = null },
+        )
+    }
 }
 
 @Composable
 private fun WalletContent(
     state: TicketWalletUiState.Content,
+    onShowQr: (String) -> Unit,
     onLoadMore: () -> Unit,
 ) {
     LazyColumn(
@@ -160,7 +172,7 @@ private fun WalletContent(
             }
         } else {
             items(state.tickets, key = PassengerTicketSummary::code) { ticket ->
-                WalletTicketCard(ticket)
+                WalletTicketCard(ticket, onShowQr)
             }
         }
         state.nextCursor?.let {
@@ -191,7 +203,7 @@ private fun WalletContent(
 }
 
 @Composable
-private fun WalletTicketCard(ticket: PassengerTicketSummary) {
+private fun WalletTicketCard(ticket: PassengerTicketSummary, onShowQr: (String) -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -264,6 +276,14 @@ private fun WalletTicketCard(ticket: PassengerTicketSummary) {
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
                         fontWeight = FontWeight.Bold,
                     )
+                }
+            }
+            if (ticket.medium == "DIGITAL") {
+                Button(
+                    onClick = { onShowQr(ticket.code) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.ticket_wallet_show_qr))
                 }
             }
         }

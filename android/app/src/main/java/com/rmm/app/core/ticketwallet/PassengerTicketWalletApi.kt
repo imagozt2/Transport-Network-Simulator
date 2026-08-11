@@ -4,6 +4,7 @@ import java.math.BigDecimal
 import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.Header
+import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface PassengerTicketWalletApi {
@@ -15,7 +16,20 @@ interface PassengerTicketWalletApi {
         @Query("limit") limit: Int = 20,
         @Query("cursor") cursor: String? = null,
     ): Response<PassengerTicketsResponse>
+
+    @GET("tickets/{ticketCode}/qr")
+    suspend fun ticketQr(
+        @Header("Authorization") authorization: String,
+        @Path("ticketCode") ticketCode: String,
+    ): Response<PassengerTicketQr>
 }
+
+data class PassengerTicketQr(
+    val ticketCode: String,
+    val qrValue: String,
+    val credentialId: String,
+    val expiresAt: String? = null,
+)
 
 data class PassengerTicketsResponse(
     val items: List<PassengerTicketSummary> = emptyList(),

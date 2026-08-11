@@ -21,6 +21,12 @@
     <string name="ticket_wallet_empty">Tu cartera está vacía</string>
     <string name="ticket_wallet_empty_description">Compra o registra un billete para verlo aquí.</string>
     <string name="ticket_wallet_load_more">Cargar más billetes</string>
+    <string name="ticket_wallet_show_qr">Mostrar QR</string>
+    <string name="ticket_qr_title">Código QR del billete</string>
+    <string name="ticket_qr_instructions">Acerca este código al lector de la máquina validadora.</string>
+    <string name="ticket_qr_loading">Preparando código seguro…</string>
+    <string name="ticket_qr_error">No se ha podido obtener el código QR.</string>
+    <string name="ticket_qr_close">Cerrar</string>
     <string name="ticket_wallet_pagination_error">No se han podido cargar más billetes. Vuelve a intentarlo.</string>
     <string name="ticket_wallet_network_error">No se ha podido conectar con tu cartera.</string>
     <string name="ticket_wallet_request_error">No se han podido cargar tus billetes.</string>

@@ -47,6 +47,9 @@ public class TicketQrCredential extends AuditableEntity {
     @Column(name = "token_fingerprint", nullable = false, unique = true, length = 64)
     private String tokenFingerprint;
 
+    @Column(name = "qr_value", nullable = false, length = 4096)
+    private String qrValue;
+
     @Column(name = "issued_at", nullable = false)
     private LocalDateTime issuedAt;
 
@@ -66,6 +69,31 @@ public class TicketQrCredential extends AuditableEntity {
     protected TicketQrCredential() {
     }
 
+    public static TicketQrCredential active(
+            UUID credentialId,
+            Ticket ticket,
+            TicketSupport support,
+            int wrapperVersion,
+            String signingKeyId,
+            String tokenFingerprint,
+            String qrValue,
+            LocalDateTime issuedAt,
+            LocalDateTime expiresAt
+    ) {
+        TicketQrCredential credential = new TicketQrCredential();
+        credential.credentialId = credentialId;
+        credential.ticket = ticket;
+        credential.support = support;
+        credential.status = TicketQrCredentialStatus.ACTIVE;
+        credential.wrapperVersion = wrapperVersion;
+        credential.signingKeyId = signingKeyId;
+        credential.tokenFingerprint = tokenFingerprint;
+        credential.qrValue = qrValue;
+        credential.issuedAt = issuedAt;
+        credential.expiresAt = expiresAt;
+        return credential;
+    }
+
     public Long getId() { return id; }
     public UUID getCredentialId() { return credentialId; }
     public Ticket getTicket() { return ticket; }
@@ -74,6 +102,7 @@ public class TicketQrCredential extends AuditableEntity {
     public int getWrapperVersion() { return wrapperVersion; }
     public String getSigningKeyId() { return signingKeyId; }
     public String getTokenFingerprint() { return tokenFingerprint; }
+    public String getQrValue() { return qrValue; }
     public LocalDateTime getIssuedAt() { return issuedAt; }
     public LocalDateTime getExpiresAt() { return expiresAt; }
     public LocalDateTime getRevokedAt() { return revokedAt; }
