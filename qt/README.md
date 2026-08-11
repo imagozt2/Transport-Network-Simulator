@@ -1,7 +1,7 @@
 # Aplicaciones Qt de RMM
 
 Este directorio contiene las aplicaciones de escritorio que simulan las máquinas físicas del
-ecosistema RMM: una máquina de venta funcional y la estructura inicial de la máquina validadora.
+ecosistema RMM: una máquina de venta y una máquina validadora funcionales.
 
 ## Requisitos locales
 
@@ -30,6 +30,8 @@ La guía conjunta de ejecución, servicios previos y artefactos está disponible
 [`../docs/ejecucion-aplicaciones-cliente.md`](../docs/ejecucion-aplicaciones-cliente.md).
 El flujo funcional, la configuración y los contratos de la máquina de venta están documentados en
 [`../docs/maquina-venta.md`](../docs/maquina-venta.md).
+El funcionamiento de los torniquetes, sus modos y validaciones MQTT se describe en
+[`../docs/maquina-validadora.md`](../docs/maquina-validadora.md).
 
 ## Compilar desde PowerShell
 
@@ -50,6 +52,6 @@ Desde la raíz del repositorio:
 Los ejecutables `RMMTicketVendingMachine.exe` y `RMMTicketValidator.exe` se generan dentro de
 `qt/build`.
 
-La máquina de venta ya integra el catálogo y la red mediante HTTP, y las compras, emisiones, eventos
-y órdenes compensatorias mediante MQTT. La validación de billetes se incorporará al desarrollar la
-máquina validadora.
+La máquina de venta integra el catálogo y la red mediante HTTP, y las compras, emisiones, eventos
+y órdenes compensatorias mediante MQTT. La validadora publica entradas y salidas, interpreta las
+decisiones del backend y se recupera de desconexiones temporales.

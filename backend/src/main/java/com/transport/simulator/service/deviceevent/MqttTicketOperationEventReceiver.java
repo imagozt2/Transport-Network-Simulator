@@ -2,12 +2,16 @@ package com.transport.simulator.service.deviceevent;
 
 import com.transport.simulator.enums.DeviceEventType;
 import com.transport.simulator.enums.DeviceType;
+import com.transport.simulator.enums.TicketQrValidationType;
 import com.transport.simulator.enums.LogSeverity;
 import com.transport.simulator.mqtt.AuthenticatedMqttMachine;
 import com.transport.simulator.mqtt.AuthenticatedMqttMessage;
 import com.transport.simulator.mqtt.AuthenticatedMqttMessageRouter;
+import com.transport.simulator.mqtt.MqttTicketValidationResponsePublisher;
 import com.transport.simulator.service.TicketMachinePurchaseService;
+import com.transport.simulator.service.TicketValidationService;
 import com.transport.simulator.service.model.TicketMachinePurchaseRequest;
+import com.transport.simulator.service.model.TicketValidationRequest;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.EnumSet;
@@ -34,13 +38,19 @@ public class MqttTicketOperationEventReceiver {
     private final DeviceEventIngress ingress;
     private final ObjectMapper objectMapper;
     private final TicketMachinePurchaseService purchaseService;
+    private final TicketValidationService validationService;
+    private final MqttTicketValidationResponsePublisher validationPublisher;
 
     public MqttTicketOperationEventReceiver(AuthenticatedMqttMessageRouter router,
             DeviceEventIngress ingress, ObjectMapper objectMapper,
-            TicketMachinePurchaseService purchaseService) {
+            TicketMachinePurchaseService purchaseService,
+            TicketValidationService validationService,
+            MqttTicketValidationResponsePublisher validationPublisher) {
         this.ingress = ingress;
         this.objectMapper = objectMapper;
         this.purchaseService = purchaseService;
+        this.validationService = validationService;
+        this.validationPublisher = validationPublisher;
         router.register(this::receive);
     }
 
@@ -148,6 +158,14 @@ public class MqttTicketOperationEventReceiver {
         ingress.receive(message(envelope, authenticated.machine(),
                 DeviceEventType.VALIDATION_REQUESTED, LogSeverity.INFO,
                 "Solicitud de validación de billete recibida", safePayload));
+        var decision = validationService.validate(authenticated.machine().deviceId(),
+                new TicketValidationRequest(
+                        text(payload, "validationReference"),
+                        TicketQrValidationType.valueOf(direction),
+                        text(payload, "stationCode"),
+                        text(payload, "qrValue")
+                ));
+        validationPublisher.publish(authenticated.machine(), text(envelope, "messageId"), decision);
     }
 
     private DeviceEventMessage message(Map<String, Object> envelope,

@@ -2,6 +2,16 @@ qt_add_executable(rmm-ticket-validator WIN32
     src/main.cpp
     src/mainwindow.cpp
     src/mainwindow.h
+    src/qrreaderdialog.cpp
+    src/qrreaderdialog.h
+    src/validatorconfiguration.cpp
+    src/validatorconfiguration.h
+    src/validationresult.cpp
+    src/validationresult.h
+    src/validatormqttclient.cpp
+    src/validatormqttclient.h
+    src/validatorprotocol.cpp
+    src/validatorprotocol.h
 )
 
 target_link_libraries(rmm-ticket-validator
