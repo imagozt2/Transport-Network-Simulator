@@ -56,6 +56,21 @@ constexpr auto windowStyle = R"(
     QLabel#validationState[state="read"] {
         background-color: #fef3c7; color: #92400e;
     }
+    QLabel#validationState[state="accepted"] {
+        background-color: #dcfce7; color: #166534;
+    }
+    QLabel#validationState[state="rejected"] {
+        background-color: #fee2e2; color: #991b1b;
+    }
+    QLabel#validationDetail {
+        color: #475569; font-size: 14px; font-weight: 600;
+    }
+    QLabel#gateState[state="open"] {
+        background-color: #dcfce7; color: #166534;
+    }
+    QLabel#gateState[state="closed-rejected"] {
+        background-color: #fee2e2; color: #991b1b;
+    }
     QPushButton#scanAction {
         min-height: 52px; padding: 0 28px; border: 0; border-radius: 14px;
         background-color: #0f172a; color: white; font-family: "Segoe UI";
@@ -182,6 +197,11 @@ QWidget *MainWindow::createScannerPanel()
     m_validationState = new QLabel(tr("Esperando un billete"), panel);
     m_validationState->setObjectName(QStringLiteral("validationState"));
     m_validationState->setAlignment(Qt::AlignCenter);
+    m_validationDetail = new QLabel(
+        tr("El resultado aparecerá después de comprobar el QR"), panel);
+    m_validationDetail->setObjectName(QStringLiteral("validationDetail"));
+    m_validationDetail->setAlignment(Qt::AlignCenter);
+    m_validationDetail->setWordWrap(true);
     m_validationState->setAccessibleName(tr("Resultado de la validación"));
     m_scanButton = new QPushButton(tr("Escanear código QR"), panel);
     m_scanButton->setObjectName(QStringLiteral("scanAction"));
@@ -196,6 +216,7 @@ QWidget *MainWindow::createScannerPanel()
     layout->addWidget(description);
     layout->addWidget(scannerWell, 1);
     layout->addWidget(m_validationState);
+    layout->addWidget(m_validationDetail);
     layout->addWidget(m_scanButton);
     return panel;
 }
@@ -290,8 +311,39 @@ void MainWindow::readQrCode()
 
     m_lastQrValue = reader.qrValue();
     m_validationState->setProperty("state", QStringLiteral("read"));
+    m_validationDetail->setText(tr("Comprobando el billete con el centro de control"));
+    m_gateState->setProperty("state", QString());
+    m_gateState->setText(tr("Torniquete cerrado"));
+    m_scanButton->setEnabled(false);
     m_validationState->setText(tr("Código QR leído · Pendiente de verificar"));
     m_validationState->style()->unpolish(m_validationState);
     m_validationState->style()->polish(m_validationState);
+    m_gateState->style()->unpolish(m_gateState);
+    m_gateState->style()->polish(m_gateState);
+    m_validationState->setFocus(Qt::OtherFocusReason);
+}
+
+void MainWindow::showValidationResult(const ValidationResult &result)
+{
+    setValidationState(
+        result.isAccepted() ? QStringLiteral("accepted") : QStringLiteral("rejected"),
+        result.title(), result.detail(), result.isAccepted());
+}
+
+void MainWindow::setValidationState(const QString &state, const QString &title,
+                                    const QString &detail, bool gateOpen)
+{
+    m_validationState->setProperty("state", state);
+    m_validationState->setText(title);
+    m_validationDetail->setText(detail);
+    m_gateState->setProperty(
+        "state", gateOpen ? QStringLiteral("open") : QStringLiteral("closed-rejected"));
+    m_gateState->setText(gateOpen ? tr("Paso autorizado") : tr("Torniquete cerrado"));
+    m_scanButton->setEnabled(m_configuration.valid);
+
+    m_validationState->style()->unpolish(m_validationState);
+    m_validationState->style()->polish(m_validationState);
+    m_gateState->style()->unpolish(m_gateState);
+    m_gateState->style()->polish(m_gateState);
     m_validationState->setFocus(Qt::OtherFocusReason);
 }

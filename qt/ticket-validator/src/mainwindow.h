@@ -1,6 +1,7 @@
 #pragma once
 
 #include "validatorconfiguration.h"
+#include "validationresult.h"
 
 #include <QMainWindow>
 
@@ -13,6 +14,7 @@ class MainWindow final : public QMainWindow
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
+    void showValidationResult(const ValidationResult &result);
 
 private:
     [[nodiscard]] QWidget *createHeader();
@@ -22,9 +24,12 @@ private:
     [[nodiscard]] QWidget *createFooter();
     void configureWindow();
     void readQrCode();
+    void setValidationState(const QString &state, const QString &title,
+                            const QString &detail, bool gateOpen);
 
     QLabel *m_connectionState = nullptr;
     QLabel *m_validationState = nullptr;
+    QLabel *m_validationDetail = nullptr;
     QLabel *m_gateState = nullptr;
     QPushButton *m_scanButton = nullptr;
     ValidatorConfiguration m_configuration;
