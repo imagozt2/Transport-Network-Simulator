@@ -1,5 +1,7 @@
 #pragma once
 
+#include "validatorconfiguration.h"
+
 #include <QMainWindow>
 
 class QLabel;
@@ -24,4 +26,5 @@ private:
     QLabel *m_validationState = nullptr;
     QLabel *m_gateState = nullptr;
     QPushButton *m_scanButton = nullptr;
+    ValidatorConfiguration m_configuration;
 };

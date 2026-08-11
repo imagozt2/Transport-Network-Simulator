@@ -24,6 +24,9 @@ constexpr auto windowStyle = R"(
         padding: 7px 12px; border-radius: 14px; background-color: #dcfce7;
         color: #166534; font-size: 12px; font-weight: 700;
     }
+    QLabel#connectionState[configurationValid="false"] {
+        background-color: #fee2e2; color: #991b1b;
+    }
     QFrame#turnstilePanel, QFrame#scannerPanel, QFrame#devicePanel {
         border: 1px solid #dbe3ec; border-radius: 18px; background-color: white;
     }
@@ -58,13 +61,15 @@ constexpr auto windowStyle = R"(
     QFrame#directionBadge {
         border: 0; border-radius: 16px; background-color: #0f172a;
     }
+    QFrame#directionBadge[mode="exit"] { background-color: #334155; }
     QLabel#directionIcon { color: white; font-size: 26px; font-weight: 900; }
     QLabel#directionText { color: white; font-size: 14px; font-weight: 800; }
 )";
 }
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
+    : QMainWindow(parent),
+      m_configuration(ValidatorConfiguration::fromEnvironment())
 {
     configureWindow();
 
@@ -81,7 +86,8 @@ MainWindow::MainWindow(QWidget *parent)
 
 void MainWindow::configureWindow()
 {
-    setWindowTitle(tr("Máquina validadora · RMM"));
+    setWindowTitle(m_configuration.isEntry()
+        ? tr("Validadora de entrada · RMM") : tr("Validadora de salida · RMM"));
     setMinimumSize(760, 620);
     resize(980, 720);
     setStyleSheet(QString::fromUtf8(windowStyle));
@@ -109,10 +115,15 @@ QWidget *MainWindow::createHeader()
     identityLayout->addWidget(name);
     identityLayout->addWidget(context);
 
-    m_connectionState = new QLabel(tr("Preparada"), header);
+    m_connectionState = new QLabel(
+        m_configuration.valid ? tr("Preparada") : tr("Configuración inválida"), header);
     m_connectionState->setObjectName(QStringLiteral("connectionState"));
+    m_connectionState->setProperty("configurationValid", m_configuration.valid);
     m_connectionState->setAlignment(Qt::AlignCenter);
     m_connectionState->setAccessibleName(tr("Estado de conexión"));
+    if (!m_configuration.valid) {
+        m_connectionState->setToolTip(m_configuration.error);
+    }
 
     layout->addWidget(brandMark);
     layout->addWidget(identity);
@@ -141,7 +152,8 @@ QWidget *MainWindow::createScannerPanel()
     layout->setContentsMargins(34, 30, 34, 30);
     layout->setSpacing(14);
 
-    auto *eyebrow = new QLabel(tr("ACCESO A LA RED"), panel);
+    auto *eyebrow = new QLabel(
+        m_configuration.isEntry() ? tr("ACCESO A LA RED") : tr("SALIDA DE LA RED"), panel);
     eyebrow->setObjectName(QStringLiteral("eyebrow"));
     auto *title = new QLabel(tr("Presenta tu billete"), panel);
     title->setObjectName(QStringLiteral("screenTitle"));
@@ -171,6 +183,7 @@ QWidget *MainWindow::createScannerPanel()
     m_scanButton->setCursor(Qt::PointingHandCursor);
     m_scanButton->setAccessibleDescription(
         tr("Abre el lector que se incorporará al flujo de validación"));
+    m_scanButton->setEnabled(m_configuration.valid);
 
     layout->addWidget(eyebrow);
     layout->addWidget(title);
@@ -216,20 +229,26 @@ QWidget *MainWindow::createDevicePanel()
 
     auto *direction = new QFrame(panel);
     direction->setObjectName(QStringLiteral("directionBadge"));
+    direction->setProperty("mode", m_configuration.isEntry()
+        ? QStringLiteral("entry") : QStringLiteral("exit"));
     auto *directionLayout = new QHBoxLayout(direction);
     directionLayout->setContentsMargins(16, 13, 16, 13);
-    auto *directionIcon = new QLabel(QStringLiteral("→"), direction);
+    auto *directionIcon = new QLabel(
+        m_configuration.isEntry() ? QStringLiteral("→") : QStringLiteral("←"), direction);
     directionIcon->setObjectName(QStringLiteral("directionIcon"));
-    auto *directionText = new QLabel(tr("VALIDACIÓN DE ENTRADA"), direction);
+    auto *directionText = new QLabel(
+        m_configuration.isEntry() ? tr("VALIDACIÓN DE ENTRADA") : tr("VALIDACIÓN DE SALIDA"),
+        direction);
     directionText->setObjectName(QStringLiteral("directionText"));
     directionLayout->addWidget(directionIcon);
     directionLayout->addWidget(directionText);
     directionLayout->addStretch();
     layout->addWidget(direction);
 
-    addDetail(tr("ESTACIÓN"), tr("Acueducto"), QStringLiteral("ST038"));
-    addDetail(tr("DISPOSITIVO"), QStringLiteral("RMM-VAL-ST038-ENT-01"));
-    addDetail(tr("SENTIDO DEL PASO"), tr("Entrada a la red"));
+    addDetail(tr("ESTACIÓN"), m_configuration.stationName, m_configuration.stationCode);
+    addDetail(tr("DISPOSITIVO"), m_configuration.deviceCode);
+    addDetail(tr("SENTIDO DEL PASO"),
+              m_configuration.isEntry() ? tr("Entrada a la red") : tr("Salida de la red"));
 
     layout->addStretch();
     m_gateState = new QLabel(tr("Torniquete cerrado"), panel);
