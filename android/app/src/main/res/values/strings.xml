@@ -49,15 +49,31 @@
     <string name="ticket_wallet_valid_until">Válido hasta el %1$s</string>
     <string name="ticket_wallet_available_balance">Saldo disponible: %1$s</string>
     <string name="ticket_wallet_open_journey">Trayecto en curso</string>
+    <string name="ticket_wallet_route_stations">Estaciones del trayecto</string>
+    <string name="ticket_wallet_trip_balance">Saldo de viajes</string>
+    <string name="ticket_wallet_money_balance">Saldo disponible</string>
+    <string name="ticket_wallet_valid_from">Inicio de vigencia</string>
+    <string name="ticket_wallet_valid_until_label">Fin de vigencia</string>
+    <string name="ticket_wallet_not_available">No disponible</string>
     <string name="ticket_status_active">Activo</string>
     <string name="ticket_status_exhausted">Agotado</string>
     <string name="ticket_status_expired">Caducado</string>
     <string name="ticket_status_blocked">Bloqueado</string>
     <string name="ticket_status_cancelled">Cancelado</string>
     <string name="ticket_status_unknown">Estado desconocido</string>
+    <string name="ticket_status_active_description">El billete está disponible para viajar.</string>
+    <string name="ticket_status_exhausted_description">El billete no dispone de viajes restantes.</string>
+    <string name="ticket_status_expired_description">La vigencia de este billete ha terminado.</string>
+    <string name="ticket_status_blocked_description">El billete está bloqueado y no puede validarse.</string>
+    <string name="ticket_status_cancelled_description">El billete ha sido cancelado y ya no puede utilizarse.</string>
+    <string name="ticket_status_unknown_description">No se ha podido determinar la disponibilidad del billete.</string>
     <plurals name="ticket_wallet_remaining_trips">
         <item quantity="one">%1$d viaje disponible</item>
         <item quantity="other">%1$d viajes disponibles</item>
+    </plurals>
+    <plurals name="ticket_wallet_station_count">
+        <item quantity="one">%1$d estación</item>
+        <item quantity="other">%1$d estaciones</item>
     </plurals>
     <string name="ticket_catalog_title">Títulos de transporte</string>
     <string name="ticket_catalog_description">Consulta los productos disponibles para viajar en la red de RMM.</string>

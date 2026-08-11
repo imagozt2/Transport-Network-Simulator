@@ -16,6 +16,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -275,10 +276,23 @@ private fun WalletTicketCard(ticket: PassengerTicketSummary, onShowQr: (String) 
                 TicketStatusBadge(ticket.status)
             }
 
+            ticket.routeSummary()?.let { route ->
+                Text(
+                    route,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            TicketRightsDetails(ticket)
+            HorizontalDivider()
             Text(
-                ticket.rightsSummary(),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
+                ticket.statusDescription(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (ticket.status == "ACTIVE") {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                } else {
+                    MaterialTheme.colorScheme.error
+                },
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -308,7 +322,7 @@ private fun WalletTicketCard(ticket: PassengerTicketSummary, onShowQr: (String) 
                     )
                 }
             }
-            if (ticket.medium == "DIGITAL") {
+            if (ticket.medium == "DIGITAL" && ticket.status == "ACTIVE") {
                 Button(
                     onClick = { onShowQr(ticket.code) },
                     modifier = Modifier.fillMaxWidth(),
@@ -322,10 +336,14 @@ private fun WalletTicketCard(ticket: PassengerTicketSummary, onShowQr: (String) 
 
 @Composable
 private fun TicketStatusBadge(status: String) {
-    val active = status == "ACTIVE"
+    val (containerColor, contentColor) = when (status) {
+        "ACTIVE" -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
+        "BLOCKED", "CANCELLED" -> MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
+        else -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
+    }
     Surface(
-        color = if (active) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-        contentColor = if (active) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+        color = containerColor,
+        contentColor = contentColor,
         shape = MaterialTheme.shapes.small,
     ) {
         Text(
@@ -338,26 +356,63 @@ private fun TicketStatusBadge(status: String) {
 }
 
 @Composable
-private fun PassengerTicketSummary.rightsSummary(): String = when (product.type) {
+private fun TicketRightsDetails(ticket: PassengerTicketSummary) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        when (ticket.product.type) {
+            "SINGLE_TRIP" -> TicketDataRow(
+                stringResource(R.string.ticket_wallet_route_stations),
+                pluralStringResource(
+                    R.plurals.ticket_wallet_station_count,
+                    ticket.stationCount ?: 0,
+                    ticket.stationCount ?: 0,
+                ),
+            )
+            "MULTI_TRIP" -> TicketDataRow(
+                stringResource(R.string.ticket_wallet_trip_balance),
+                pluralStringResource(
+                    R.plurals.ticket_wallet_remaining_trips,
+                    ticket.remainingTrips ?: 0,
+                    ticket.remainingTrips ?: 0,
+                ),
+            )
+            "TIME_PASS" -> {
+                TicketDataRow(
+                    stringResource(R.string.ticket_wallet_valid_from),
+                    ticket.validFrom?.displayDateTime() ?: stringResource(R.string.ticket_wallet_not_available),
+                )
+                TicketDataRow(
+                    stringResource(R.string.ticket_wallet_valid_until_label),
+                    ticket.validUntil?.displayDateTime() ?: stringResource(R.string.ticket_wallet_not_available),
+                )
+            }
+            "SMART_BALANCE" -> TicketDataRow(
+                stringResource(R.string.ticket_wallet_money_balance),
+                ticket.balanceAmount.money(ticket.currency),
+            )
+        }
+    }
+}
+
+@Composable
+private fun TicketDataRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun PassengerTicketSummary.routeSummary(): String? = when (product.type) {
     "SINGLE_TRIP" -> stringResource(
         R.string.ticket_wallet_single_trip,
         originStation?.name.orEmpty(),
         destinationStation?.name.orEmpty(),
     )
-    "MULTI_TRIP" -> pluralStringResource(
-        R.plurals.ticket_wallet_remaining_trips,
-        remainingTrips ?: 0,
-        remainingTrips ?: 0,
-    )
-    "TIME_PASS" -> stringResource(
-        R.string.ticket_wallet_valid_until,
-        validUntil?.displayDate().orEmpty(),
-    )
-    "SMART_BALANCE" -> stringResource(
-        R.string.ticket_wallet_available_balance,
-        balanceAmount.money(currency),
-    )
-    else -> product.name
+    else -> null
 }
 
 @Composable
@@ -375,8 +430,24 @@ private fun String.statusLabel(): String = stringResource(when (this) {
     else -> R.string.ticket_status_unknown
 })
 
+@Composable
+private fun PassengerTicketSummary.statusDescription(): String = stringResource(when (status) {
+    "ACTIVE" -> R.string.ticket_status_active_description
+    "EXHAUSTED" -> R.string.ticket_status_exhausted_description
+    "EXPIRED" -> R.string.ticket_status_expired_description
+    "BLOCKED" -> R.string.ticket_status_blocked_description
+    "CANCELLED" -> R.string.ticket_status_cancelled_description
+    else -> R.string.ticket_status_unknown_description
+})
+
 private fun String.displayDate(): String = take(10).split('-').let { parts ->
     if (parts.size == 3) "${parts[2]}/${parts[1]}/${parts[0]}" else take(10)
+}
+
+private fun String.displayDateTime(): String {
+    val date = displayDate()
+    val time = substringAfter('T', "").take(5)
+    return if (time.length == 5) "$date · $time" else date
 }
 
 private fun BigDecimal.money(currencyCode: String): String = NumberFormat
