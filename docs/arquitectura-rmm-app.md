@@ -62,6 +62,7 @@ com.rmm.app/
 │   ├── auth/                       # Contratos y flujos de autenticación
 │   ├── environment/                # Entorno y URL versionada de la API
 │   ├── journeys/                   # Historial local y favoritos de trayectos
+│   ├── journeyhistory/             # Desplazamientos ferroviarios consultados al backend
 │   ├── network/                    # Retrofit, OkHttp y resultados tipados
 │   ├── networkcatalog/             # Catálogo público y planificador REST
 │   ├── session/                    # Modelo y persistencia cifrada de sesión
@@ -243,7 +244,8 @@ Los tests JVM se encuentran en `android/app/src/test/java/com/rmm/app` y cubren 
 - búsquedas de estaciones, representación de tramos y continuidad de transbordos;
 - coherencia geométrica del mapa, trayectos recientes y favoritos;
 - precios de los cuatro productos, solicitudes de compra y errores de emisión.
-- filtros y paginación de la cartera, vinculación de soportes y lectura previa de QR físicos.
+- filtros y paginación de la cartera, vinculación de soportes y lectura previa de QR físicos;
+- autenticación y paginación del historial ferroviario del pasajero.
 
 Se ejecutan junto con la compilación mediante:
 
@@ -274,6 +276,7 @@ tests como artefactos. Las pruebas no necesitan un backend, una base de datos ni
 - [Consulta de la red y planificación de trayectos](consulta-red-rmm-app.md)
 - [Compra de billetes desde RMM App](compra-billetes-rmm-app.md)
 - [Cartera de billetes de RMM App](cartera-rmm-app.md)
+- [Historial de desplazamientos de RMM App](historial-desplazamientos-rmm-app.md)
 - [Flujos online y sin conexión](flujos-conectividad.md)
 - [Configuración y ejecución de aplicaciones cliente](ejecucion-aplicaciones-cliente.md)
 

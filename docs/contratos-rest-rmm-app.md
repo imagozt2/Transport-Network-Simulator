@@ -633,41 +633,35 @@ recarga y la modificación de derechos se confirman en una única transacción.
 ### Consultar trayectos propios
 
 ```http
-GET /api/rmm-app/v1/trips?from=2026-08-01T00:00:00Z&to=2026-09-01T00:00:00Z&limit=20&cursor=...
+GET /api/rmm-app/v1/journeys/history?limit=20&cursor=RMM-JRN-...
 ```
 
 ```json
 {
   "items": [
     {
-      "code": "RMM-TRP-01J8Z1YQ7PT8MF5Q2A0R9G6B3K",
+      "code": "RMM-JRN-01J8Z1YQ7PT8MF5Q2A0R9G6B3K",
       "status": "CLOSED",
       "ticketCode": "RMM-TKT-01J8YQ7V4F6V2X0K8M3P9N5C2A",
-      "entryStation": { "code": "ST016", "name": "Teatro Nacional" },
-      "exitStation": { "code": "ST049", "name": "HUB Industrial Este" },
+      "productName": "Saldo inteligente",
+      "productType": "SMART_BALANCE",
+      "origin": { "code": "ST016", "name": "Teatro Nacional" },
+      "destination": { "code": "ST049", "name": "HUB Industrial Este" },
       "stationCount": 7,
       "fareAmount": "0.60",
       "currency": "EUR",
-      "openedAt": "2026-08-07T08:14:03Z",
-      "closedAt": "2026-08-07T08:39:41Z"
+      "openedAt": "2026-08-07T08:14:03",
+      "endedAt": "2026-08-07T08:39:41",
+      "durationSeconds": 1538,
+      "anomalous": false
     }
   ],
-  "page": {
-    "limit": 20,
-    "nextCursor": null,
-    "hasMore": false
-  }
+  "nextCursor": null
 }
 ```
 
-### Consultar un trayecto
-
-```http
-GET /api/rmm-app/v1/trips/{tripCode}
-```
-
-Incluye las validaciones de entrada y salida asociadas y la explicación del cargo, sin exponer datos
-técnicos privados de las máquinas.
+La respuesta contiene los datos utilizados por el listado y por el detalle local de RMM App. No
+expone identificadores ni datos técnicos privados de las máquinas.
 
 ## Cuenta y dispositivos móviles
 

@@ -108,9 +108,10 @@ Los servicios especializados `SingleTripTicketService`, `MultiTripTicketService`
 `TimePassTicketService` y `SmartBalanceTicketService` aplican las reglas de entrada, salida y
 recarga de cada producto.
 
-Una entrada aceptada abre un único `TicketJourney`. Una nueva entrada se rechaza mientras exista un
-trayecto abierto. La salida recupera ese trayecto, calcula la distancia cuando corresponde y lo
-cierra con la estación, el importe y la hora oficiales.
+Una entrada aceptada abre un único `TicketJourney`. Si una nueva entrada revela que la anterior no
+tuvo salida, el trayecto incompleto se regulariza como `FORCED_CLOSED` antes de abrir el siguiente.
+La salida recupera el trayecto vigente, calcula la distancia y lo cierra con la estación, el importe
+y la hora oficiales.
 
 El momento del consumo depende del producto:
 
@@ -194,5 +195,6 @@ historial y la coherencia entre cada operación y su billete.
 - [Catálogo de títulos de transporte](titulos-transporte.md)
 - [Contrato de códigos QR](contrato-codigos-qr.md)
 - [Contratos REST de RMM App](contratos-rest-rmm-app.md)
+- [Historial de desplazamientos de RMM App](historial-desplazamientos-rmm-app.md)
 - [Contrato MQTT](contrato-mqtt.md)
 - [Flujos online y sin conexión](flujos-conectividad.md)
