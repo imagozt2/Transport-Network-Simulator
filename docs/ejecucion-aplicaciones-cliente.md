@@ -1,8 +1,8 @@
 # Ejecución de las aplicaciones cliente
 
 Esta guía describe cómo preparar, compilar y ejecutar RMM App y las dos máquinas Qt en el entorno
-local. RMM App y la máquina de venta ya incorporan sus flujos funcionales; la máquina validadora
-mantiene por ahora su estructura inicial. Todas comparten configuración y compilación automatizada.
+local. RMM App, la máquina de venta y la máquina validadora incorporan sus flujos funcionales.
+Todas comparten configuración y compilación automatizada.
 
 ## Servicios compartidos
 
@@ -86,6 +86,10 @@ para comprobar el futuro entorno de máquinas simuladas.
 Antes de ejecutar la máquina de venta, configura su identidad y contraseña MQTT siguiendo su
 [documentación específica](maquina-venta.md). Esa guía también describe el flujo de compra, las
 emisiones compensatorias y el comportamiento ante desconexiones.
+
+Antes de ejecutar la máquina validadora, configura su modo, estación, identidad y contraseña MQTT
+siguiendo su [documentación específica](maquina-validadora.md). Para probar entrada y salida al mismo
+tiempo deben iniciarse dos procesos con identidades distintas.
 
 ### Compilación y pruebas desde PowerShell
 
