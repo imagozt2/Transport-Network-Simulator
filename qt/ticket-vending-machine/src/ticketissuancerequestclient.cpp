@@ -8,6 +8,7 @@
 #include <QMqttClient>
 #include <QMqttTopicName>
 #include <QProcessEnvironment>
+#include <QSettings>
 #include <QSslConfiguration>
 #include <QTimer>
 #include <QUuid>
@@ -45,8 +46,30 @@ TicketIssuanceRequestClient::TicketIssuanceRequestClient(QObject *parent)
             return;
         }
         const auto payload = envelope.value(QStringLiteral("payload")).toObject();
-        if (payload.value(QStringLiteral("purchaseReference")).toString() != m_awaitedReference) {
+        const bool compensatory = payload.value(QStringLiteral("issuanceKind")).toString()
+            == QStringLiteral("COMPENSATORY");
+        const QString commandId = payload.value(QStringLiteral("commandId")).toString();
+        const QString issuanceCode = payload.value(QStringLiteral("issuanceCode")).toString();
+        const QDateTime expiresAt = QDateTime::fromString(
+            payload.value(QStringLiteral("expiresAt")).toString(), Qt::ISODateWithMs);
+        if (commandId.isEmpty() || !expiresAt.isValid()
+                || expiresAt < QDateTime::currentDateTimeUtc()) {
             return;
+        }
+        if (!compensatory
+                && payload.value(QStringLiteral("purchaseReference")).toString() != m_awaitedReference) {
+            return;
+        }
+        if (compensatory) {
+            QSettings settings;
+            const QString storedStatus = settings.value(
+                QStringLiteral("commands/%1/status").arg(commandId)).toString();
+            if (storedStatus == QStringLiteral("COMPLETED")) {
+                publishCommandAcknowledgement(
+                    commandId, issuanceCode, QStringLiteral("COMPLETED"),
+                    QStringLiteral("TICKET_PRESENTED"));
+                return;
+            }
         }
         const auto ticket = payload.value(QStringLiteral("ticket")).toObject();
         const QByteArray png = QByteArray::fromBase64(
@@ -54,7 +77,25 @@ TicketIssuanceRequestClient::TicketIssuanceRequestClient(QObject *parent)
         const QString ticketCode = ticket.value(QStringLiteral("ticketCode")).toString();
         const QString qrValue = ticket.value(QStringLiteral("qrValue")).toString();
         if (ticketCode.isEmpty() || qrValue.isEmpty() || png.isEmpty()) {
-            fail(QStringLiteral("INVALID_ISSUANCE_RESPONSE"));
+            if (compensatory) {
+                publishCommandAcknowledgement(
+                    commandId, issuanceCode, QStringLiteral("REJECTED"),
+                    QStringLiteral("INVALID_TICKET_PAYLOAD"));
+            } else {
+                fail(QStringLiteral("INVALID_ISSUANCE_RESPONSE"));
+            }
+            return;
+        }
+        if (compensatory) {
+            QSettings settings;
+            settings.setValue(QStringLiteral("commands/%1/status").arg(commandId),
+                              QStringLiteral("RECEIVED"));
+            publishCommandAcknowledgement(
+                commandId, issuanceCode, QStringLiteral("RECEIVED"),
+                QStringLiteral("COMMAND_STORED"));
+            emit compensatoryTicketIssued(
+                commandId, issuanceCode, ticketCode, png, qrValue,
+                ticket.value(QStringLiteral("linkingCode")).toString());
             return;
         }
         m_timeout->stop();
@@ -87,6 +128,48 @@ TicketIssuanceRequestClient::TicketIssuanceRequestClient(QObject *parent)
     connect(m_timeout, &QTimer::timeout, this, [this] {
         fail(QStringLiteral("MQTT_TIMEOUT"));
     });
+}
+
+void TicketIssuanceRequestClient::completeCompensatoryIssuance(
+    const QString &commandId,
+    const QString &issuanceCode)
+{
+    QSettings settings;
+    settings.setValue(QStringLiteral("commands/%1/status").arg(commandId),
+                      QStringLiteral("COMPLETED"));
+    publishCommandAcknowledgement(
+        commandId, issuanceCode, QStringLiteral("COMPLETED"),
+        QStringLiteral("TICKET_PRESENTED"));
+}
+
+void TicketIssuanceRequestClient::publishCommandAcknowledgement(
+    const QString &commandId,
+    const QString &issuanceCode,
+    const QString &status,
+    const QString &resultCode)
+{
+    if (m_client->state() != QMqttClient::Connected) return;
+    const QString now = QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs);
+    QJsonObject payload{
+        {QStringLiteral("commandId"), commandId},
+        {QStringLiteral("issuanceCode"), issuanceCode},
+        {QStringLiteral("status"), status},
+        {QStringLiteral("resultCode"), resultCode},
+        {QStringLiteral("completedAt"), now},
+    };
+    QJsonObject envelope{
+        {QStringLiteral("schemaVersion"), 1},
+        {QStringLiteral("messageId"), QUuid::createUuid().toString(QUuid::WithoutBraces)},
+        {QStringLiteral("correlationId"), commandId},
+        {QStringLiteral("type"), QStringLiteral("ticket.issue-acknowledged")},
+        {QStringLiteral("deviceCode"), m_deviceCode},
+        {QStringLiteral("occurredAt"), now},
+        {QStringLiteral("sentAt"), now},
+        {QStringLiteral("payload"), payload},
+    };
+    m_client->publish(
+        QMqttTopicName(QStringLiteral("rmm/v1/devices/%1/acks").arg(m_deviceCode)),
+        QJsonDocument(envelope).toJson(QJsonDocument::Compact), 1, false);
 }
 
 void TicketIssuanceRequestClient::publishOperationEvent(

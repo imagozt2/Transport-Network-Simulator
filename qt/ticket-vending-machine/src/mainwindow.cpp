@@ -293,6 +293,7 @@ MainWindow::MainWindow(QWidget *parent)
         QDialog dialog(this);
         dialog.setObjectName(QStringLiteral("configurationDialog"));
         dialog.setModal(true);
+        dialog.setWindowFlag(Qt::WindowCloseButtonHint, false);
         dialog.setMinimumWidth(560);
         dialog.setWindowTitle(spanish ? QStringLiteral("Billete emitido")
                                       : QStringLiteral("Ticket issued"));
@@ -343,6 +344,70 @@ MainWindow::MainWindow(QWidget *parent)
                                           : QStringLiteral("Ticket issued"));
         dialog.exec();
         showHome();
+    });
+    connect(m_issuanceClient, &TicketIssuanceRequestClient::compensatoryTicketIssued, this,
+            [this](const QString &commandId, const QString &issuanceCode,
+                   const QString &ticketCode, const QByteArray &qrPng,
+                   const QString &, const QString &linkingCode) {
+        QPixmap qr;
+        if (!qr.loadFromData(qrPng, "PNG")) return;
+        const bool spanish = m_language == UiLanguage::Spanish;
+        QDialog dialog(this);
+        dialog.setObjectName(QStringLiteral("configurationDialog"));
+        dialog.setModal(true);
+        dialog.setMinimumWidth(560);
+        dialog.setWindowFlag(Qt::WindowCloseButtonHint, false);
+        dialog.setWindowTitle(spanish ? QStringLiteral("Emisión compensatoria")
+                                      : QStringLiteral("Compensatory issuance"));
+        auto *layout = new QVBoxLayout(&dialog);
+        layout->setContentsMargins(30, 26, 30, 26);
+        layout->setSpacing(12);
+        auto *title = new QLabel(
+            spanish ? QStringLiteral("Billete compensatorio preparado")
+                    : QStringLiteral("Compensatory ticket ready"), &dialog);
+        title->setObjectName(QStringLiteral("dialogTitle"));
+        auto *hint = new QLabel(
+            spanish
+                ? QStringLiteral("El centro de control ha autorizado esta emisión gratuita. Presenta el soporte una sola vez.")
+                : QStringLiteral("The control centre authorised this free issuance. Present the support only once."),
+            &dialog);
+        hint->setObjectName(QStringLiteral("screenHint"));
+        hint->setWordWrap(true);
+        auto *qrLabel = new QLabel(&dialog);
+        qrLabel->setAlignment(Qt::AlignCenter);
+        qrLabel->setPixmap(qr);
+        qrLabel->setAccessibleName(spanish ? QStringLiteral("QR del billete compensatorio")
+                                          : QStringLiteral("Compensatory ticket QR"));
+        auto *code = new QLabel(ticketCode, &dialog);
+        code->setObjectName(QStringLiteral("productCode"));
+        code->setAlignment(Qt::AlignCenter);
+        auto *link = new QLabel(
+            spanish ? QStringLiteral("Código de vinculación: %1").arg(linkingCode)
+                    : QStringLiteral("Linking code: %1").arg(linkingCode), &dialog);
+        link->setObjectName(QStringLiteral("productName"));
+        link->setAlignment(Qt::AlignCenter);
+        auto *finish = new QPushButton(spanish ? QStringLiteral("Confirmar entrega")
+                                              : QStringLiteral("Confirm delivery"), &dialog);
+        finish->setObjectName(QStringLiteral("confirmAction"));
+        connect(finish, &QPushButton::clicked, &dialog, [&, this] {
+            m_issuanceClient->completeCompensatoryIssuance(commandId, issuanceCode);
+            dialog.accept();
+        });
+        layout->addWidget(title);
+        layout->addWidget(hint);
+        layout->addWidget(qrLabel, 0, Qt::AlignCenter);
+        layout->addWidget(code);
+        layout->addWidget(link);
+        layout->addWidget(finish, 0, Qt::AlignRight);
+        m_connectionState->setText(spanish ? QStringLiteral("Orden compensatoria recibida")
+                                          : QStringLiteral("Compensatory order received"));
+        const int result = dialog.exec();
+        m_connectionState->setText(
+            result == QDialog::Accepted
+                ? (spanish ? QStringLiteral("Entrega confirmada")
+                           : QStringLiteral("Delivery confirmed"))
+                : (spanish ? QStringLiteral("Entrega compensatoria pendiente")
+                           : QStringLiteral("Compensatory delivery pending")));
     });
     connect(m_issuanceClient, &TicketIssuanceRequestClient::failed, this,
             [this](const QString &reason) {

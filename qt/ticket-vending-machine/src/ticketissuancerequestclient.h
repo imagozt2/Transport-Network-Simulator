@@ -28,6 +28,9 @@ public:
         const QString &purchaseReference,
         const QString &ticketCode,
         const QString &resultCode = QString());
+    void completeCompensatoryIssuance(
+        const QString &commandId,
+        const QString &issuanceCode);
 
 signals:
     void submitted(const QString &requestReference);
@@ -38,9 +41,21 @@ signals:
         const QString &qrValue,
         const QString &linkingCode,
         const QString &purchaseReference);
+    void compensatoryTicketIssued(
+        const QString &commandId,
+        const QString &issuanceCode,
+        const QString &ticketCode,
+        const QByteArray &qrPng,
+        const QString &qrValue,
+        const QString &linkingCode);
 
 private:
     void publishPending();
+    void publishCommandAcknowledgement(
+        const QString &commandId,
+        const QString &issuanceCode,
+        const QString &status,
+        const QString &resultCode);
     void fail(const QString &reason);
 
     QMqttClient *m_client;
