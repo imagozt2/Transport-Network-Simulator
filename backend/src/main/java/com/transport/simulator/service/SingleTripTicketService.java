@@ -27,6 +27,7 @@ public class SingleTripTicketService {
     private final TicketJourneyRepository journeyRepository;
     private final StationRepository stationRepository;
     private final NetworkJourneyPlanningService journeyPlanningService;
+    private final TicketJourneySettlementService settlementService;
     private final TicketOperationRegistrationService operationRegistrationService;
     private final Clock clock;
 
@@ -35,6 +36,7 @@ public class SingleTripTicketService {
             TicketJourneyRepository journeyRepository,
             StationRepository stationRepository,
             NetworkJourneyPlanningService journeyPlanningService,
+            TicketJourneySettlementService settlementService,
             TicketOperationRegistrationService operationRegistrationService,
             Clock clock
     ) {
@@ -42,6 +44,7 @@ public class SingleTripTicketService {
         this.journeyRepository = journeyRepository;
         this.stationRepository = stationRepository;
         this.journeyPlanningService = journeyPlanningService;
+        this.settlementService = settlementService;
         this.operationRegistrationService = operationRegistrationService;
         this.clock = clock;
     }
@@ -83,12 +86,13 @@ public class SingleTripTicketService {
                 .orElseThrow(() -> new IllegalStateException("The ticket has no open journey"));
         TicketSnapshot before = TicketSnapshot.from(ticket);
         LocalDateTime now = LocalDateTime.now(clock);
-        journey.close(station, ticket.getStationCount(), ticket.getRoutePriceAmount(), now);
+        var settlement = settlementService.calculate(ticket, journey.getEntryStation(), station);
+        journey.close(station, settlement.stationCount(), settlement.fareAmount(), now);
         ticket.exhaust(now);
         TicketJourney persisted = journeyRepository.save(journey);
         operationRegistrationService.recordJourney(
                 TicketOperationType.EXIT_ACCEPTED, ticket, persisted, station,
-                before, ticket.getRoutePriceAmount()
+                before, settlement.fareAmount()
         );
         return persisted;
     }

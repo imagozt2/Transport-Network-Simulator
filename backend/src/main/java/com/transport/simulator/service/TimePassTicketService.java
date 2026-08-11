@@ -10,7 +10,6 @@ import com.transport.simulator.enums.TicketStatus;
 import com.transport.simulator.repository.StationRepository;
 import com.transport.simulator.repository.TicketJourneyRepository;
 import com.transport.simulator.repository.TicketRepository;
-import com.transport.simulator.service.model.NetworkJourney;
 import com.transport.simulator.service.model.TicketSnapshot;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -27,7 +26,7 @@ public class TimePassTicketService {
     private final TicketRepository ticketRepository;
     private final TicketJourneyRepository journeyRepository;
     private final StationRepository stationRepository;
-    private final NetworkJourneyPlanningService journeyPlanningService;
+    private final TicketJourneySettlementService settlementService;
     private final TicketOperationRegistrationService operationRegistrationService;
     private final Clock clock;
 
@@ -35,14 +34,14 @@ public class TimePassTicketService {
             TicketRepository ticketRepository,
             TicketJourneyRepository journeyRepository,
             StationRepository stationRepository,
-            NetworkJourneyPlanningService journeyPlanningService,
+            TicketJourneySettlementService settlementService,
             TicketOperationRegistrationService operationRegistrationService,
             Clock clock
     ) {
         this.ticketRepository = ticketRepository;
         this.journeyRepository = journeyRepository;
         this.stationRepository = stationRepository;
-        this.journeyPlanningService = journeyPlanningService;
+        this.settlementService = settlementService;
         this.operationRegistrationService = operationRegistrationService;
         this.clock = clock;
     }
@@ -87,8 +86,8 @@ public class TimePassTicketService {
                 .orElseThrow(() -> new IllegalStateException("The ticket has no open journey"));
         LocalDateTime now = LocalDateTime.now(clock);
         ticket.refreshTimePassStatus(now);
-        int stationCount = calculateStationCount(journey.getEntryStation(), station);
-        journey.close(station, stationCount, BigDecimal.ZERO, now);
+        var settlement = settlementService.calculate(ticket, journey.getEntryStation(), station);
+        journey.close(station, settlement.stationCount(), settlement.fareAmount(), now);
         ticket.recordUse(now);
         TicketJourney persisted = journeyRepository.save(journey);
         operationRegistrationService.recordJourney(
@@ -108,14 +107,6 @@ public class TimePassTicketService {
         ticket.refreshTimePassStatus(now);
         ticket.renewValidity(days, now);
         return ticket;
-    }
-
-    private int calculateStationCount(Station origin, Station destination) {
-        if (origin.getCode().equals(destination.getCode())) {
-            return 1;
-        }
-        NetworkJourney route = journeyPlanningService.calculate(origin.getCode(), destination.getCode());
-        return route.stationCount();
     }
 
     private Ticket requiredTicketForUpdate(String code) {
