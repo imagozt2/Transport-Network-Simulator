@@ -3,8 +3,6 @@
 #include <rmm/localservices.h>
 
 #include <QDateTime>
-#include <QJsonDocument>
-#include <QJsonObject>
 #include <QMqttClient>
 #include <QMqttTopicName>
 #include <QProcessEnvironment>
@@ -54,50 +52,27 @@ TicketIssuanceRequestClient::TicketIssuanceRequestClient(QObject *parent)
     });
     connect(m_client, &QMqttClient::messageReceived, this,
             [this](const QByteArray &message, const QMqttTopicName &) {
-        const auto document = QJsonDocument::fromJson(message);
-        if (!document.isObject()) {
+        const auto command = rmm::ticketmachine::parseIssueCommand(
+            message, m_awaitedReference, QDateTime::currentDateTimeUtc());
+        if (command.result == rmm::ticketmachine::IssueCommandResult::Ignored) {
             return;
         }
-        const auto envelope = document.object();
-        if (envelope.value(QStringLiteral("type")).toString()
-                != QStringLiteral("ticket.issue-command")) {
-            return;
-        }
-        const auto payload = envelope.value(QStringLiteral("payload")).toObject();
-        const bool compensatory = payload.value(QStringLiteral("issuanceKind")).toString()
-            == QStringLiteral("COMPENSATORY");
-        const QString commandId = payload.value(QStringLiteral("commandId")).toString();
-        const QString issuanceCode = payload.value(QStringLiteral("issuanceCode")).toString();
-        const QDateTime expiresAt = QDateTime::fromString(
-            payload.value(QStringLiteral("expiresAt")).toString(), Qt::ISODateWithMs);
-        if (commandId.isEmpty() || !expiresAt.isValid()
-                || expiresAt < QDateTime::currentDateTimeUtc()) {
-            return;
-        }
-        if (!compensatory
-                && payload.value(QStringLiteral("purchaseReference")).toString() != m_awaitedReference) {
-            return;
-        }
+        const bool compensatory = command.compensatory;
         if (compensatory) {
             QSettings settings;
             const QString storedStatus = settings.value(
-                QStringLiteral("commands/%1/status").arg(commandId)).toString();
+                QStringLiteral("commands/%1/status").arg(command.commandId)).toString();
             if (storedStatus == QStringLiteral("COMPLETED")) {
                 publishCommandAcknowledgement(
-                    commandId, issuanceCode, QStringLiteral("COMPLETED"),
+                    command.commandId, command.issuanceCode, QStringLiteral("COMPLETED"),
                     QStringLiteral("TICKET_PRESENTED"));
                 return;
             }
         }
-        const auto ticket = payload.value(QStringLiteral("ticket")).toObject();
-        const QByteArray png = QByteArray::fromBase64(
-            ticket.value(QStringLiteral("qrPngBase64")).toString().toLatin1());
-        const QString ticketCode = ticket.value(QStringLiteral("ticketCode")).toString();
-        const QString qrValue = ticket.value(QStringLiteral("qrValue")).toString();
-        if (ticketCode.isEmpty() || qrValue.isEmpty() || png.isEmpty()) {
+        if (command.result == rmm::ticketmachine::IssueCommandResult::Invalid) {
             if (compensatory) {
                 publishCommandAcknowledgement(
-                    commandId, issuanceCode, QStringLiteral("REJECTED"),
+                    command.commandId, command.issuanceCode, QStringLiteral("REJECTED"),
                     QStringLiteral("INVALID_TICKET_PAYLOAD"));
             } else {
                 fail(QStringLiteral("INVALID_ISSUANCE_RESPONSE"));
@@ -106,25 +81,25 @@ TicketIssuanceRequestClient::TicketIssuanceRequestClient(QObject *parent)
         }
         if (compensatory) {
             QSettings settings;
-            settings.setValue(QStringLiteral("commands/%1/status").arg(commandId),
+            settings.setValue(QStringLiteral("commands/%1/status").arg(command.commandId),
                               QStringLiteral("RECEIVED"));
             publishCommandAcknowledgement(
-                commandId, issuanceCode, QStringLiteral("RECEIVED"),
+                command.commandId, command.issuanceCode, QStringLiteral("RECEIVED"),
                 QStringLiteral("COMMAND_STORED"));
             emit compensatoryTicketIssued(
-                commandId, issuanceCode, ticketCode, png, qrValue,
-                ticket.value(QStringLiteral("linkingCode")).toString());
+                command.commandId, command.issuanceCode, command.ticketCode,
+                command.qrPng, command.qrValue, command.linkingCode);
             return;
         }
         m_timeout->stop();
         const QString purchaseReference = m_awaitedReference;
         m_awaitedReference.clear();
         publishOperationEvent(
-            QStringLiteral("QR_TICKET_GENERATED"), purchaseReference, ticketCode,
+            QStringLiteral("QR_TICKET_GENERATED"), purchaseReference, command.ticketCode,
             QStringLiteral("QR_PRESENTED"));
         emit ticketIssued(
-            ticketCode, png, qrValue,
-            ticket.value(QStringLiteral("linkingCode")).toString(), purchaseReference);
+            command.ticketCode, command.qrPng, command.qrValue,
+            command.linkingCode, purchaseReference);
     });
     connect(m_client, &QMqttClient::messageSent, this, [this](qint32 packetId) {
         if (m_packetId < 0 || packetId != m_packetId) {
@@ -230,27 +205,12 @@ void TicketIssuanceRequestClient::publishCommandAcknowledgement(
     const QString &status,
     const QString &resultCode)
 {
-    const QString now = QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs);
-    QJsonObject payload{
-        {QStringLiteral("commandId"), commandId},
-        {QStringLiteral("issuanceCode"), issuanceCode},
-        {QStringLiteral("status"), status},
-        {QStringLiteral("resultCode"), resultCode},
-        {QStringLiteral("completedAt"), now},
-    };
-    QJsonObject envelope{
-        {QStringLiteral("schemaVersion"), 1},
-        {QStringLiteral("messageId"), QUuid::createUuid().toString(QUuid::WithoutBraces)},
-        {QStringLiteral("correlationId"), commandId},
-        {QStringLiteral("type"), QStringLiteral("ticket.issue-acknowledged")},
-        {QStringLiteral("deviceCode"), m_deviceCode},
-        {QStringLiteral("occurredAt"), now},
-        {QStringLiteral("sentAt"), now},
-        {QStringLiteral("payload"), payload},
-    };
     publishOrQueue(
         QStringLiteral("rmm/v1/devices/%1/acks").arg(m_deviceCode),
-        QJsonDocument(envelope).toJson(QJsonDocument::Compact));
+        rmm::ticketmachine::buildCommandAcknowledgement(
+            m_deviceCode, commandId, issuanceCode, status, resultCode,
+            QUuid::createUuid().toString(QUuid::WithoutBraces),
+            QDateTime::currentDateTimeUtc()));
 }
 
 void TicketIssuanceRequestClient::publishOperationEvent(
@@ -262,37 +222,11 @@ void TicketIssuanceRequestClient::publishOperationEvent(
     if (eventCode.isEmpty()) {
         return;
     }
-    QJsonObject details;
-    if (!purchaseReference.isEmpty()) {
-        details.insert(QStringLiteral("purchaseReference"), purchaseReference);
-    }
-    if (!ticketCode.isEmpty()) {
-        details.insert(QStringLiteral("ticketCode"), ticketCode);
-    }
-    if (!resultCode.isEmpty()) {
-        details.insert(QStringLiteral("resultCode"), resultCode);
-    }
-    QJsonObject payload{
-        {QStringLiteral("eventCode"), eventCode},
-        {QStringLiteral("severity"),
-         eventCode == QStringLiteral("TICKET_PURCHASE_FAILED")
-            ? QStringLiteral("ERROR") : QStringLiteral("INFO")},
-        {QStringLiteral("details"), details},
-    };
-    const QString now = QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs);
-    QJsonObject envelope{
-        {QStringLiteral("schemaVersion"), 1},
-        {QStringLiteral("messageId"), QUuid::createUuid().toString(QUuid::WithoutBraces)},
-        {QStringLiteral("correlationId"), purchaseReference.isEmpty()
-            ? QJsonValue::Null : QJsonValue(purchaseReference)},
-        {QStringLiteral("type"), QStringLiteral("device.operation-event")},
-        {QStringLiteral("deviceCode"), m_deviceCode},
-        {QStringLiteral("occurredAt"), now},
-        {QStringLiteral("sentAt"), now},
-        {QStringLiteral("payload"), payload},
-    };
     const QString topic = QStringLiteral("rmm/v1/devices/%1/events/operation").arg(m_deviceCode);
-    publishOrQueue(topic, QJsonDocument(envelope).toJson(QJsonDocument::Compact));
+    publishOrQueue(topic, rmm::ticketmachine::buildOperationEvent(
+        m_deviceCode, eventCode, purchaseReference, ticketCode, resultCode,
+        QUuid::createUuid().toString(QUuid::WithoutBraces),
+        QDateTime::currentDateTimeUtc()));
 }
 
 void TicketIssuanceRequestClient::submit(const TicketIssuanceRequest &request)
@@ -308,35 +242,10 @@ void TicketIssuanceRequestClient::submit(const TicketIssuanceRequest &request)
 
     m_pendingReference = QUuid::createUuid().toString(QUuid::WithoutBraces);
     m_awaitedReference = m_pendingReference;
-    QJsonObject configuration;
-    if (!request.originStationCode.isEmpty()) {
-        configuration.insert(QStringLiteral("originStationCode"), request.originStationCode);
-        configuration.insert(QStringLiteral("destinationStationCode"), request.destinationStationCode);
-    } else if (request.quantity > 0) {
-        configuration.insert(QStringLiteral("quantity"), request.quantity);
-    } else {
-        configuration.insert(QStringLiteral("rechargeAmount"), request.rechargeAmount);
-    }
-    QJsonObject payload{
-        {QStringLiteral("purchaseReference"), m_pendingReference},
-        {QStringLiteral("productCode"), request.productCode},
-        {QStringLiteral("paymentMethod"), QStringLiteral("SIMULATED")},
-        {QStringLiteral("paidAmount"), request.paidAmount},
-        {QStringLiteral("currency"), QStringLiteral("EUR")},
-        {QStringLiteral("configuration"), configuration},
-    };
     const QString messageId = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    QJsonObject envelope{
-        {QStringLiteral("schemaVersion"), 1},
-        {QStringLiteral("messageId"), messageId},
-        {QStringLiteral("correlationId"), QJsonValue::Null},
-        {QStringLiteral("type"), QStringLiteral("ticket.purchase-requested")},
-        {QStringLiteral("deviceCode"), m_deviceCode},
-        {QStringLiteral("occurredAt"), QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs)},
-        {QStringLiteral("sentAt"), QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs)},
-        {QStringLiteral("payload"), payload},
-    };
-    m_pendingPayload = QJsonDocument(envelope).toJson(QJsonDocument::Compact);
+    m_pendingPayload = rmm::ticketmachine::buildPurchaseRequest(
+        request, m_deviceCode, m_pendingReference, messageId,
+        QDateTime::currentDateTimeUtc());
     m_timeout->start();
     if (m_client->state() == QMqttClient::Connected) {
         publishPending();

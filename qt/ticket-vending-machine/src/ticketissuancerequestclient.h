@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ticketmachineprotocol.h"
+
 #include <QByteArray>
 #include <QObject>
 #include <QQueue>
@@ -7,16 +9,6 @@
 
 class QMqttClient;
 class QTimer;
-
-struct TicketIssuanceRequest
-{
-    QString productCode;
-    QString originStationCode;
-    QString destinationStationCode;
-    int quantity = 0;
-    double rechargeAmount = 0.0;
-    double paidAmount = 0.0;
-};
 
 class TicketIssuanceRequestClient final : public QObject
 {
