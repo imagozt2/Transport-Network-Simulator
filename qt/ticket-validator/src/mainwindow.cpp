@@ -109,7 +109,8 @@ MainWindow::MainWindow(QWidget *parent)
             this, [this](bool connected) {
         m_connectionState->setProperty("configurationValid", connected);
         m_connectionState->setText(connected ? tr("Preparada") : tr("Sin conexión"));
-        m_scanButton->setEnabled(connected && m_configuration.valid);
+        m_scanButton->setEnabled(connected && m_configuration.valid
+                                 && !m_validationClient->hasPendingValidation());
         m_connectionState->style()->unpolish(m_connectionState);
         m_connectionState->style()->polish(m_connectionState);
     });
