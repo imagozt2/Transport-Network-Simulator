@@ -98,7 +98,7 @@
                 <th scope="col">Fecha</th><th scope="col">Severidad</th>
                 <th scope="col">Evento</th><th scope="col">Procedencia</th><th scope="col">Canal</th>
                 <th scope="col">Máquina</th><th scope="col">Estación</th><th scope="col">Billete</th>
-                <th scope="col">Mensaje</th>
+                <th scope="col">Mensaje</th><th scope="col"><span class="visually-hidden">Acciones</span></th>
               </tr>
             </thead>
             <tbody>
@@ -129,6 +129,14 @@
                     }
                   </td>
                   <td class="message-cell">{{ log.message }}</td>
+                  <td class="incident-cell">
+                    <a
+                      class="incident-link"
+                      [routerLink]="['/incidents']"
+                      [queryParams]="incidentContext(log)"
+                      [attr.aria-label]="'Crear incidencia para ' + log.deviceCode"
+                    >Crear incidencia</a>
+                  </td>
                 </tr>
               }
             </tbody>

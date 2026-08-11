@@ -430,6 +430,8 @@ const englishPhrases: Readonly<Record<string, string>> = {
   'Publicar comentario': 'Publish comment',
   'Nuevo ticket': 'New ticket',
   'Crear incidencia': 'Create incident',
+  'Contexto de la incidencia': 'Incident context',
+  'Contexto relacionado': 'Related context',
   'Asignarme la incidencia al crearla': 'Assign the incident to me when creating it',
   'Alcance general': 'General scope',
   'Sin asignar': 'Unassigned',
@@ -472,6 +474,8 @@ const englishPhrases: Readonly<Record<string, string>> = {
 };
 
 const englishPatterns: ReadonlyArray<readonly [RegExp, string]> = [
+  [/^Máquina (.+)$/, 'Device $1'],
+  [/^Billete (.+)$/, 'Ticket $1'],
   [/^(\d+) líneas activas$/, '$1 active lines'],
   [/^Dirección (.+)$/, 'Towards $1'],
   [/^Próximo tren en (.+)$/, 'Next train in $1'],

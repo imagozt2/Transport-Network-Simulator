@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
 import { DeviceOperationsResponse } from '../../core/models/device-operation.model';
@@ -108,6 +108,8 @@ describe('Logs URL filters', () => {
     expect(compiled.querySelector('.operation-sale')?.textContent).toContain('Venta');
     expect(compiled.querySelector('.ticket-cell')?.textContent).toContain('Billete sencillo');
     expect(compiled.querySelector('.ticket-cell')?.textContent).toContain('TCK-2026-0001');
+    expect(compiled.querySelector<HTMLAnchorElement>('.incident-link')?.getAttribute('href'))
+      .toContain('/incidents?create=true&deviceId=10&deviceCode=RMM-MB-ST001-001');
     expect(Array.from(
       compiled.querySelectorAll<HTMLTableCellElement>('.logs-table thead th')
     ).every((heading) => heading.scope === 'col')).toBe(true);
@@ -315,6 +317,7 @@ async function configure(
   await TestBed.configureTestingModule({
     imports: [Logs],
     providers: [
+      provideRouter([]),
       {
         provide: ActivatedRoute,
         useValue: { snapshot: { queryParamMap: convertToParamMap(queryParams) } }

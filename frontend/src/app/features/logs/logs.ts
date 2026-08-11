@@ -1,5 +1,5 @@
 import { Component, inject, OnInit } from '@angular/core';
-import { ActivatedRoute, ParamMap } from '@angular/router';
+import { ActivatedRoute, ParamMap, RouterLink } from '@angular/router';
 
 import { DeviceOperation, DeviceType } from '../../core/models/device-operation.model';
 import { OperationalLog } from '../../core/models/operational-log.model';
@@ -30,6 +30,7 @@ type PaginationItem =
 
 @Component({
   selector: 'app-logs',
+  imports: [RouterLink],
   templateUrl: './logs.html',
   styleUrls: ['./logs.css', './logs-list.css']
 })
@@ -353,6 +354,21 @@ export class Logs implements OnInit {
 
   operationReference(log: OperationalLog): string | null {
     return log.ticketCode ?? log.compensatoryIssuanceCode ?? log.externalReference;
+  }
+
+  incidentContext(log: OperationalLog): Record<string, string | number> {
+    const params: Record<string, string | number> = {
+      create: 'true',
+      deviceId: log.deviceId,
+      deviceCode: log.deviceCode,
+      eventType: log.eventType
+    };
+    if (log.ticketCode) params['ticketCode'] = log.ticketCode;
+    if (log.compensatoryIssuanceCode) {
+      params['issuanceCode'] = log.compensatoryIssuanceCode;
+    }
+    if (log.externalReference) params['externalReference'] = log.externalReference;
+    return params;
   }
 
   deviceTypeLabel(type: DeviceType): string {
