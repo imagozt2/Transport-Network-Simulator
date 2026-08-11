@@ -2,7 +2,8 @@ import {
   DeviceEventSource,
   DeviceEventType,
   LogOrigin,
-  LogSeverity
+  LogSeverity,
+  TicketProductType
 } from './operational-log.types';
 
 export interface OperationalLog {
@@ -18,6 +19,9 @@ export interface OperationalLog {
   stationId: number;
   stationCode: string;
   stationName: string;
+  ticketCode: string | null;
+  ticketType: TicketProductType | null;
+  compensatoryIssuanceCode: string | null;
   externalReference: string | null;
   occurredAt: string;
   receivedAt: string;

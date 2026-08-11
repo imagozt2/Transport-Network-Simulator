@@ -39,7 +39,7 @@ const logsPage: OperationalLogPage = {
     id: 100,
     origin: 'DEVICE_SIMULATION',
     source: 'SIMULATED',
-    eventType: 'DEVICE_ONLINE',
+    eventType: 'TICKET_PURCHASE_COMPLETED',
     severity: 'INFO',
     message: 'Máquina conectada',
     deviceId: 10,
@@ -48,6 +48,9 @@ const logsPage: OperationalLogPage = {
     stationId: 1,
     stationCode: 'ST001',
     stationName: 'Los Molinos',
+    ticketCode: 'TCK-2026-0001',
+    ticketType: 'SINGLE_TRIP',
+    compensatoryIssuanceCode: null,
     externalReference: null,
     occurredAt: '2026-07-23T11:59:55',
     receivedAt: '2026-07-23T11:59:56'
@@ -102,6 +105,9 @@ describe('Logs URL filters', () => {
     expect(deviceFilter.value).toBe('RMM-MB-ST001-001');
     expect(deviceFilter.selectedOptions[0]?.textContent).toContain('Máquina de billetes 1');
     expect(compiled.querySelector('.logs-table tbody tr')).not.toBeNull();
+    expect(compiled.querySelector('.operation-sale')?.textContent).toContain('Venta');
+    expect(compiled.querySelector('.ticket-cell')?.textContent).toContain('Billete sencillo');
+    expect(compiled.querySelector('.ticket-cell')?.textContent).toContain('TCK-2026-0001');
     expect(Array.from(
       compiled.querySelectorAll<HTMLTableCellElement>('.logs-table thead th')
     ).every((heading) => heading.scope === 'col')).toBe(true);

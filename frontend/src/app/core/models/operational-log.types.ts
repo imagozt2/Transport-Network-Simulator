@@ -1,6 +1,7 @@
 export type LogSeverity = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR' | 'CRITICAL';
-export type LogOrigin = 'DEVICE_SIMULATION' | 'MQTT';
+export type LogOrigin = 'ADMINISTRATION' | 'DEVICE_SIMULATION' | 'MQTT';
 export type DeviceEventSource = 'SIMULATED' | 'REAL' | 'ADMINISTRATIVE';
+export type TicketProductType = 'SINGLE_TRIP' | 'MULTI_TRIP' | 'TIME_PASS' | 'SMART_BALANCE';
 
 export type DeviceEventType =
   | 'DEVICE_ONLINE'
@@ -12,6 +13,8 @@ export type DeviceEventType =
   | 'TICKET_PURCHASE_REQUESTED'
   | 'TICKET_PURCHASE_COMPLETED'
   | 'TICKET_PURCHASE_FAILED'
+  | 'COMPENSATORY_TICKET_ISSUANCE_REQUESTED'
+  | 'COMPENSATORY_TICKET_ISSUED'
   | 'QR_TICKET_GENERATED'
   | 'QR_TICKET_SCANNED'
   | 'VALIDATION_REQUESTED'
