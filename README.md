@@ -55,8 +55,13 @@ La aplicación incluye actualmente:
 - compilación automática del backend, el frontend, RMM App y las aplicaciones Qt mediante GitHub
   Actions.
 
-El proyecto continúa en desarrollo. La compra está disponible en RMM App y en la máquina de venta
-Qt, mientras que la máquina validadora ya procesa entradas y salidas mediante MQTT.
+El ecosistema funcional incluye la compra desde RMM App y la máquina de venta Qt, la cartera de
+billetes, la vinculación de soportes físicos, la validación de entrada y salida mediante MQTT y el
+historial de desplazamientos. Los pagos y los dispositivos son simulados y no representan sistemas
+de producción.
+
+La [guía integral del ecosistema RMM](docs/guia-ecosistema-rmm.md) resume sus componentes, flujos,
+seguridad, ejecución y documentación.
 
 ## Tecnologías
 
@@ -296,10 +301,19 @@ npm run build -- --configuration production
 
 El workflow de GitHub Actions compila el backend, el frontend, RMM App y las aplicaciones Qt en cada
 pull request dirigida a `main` o `develop/ecosystem` y en cada actualización de esas ramas. También
-ejecuta las pruebas de Android y Qt y conserva temporalmente sus artefactos de compilación.
+ejecuta las pruebas de Android, Qt y MQTT, conserva temporalmente sus artefactos y valida en
+contenedores aislados la integración del backend con MySQL y Mosquitto.
+
+La validación integral de contenedores puede reproducirse localmente con Docker Desktop iniciado:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\infrastructure\tests\ecosystem-container-tests.ps1
+```
 
 ## Documentación
 
+- [Guía integral del ecosistema RMM](docs/guia-ecosistema-rmm.md)
 - [Arquitectura, componentes y responsabilidades del ecosistema RMM](docs/arquitectura-ecosistema.md)
 - [Infraestructura local del ecosistema RMM](docs/infraestructura-local.md)
 - [Ejecución de RMM App y las aplicaciones Qt](docs/ejecucion-aplicaciones-cliente.md)
@@ -311,6 +325,8 @@ ejecuta las pruebas de Android y Qt y conserva temporalmente sus artefactos de c
 - [Contratos REST para RMM App](docs/contratos-rest-rmm-app.md)
 - [Autenticación, sesiones y dispositivos de RMM App](docs/autenticacion-rmm-app.md)
 - [Cartera, QR e historial de billetes en RMM App](docs/cartera-rmm-app.md)
+- [Compra de billetes desde RMM App](docs/compra-billetes-rmm-app.md)
+- [Consulta de la red desde RMM App](docs/consulta-red-rmm-app.md)
 - [Historial de desplazamientos en RMM App](docs/historial-desplazamientos-rmm-app.md)
 - [Topics y mensajes MQTT del ecosistema RMM](docs/contrato-mqtt.md)
 - [Integración MQTT del backend](docs/integracion-mqtt-backend.md)
