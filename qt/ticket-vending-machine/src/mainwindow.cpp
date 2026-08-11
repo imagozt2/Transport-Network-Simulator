@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 
+#include <algorithm>
 #include <QFrame>
 #include <QComboBox>
 #include <QDialog>
@@ -7,12 +8,15 @@
 #include <QHBoxLayout>
 #include <QLocale>
 #include <QLabel>
+#include <QMessageBox>
 #include <QPushButton>
 #include <QSizePolicy>
 #include <QSettings>
 #include <QScrollArea>
 #include <QStackedWidget>
 #include <QSpinBox>
+#include <QTimer>
+#include <QtMath>
 #include <QVBoxLayout>
 #include <QWidget>
 
@@ -194,6 +198,19 @@ constexpr auto windowStyle = R"(
         font-size: 14px;
         font-weight: 700;
     }
+    QLabel#paymentAmount {
+        color: #0875c1;
+        font-size: 34px;
+        font-weight: 900;
+    }
+    QLabel#paymentApproved {
+        padding: 14px;
+        border-radius: 12px;
+        background-color: #dcfce7;
+        color: #166534;
+        font-size: 16px;
+        font-weight: 800;
+    }
     QComboBox, QSpinBox, QDoubleSpinBox {
         min-height: 54px;
         padding: 0 14px;
@@ -217,6 +234,7 @@ MainWindow::MainWindow(QWidget *parent)
     auto *centralWidget = new QWidget(this);
     m_catalogClient = new TicketCatalogClient(this);
     m_stationClient = new StationCatalogClient(this);
+    m_journeyClient = new JourneyQuoteClient(this);
     auto *layout = new QVBoxLayout(centralWidget);
     layout->setContentsMargins(28, 24, 28, 22);
     layout->setSpacing(18);
@@ -237,6 +255,7 @@ MainWindow::MainWindow(QWidget *parent)
         : UiLanguage::Spanish;
     connect(this, &MainWindow::languageRequested, this, &MainWindow::showLanguageSelector);
     connect(this, &MainWindow::purchaseRequested, this, &MainWindow::showCatalog);
+    connect(this, &MainWindow::configurationSelected, this, &MainWindow::preparePayment);
     connect(m_catalogClient, &TicketCatalogClient::loaded, this, [this](const auto &products) {
         m_products = products;
         renderCatalog();
@@ -262,6 +281,29 @@ MainWindow::MainWindow(QWidget *parent)
         if (!m_products.isEmpty()) {
             renderCatalog();
         }
+    });
+    connect(m_journeyClient, &JourneyQuoteClient::loaded, this, [this](int stationCount) {
+        m_catalogPanel->setEnabled(true);
+        m_catalogState->hide();
+        if (!m_pendingPayment || !m_pendingPayment->product.basePrice
+            || !m_pendingPayment->product.pricePerStation) {
+            return;
+        }
+        const double amount = *m_pendingPayment->product.basePrice
+            + (*m_pendingPayment->product.pricePerStation * stationCount);
+        showPaymentDialog(m_pendingPayment->product, amount);
+    });
+    connect(m_journeyClient, &JourneyQuoteClient::failed, this, [this] {
+        m_catalogPanel->setEnabled(true);
+        m_catalogState->hide();
+        QMessageBox::warning(
+            this,
+            m_language == UiLanguage::Spanish ? QStringLiteral("Trayecto no disponible")
+                                              : QStringLiteral("Journey unavailable"),
+            m_language == UiLanguage::Spanish
+                ? QStringLiteral("No se ha podido calcular el trayecto y su precio. Inténtalo de nuevo.")
+                : QStringLiteral("The journey and its fare could not be calculated. Please try again."));
+        m_pendingPayment.reset();
     });
     retranslateUi();
 }
@@ -737,6 +779,161 @@ void MainWindow::showProductConfiguration(const TicketProduct &product)
         dialog.accept();
     });
     dialog.exec();
+}
+
+void MainWindow::preparePayment(
+    const QString &productCode,
+    const QString &originStationCode,
+    const QString &destinationStationCode,
+    int quantity,
+    double rechargeAmount)
+{
+    const auto product = std::find_if(m_products.cbegin(), m_products.cend(), [&](const auto &item) {
+        return item.code == productCode;
+    });
+    if (product == m_products.cend()) {
+        return;
+    }
+
+    m_pendingPayment = PendingPayment{
+        .product = *product,
+        .originStationCode = originStationCode,
+        .destinationStationCode = destinationStationCode,
+        .quantity = quantity,
+        .rechargeAmount = rechargeAmount,
+    };
+    if (product->type == QStringLiteral("SINGLE_TRIP")) {
+        m_catalogState->setText(
+            m_language == UiLanguage::Spanish ? QStringLiteral("Calculando el trayecto y el precio…")
+                                              : QStringLiteral("Calculating journey and fare…"));
+        m_catalogState->show();
+        m_catalogPanel->setEnabled(false);
+        m_journeyClient->load(originStationCode, destinationStationCode);
+        return;
+    }
+
+    double amount = 0.0;
+    if (product->type == QStringLiteral("MULTI_TRIP") && product->pricePerTrip) {
+        amount = *product->pricePerTrip * quantity;
+    } else if (product->type == QStringLiteral("TIME_PASS") && product->pricePerDay) {
+        amount = *product->pricePerDay * quantity;
+    } else if (product->type == QStringLiteral("SMART_BALANCE")) {
+        amount = rechargeAmount;
+    }
+    showPaymentDialog(*product, amount);
+}
+
+void MainWindow::showPaymentDialog(const TicketProduct &product, double rawAmount)
+{
+    if (!m_pendingPayment) {
+        return;
+    }
+    const bool spanish = m_language == UiLanguage::Spanish;
+    const double amount = qRound64(rawAmount * 100.0) / 100.0;
+    const QLocale locale = spanish ? QLocale(QLocale::Spanish, QLocale::Spain)
+                                   : QLocale(QLocale::English, QLocale::UnitedKingdom);
+
+    QDialog dialog(this);
+    dialog.setObjectName(QStringLiteral("configurationDialog"));
+    dialog.setModal(true);
+    dialog.setMinimumWidth(620);
+    dialog.setWindowTitle(spanish ? QStringLiteral("Pago simulado")
+                                  : QStringLiteral("Simulated payment"));
+    auto *layout = new QVBoxLayout(&dialog);
+    layout->setContentsMargins(30, 28, 30, 26);
+    layout->setSpacing(14);
+
+    auto *title = new QLabel(spanish ? QStringLiteral("Revisa y paga")
+                                    : QStringLiteral("Review and pay"), &dialog);
+    title->setObjectName(QStringLiteral("dialogTitle"));
+    auto *productLabel = new QLabel(productName(product), &dialog);
+    productLabel->setObjectName(QStringLiteral("productName"));
+    QString detail;
+    if (product.type == QStringLiteral("SINGLE_TRIP")) {
+        const auto stationName = [this](const QString &code) {
+            const auto station = std::find_if(m_stations.cbegin(), m_stations.cend(), [&](const auto &item) {
+                return item.code == code;
+            });
+            return station == m_stations.cend() ? code : station->name;
+        };
+        detail = QStringLiteral("%1 → %2").arg(
+            stationName(m_pendingPayment->originStationCode),
+            stationName(m_pendingPayment->destinationStationCode));
+    } else if (product.type == QStringLiteral("MULTI_TRIP")) {
+        detail = spanish ? QStringLiteral("%1 viajes").arg(m_pendingPayment->quantity)
+                         : QStringLiteral("%1 trips").arg(m_pendingPayment->quantity);
+    } else if (product.type == QStringLiteral("TIME_PASS")) {
+        detail = spanish ? QStringLiteral("%1 días").arg(m_pendingPayment->quantity)
+                         : QStringLiteral("%1 days").arg(m_pendingPayment->quantity);
+    } else {
+        detail = spanish ? QStringLiteral("Saldo recargado") : QStringLiteral("Balance top-up");
+    }
+    auto *detailLabel = new QLabel(detail, &dialog);
+    detailLabel->setObjectName(QStringLiteral("screenHint"));
+    auto *amountLabel = new QLabel(locale.toCurrencyString(amount, product.currency), &dialog);
+    amountLabel->setObjectName(QStringLiteral("paymentAmount"));
+    auto *method = new QLabel(
+        spanish ? QStringLiteral("Pago simulado con tarjeta · No se realizará ningún cargo real")
+                : QStringLiteral("Simulated card payment · No real charge will be made"),
+        &dialog);
+    method->setObjectName(QStringLiteral("screenHint"));
+    method->setWordWrap(true);
+    auto *state = new QLabel(&dialog);
+    state->setObjectName(QStringLiteral("paymentApproved"));
+    state->hide();
+
+    auto *actions = new QHBoxLayout();
+    auto *cancel = new QPushButton(spanish ? QStringLiteral("Volver")
+                                          : QStringLiteral("Back"), &dialog);
+    cancel->setObjectName(QStringLiteral("backAction"));
+    auto *pay = new QPushButton(
+        spanish ? QStringLiteral("Pagar %1").arg(locale.toCurrencyString(amount, product.currency))
+                : QStringLiteral("Pay %1").arg(locale.toCurrencyString(amount, product.currency)),
+        &dialog);
+    pay->setObjectName(QStringLiteral("confirmAction"));
+    actions->addStretch();
+    actions->addWidget(cancel);
+    actions->addWidget(pay);
+
+    layout->addWidget(title);
+    layout->addWidget(productLabel);
+    layout->addWidget(detailLabel);
+    layout->addSpacing(8);
+    layout->addWidget(amountLabel);
+    layout->addWidget(method);
+    layout->addWidget(state);
+    layout->addSpacing(8);
+    layout->addLayout(actions);
+
+    connect(cancel, &QPushButton::clicked, &dialog, &QDialog::reject);
+    connect(pay, &QPushButton::clicked, &dialog, [&, this] {
+        pay->setEnabled(false);
+        cancel->setEnabled(false);
+        pay->setText(spanish ? QStringLiteral("Procesando…") : QStringLiteral("Processing…"));
+        QTimer::singleShot(900, &dialog, [&, this] {
+            if (!m_pendingPayment) {
+                return;
+            }
+            state->setText(spanish ? QStringLiteral("Pago aprobado")
+                                   : QStringLiteral("Payment approved"));
+            state->show();
+            pay->setText(spanish ? QStringLiteral("Continuar") : QStringLiteral("Continue"));
+            pay->setEnabled(true);
+            disconnect(pay, nullptr, &dialog, nullptr);
+            connect(pay, &QPushButton::clicked, &dialog, [&, this] {
+                emit paymentApproved(
+                    m_pendingPayment->product.code,
+                    m_pendingPayment->originStationCode,
+                    m_pendingPayment->destinationStationCode,
+                    m_pendingPayment->quantity,
+                    m_pendingPayment->rechargeAmount,
+                    amount);
+                dialog.accept();
+            });
+        });
+    });
+    dialog.exec();
+    m_pendingPayment.reset();
 }
 
 QString MainWindow::productName(const TicketProduct &product) const

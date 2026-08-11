@@ -3,6 +3,8 @@
 #include <QMainWindow>
 #include "ticketcatalogclient.h"
 #include "stationcatalogclient.h"
+#include "journeyquoteclient.h"
+#include <optional>
 
 class QLabel;
 class QPushButton;
@@ -33,6 +35,13 @@ signals:
         const QString &destinationStationCode,
         int quantity,
         double rechargeAmount);
+    void paymentApproved(
+        const QString &productCode,
+        const QString &originStationCode,
+        const QString &destinationStationCode,
+        int quantity,
+        double rechargeAmount,
+        double paidAmount);
 
 private:
     [[nodiscard]] QWidget *createHeader();
@@ -47,6 +56,13 @@ private:
     void showHome();
     void renderCatalog();
     void showProductConfiguration(const TicketProduct &product);
+    void preparePayment(
+        const QString &productCode,
+        const QString &originStationCode,
+        const QString &destinationStationCode,
+        int quantity,
+        double rechargeAmount);
+    void showPaymentDialog(const TicketProduct &product, double amount);
     [[nodiscard]] QString productName(const TicketProduct &product) const;
     [[nodiscard]] QString productTariff(const TicketProduct &product) const;
     [[nodiscard]] QString productRules(const TicketProduct &product) const;
@@ -75,7 +91,17 @@ private:
     QVBoxLayout *m_catalogList = nullptr;
     TicketCatalogClient *m_catalogClient = nullptr;
     StationCatalogClient *m_stationClient = nullptr;
+    JourneyQuoteClient *m_journeyClient = nullptr;
     QVector<TicketProduct> m_products;
     QVector<NetworkStation> m_stations;
     bool m_stationLoadFailed = false;
+    struct PendingPayment
+    {
+        TicketProduct product;
+        QString originStationCode;
+        QString destinationStationCode;
+        int quantity = 0;
+        double rechargeAmount = 0.0;
+    };
+    std::optional<PendingPayment> m_pendingPayment;
 };
