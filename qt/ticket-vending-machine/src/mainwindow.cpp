@@ -1,7 +1,9 @@
 #include "mainwindow.h"
 
 #include <QFrame>
+#include <QComboBox>
 #include <QDialog>
+#include <QDoubleSpinBox>
 #include <QHBoxLayout>
 #include <QLocale>
 #include <QLabel>
@@ -10,6 +12,7 @@
 #include <QSettings>
 #include <QScrollArea>
 #include <QStackedWidget>
+#include <QSpinBox>
 #include <QVBoxLayout>
 #include <QWidget>
 
@@ -165,6 +168,44 @@ constexpr auto windowStyle = R"(
         font-size: 18px;
         font-weight: 800;
     }
+    QPushButton#selectProduct, QPushButton#confirmAction {
+        min-height: 48px;
+        padding: 8px 20px;
+        border: 0;
+        border-radius: 14px;
+        background-color: #0f172a;
+        color: #ffffff;
+        font-size: 15px;
+        font-weight: 800;
+    }
+    QPushButton#selectProduct:hover, QPushButton#confirmAction:hover,
+    QPushButton#selectProduct:focus, QPushButton#confirmAction:focus {
+        background-color: #2294f2;
+    }
+    QPushButton#selectProduct:disabled {
+        background-color: #cbd5e1;
+        color: #64748b;
+    }
+    QDialog#configurationDialog {
+        background-color: #ffffff;
+    }
+    QLabel#fieldLabel {
+        color: #475569;
+        font-size: 14px;
+        font-weight: 700;
+    }
+    QComboBox, QSpinBox, QDoubleSpinBox {
+        min-height: 54px;
+        padding: 0 14px;
+        border: 2px solid #cbd5e1;
+        border-radius: 14px;
+        background-color: #f8fafc;
+        font-size: 17px;
+        font-weight: 700;
+    }
+    QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {
+        border-color: #2294f2;
+    }
 )";
 }
 
@@ -175,6 +216,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     auto *centralWidget = new QWidget(this);
     m_catalogClient = new TicketCatalogClient(this);
+    m_stationClient = new StationCatalogClient(this);
     auto *layout = new QVBoxLayout(centralWidget);
     layout->setContentsMargins(28, 24, 28, 22);
     layout->setSpacing(18);
@@ -206,6 +248,20 @@ MainWindow::MainWindow(QWidget *parent)
                 : QStringLiteral("Ticket products and fares could not be loaded."));
         m_catalogState->show();
         m_catalogRetryButton->show();
+    });
+    connect(m_stationClient, &StationCatalogClient::loaded, this, [this](const auto &stations) {
+        m_stations = stations;
+        m_stationLoadFailed = false;
+        if (!m_products.isEmpty()) {
+            renderCatalog();
+        }
+    });
+    connect(m_stationClient, &StationCatalogClient::failed, this, [this] {
+        m_stations.clear();
+        m_stationLoadFailed = true;
+        if (!m_products.isEmpty()) {
+            renderCatalog();
+        }
     });
     retranslateUi();
 }
@@ -483,6 +539,8 @@ void MainWindow::showCatalog()
     m_catalogState->show();
     m_catalogRetryButton->hide();
     m_catalogClient->load();
+    m_stationLoadFailed = false;
+    m_stationClient->load();
 }
 
 void MainWindow::showHome()
@@ -531,9 +589,154 @@ void MainWindow::renderCatalog()
         layout->addWidget(header);
         layout->addWidget(tariff);
         layout->addWidget(rules);
+        auto *selectButton = new QPushButton(card);
+        selectButton->setObjectName(QStringLiteral("selectProduct"));
+        selectButton->setCursor(Qt::PointingHandCursor);
+        const bool stationProduct = product.type == QStringLiteral("SINGLE_TRIP");
+        const bool stationSelectionAvailable = !stationProduct || !m_stations.isEmpty();
+        selectButton->setEnabled(stationSelectionAvailable || m_stationLoadFailed);
+        if (stationProduct && m_stations.isEmpty()) {
+            selectButton->setText(
+                m_language == UiLanguage::Spanish
+                    ? (m_stationLoadFailed ? QStringLiteral("Estaciones no disponibles")
+                                           : QStringLiteral("Cargando estaciones…"))
+                    : (m_stationLoadFailed ? QStringLiteral("Stations unavailable")
+                                           : QStringLiteral("Loading stations…")));
+        } else {
+            selectButton->setText(
+                m_language == UiLanguage::Spanish ? QStringLiteral("Seleccionar")
+                                                  : QStringLiteral("Select"));
+        }
+        connect(selectButton, &QPushButton::clicked, this, [this, product, stationSelectionAvailable] {
+            if (!stationSelectionAvailable) {
+                m_stationLoadFailed = false;
+                renderCatalog();
+                m_stationClient->load();
+                return;
+            }
+            showProductConfiguration(product);
+        });
+        layout->addWidget(selectButton, 0, Qt::AlignRight);
         m_catalogList->addWidget(card);
     }
     m_catalogList->addStretch();
+}
+
+void MainWindow::showProductConfiguration(const TicketProduct &product)
+{
+    const bool spanish = m_language == UiLanguage::Spanish;
+    QDialog dialog(this);
+    dialog.setObjectName(QStringLiteral("configurationDialog"));
+    dialog.setModal(true);
+    dialog.setMinimumWidth(620);
+    dialog.setWindowTitle(productName(product));
+
+    auto *layout = new QVBoxLayout(&dialog);
+    layout->setContentsMargins(30, 28, 30, 26);
+    layout->setSpacing(14);
+    auto *title = new QLabel(productName(product), &dialog);
+    title->setObjectName(QStringLiteral("dialogTitle"));
+    auto *hint = new QLabel(productRules(product), &dialog);
+    hint->setObjectName(QStringLiteral("screenHint"));
+    hint->setWordWrap(true);
+    layout->addWidget(title);
+    layout->addWidget(hint);
+
+    auto *origin = static_cast<QComboBox *>(nullptr);
+    auto *destination = static_cast<QComboBox *>(nullptr);
+    auto *quantity = static_cast<QSpinBox *>(nullptr);
+    auto *amount = static_cast<QDoubleSpinBox *>(nullptr);
+
+    if (product.type == QStringLiteral("SINGLE_TRIP")) {
+        auto addStationField = [&](const QString &labelText) {
+            auto *label = new QLabel(labelText, &dialog);
+            label->setObjectName(QStringLiteral("fieldLabel"));
+            auto *selector = new QComboBox(&dialog);
+            selector->addItem(spanish ? QStringLiteral("Selecciona una estación")
+                                      : QStringLiteral("Choose a station"));
+            for (const auto &station : m_stations) {
+                selector->addItem(
+                    QStringLiteral("%1 · %2").arg(station.name, station.code), station.code);
+            }
+            layout->addWidget(label);
+            layout->addWidget(selector);
+            return selector;
+        };
+        origin = addStationField(spanish ? QStringLiteral("Estación de origen")
+                                         : QStringLiteral("Origin station"));
+        destination = addStationField(spanish ? QStringLiteral("Estación de destino")
+                                              : QStringLiteral("Destination station"));
+    } else if (product.type == QStringLiteral("MULTI_TRIP")) {
+        auto *label = new QLabel(spanish ? QStringLiteral("Número de viajes")
+                                        : QStringLiteral("Number of trips"), &dialog);
+        label->setObjectName(QStringLiteral("fieldLabel"));
+        quantity = new QSpinBox(&dialog);
+        quantity->setRange(product.minTrips.value_or(2), product.maxTrips.value_or(30));
+        layout->addWidget(label);
+        layout->addWidget(quantity);
+    } else if (product.type == QStringLiteral("TIME_PASS")) {
+        auto *label = new QLabel(spanish ? QStringLiteral("Número de días")
+                                        : QStringLiteral("Number of days"), &dialog);
+        label->setObjectName(QStringLiteral("fieldLabel"));
+        quantity = new QSpinBox(&dialog);
+        quantity->setRange(product.minDays.value_or(2), product.maxDays.value_or(30));
+        layout->addWidget(label);
+        layout->addWidget(quantity);
+    } else if (product.type == QStringLiteral("SMART_BALANCE")) {
+        auto *label = new QLabel(spanish ? QStringLiteral("Importe de la recarga")
+                                        : QStringLiteral("Recharge amount"), &dialog);
+        label->setObjectName(QStringLiteral("fieldLabel"));
+        amount = new QDoubleSpinBox(&dialog);
+        amount->setDecimals(2);
+        amount->setSingleStep(1.0);
+        amount->setRange(product.minRechargeAmount.value_or(1.0),
+                         product.maxRechargeAmount.value_or(100.0));
+        amount->setSuffix(QStringLiteral(" €"));
+        layout->addWidget(label);
+        layout->addWidget(amount);
+    }
+
+    auto *validation = new QLabel(&dialog);
+    validation->setObjectName(QStringLiteral("screenHint"));
+    validation->hide();
+    auto *actions = new QHBoxLayout();
+    auto *cancel = new QPushButton(spanish ? QStringLiteral("Cancelar")
+                                          : QStringLiteral("Cancel"), &dialog);
+    cancel->setObjectName(QStringLiteral("backAction"));
+    auto *confirm = new QPushButton(spanish ? QStringLiteral("Continuar")
+                                           : QStringLiteral("Continue"), &dialog);
+    confirm->setObjectName(QStringLiteral("confirmAction"));
+    actions->addStretch();
+    actions->addWidget(cancel);
+    actions->addWidget(confirm);
+    layout->addWidget(validation);
+    layout->addSpacing(8);
+    layout->addLayout(actions);
+
+    connect(cancel, &QPushButton::clicked, &dialog, &QDialog::reject);
+    connect(confirm, &QPushButton::clicked, &dialog, [&, this] {
+        QString originCode;
+        QString destinationCode;
+        if (origin && destination) {
+            originCode = origin->currentData().toString();
+            destinationCode = destination->currentData().toString();
+            if (originCode.isEmpty() || destinationCode.isEmpty() || originCode == destinationCode) {
+                validation->setText(
+                    spanish ? QStringLiteral("Selecciona dos estaciones diferentes.")
+                            : QStringLiteral("Choose two different stations."));
+                validation->show();
+                return;
+            }
+        }
+        emit configurationSelected(
+            product.code,
+            originCode,
+            destinationCode,
+            quantity ? quantity->value() : 0,
+            amount ? amount->value() : 0.0);
+        dialog.accept();
+    });
+    dialog.exec();
 }
 
 QString MainWindow::productName(const TicketProduct &product) const

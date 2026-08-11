@@ -4,6 +4,8 @@ qt_add_executable(rmm-ticket-vending-machine WIN32
     src/mainwindow.h
     src/ticketcatalogclient.cpp
     src/ticketcatalogclient.h
+    src/stationcatalogclient.cpp
+    src/stationcatalogclient.h
 )
 
 target_link_libraries(rmm-ticket-vending-machine

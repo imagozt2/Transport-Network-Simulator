@@ -2,6 +2,7 @@
 
 #include <QMainWindow>
 #include "ticketcatalogclient.h"
+#include "stationcatalogclient.h"
 
 class QLabel;
 class QPushButton;
@@ -26,6 +27,12 @@ signals:
     void rechargeRequested();
     void accessibilityRequested();
     void languageRequested();
+    void configurationSelected(
+        const QString &productCode,
+        const QString &originStationCode,
+        const QString &destinationStationCode,
+        int quantity,
+        double rechargeAmount);
 
 private:
     [[nodiscard]] QWidget *createHeader();
@@ -39,6 +46,7 @@ private:
     void showCatalog();
     void showHome();
     void renderCatalog();
+    void showProductConfiguration(const TicketProduct &product);
     [[nodiscard]] QString productName(const TicketProduct &product) const;
     [[nodiscard]] QString productTariff(const TicketProduct &product) const;
     [[nodiscard]] QString productRules(const TicketProduct &product) const;
@@ -66,5 +74,8 @@ private:
     QPushButton *m_catalogRetryButton = nullptr;
     QVBoxLayout *m_catalogList = nullptr;
     TicketCatalogClient *m_catalogClient = nullptr;
+    StationCatalogClient *m_stationClient = nullptr;
     QVector<TicketProduct> m_products;
+    QVector<NetworkStation> m_stations;
+    bool m_stationLoadFailed = false;
 };
