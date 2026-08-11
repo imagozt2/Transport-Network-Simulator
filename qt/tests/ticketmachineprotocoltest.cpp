@@ -56,6 +56,8 @@ private slots:
     void acceptsCompensatoryIssuanceWithoutPurchase();
     void rejectsInvalidAndExpiredIssuances();
     void buildsOperationalEventsAndAcknowledgements();
+    void completesARegularPurchaseContract();
+    void completesACompensatoryIssuanceContract();
 };
 
 void TicketMachineProtocolTest::buildsPurchaseConfigurations_data()
@@ -158,6 +160,101 @@ void TicketMachineProtocolTest::buildsOperationalEventsAndAcknowledgements()
     QCOMPARE(payload.value(QStringLiteral("status")).toString(), QStringLiteral("COMPLETED"));
     QCOMPARE(payload.value(QStringLiteral("resultCode")).toString(),
              QStringLiteral("TICKET_PRESENTED"));
+}
+
+void TicketMachineProtocolTest::completesARegularPurchaseContract()
+{
+    const QString deviceCode = QStringLiteral("RMM-SALE-ST001-01");
+    const QString purchaseReference = QStringLiteral("9561ad31-6273-42d9-b76f-2dabb0b60955");
+    const TicketIssuanceRequest request{
+        QStringLiteral("SINGLE_TRIP"),
+        QStringLiteral("ST001"),
+        QStringLiteral("ST007"),
+        0,
+        0.0,
+        0.85,
+    };
+
+    const auto purchaseEnvelope = object(rmm::ticketmachine::buildPurchaseRequest(
+        request, deviceCode, purchaseReference,
+        QStringLiteral("73bb91e8-b263-41e8-aa8f-b791480110b3"), Now));
+    const auto purchasePayload = purchaseEnvelope.value(QStringLiteral("payload")).toObject();
+    const auto configuration = purchasePayload.value(QStringLiteral("configuration")).toObject();
+
+    QCOMPARE(purchaseEnvelope.value(QStringLiteral("schemaVersion")).toInt(), 1);
+    QCOMPARE(purchaseEnvelope.value(QStringLiteral("type")).toString(),
+             QStringLiteral("ticket.purchase-requested"));
+    QCOMPARE(purchaseEnvelope.value(QStringLiteral("deviceCode")).toString(), deviceCode);
+    QCOMPARE(purchasePayload.value(QStringLiteral("purchaseReference")).toString(),
+             purchaseReference);
+    QCOMPARE(purchasePayload.value(QStringLiteral("productCode")).toString(),
+             QStringLiteral("SINGLE_TRIP"));
+    QCOMPARE(purchasePayload.value(QStringLiteral("paymentMethod")).toString(),
+             QStringLiteral("SIMULATED"));
+    QCOMPARE(purchasePayload.value(QStringLiteral("currency")).toString(),
+             QStringLiteral("EUR"));
+    QCOMPARE(purchasePayload.value(QStringLiteral("paidAmount")).toDouble(), 0.85);
+    QCOMPARE(configuration.value(QStringLiteral("originStationCode")).toString(),
+             QStringLiteral("ST001"));
+    QCOMPARE(configuration.value(QStringLiteral("destinationStationCode")).toString(),
+             QStringLiteral("ST007"));
+
+    const auto issued = rmm::ticketmachine::parseIssueCommand(
+        issueCommand(purchaseReference, QStringLiteral("PURCHASE"), Now.addSecs(60)),
+        purchaseReference, Now);
+    QCOMPARE(issued.result, IssueCommandResult::Regular);
+    QCOMPARE(issued.ticketCode, QStringLiteral("RMM-TICKET-001"));
+
+    const auto operationEvent = object(rmm::ticketmachine::buildOperationEvent(
+        deviceCode, QStringLiteral("QR_TICKET_GENERATED"), purchaseReference,
+        issued.ticketCode, QStringLiteral("QR_PRESENTED"),
+        QStringLiteral("7f941a86-b297-4b14-8058-272798622c45"), Now));
+    QCOMPARE(operationEvent.value(QStringLiteral("correlationId")).toString(),
+             purchaseReference);
+    const auto details = operationEvent.value(QStringLiteral("payload")).toObject()
+                             .value(QStringLiteral("details")).toObject();
+    QCOMPARE(details.value(QStringLiteral("ticketCode")).toString(), issued.ticketCode);
+    QCOMPARE(details.value(QStringLiteral("resultCode")).toString(),
+             QStringLiteral("QR_PRESENTED"));
+}
+
+void TicketMachineProtocolTest::completesACompensatoryIssuanceContract()
+{
+    const QString deviceCode = QStringLiteral("RMM-SALE-ST001-01");
+    const auto command = rmm::ticketmachine::parseIssueCommand(
+        issueCommand({}, QStringLiteral("COMPENSATORY"), Now.addSecs(120)), {}, Now);
+
+    QCOMPARE(command.result, IssueCommandResult::Compensatory);
+    QVERIFY(command.compensatory);
+    QCOMPARE(command.commandId, QStringLiteral("command-1"));
+    QCOMPARE(command.issuanceCode, QStringLiteral("issuance-1"));
+    QCOMPARE(command.ticketCode, QStringLiteral("RMM-TICKET-001"));
+    QCOMPARE(command.qrPng, QByteArray("png-data"));
+
+    const auto received = object(rmm::ticketmachine::buildCommandAcknowledgement(
+        deviceCode, command.commandId, command.issuanceCode,
+        QStringLiteral("RECEIVED"), QStringLiteral("COMMAND_STORED"),
+        QStringLiteral("2a688584-455b-4fbf-a702-35a18a82a81c"), Now));
+    const auto receivedPayload = received.value(QStringLiteral("payload")).toObject();
+    QCOMPARE(received.value(QStringLiteral("type")).toString(),
+             QStringLiteral("ticket.issue-acknowledged"));
+    QCOMPARE(receivedPayload.value(QStringLiteral("commandId")).toString(), command.commandId);
+    QCOMPARE(receivedPayload.value(QStringLiteral("issuanceCode")).toString(),
+             command.issuanceCode);
+    QCOMPARE(receivedPayload.value(QStringLiteral("status")).toString(),
+             QStringLiteral("RECEIVED"));
+
+    const auto completed = object(rmm::ticketmachine::buildCommandAcknowledgement(
+        deviceCode, command.commandId, command.issuanceCode,
+        QStringLiteral("COMPLETED"), QStringLiteral("TICKET_PRESENTED"),
+        QStringLiteral("cc7096fc-f4e0-4368-b237-178396a9ccfb"), Now.addSecs(5)));
+    const auto completedPayload = completed.value(QStringLiteral("payload")).toObject();
+    QCOMPARE(completedPayload.value(QStringLiteral("status")).toString(),
+             QStringLiteral("COMPLETED"));
+    QCOMPARE(completedPayload.value(QStringLiteral("resultCode")).toString(),
+             QStringLiteral("TICKET_PRESENTED"));
+    QCOMPARE(completedPayload.value(QStringLiteral("issuanceCode")).toString(),
+             command.issuanceCode);
 }
 
 QTEST_APPLESS_MAIN(TicketMachineProtocolTest)

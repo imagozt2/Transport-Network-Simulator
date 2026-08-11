@@ -203,3 +203,15 @@ jobs:
       - name: Test MQTT publication, subscription and reconnection
         shell: pwsh
         run: ./infrastructure/mosquitto/tests/mqtt-integration-tests.ps1
+
+  ecosystem:
+    name: Containerized ecosystem integration test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build and validate backend, MySQL and MQTT containers
+        shell: pwsh
+        run: ./infrastructure/tests/ecosystem-container-tests.ps1
