@@ -40,6 +40,12 @@ representarse mediante uno o varios registros de `ticket_supports`, físicos o d
 duplicar sus derechos. Los soportes físicos admiten un número de serie y vinculación posterior a una
 cuenta; los digitales nacen vinculados al pasajero correspondiente.
 
+`ticket_journeys` es la fuente única de los trayectos realizados. Conserva las validaciones y
+estaciones de entrada y salida, el coste, la duración derivada y el estado del recorrido. La
+referencia opcional a `passenger_accounts` fija la titularidad histórica necesaria para RMM App sin
+crear una segunda tabla que duplique los viajes. El índice por pasajero y fecha de cierre permite
+consultar el historial de forma paginada.
+
 `ticket_qr_credentials` mantiene las credenciales QR versionadas asociadas a cada soporte. Solo
 persiste su identificador y huella, nunca el contenido íntegro del QR. Sus estados permiten revocar,
 caducar o sustituir una credencial sin eliminar el billete ni su historial. Los campos `qr_token`,

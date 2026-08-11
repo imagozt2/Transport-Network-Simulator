@@ -258,6 +258,32 @@ WHERE credentials.id IS NULL
    OR (claims.claim_status = 'COMPLETED' AND claims.completed_at IS NULL)
    OR claims.completed_at < claims.received_at;
 
+SELECT journeys.id, journeys.code, journeys.status
+FROM ticket_journeys journeys
+LEFT JOIN tickets ON tickets.id = journeys.ticket_id
+LEFT JOIN passenger_accounts passengers ON passengers.id = journeys.passenger_account_id
+LEFT JOIN stations entry_stations ON entry_stations.id = journeys.entry_station_id
+LEFT JOIN stations exit_stations ON exit_stations.id = journeys.exit_station_id
+LEFT JOIN ticket_validations entry_validations
+    ON entry_validations.id = journeys.entry_validation_id
+LEFT JOIN ticket_validations exit_validations
+    ON exit_validations.id = journeys.exit_validation_id
+WHERE tickets.id IS NULL
+   OR entry_stations.id IS NULL
+   OR (journeys.passenger_account_id IS NOT NULL AND passengers.id IS NULL)
+   OR (tickets.passenger_user_id IS NOT NULL AND journeys.passenger_account_id IS NULL)
+   OR (journeys.passenger_account_id IS NOT NULL
+       AND tickets.passenger_user_id IS NOT NULL
+       AND journeys.passenger_account_id <> tickets.passenger_user_id)
+   OR (journeys.exit_station_id IS NOT NULL AND exit_stations.id IS NULL)
+   OR (journeys.entry_validation_id IS NOT NULL AND entry_validations.id IS NULL)
+   OR (journeys.exit_validation_id IS NOT NULL AND exit_validations.id IS NULL)
+   OR journeys.status NOT IN ('OPEN', 'CLOSED', 'FORCED_CLOSED', 'CANCELLED')
+   OR (journeys.status = 'OPEN' AND (journeys.exit_station_id IS NOT NULL
+       OR journeys.closed_at IS NOT NULL OR journeys.duration_seconds IS NOT NULL))
+   OR (journeys.status = 'CLOSED' AND (journeys.exit_station_id IS NULL
+       OR journeys.closed_at IS NULL OR journeys.duration_seconds IS NULL));
+
 SELECT operations.id, operations.code, operations.operation_type
 FROM ticket_operations operations
 LEFT JOIN tickets ON tickets.id = operations.ticket_id
