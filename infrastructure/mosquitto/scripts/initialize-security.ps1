@@ -43,8 +43,9 @@ foreach ($rawLine in Get-Content -LiteralPath $usersPath) {
         throw "La contraseña de $username debe contener al menos 12 caracteres"
     }
     if ($username -ne "rmm-backend" -and
-            -not $username.StartsWith("RMM-SALE-") -and
-            -not $username.StartsWith("RMM-VAL-")) {
+            -not $username.StartsWith("RMM-TM-") -and
+            -not $username.StartsWith("RMM-EN-") -and
+            -not $username.StartsWith("RMM-EX-")) {
         throw "Identidad MQTT no admitida: $username"
     }
     if ($credentials.Contains($username)) {
@@ -107,10 +108,10 @@ foreach ($username in $credentials.Keys | Where-Object { $_ -ne "rmm-backend" })
     $acl.Add("topic write rmm/v1/devices/$username/telemetry")
     $acl.Add("topic write rmm/v1/devices/$username/events/+")
     $acl.Add("topic write rmm/v1/devices/$username/acks")
-    if ($username.StartsWith("RMM-VAL-")) {
+    if ($username.StartsWith("RMM-EN-") -or $username.StartsWith("RMM-EX-")) {
         $acl.Add("topic write rmm/v1/devices/$username/requests/validations")
     }
-    if ($username.StartsWith("RMM-SALE-")) {
+    if ($username.StartsWith("RMM-TM-")) {
         $acl.Add("topic write rmm/v1/devices/$username/requests/purchases")
     }
     $acl.Add("topic read rmm/v1/devices/$username/commands")
