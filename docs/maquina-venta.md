@@ -86,14 +86,17 @@ Las direcciones HTTP y MQTT se generan al configurar CMake a partir de
 La identidad y la contraseña se proporcionan como variables de entorno:
 
 ```powershell
-$env:RMM_TICKET_MACHINE_DEVICE_CODE = "RMM-SALE-ST046-01"
+$env:RMM_TICKET_MACHINE_DEVICE_CODE = "RMM-TM-ST046-01"
 $env:RMM_TICKET_MACHINE_MQTT_PASSWORD = "contraseña-local-de-la-maquina"
 ```
 
 `RMM_TICKET_MACHINE_DEVICE_CODE` se usa como identidad, usuario MQTT y segmento de topic. Si se
-omite, la identidad local predeterminada es `RMM-SALE-ST046-01`. La contraseña no tiene valor
+omite, la identidad local predeterminada es `RMM-TM-ST046-01`. La contraseña no tiene valor
 predeterminado: sin ella la máquina permite consultar el catálogo, pero rechaza una solicitud de
 emisión e indica que falta la credencial MQTT.
+
+El código debe cumplir `RMM-TM-STnnn-nn` y existir como `TICKET_MACHINE` activa en el inventario.
+La aplicación rechaza identidades de validadores y los prefijos históricos antes de conectarse.
 
 Las credenciales reales no deben escribirse en CMake, `local-services.properties`, el código ni la
 documentación. La preparación de identidades está detallada en

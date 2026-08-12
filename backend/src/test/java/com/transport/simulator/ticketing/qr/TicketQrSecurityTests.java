@@ -144,14 +144,14 @@ class TicketQrSecurityTests {
                 verifiedQr,
                 "VAL-2026-000001",
                 TicketQrValidationType.ENTRY,
-                "RMM-VAL-001",
+                "RMM-EN-ST038-01",
                 "ST038"
         );
         TicketQrUseClaimResult retry = guard.claim(
                 verifiedQr,
                 "VAL-2026-000001",
                 TicketQrValidationType.ENTRY,
-                "RMM-VAL-001",
+                "RMM-EN-ST038-01",
                 "ST038"
         );
 
@@ -162,7 +162,7 @@ class TicketQrSecurityTests {
                 verifiedQr,
                 "VAL-2026-000001",
                 TicketQrValidationType.ENTRY,
-                "RMM-VAL-001",
+                "RMM-EN-ST038-01",
                 "ST039"
         )).isInstanceOf(TicketQrReferenceReuseException.class);
     }

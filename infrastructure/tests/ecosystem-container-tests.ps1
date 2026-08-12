@@ -10,7 +10,7 @@ $runtimeDirectory = Join-Path ([IO.Path]::GetTempPath()) $projectName
 $usersFile = Join-Path $runtimeDirectory "mqtt-users.test"
 $backendUsername = "rmm-backend"
 $backendPassword = "backend-container-test-password"
-$machineUsername = "RMM-SALE-ST046-01"
+$machineUsername = "RMM-TM-ST046-01"
 $machinePassword = "machine-container-test-password"
 
 function Get-FreeTcpPort {

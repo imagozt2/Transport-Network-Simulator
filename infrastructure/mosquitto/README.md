@@ -48,6 +48,11 @@ Este último comando también retira los contenedores del backend y MySQL si est
 El broker escucha en `127.0.0.1:1883`, de acuerdo con
 [`config/local-services.properties.example`](../../config/local-services.properties.example).
 
+Cada usuario de máquina debe coincidir con un `devices.code` del inventario y con su
+`device_mqtt_identities.mqtt_client_id`. La máquina de venta usa `RMM-TM-*`; una validadora en modo
+entrada, `RMM-EN-*`; y una validadora en modo salida, `RMM-EX-*`. El script rechaza otros prefijos,
+usuarios duplicados, contraseñas de ejemplo y contraseñas compartidas.
+
 ## Comprobación manual
 
 Con el contenedor iniciado, una máquina solo puede publicar y suscribirse a sus topics autorizados.
@@ -55,16 +60,16 @@ Por ejemplo, usando una identidad validadora configurada localmente:
 
 ```powershell
 docker compose exec mosquitto mosquitto_sub -h 127.0.0.1 `
-  -u RMM-VAL-ST046-ENT-01 -P "<contraseña-local>" `
-  -t rmm/v1/devices/RMM-VAL-ST046-ENT-01/status
+  -u RMM-EN-ST046-01 -P "<contraseña-local>" `
+  -t rmm/v1/devices/RMM-EN-ST046-01/status
 ```
 
 En la segunda, publica un mensaje:
 
 ```powershell
 docker compose exec mosquitto mosquitto_pub -h 127.0.0.1 `
-  -u RMM-VAL-ST046-ENT-01 -P "<contraseña-local>" `
-  -t rmm/v1/devices/RMM-VAL-ST046-ENT-01/status -m '{"state":"AVAILABLE"}'
+  -u RMM-EN-ST046-01 -P "<contraseña-local>" `
+  -t rmm/v1/devices/RMM-EN-ST046-01/status -m '{"state":"AVAILABLE"}'
 ```
 
 La primera terminal debe mostrar el mensaje. Un intento con esa identidad sobre el topic de otra
@@ -93,12 +98,16 @@ escenario en cada pull request dirigida a `main` o `develop/ecosystem`.
 
 - `rmm-backend` consume presencia, estado, telemetría, eventos, validaciones y confirmaciones de
   todas las máquinas; publica respuestas, órdenes y configuración.
-- Cada identidad `RMM-SALE-*` publica únicamente en sus topics de presencia, estado, telemetría,
+- Cada identidad `RMM-TM-*` publica únicamente en sus topics de presencia, estado, telemetría,
   eventos y confirmaciones; consume sus órdenes, respuestas y configuración.
-- Cada identidad `RMM-VAL-*` dispone de los mismos permisos y además puede publicar solicitudes de
-  validación.
+- Cada identidad `RMM-EN-*` o `RMM-EX-*` publica solicitudes de validación y eventos operativos,
+  y consume exclusivamente sus respuestas y configuración.
 - Todas las máquinas pueden leer el conjunto global de claves públicas QR.
 - Ninguna máquina puede leer o escribir los topics de otra identidad.
+
+Las aplicaciones Qt utilizan el mismo código como usuario, `clientId`, `deviceCode` del mensaje y
+segmento del topic. Cambiar únicamente una variable local no reasigna la máquina: el backend exige
+que identidad, tipo y estación continúen coincidiendo con el inventario.
 
 ## Persistencia y seguridad
 
@@ -154,9 +163,10 @@ infrastructure/mosquitto/runtime/certificates/
 └── clients/
     ├── rmm-backend.crt
     ├── rmm-backend.key
-    ├── RMM-SALE-ST046-01.crt
-    ├── RMM-SALE-ST046-01.key
-    └── RMM-VAL-ST046-ENT-01.*
+    ├── RMM-TM-ST046-01.crt
+    ├── RMM-TM-ST046-01.key
+    ├── RMM-EN-ST046-01.*
+    └── RMM-EX-ST046-01.*
 ```
 
 El certificado del broker debe admitir autenticación de servidor y contener los nombres usados para

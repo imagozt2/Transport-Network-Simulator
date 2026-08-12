@@ -72,6 +72,7 @@ private:
     QString m_pendingReference;
     QString m_awaitedReference;
     QString m_deviceCode;
+    bool m_configurationValid = false;
     qint32 m_packetId = -1;
     int m_reconnectAttempt = 0;
     int m_publishAttempt = 0;

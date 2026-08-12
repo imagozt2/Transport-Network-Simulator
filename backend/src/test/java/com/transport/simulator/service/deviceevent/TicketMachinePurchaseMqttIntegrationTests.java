@@ -53,7 +53,7 @@ class TicketMachinePurchaseMqttIntegrationTests {
                   "messageId": "73bb91e8-b263-41e8-aa8f-b791480110b3",
                   "correlationId": null,
                   "type": "ticket.purchase-requested",
-                  "deviceCode": "RMM-SALE-ST001-01",
+                  "deviceCode": "RMM-TM-ST001-01",
                   "occurredAt": "2026-08-11T12:00:00.000Z",
                   "sentAt": "2026-08-11T12:00:00.000Z",
                   "payload": {
@@ -70,13 +70,13 @@ class TicketMachinePurchaseMqttIntegrationTests {
                 }
                 """;
         AuthenticatedMqttMachine machine = new AuthenticatedMqttMachine(
-                41L, "RMM-SALE-ST001-01", DeviceType.TICKET_MACHINE,
-                "ST001", "ticket-machine-01", "RMM-SALE-ST001-01"
+                41L, "RMM-TM-ST001-01", DeviceType.TICKET_MACHINE,
+                "ST001", "ticket-machine-01", "RMM-TM-ST001-01"
         );
 
         consumerCaptor.getValue().accept(new AuthenticatedMqttMessage(
                 machine,
-                "rmm/v1/devices/RMM-SALE-ST001-01/requests/purchases",
+                "rmm/v1/devices/RMM-TM-ST001-01/requests/purchases",
                 payload.getBytes(StandardCharsets.UTF_8)
         ));
 
@@ -84,7 +84,7 @@ class TicketMachinePurchaseMqttIntegrationTests {
                 ArgumentCaptor.forClass(DeviceEventMessage.class);
         verify(ingress).receive(eventCaptor.capture());
         assertThat(eventCaptor.getValue().type()).isEqualTo(DeviceEventType.TICKET_PURCHASE_REQUESTED);
-        assertThat(eventCaptor.getValue().deviceCode()).isEqualTo("RMM-SALE-ST001-01");
+        assertThat(eventCaptor.getValue().deviceCode()).isEqualTo("RMM-TM-ST001-01");
         assertThat(eventCaptor.getValue().payload())
                 .containsEntry("purchaseReference", "9561ad31-6273-42d9-b76f-2dabb0b60955")
                 .containsEntry("productCode", "SINGLE_TRIP");

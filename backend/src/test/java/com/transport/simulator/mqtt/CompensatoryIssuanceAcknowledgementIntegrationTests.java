@@ -39,7 +39,7 @@ class CompensatoryIssuanceAcknowledgementIntegrationTests {
     void shouldCompleteTheIssuanceWhenTheTicketMachineConfirmsPresentation() {
         Device device = mock(Device.class);
         when(device.getId()).thenReturn(41L);
-        when(device.getCode()).thenReturn("RMM-SALE-ST001-01");
+        when(device.getCode()).thenReturn("RMM-TM-ST001-01");
         TicketProduct product = mock(TicketProduct.class);
         OperatorAccount operator = mock(OperatorAccount.class);
         Ticket ticket = mock(Ticket.class);
@@ -90,7 +90,7 @@ class CompensatoryIssuanceAcknowledgementIntegrationTests {
                   "messageId": "cc7096fc-f4e0-4368-b237-178396a9ccfb",
                   "correlationId": "command-compensatory-001",
                   "type": "ticket.issue-acknowledged",
-                  "deviceCode": "RMM-SALE-ST001-01",
+                  "deviceCode": "RMM-TM-ST001-01",
                   "occurredAt": "2026-08-11T10:02:00.000Z",
                   "sentAt": "2026-08-11T10:02:00.000Z",
                   "payload": {
@@ -103,13 +103,13 @@ class CompensatoryIssuanceAcknowledgementIntegrationTests {
                 }
                 """;
         AuthenticatedMqttMachine machine = new AuthenticatedMqttMachine(
-                41L, "RMM-SALE-ST001-01", DeviceType.TICKET_MACHINE,
-                "ST001", "ticket-machine-01", "RMM-SALE-ST001-01"
+                41L, "RMM-TM-ST001-01", DeviceType.TICKET_MACHINE,
+                "ST001", "ticket-machine-01", "RMM-TM-ST001-01"
         );
 
         consumerCaptor.getValue().accept(new AuthenticatedMqttMessage(
                 machine,
-                "rmm/v1/devices/RMM-SALE-ST001-01/acks",
+                "rmm/v1/devices/RMM-TM-ST001-01/acks",
                 acknowledgement.getBytes(StandardCharsets.UTF_8)
         ));
 

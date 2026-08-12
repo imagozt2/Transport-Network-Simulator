@@ -12,9 +12,9 @@ $brokerImage = "eclipse-mosquitto:2.0.22-openssl"
 
 $backendUsername = "rmm-backend"
 $backendPassword = "backend-test-password"
-$saleUsername = "RMM-SALE-ST046-01"
+$saleUsername = "RMM-TM-ST046-01"
 $salePassword = "sale-device-test-password"
-$validatorUsername = "RMM-VAL-ST046-ENT-01"
+$validatorUsername = "RMM-EN-ST046-01"
 $validatorPassword = "validator-test-password"
 
 function Invoke-Docker {

@@ -28,20 +28,46 @@ credenciales permite iniciar sesión en el centro de control o en RMM App.
 ejemplo:
 
 ```text
-RMM-SALE-ST046-01
-RMM-VAL-ST046-ENT-01
-RMM-VAL-ST046-EXT-01
+RMM-TM-ST046-01
+RMM-EN-ST046-01
+RMM-EX-ST046-01
 ```
 
 El código permite reconocer:
 
-- una máquina de venta (`SALE`);
-- una validadora de entrada (`ENT`);
-- una validadora de salida (`EXT`);
+- una máquina de venta (`TM`);
+- una validadora de entrada (`EN`);
+- una validadora de salida (`EX`);
 - la estación asignada;
 - el ordinal dentro de esa función.
 
 El código es público y no constituye un secreto. No concede permisos por sí mismo.
+
+La nomenclatura canónica es:
+
+| Tipo del inventario | Prefijo | Formato | Aplicación autorizada |
+| --- | --- | --- | --- |
+| `TICKET_MACHINE` | `RMM-TM-` | `RMM-TM-STnnn-nn` | Máquina de venta Qt |
+| `ENTRY_VALIDATOR` | `RMM-EN-` | `RMM-EN-STnnn-nn` | Validadora Qt en modo `ENTRY` |
+| `EXIT_VALIDATOR` | `RMM-EX-` | `RMM-EX-STnnn-nn` | Validadora Qt en modo `EXIT` |
+
+`STnnn` debe ser el código de la estación registrada y el último bloque representa el ordinal de
+la máquina en esa estación. Los prefijos históricos `RMM-SALE-*`, `RMM-VAL-*`, `RMM-ENTRY-*` y
+`RMM-EXIT-*` no forman parte del contrato y deben rechazarse.
+
+### Correspondencia obligatoria
+
+Para una instalación, el mismo `deviceCode` debe aparecer en todos estos puntos:
+
+- `devices.code` y `device_mqtt_identities.mqtt_client_id` en MySQL;
+- usuario y `clientId` enviados por la aplicación Qt;
+- usuario incluido en `mqtt-users.local` durante el desarrollo local;
+- segmento `{deviceCode}` de los topics MQTT;
+- `deviceCode` declarado en cada mensaje.
+
+Mosquitto comprueba las credenciales y limita los topics. El backend vuelve a contrastar el código,
+el tipo de máquina, la estación y el estado de la identidad con el inventario. Coincidir solo en el
+prefijo no permite suplantar otra máquina.
 
 ### Instancia instalada
 
@@ -96,7 +122,7 @@ urn:rmm:device:{deviceCode}:{deviceInstanceId}
 Ejemplo:
 
 ```text
-urn:rmm:device:RMM-VAL-ST046-ENT-01:4fb7510f-dfc0-437f-a785-e7314854f170
+urn:rmm:device:RMM-EN-ST046-01:4fb7510f-dfc0-437f-a785-e7314854f170
 ```
 
 El certificado contiene además:
@@ -126,6 +152,10 @@ operativo:
 estados administrativos.
 
 ## Aprovisionamiento inicial
+
+En el entorno local actual, las identidades se crean a partir del inventario SQL y se autentican
+contra contraseñas individuales de Mosquitto. El flujo con certificados descrito más adelante es el
+modelo previsto para entornos seguros; no implica guardar certificados o claves privadas en Git.
 
 ### 1. Alta administrativa
 
@@ -201,14 +231,17 @@ otros entornos.
 
 ### Identificador de cliente
 
-El `clientId` sigue esta forma:
+En la implementación actual, el `clientId` es exactamente el `deviceCode`:
 
 ```text
-rmm-{deviceCode}-{deviceInstanceId}
+RMM-TM-ST046-01
 ```
 
-Ayuda a administrar sesiones, pero no es una credencial. Mosquitto verifica que corresponde al
-certificado autenticado y rechaza una segunda sesión incompatible de la misma instancia.
+De este modo coincide con `device_mqtt_identities.mqtt_client_id`, el usuario autenticado y el
+segmento del topic. Es estable y único, pero no es una credencial. Una evolución basada en
+certificados podrá incorporar `deviceInstanceId` al identificador de sesión cuando broker, backend
+y clientes adopten conjuntamente ese contrato; no debe cambiarse de forma unilateral en una
+aplicación Qt.
 
 ### Asociación con los topics
 

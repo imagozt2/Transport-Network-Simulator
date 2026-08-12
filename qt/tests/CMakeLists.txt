@@ -69,3 +69,32 @@ add_test(
 set_tests_properties(rmm-validator-entries-exits-rejections-duplicates PROPERTIES
     ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>"
 )
+
+qt_add_executable(rmm-qt-mqtt-identity-tests
+    mqttidentityconfigurationtest.cpp
+    ../ticket-vending-machine/src/ticketmachineconfiguration.cpp
+    ../ticket-vending-machine/src/ticketmachineconfiguration.h
+    ../ticket-validator/src/validatorconfiguration.cpp
+    ../ticket-validator/src/validatorconfiguration.h
+)
+
+target_include_directories(rmm-qt-mqtt-identity-tests
+    PRIVATE
+        ../ticket-vending-machine/src
+        ../ticket-validator/src
+)
+
+target_link_libraries(rmm-qt-mqtt-identity-tests
+    PRIVATE
+        Qt6::Core
+        Qt6::Test
+)
+
+add_test(
+    NAME rmm-qt-mqtt-identity-authentication
+    COMMAND rmm-qt-mqtt-identity-tests
+)
+
+set_tests_properties(rmm-qt-mqtt-identity-authentication PROPERTIES
+    ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>"
+)

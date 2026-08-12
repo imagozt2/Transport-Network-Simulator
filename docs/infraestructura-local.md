@@ -78,6 +78,24 @@ el archivo cifrado de contraseñas y las reglas de acceso:
 El script crea `runtime/password_file` y `runtime/acl_file`. Estos archivos y
 `mqtt-users.local` están excluidos de Git.
 
+Los usuarios de la plantilla corresponden a máquinas existentes en el inventario inicial:
+
+| Aplicación | Identidad local | Variable de contraseña |
+| --- | --- | --- |
+| Backend | `rmm-backend` | `MQTT_BACKEND_PASSWORD` en `.env` |
+| Máquina de venta | `RMM-TM-ST046-01` | `RMM_TICKET_MACHINE_MQTT_PASSWORD` |
+| Validadora de entrada | `RMM-EN-ST046-01` | `RMM_VALIDATOR_MQTT_PASSWORD` |
+| Validadora de salida | `RMM-EX-ST046-01` | `RMM_VALIDATOR_MQTT_PASSWORD` |
+
+El nombre situado a la izquierda de `=` en `mqtt-users.local` debe coincidir exactamente con la
+variable `RMM_TICKET_MACHINE_DEVICE_CODE` o `RMM_VALIDATOR_DEVICE_CODE` de la aplicación que se
+arranque. Cada proceso Qt utiliza una identidad y una contraseña diferentes; las validadoras de
+entrada y salida no comparten usuario aunque pertenezcan a la misma estación.
+
+Si se añade otra máquina, primero debe existir en `devices` con el tipo y la estación correctos y
+tener una identidad activa en `device_mqtt_identities`. Después se añade el mismo código a
+`mqtt-users.local` y se vuelve a ejecutar `initialize-security.ps1` antes de reiniciar Mosquitto.
+
 ## Inicio y comprobación
 
 Construye el backend e inicia los tres servicios:

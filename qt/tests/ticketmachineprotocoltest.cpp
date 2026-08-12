@@ -85,7 +85,7 @@ void TicketMachineProtocolTest::buildsPurchaseConfigurations()
     QFETCH(QVariant, value);
 
     const auto envelope = object(rmm::ticketmachine::buildPurchaseRequest(
-        request, QStringLiteral("RMM-SALE-ST001-01"), QStringLiteral("purchase-1"),
+        request, QStringLiteral("RMM-TM-ST001-01"), QStringLiteral("purchase-1"),
         QStringLiteral("message-1"), Now));
     const auto payload = envelope.value(QStringLiteral("payload")).toObject();
     const auto configuration = payload.value(QStringLiteral("configuration")).toObject();
@@ -93,7 +93,7 @@ void TicketMachineProtocolTest::buildsPurchaseConfigurations()
     QCOMPARE(envelope.value(QStringLiteral("type")).toString(),
              QStringLiteral("ticket.purchase-requested"));
     QCOMPARE(envelope.value(QStringLiteral("deviceCode")).toString(),
-             QStringLiteral("RMM-SALE-ST001-01"));
+             QStringLiteral("RMM-TM-ST001-01"));
     QCOMPARE(payload.value(QStringLiteral("purchaseReference")).toString(),
              QStringLiteral("purchase-1"));
     QCOMPARE(configuration.value(field).toVariant(), value);
@@ -142,7 +142,7 @@ void TicketMachineProtocolTest::rejectsInvalidAndExpiredIssuances()
 void TicketMachineProtocolTest::buildsOperationalEventsAndAcknowledgements()
 {
     const auto event = object(rmm::ticketmachine::buildOperationEvent(
-        QStringLiteral("RMM-SALE-ST001-01"), QStringLiteral("TICKET_PURCHASE_FAILED"),
+        QStringLiteral("RMM-TM-ST001-01"), QStringLiteral("TICKET_PURCHASE_FAILED"),
         QStringLiteral("purchase-1"), {}, QStringLiteral("MQTT_TIMEOUT"),
         QStringLiteral("event-1"), Now));
     QCOMPARE(event.value(QStringLiteral("payload")).toObject()
@@ -151,7 +151,7 @@ void TicketMachineProtocolTest::buildsOperationalEventsAndAcknowledgements()
              QStringLiteral("purchase-1"));
 
     const auto acknowledgement = object(rmm::ticketmachine::buildCommandAcknowledgement(
-        QStringLiteral("RMM-SALE-ST001-01"), QStringLiteral("command-1"),
+        QStringLiteral("RMM-TM-ST001-01"), QStringLiteral("command-1"),
         QStringLiteral("issuance-1"), QStringLiteral("COMPLETED"),
         QStringLiteral("TICKET_PRESENTED"), QStringLiteral("ack-1"), Now));
     const auto payload = acknowledgement.value(QStringLiteral("payload")).toObject();
@@ -164,7 +164,7 @@ void TicketMachineProtocolTest::buildsOperationalEventsAndAcknowledgements()
 
 void TicketMachineProtocolTest::completesARegularPurchaseContract()
 {
-    const QString deviceCode = QStringLiteral("RMM-SALE-ST001-01");
+    const QString deviceCode = QStringLiteral("RMM-TM-ST001-01");
     const QString purchaseReference = QStringLiteral("9561ad31-6273-42d9-b76f-2dabb0b60955");
     const TicketIssuanceRequest request{
         QStringLiteral("SINGLE_TRIP"),
@@ -220,7 +220,7 @@ void TicketMachineProtocolTest::completesARegularPurchaseContract()
 
 void TicketMachineProtocolTest::completesACompensatoryIssuanceContract()
 {
-    const QString deviceCode = QStringLiteral("RMM-SALE-ST001-01");
+    const QString deviceCode = QStringLiteral("RMM-TM-ST001-01");
     const auto command = rmm::ticketmachine::parseIssueCommand(
         issueCommand({}, QStringLiteral("COMPENSATORY"), Now.addSecs(120)), {}, Now);
 

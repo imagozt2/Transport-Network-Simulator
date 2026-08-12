@@ -10,6 +10,8 @@ qt_add_executable(rmm-ticket-vending-machine WIN32
     src/journeyquoteclient.h
     src/ticketissuancerequestclient.cpp
     src/ticketissuancerequestclient.h
+    src/ticketmachineconfiguration.cpp
+    src/ticketmachineconfiguration.h
     src/ticketmachineprotocol.cpp
     src/ticketmachineprotocol.h
 )

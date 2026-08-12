@@ -55,7 +55,7 @@ Todo mensaje operativo no retenido utiliza este sobre:
   "messageId": "67ec60c1-9680-4799-b0b0-c28995c3bddf",
   "correlationId": null,
   "type": "device.status-reported",
-  "deviceCode": "RMM-VAL-ST046-ENT-01",
+  "deviceCode": "RMM-EN-ST046-01",
   "occurredAt": "2026-08-07T10:15:30.125Z",
   "sentAt": "2026-08-07T10:15:30.420Z",
   "payload": {}
@@ -149,7 +149,7 @@ La máquina publica su estado al arrancar, cuando cambia y como latido periódic
   "messageId": "88661b53-306e-4288-b005-ac59bb267966",
   "correlationId": null,
   "type": "device.status-reported",
-  "deviceCode": "RMM-VAL-ST046-ENT-01",
+  "deviceCode": "RMM-EN-ST046-01",
   "occurredAt": "2026-08-07T10:16:00Z",
   "sentAt": "2026-08-07T10:16:00Z",
   "payload": {
@@ -183,7 +183,7 @@ La telemetría representa mediciones prescindibles y de alta frecuencia:
   "messageId": "460dd2ce-817b-4f34-8257-d6211063c7c4",
   "correlationId": null,
   "type": "device.telemetry-reported",
-  "deviceCode": "RMM-SALE-ST046-01",
+  "deviceCode": "RMM-TM-ST046-01",
   "occurredAt": "2026-08-07T10:17:00Z",
   "sentAt": "2026-08-07T10:17:00Z",
   "payload": {
@@ -208,7 +208,7 @@ Los eventos se publican en `events/{eventType}`. Los tipos iniciales son `lifecy
   "messageId": "3a36bd79-8c29-4374-a573-837afee57fc7",
   "correlationId": null,
   "type": "device.lifecycle-event",
-  "deviceCode": "RMM-SALE-ST046-01",
+  "deviceCode": "RMM-TM-ST046-01",
   "occurredAt": "2026-08-07T10:12:00Z",
   "sentAt": "2026-08-07T10:12:01Z",
   "payload": {
@@ -232,7 +232,7 @@ Una validadora solicita al backend la decisión de entrada o salida:
   "messageId": "4ca026f2-1a51-4e62-b03a-d01a58f1c687",
   "correlationId": null,
   "type": "ticket.validation-requested",
-  "deviceCode": "RMM-VAL-ST046-ENT-01",
+  "deviceCode": "RMM-EN-ST046-01",
   "occurredAt": "2026-08-07T10:20:15.120Z",
   "sentAt": "2026-08-07T10:20:15.130Z",
   "payload": {
@@ -253,7 +253,7 @@ lectura. El backend responde en `devices/{deviceCode}/responses`:
   "messageId": "b1594278-4af5-4348-9bbf-e8bddeef9de3",
   "correlationId": "4ca026f2-1a51-4e62-b03a-d01a58f1c687",
   "type": "ticket.validation-decided",
-  "deviceCode": "RMM-VAL-ST046-ENT-01",
+  "deviceCode": "RMM-EN-ST046-01",
   "occurredAt": "2026-08-07T10:20:15.180Z",
   "sentAt": "2026-08-07T10:20:15.185Z",
   "payload": {
@@ -298,7 +298,7 @@ Una emisión autorizada se entrega exclusivamente a una máquina de venta:
   "messageId": "0d80f67f-dcfa-4a16-a502-0ca74508d096",
   "correlationId": null,
   "type": "ticket.issue-command",
-  "deviceCode": "RMM-SALE-ST046-01",
+  "deviceCode": "RMM-TM-ST046-01",
   "occurredAt": "2026-08-07T10:30:00Z",
   "sentAt": "2026-08-07T10:30:00Z",
   "payload": {
@@ -329,7 +329,7 @@ La máquina confirma cada orden en `devices/{deviceCode}/acks`:
   "messageId": "68374bc0-a13f-4306-a357-af2e18f81ee5",
   "correlationId": "0d80f67f-dcfa-4a16-a502-0ca74508d096",
   "type": "ticket.issue-acknowledged",
-  "deviceCode": "RMM-SALE-ST046-01",
+  "deviceCode": "RMM-TM-ST046-01",
   "occurredAt": "2026-08-07T10:30:02Z",
   "sentAt": "2026-08-07T10:30:02Z",
   "payload": {
@@ -354,7 +354,7 @@ El backend publica una configuración retenida específica:
 {
   "schemaVersion": 1,
   "configurationVersion": 14,
-  "deviceCode": "RMM-VAL-ST046-ENT-01",
+  "deviceCode": "RMM-EN-ST046-01",
   "stationCode": "ST046",
   "deviceType": "ENTRY_VALIDATOR",
   "heartbeatSeconds": 30,
@@ -403,10 +403,14 @@ QR](contrato-codigos-qr.md): distribuir, confirmar disponibilidad, empezar a fir
 
 ACL conceptual de una máquina `{deviceCode}`:
 
-| Acción | Topics permitidos |
-| --- | --- |
-| Publicar | Su `presence`, `status`, `telemetry`, `events/+`, `requests/validations` y `acks` |
-| Suscribirse | Sus `commands`, `responses`, `configuration` y las claves públicas QR |
+| Identidad | Publicación adicional | Topics comunes |
+| --- | --- | --- |
+| `RMM-TM-*` | `requests/purchases` | Su `presence`, `status`, `telemetry`, `events/+` y `acks` |
+| `RMM-EN-*` | `requests/validations` de entrada | Su `presence`, `status`, `telemetry`, `events/+` y `acks` |
+| `RMM-EX-*` | `requests/validations` de salida | Su `presence`, `status`, `telemetry`, `events/+` y `acks` |
+
+Todas se suscriben únicamente a sus propios `commands`, `responses` y `configuration`, además del
+topic global de claves públicas QR.
 
 La identidad autenticada debe coincidir con `{deviceCode}`. Una máquina no puede acceder al
 namespace de otra. Solo el backend publica órdenes, respuestas y configuración y consume mensajes
