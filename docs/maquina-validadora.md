@@ -32,7 +32,9 @@ mismas reglas y MySQL conserva el estado autoritativo.
 | `EXIT` | `EXIT_VALIDATOR` | Cierra el trayecto, calcula su coste y descuenta saldo cuando corresponde. |
 
 La identidad debe ser compatible con el modo: `RMM-EN-*` para entrada y `RMM-EX-*` para salida. La
-estación de la solicitud debe coincidir con la estación asignada al dispositivo en la base de datos.
+identidad, la estación configurada y el registro del inventario deben representar la misma máquina.
+La estación de la solicitud debe coincidir con la estación asignada al dispositivo en la base de
+datos.
 
 ## Flujo de validación
 
