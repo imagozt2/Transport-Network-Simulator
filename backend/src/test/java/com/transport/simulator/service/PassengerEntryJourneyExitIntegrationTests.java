@@ -162,11 +162,11 @@ class PassengerEntryJourneyExitIntegrationTests {
                 ArgumentCaptor.forClass(Consumer.class);
         verify(router).register(consumerCaptor.capture());
         AuthenticatedMqttMachine entryMachine = new AuthenticatedMqttMachine(
-                51L, "RMM-ENTRY-ST001-01", DeviceType.ENTRY_VALIDATOR,
-                "ST001", "validator-instance-01", "RMM-ENTRY-ST001-01");
+                51L, "RMM-EN-ST001-01", DeviceType.ENTRY_VALIDATOR,
+                "ST001", "validator-instance-01", "RMM-EN-ST001-01");
         AuthenticatedMqttMachine exitMachine = new AuthenticatedMqttMachine(
-                52L, "RMM-EXIT-ST010-01", DeviceType.EXIT_VALIDATOR,
-                "ST010", "validator-instance-02", "RMM-EXIT-ST010-01");
+                52L, "RMM-EX-ST010-01", DeviceType.EXIT_VALIDATOR,
+                "ST010", "validator-instance-02", "RMM-EX-ST010-01");
 
         consumerCaptor.getValue().accept(operationLog(entryMachine, ticket, journey,
                 "a864635c-da08-42a5-a556-a3e76bae62e7", "ENTRY", "ST001",

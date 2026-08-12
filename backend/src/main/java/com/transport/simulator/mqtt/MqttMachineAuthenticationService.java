@@ -1,6 +1,7 @@
 package com.transport.simulator.mqtt;
 
 import com.transport.simulator.entity.DeviceMqttIdentity;
+import com.transport.simulator.enums.DeviceType;
 import com.transport.simulator.repository.DeviceMqttIdentityRepository;
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -44,11 +45,23 @@ public class MqttMachineAuthenticationService {
                 || !identity.canAuthenticate(now)) {
             throw rejected("Inactive MQTT machine identity");
         }
+        if (!hasCompatibleDeviceCode(identity.getDevice().getType(), topicDeviceCode)) {
+            throw rejected("MQTT machine identity is incompatible with its device type");
+        }
         identity.recordAuthentication(now);
         return new AuthenticatedMqttMachine(identity.getDevice().getId(),
                 identity.getDevice().getCode(), identity.getDevice().getType(),
                 identity.getDevice().getStation().getCode(),
                 identity.getInstanceId(), identity.getMqttClientId());
+    }
+
+    private boolean hasCompatibleDeviceCode(DeviceType deviceType, String deviceCode) {
+        String requiredPrefix = switch (deviceType) {
+            case TICKET_MACHINE -> "RMM-TM-";
+            case ENTRY_VALIDATOR -> "RMM-EN-";
+            case EXIT_VALIDATOR -> "RMM-EX-";
+        };
+        return deviceCode.startsWith(requiredPrefix);
     }
 
     private String deviceCode(String topic) {
