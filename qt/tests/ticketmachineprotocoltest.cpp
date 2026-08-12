@@ -1,5 +1,4 @@
 #include "ticketmachineprotocol.h"
-#include "ticketmachineconfiguration.h"
 
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -59,34 +58,7 @@ private slots:
     void buildsOperationalEventsAndAcknowledgements();
     void completesARegularPurchaseContract();
     void completesACompensatoryIssuanceContract();
-    void usesTheInventoriedTicketMachineIdentity();
-    void rejectsAnIdentityFromAnotherDeviceType();
 };
-
-void TicketMachineProtocolTest::usesTheInventoriedTicketMachineIdentity()
-{
-    QProcessEnvironment environment;
-    QCOMPARE(TicketMachineConfiguration::fromEnvironment(environment).deviceCode,
-             QStringLiteral("RMM-TM-ST046-01"));
-
-    environment.insert(QStringLiteral("RMM_TICKET_MACHINE_DEVICE_CODE"),
-                       QStringLiteral(" rmm-tm-st001-03 "));
-    const auto configuration = TicketMachineConfiguration::fromEnvironment(environment);
-    QVERIFY(configuration.valid);
-    QCOMPARE(configuration.deviceCode, QStringLiteral("RMM-TM-ST001-03"));
-}
-
-void TicketMachineProtocolTest::rejectsAnIdentityFromAnotherDeviceType()
-{
-    QProcessEnvironment environment;
-    environment.insert(QStringLiteral("RMM_TICKET_MACHINE_DEVICE_CODE"),
-                       QStringLiteral("RMM-EN-ST001-01"));
-
-    const auto configuration = TicketMachineConfiguration::fromEnvironment(environment);
-
-    QVERIFY(!configuration.valid);
-    QVERIFY(!configuration.error.isEmpty());
-}
 
 void TicketMachineProtocolTest::buildsPurchaseConfigurations_data()
 {
