@@ -1,4 +1,5 @@
 #include "ticketissuancerequestclient.h"
+#include "ticketmachineconfiguration.h"
 
 #include <rmm/localservices.h>
 
@@ -19,9 +20,9 @@ TicketIssuanceRequestClient::TicketIssuanceRequestClient(QObject *parent)
       m_publishRetryTimer(new QTimer(this))
 {
     const auto environment = QProcessEnvironment::systemEnvironment();
-    m_deviceCode = environment.value(
-        QStringLiteral("RMM_TICKET_MACHINE_DEVICE_CODE"),
-        QStringLiteral("RMM-SALE-ST046-01"));
+    const auto configuration = TicketMachineConfiguration::fromEnvironment(environment);
+    m_deviceCode = configuration.deviceCode;
+    m_configurationValid = configuration.valid;
     m_client->setHostname(QString::fromUtf8(
         rmm::config::mqttHost.data(), static_cast<qsizetype>(rmm::config::mqttHost.size())));
     m_client->setPort(rmm::config::mqttPort);
@@ -133,7 +134,7 @@ TicketIssuanceRequestClient::TicketIssuanceRequestClient(QObject *parent)
         fail(QStringLiteral("MQTT_TIMEOUT"));
     });
 
-    if (!m_client->password().isEmpty()) {
+    if (m_configurationValid && !m_client->password().isEmpty()) {
         connectToBroker();
     }
 }
@@ -233,6 +234,10 @@ void TicketIssuanceRequestClient::submit(const TicketIssuanceRequest &request)
 {
     if (!m_pendingReference.isEmpty() || !m_awaitedReference.isEmpty()) {
         emit failed(QStringLiteral("REQUEST_ALREADY_IN_PROGRESS"));
+        return;
+    }
+    if (!m_configurationValid) {
+        emit failed(QStringLiteral("MQTT_IDENTITY_INVALID"));
         return;
     }
     if (m_client->password().isEmpty()) {

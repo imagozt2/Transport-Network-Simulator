@@ -22,6 +22,8 @@ qt_add_executable(rmm-ticket-machine-protocol-tests
     ticketmachineprotocoltest.cpp
     ../ticket-vending-machine/src/ticketmachineprotocol.cpp
     ../ticket-vending-machine/src/ticketmachineprotocol.h
+    ../ticket-vending-machine/src/ticketmachineconfiguration.cpp
+    ../ticket-vending-machine/src/ticketmachineconfiguration.h
 )
 
 target_include_directories(rmm-ticket-machine-protocol-tests
