@@ -22,8 +22,8 @@
           <a
             class="nav-link"
             [routerLink]="item.route"
-            routerLinkActive="active"
-            [routerLinkActiveOptions]="{ exact: true }"
+            [class.active]="isActiveRoute(item.route)"
+            [attr.aria-current]="isActiveRoute(item.route) ? 'page' : null"
             (click)="navigationSelected.emit()"
           >
             <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>

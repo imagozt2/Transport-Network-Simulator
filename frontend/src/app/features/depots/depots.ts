@@ -1,6 +1,7 @@
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
+import { APPLICATION_ROUTES } from '../../core/navigation/application-routes';
 import {
   DepotMovement,
   DepotMovementType,
@@ -27,6 +28,7 @@ const AGENDA_WINDOW_MS = 12 * 60 * 60 * 1_000;
   styleUrls: ['./depots.css', './depots-cards.css', './depots-fleet.css']
 })
 export class Depots implements OnInit, OnDestroy {
+  protected readonly sectionRoutes = APPLICATION_ROUTES;
   private readonly depotOperationsService = inject(DepotOperationsService);
   private readonly route = inject(ActivatedRoute);
   private readonly periodicRefresh = new PeriodicRefresh(15_000, () => this.loadOperations());

@@ -48,7 +48,7 @@
           <h2>Estado de trenes</h2>
           <div class="panel-actions">
             <span>{{ data.totalFleet }} trenes</span>
-            <a class="context-link" routerLink="/trains">Ver trenes</a>
+            <a class="context-link" [routerLink]="sectionRoutes.trains">Ver trenes</a>
           </div>
         </div>
         <div class="status-list">
@@ -67,7 +67,7 @@
           <h2>Estado de máquinas</h2>
           <div class="panel-actions">
             <span>{{ data.deviceCount }} máquinas</span>
-            <a class="context-link" routerLink="/devices">Ver máquinas</a>
+            <a class="context-link" [routerLink]="sectionRoutes.devices">Ver máquinas</a>
           </div>
         </div>
         <div class="status-list">
@@ -94,7 +94,7 @@
           <h2>Ocupación de las cocheras</h2>
           <div class="panel-actions">
             <span>{{ data.availableDepotSpaces }} plazas libres</span>
-            <a class="context-link" routerLink="/depots">Ver cocheras</a>
+            <a class="context-link" [routerLink]="sectionRoutes.depots">Ver cocheras</a>
           </div>
         </div>
         <div class="depot-occupation">
@@ -129,7 +129,7 @@
           <h2>Líneas de la red</h2>
           <div class="panel-actions">
             <span>{{ data.lineCount }} líneas</span>
-            <a class="context-link" routerLink="/lines">Ver líneas</a>
+            <a class="context-link" [routerLink]="sectionRoutes.lines">Ver líneas</a>
           </div>
         </div>
         <div class="line-list">

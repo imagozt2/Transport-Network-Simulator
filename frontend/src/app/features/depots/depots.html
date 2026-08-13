@@ -81,7 +81,7 @@
                   <div class="section-heading-actions">
                     <strong>{{ depot.fleet.assignedTrainCount }} trenes</strong>
                     <a class="context-link"
-                      [routerLink]="['/trains']"
+                      [routerLink]="sectionRoutes.trains"
                       [queryParams]="{ depotCode: depot.code }"
                       [attr.aria-label]="'Ver trenes de ' + depot.name">Ver trenes</a>
                   </div>

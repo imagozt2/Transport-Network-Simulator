@@ -189,7 +189,7 @@
               <footer class="device-actions">
                 <a
                   class="context-link"
-                  [routerLink]="['/logs']"
+                  [routerLink]="sectionRoutes.logs"
                   [queryParams]="{ deviceCode: device.code }"
                   [attr.aria-label]="'Ver logs de ' + device.name + ' (' + device.code + ')'"
                 >

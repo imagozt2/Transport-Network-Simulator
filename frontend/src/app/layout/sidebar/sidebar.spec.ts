@@ -105,6 +105,23 @@ describe('Sidebar', () => {
     expect(activeLink?.querySelector('.nav-label')?.textContent?.trim()).toBe('Incidencias');
   });
 
+  it('should keep the destination section active when contextual filters are present', async () => {
+    const router = TestBed.inject(Router);
+    const fixture = TestBed.createComponent(Sidebar);
+    fixture.detectChanges();
+
+    await router.navigateByUrl('/stations?lineCode=L3&stationCode=ST001');
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const activeLinks = compiled.querySelectorAll<HTMLAnchorElement>('.nav-link.active');
+
+    expect(activeLinks).toHaveLength(1);
+    expect(activeLinks[0].getAttribute('href')).toBe('/stations');
+    expect(activeLinks[0].getAttribute('aria-current')).toBe('page');
+  });
+
   it('should notify the layout when a navigation option is selected', () => {
     const fixture = TestBed.createComponent(Sidebar);
     const navigationSelected = vi.fn();

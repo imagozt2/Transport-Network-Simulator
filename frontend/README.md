@@ -57,11 +57,16 @@ Algunas pantallas enlazan con otras conservando el contexto mediante parámetros
 /devices  -> /logs?deviceCode=RMM-MB-ST001-001
 /depots   -> /trains?depotCode=DEP-AIR-A
 /lines    -> /trains?lineCode=L1
-/stations -> /trains?stationCode=ST001
+/stations -> /trains?lineCode=L1&status=IN_SERVICE
 ```
 
 Las pantallas receptoras normalizan los códigos, inicializan el control visible y aplican el mismo
 valor a los resultados o a la petición del backend. Un parámetro vacío equivale a no filtrar.
+
+Las rutas base proceden de `APPLICATION_ROUTES`, compartido por el sidebar y los accesos
+contextuales. `ActiveSectionService` determina la sección mediante la ruta primaria e ignora los
+parámetros y fragmentos, por lo que el menú conserva correctamente la opción de destino activa. El
+enlace seleccionado expone también `aria-current="page"`.
 
 ## Actualización y renderizado
 

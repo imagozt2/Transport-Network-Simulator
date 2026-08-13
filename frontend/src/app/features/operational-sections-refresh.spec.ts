@@ -66,7 +66,8 @@ const deviceResponse = {
     totalDevices: 0,
     filteredDevices: 0,
     byType: { TICKET_MACHINE: 0, ENTRY_VALIDATOR: 0, EXIT_VALIDATOR: 0 },
-    byStatus: { ONLINE: 0, OFFLINE: 0, MAINTENANCE: 0, ERROR: 0 }
+    byStatus: { ONLINE: 0, OFFLINE: 0, MAINTENANCE: 0, ERROR: 0 },
+    byConnectivity: { CONNECTED: 0, DISCONNECTED: 0, NOT_MONITORED: 0 }
   },
   devices: []
 };

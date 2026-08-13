@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 
 import { routes } from '../app.routes';
+import { APPLICATION_ROUTES } from '../core/navigation/application-routes';
 import { Dashboard } from './dashboard/dashboard';
 import { Depots } from './depots/depots';
 import { Devices } from './devices/devices';
@@ -152,6 +153,14 @@ describe('Contextual navigation between operational sections', () => {
       expect(Object.keys(navigation.queryParams).every((parameter) =>
         supportedFilters[navigation.destinationPath]?.includes(parameter)
       )).toBe(true);
+    }
+  });
+
+  it('should use destinations registered in the main navigation', () => {
+    const menuDestinations = new Set<string>(Object.values(APPLICATION_ROUTES));
+
+    for (const navigation of contextualNavigations) {
+      expect(menuDestinations.has(`/${navigation.destinationPath}`)).toBe(true);
     }
   });
 

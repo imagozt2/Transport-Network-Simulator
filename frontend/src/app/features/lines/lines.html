@@ -67,7 +67,7 @@
                 <section class="metric-panel">
                   <div class="panel-header">
                     <h2>Circulación</h2>
-                    <a class="context-link panel-context-link" [routerLink]="['/trains']" [queryParams]="{ lineCode: line.code }">Ver trenes</a>
+                    <a class="context-link panel-context-link" [routerLink]="sectionRoutes.trains" [queryParams]="{ lineCode: line.code }">Ver trenes</a>
                   </div>
                   <div class="large-metric"><strong>{{ line.activeTrainCount }}</strong><span>trenes en servicio</span></div>
                   <div class="direction-stats">
@@ -81,7 +81,7 @@
                     <h2>Cocheras</h2>
                     <div class="panel-actions">
                       <span>{{ line.depots.length }} asociadas</span>
-                      <a class="context-link panel-context-link" [routerLink]="['/depots']" [queryParams]="{ lineCode: line.code }">Ver cocheras</a>
+                      <a class="context-link panel-context-link" [routerLink]="sectionRoutes.depots" [queryParams]="{ lineCode: line.code }">Ver cocheras</a>
                     </div>
                   </div>
                   <div class="line-depots-list">
@@ -150,7 +150,7 @@
                                 } @else {
                                   <span>Sin próximas llegadas</span>
                                 }
-                                <a class="context-link tooltip-context-link" [routerLink]="['/stations']" [queryParams]="{ stationCode: station.code }">Ver estación</a>
+                                <a class="context-link tooltip-context-link" [routerLink]="sectionRoutes.stations" [queryParams]="{ stationCode: station.code }">Ver estación</a>
                               </span>
                             </span>
                             <span
@@ -181,7 +181,7 @@
                               >
                                 <strong>{{ train.code }}</strong>
                                 <small>{{ directionDestination(line, direction) }}</small>
-                                <a class="context-link tooltip-context-link" [routerLink]="['/trains']" [queryParams]="{ trainCode: train.code }">Ver tren</a>
+                                <a class="context-link tooltip-context-link" [routerLink]="sectionRoutes.trains" [queryParams]="{ trainCode: train.code }">Ver tren</a>
                               </span>
                             </span>
                           }
@@ -214,7 +214,7 @@
                       }
                     </div>
                   </div>
-                  <a class="context-link panel-context-link stations-link" [routerLink]="['/stations']" [queryParams]="{ lineCode: line.code }">Ver estaciones</a>
+                  <a class="context-link panel-context-link stations-link" [routerLink]="sectionRoutes.stations" [queryParams]="{ lineCode: line.code }">Ver estaciones</a>
                 </section>
               </div>
             </div>

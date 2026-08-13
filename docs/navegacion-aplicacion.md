@@ -56,12 +56,42 @@ registrada también redirigen al Panel general. Todas las rutas incluidas en `Ma
 una sesión de operador válida; un acceso anónimo redirige a `/login`. Después de autenticarse se
 abre siempre el Panel general, sin restaurar la sección utilizada en una sesión anterior.
 
-Angular aplica la clase `active` exclusivamente al enlace cuya ruta coincide exactamente con la URL
-actual. De esta manera, el menú indica siempre la sección que está abierta.
+`ActiveSectionService` centraliza la detección de la sección abierta. El servicio observa las
+navegaciones completadas por Angular, obtiene el primer segmento de la ruta primaria y lo compara
+con el destino de cada opción del menú. El sidebar no interpreta la URL por su cuenta.
 
-Las navegaciones contextuales pueden incluir parámetros de consulta. Por ejemplo, una tarjeta de
-Máquinas puede abrir `/logs` con el filtro de esa máquina. Estos parámetros modifican el contenido
-inicial de la pantalla de destino, pero no crean una sección distinta en el menú.
+La comparación ignora los parámetros de consulta, los fragmentos y los demás datos contextuales.
+Por tanto, `/stations`, `/stations?lineCode=L3` y
+`/stations?lineCode=L3&stationCode=ST001` mantienen seleccionada la misma opción **Estaciones**. Al
+cambiar a `/trains?lineCode=L3`, Estaciones deja de estar activa y se selecciona **Trenes**.
+
+El único enlace activo recibe la clase `active` y el atributo accesible `aria-current="page"`. Así,
+el estado visible del menú y el estado anunciado por las tecnologías de asistencia representan la
+misma sección.
+
+## Rutas y navegación contextual
+
+`APPLICATION_ROUTES`, ubicado en `core/navigation/application-routes.ts`, es el catálogo común de
+destinos. El menú lateral y los botones contextuales utilizan sus valores en lugar de repetir rutas
+literales. De este modo, ambos tipos de navegación permanecen alineados si cambia una dirección.
+
+Las acciones contextuales añaden únicamente los parámetros admitidos por la pantalla receptora:
+
+| Origen | Destino | Contexto conservado |
+| --- | --- | --- |
+| Panel general | Líneas, Trenes, Cocheras o Máquinas | Sección operativa elegida. |
+| Líneas | Trenes | `lineCode` o `trainCode`. |
+| Líneas | Cocheras | `lineCode`. |
+| Líneas | Estaciones | `lineCode` o `stationCode`. |
+| Estaciones | Trenes | `lineCode` y estado `IN_SERVICE`. |
+| Estaciones | Máquinas o Logs | `stationCode`. |
+| Cocheras | Trenes | `depotCode`. |
+| Máquinas | Logs | `deviceCode`. |
+| Logs | Incidencias | Datos de la máquina y del evento. |
+
+Estos parámetros inicializan los filtros visibles y modifican el contenido de destino, pero no
+crean subsecciones en el menú. La navegación directa y la contextual comparten siempre la misma
+ruta canónica.
 
 ## Escritorio y dispositivos móviles
 
@@ -104,11 +134,14 @@ administrativos utilizan el mismo servicio de internacionalización.
 Para añadir una sección navegable se deben realizar conjuntamente estos cambios:
 
 1. registrar su ruta hija dentro de `MainLayout` en `app.routes.ts`;
-2. añadir una única opción al grupo funcional adecuado en `sidebar.ts`;
-3. asignar una etiqueta descriptiva y un icono exclusivamente decorativo;
-4. comprobar el estado activo y el cierre del menú móvil;
-5. actualizar las pruebas de rutas, orden y enlaces del sidebar;
-6. actualizar esta tabla de navegación.
+2. declarar su dirección canónica en `APPLICATION_ROUTES`;
+3. añadir una única opción al grupo funcional adecuado en `sidebar.ts` utilizando ese catálogo;
+4. asignar una etiqueta descriptiva y un icono exclusivamente decorativo;
+5. reutilizar la ruta canónica en los enlaces contextuales que apunten a la nueva sección;
+6. comprobar el estado activo con acceso directo y con parámetros de consulta;
+7. comprobar el cierre del menú móvil y el valor de `aria-current`;
+8. actualizar las pruebas de rutas, orden y enlaces del sidebar;
+9. actualizar esta tabla de navegación.
 
 No deben añadirse al menú pantallas que todavía no dispongan de ruta y funcionalidad. Las acciones
 contextuales relacionadas con una entidad deben enlazar a la sección existente mediante filtros en

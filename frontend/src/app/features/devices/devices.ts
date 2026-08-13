@@ -1,6 +1,7 @@
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
+import { APPLICATION_ROUTES } from '../../core/navigation/application-routes';
 import {
   DeviceConnectivityState,
   DeviceOperation,
@@ -32,6 +33,7 @@ type ConnectivityFilter = DeviceConnectivityState | 'ALL';
   styleUrls: ['./devices.css', './devices-cards.css']
 })
 export class Devices implements OnInit, OnDestroy {
+  protected readonly sectionRoutes = APPLICATION_ROUTES;
   private readonly deviceOperationsService = inject(DeviceOperationsService);
   private readonly periodicRefresh = new PeriodicRefresh(15_000, () => this.loadOperations());
   private readonly route = inject(ActivatedRoute);

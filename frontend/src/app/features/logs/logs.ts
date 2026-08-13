@@ -1,6 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute, ParamMap, RouterLink } from '@angular/router';
 
+import { APPLICATION_ROUTES } from '../../core/navigation/application-routes';
 import { DeviceOperation, DeviceType } from '../../core/models/device-operation.model';
 import { OperationalLog } from '../../core/models/operational-log.model';
 import {
@@ -35,6 +36,7 @@ type PaginationItem =
   styleUrls: ['./logs.css', './logs-list.css']
 })
 export class Logs implements OnInit {
+  protected readonly sectionRoutes = APPLICATION_ROUTES;
   private readonly logsService = inject(OperationalLogsService);
   private readonly devicesService = inject(DeviceOperationsService);
   private readonly route = inject(ActivatedRoute);
