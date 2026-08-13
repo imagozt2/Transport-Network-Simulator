@@ -160,8 +160,8 @@ bool ValidatorMqttClient::hasPendingValidation() const
 void ValidatorMqttClient::connectToBroker()
 {
     if (m_client->state() != QMqttClient::Disconnected || m_client->password().isEmpty()) return;
-    m_client->setWillTopic(QMqttTopicName(
-        QStringLiteral("rmm/v1/devices/%1/presence").arg(m_configuration.deviceCode)));
+    m_client->setWillTopic(
+        QStringLiteral("rmm/v1/devices/%1/presence").arg(m_configuration.deviceCode));
     m_client->setWillMessage(presencePayload(
         QStringLiteral("OFFLINE"), QStringLiteral("CONNECTION_LOST")));
     m_client->setWillQoS(1);

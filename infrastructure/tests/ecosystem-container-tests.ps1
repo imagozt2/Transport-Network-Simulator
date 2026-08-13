@@ -106,6 +106,15 @@ try {
         throw "El contenedor MySQL no contiene todos los datos iniciales requeridos"
     }
 
+    Write-Host "Comprobando identidades MQTT, tipos y estaciones del inventario..."
+    $identityIssues = & docker exec "$projectName-mysql" `
+        mysql -N -u root "-p$($env:MYSQL_ROOT_PASSWORD)" transport_simulator_db `
+        -e "SELECT COUNT(*) FROM devices d JOIN stations s ON s.id = d.station_id LEFT JOIN device_mqtt_identities i ON i.device_id = d.id WHERE i.id IS NULL OR i.mqtt_client_id <> d.code OR d.code <> CONCAT(CASE d.device_type WHEN 'TICKET_MACHINE' THEN 'RMM-TM-' WHEN 'ENTRY_VALIDATOR' THEN 'RMM-EN-' WHEN 'EXIT_VALIDATOR' THEN 'RMM-EX-' ELSE 'INVALID-' END, s.code, '-', RIGHT(d.code, 2));"
+    if ($LASTEXITCODE -ne 0) { throw "No se pudo verificar el inventario MQTT" }
+    if (($identityIssues -join "`n").Trim() -ne "0") {
+        throw "El inventario contiene máquinas con identidad MQTT, tipo o estación incoherentes"
+    }
+
     Write-Host "Comprobando la codificación de MySQL y de los datos iniciales..."
     $encodingVerification = Join-Path $repositoryRoot "database\verification\verify_encoding.sql"
     $encodingIssues = Get-Content -LiteralPath $encodingVerification -Raw -Encoding utf8 |
