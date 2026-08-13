@@ -18,6 +18,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  database:
+    name: Database encoding tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate SQL source encoding
+        shell: pwsh
+        run: ./database/tests/database-source-encoding-tests.ps1
+
   backend:
     name: Backend build
     runs-on: ubuntu-latest
