@@ -142,6 +142,12 @@ El monitor revisa únicamente máquinas gestionadas por MQTT que estén online. 
 ni estado durante `RMM_MQTT_DEVICE_STALE_AFTER`, las marca offline. Un nuevo estado válido vuelve a
 ponerlas online sin intervención manual.
 
+Las aplicaciones Qt publican presencia retenida al conectarse y un latido periódico. También
+configuran un Last Will retenido con estado `OFFLINE`, de modo que Mosquitto pueda comunicar una
+desconexión no controlada. El backend valida la fecha declarada en el mensaje, pero registra la
+presencia con su propia hora de recepción para que un reloj desajustado o un Last Will antiguo no
+falseen la conectividad actual.
+
 ## Publicación y recuperación de órdenes
 
 Las órdenes no se publican directamente desde una petición de negocio:
@@ -187,7 +193,10 @@ Las pruebas unitarias MQTT cubren:
 - transición a `PUBLISHED` y conservación recuperable de un fallo;
 - recepción única ante una redelivery QoS 1;
 - recuperación de órdenes tras reconectar;
-- ausencia de reintentos mientras el broker está desconectado.
+- ausencia de reintentos mientras el broker está desconectado;
+- conservación de caracteres UTF-8 en estados recibidos por MQTT;
+- actualización de presencia con la identidad autenticada y la hora de recepción del backend;
+- correspondencia entre código, tipo, estación e identidad MQTT del inventario cargado.
 
 Para ejecutarlas:
 

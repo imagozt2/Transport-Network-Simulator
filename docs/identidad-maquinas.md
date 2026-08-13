@@ -69,6 +69,28 @@ Mosquitto comprueba las credenciales y limita los topics. El backend vuelve a co
 el tipo de máquina, la estación y el estado de la identidad con el inventario. Coincidir solo en el
 prefijo no permite suplantar otra máquina.
 
+### Inventario como fuente de verdad
+
+`devices` es la fuente de verdad para el puesto físico, el tipo y la estación de una máquina.
+`device_mqtt_identities` autoriza una instancia de ese puesto, pero no puede reasignarlo. Para cada
+registro activo se exige simultáneamente:
+
+- el prefijo `RMM-TM`, `RMM-EN` o `RMM-EX` coincide con `devices.device_type`;
+- el bloque `STnnn` coincide con `stations.code` a través de `devices.station_id`;
+- `device_mqtt_identities.device_id` apunta a esa misma máquina;
+- `device_mqtt_identities.mqtt_client_id` coincide exactamente con `devices.code`;
+- la identidad está activa y dentro de su periodo de validez.
+
+Los nombres (`El Espigón`, por ejemplo) son información visible codificada en UTF-8; no participan
+en la autenticación. Las aplicaciones Qt derivan la estación desde el código inventariado y solo
+aceptan un nombre configurado si coincide con el nombre canónico. Trasladar una máquina requiere
+actualizar el inventario y aprovisionar la identidad apropiada, no editar únicamente variables
+locales.
+
+Los datos iniciales crean una identidad MQTT por cada máquina inventariada. Las pruebas del
+ecosistema consultan MySQL después de cargar los datos y fallan si falta una identidad o si código,
+tipo, estación y `mqttClientId` dejan de ser coherentes.
+
 ### Instancia instalada
 
 `deviceInstanceId` es un UUID generado al aprovisionar una instalación concreta. Distingue la

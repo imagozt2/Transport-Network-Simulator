@@ -126,6 +126,7 @@ La respuesta contiene:
 | `summary.filteredDevices` | Número de máquinas incluidas tras aplicar filtros del backend. |
 | `summary.byType` | Recuento completo agrupado por tipo. |
 | `summary.byStatus` | Recuento completo agrupado por estado. |
+| `summary.byConnectivity` | Recuento completo agrupado por conectividad MQTT real. |
 | `devices` | Máquinas que cumplen los filtros. |
 
 Cada elemento de `devices` incluye su identificador, código, nombre, tipo, estado,
@@ -133,6 +134,11 @@ Cada elemento de `devices` incluye su identificador, código, nombre, tipo, esta
 distingue presencia MQTT y estado operativo, e incluye cuando están disponibles
 `lastCommunicationAt`, `lastPresenceAt`, `lastStatusAt`, `serviceMode`, `softwareVersion` y
 `uptimeSeconds`.
+
+El indicador **Conectadas por MQTT** utiliza `summary.byConnectivity.CONNECTED` entregado por el
+backend. No se deduce en el navegador a partir del estado operativo ni se sustituye por un valor
+fijo. Una máquina solo figura conectada después de que el backend haya procesado su presencia o
+estado MQTT autenticados.
 
 Los mensajes MQTT retrasados se guardan en el historial, pero no pueden sustituir el estado ni la
 última comunicación más recientes. De este modo, la vista actual y la trazabilidad histórica se
