@@ -1,5 +1,7 @@
-import { Component, input, output } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Component, inject, input, output } from '@angular/core';
+import { RouterLink } from '@angular/router';
+
+import { ActiveSectionService } from '../../core/services/active-section.service';
 
 interface SidebarItem {
   label: string;
@@ -14,13 +16,18 @@ interface SidebarSection {
 
 @Component({
   selector: 'app-sidebar',
-  imports: [RouterLink, RouterLinkActive],
+  imports: [RouterLink],
   templateUrl: './sidebar.html',
   styleUrl: './sidebar.css'
 })
 export class Sidebar {
+  private readonly activeSectionService = inject(ActiveSectionService);
+
   readonly open = input(false);
   readonly navigationSelected = output<void>();
+
+  protected readonly isActiveRoute = (route: string): boolean =>
+    this.activeSectionService.isActive(route);
 
   protected readonly sections: SidebarSection[] = [
     {
