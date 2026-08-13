@@ -4,8 +4,8 @@ import com.google.gson.Gson
 import com.google.gson.JsonParseException
 import com.google.gson.stream.MalformedJsonException
 import java.io.IOException
+import java.io.InterruptedIOException
 import java.net.ConnectException
-import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import java.util.concurrent.CancellationException
 import retrofit2.Response
@@ -68,7 +68,7 @@ class RMMApiCallExecutor(gson: Gson) {
         headers()["X-Request-Id"] ?: headers()["X-Correlation-Id"]
 
     private fun IOException.networkKind(): NetworkFailureKind = when (this) {
-        is SocketTimeoutException -> NetworkFailureKind.TIMEOUT
+        is InterruptedIOException -> NetworkFailureKind.TIMEOUT
         is UnknownHostException -> NetworkFailureKind.HOST_UNREACHABLE
         is ConnectException -> NetworkFailureKind.CONNECTION
         else -> NetworkFailureKind.OTHER

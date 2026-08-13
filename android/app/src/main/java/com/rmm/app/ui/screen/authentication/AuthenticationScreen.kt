@@ -132,7 +132,11 @@ fun AuthenticationScreen(
                                     is ApiResult.Success -> {
                                         mode = AuthenticationMode.LOGIN
                                         feedback = context.getString(
-                                            R.string.auth_registration_success,
+                                            if (result.value.verificationRequired) {
+                                                R.string.auth_registration_verification_required
+                                            } else {
+                                                R.string.auth_registration_active
+                                            },
                                             result.value.user.email,
                                         )
                                         feedbackIsError = false
@@ -380,10 +384,5 @@ private fun validateRegistration(
     else -> null
 }
 
-private fun android.content.Context.authError(failure: ApiFailure): String = when (failure) {
-    is ApiFailure.Http -> failure.problem?.detail
-        ?: getString(if (failure.statusCode == 401) R.string.auth_invalid_credentials else R.string.auth_request_error)
-    is ApiFailure.Network -> getString(R.string.auth_network_error)
-    ApiFailure.InvalidResponse, ApiFailure.Serialization, ApiFailure.Unexpected ->
-        getString(R.string.auth_request_error)
-}
+private fun android.content.Context.authError(failure: ApiFailure): String =
+    getString(authenticationErrorMessage(failure))
