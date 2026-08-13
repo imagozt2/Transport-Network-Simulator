@@ -1,4 +1,5 @@
 USE transport_simulator_db;
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 SET @encoding_issues = 0;
 

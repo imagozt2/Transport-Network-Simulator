@@ -1,4 +1,5 @@
 USE transport_simulator_db;
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 DROP TEMPORARY TABLE IF EXISTS seed_numbers;
 CREATE TEMPORARY TABLE seed_numbers (n INT PRIMARY KEY);

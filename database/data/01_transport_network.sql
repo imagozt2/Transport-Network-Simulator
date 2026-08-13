@@ -1,4 +1,5 @@
 USE transport_simulator_db;
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 INSERT INTO stations (code, name, active) VALUES
 ('ST001', 'Aeropuerto', TRUE),
