@@ -109,7 +109,8 @@ describe('TransportTitles', () => {
         summary: {
           totalDevices: 1, filteredDevices: 1,
           byType: { TICKET_MACHINE: 1, ENTRY_VALIDATOR: 0, EXIT_VALIDATOR: 0 },
-          byStatus: { ONLINE: 1, OFFLINE: 0, MAINTENANCE: 0, ERROR: 0 }
+          byStatus: { ONLINE: 1, OFFLINE: 0, MAINTENANCE: 0, ERROR: 0 },
+          byConnectivity: { CONNECTED: 0, DISCONNECTED: 0, NOT_MONITORED: 1 }
         },
         devices: [{
           id: 1, code: 'TM-ST001-01', name: 'Máquina Aeropuerto',

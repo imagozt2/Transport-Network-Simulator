@@ -157,7 +157,7 @@ describe('Contextual navigation between operational sections', () => {
   });
 
   it('should use destinations registered in the main navigation', () => {
-    const menuDestinations = new Set(Object.values(APPLICATION_ROUTES));
+    const menuDestinations = new Set<string>(Object.values(APPLICATION_ROUTES));
 
     for (const navigation of contextualNavigations) {
       expect(menuDestinations.has(`/${navigation.destinationPath}`)).toBe(true);
