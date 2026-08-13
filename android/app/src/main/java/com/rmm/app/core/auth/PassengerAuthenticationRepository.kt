@@ -4,15 +4,20 @@ import android.content.Context
 import com.rmm.app.core.network.ApiFailure
 import com.rmm.app.core.network.ApiResult
 import com.rmm.app.core.network.RMMApiClient
+import com.rmm.app.core.network.RMMApiClientFactory
 import com.rmm.app.core.session.PassengerSession
 import com.rmm.app.core.session.PassengerSessionStorage
 import com.rmm.app.core.session.PassengerSessionUser
 import java.time.Instant
 
-class PassengerAuthenticationRepository(context: Context) {
+class PassengerAuthenticationRepository(
+    context: Context,
+    apiFactory: RMMApiClientFactory? = null,
+) {
     private val applicationContext = context.applicationContext
-    private val api = RMMApiClient.create(PassengerAuthenticationApi::class.java)
-    private val calls = RMMApiClient.calls()
+    private val api = apiFactory?.create(PassengerAuthenticationApi::class.java)
+        ?: RMMApiClient.create(PassengerAuthenticationApi::class.java)
+    private val calls = apiFactory?.calls ?: RMMApiClient.calls()
     private val installation = PassengerInstallation(applicationContext)
     private val sessionStore = PassengerSessionStorage.get(applicationContext)
 

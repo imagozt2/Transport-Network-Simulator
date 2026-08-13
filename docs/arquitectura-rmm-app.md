@@ -156,8 +156,9 @@ Antes del envío comprueba el formato básico y las mismas condiciones públicas
 backend. La API vuelve a validar todos los datos.
 
 La implementación actual envía el idioma `es-ES` y la versión de términos `2026-01`. Un registro
-correcto no crea una sesión: muestra que debe verificarse el correo y devuelve al formulario de
-acceso.
+correcto no crea una sesión y devuelve al formulario de acceso. El mensaje distingue la respuesta
+`verificationRequired`: en entornos normales solicita verificar el correo; el Docker local activa
+la cuenta automáticamente para permitir probar el flujo sin infraestructura SMTP.
 
 ### Identidad de instalación
 

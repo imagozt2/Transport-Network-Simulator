@@ -23,6 +23,11 @@ entregan al cliente y no deben aparecer en logs, URLs ni almacenamiento sin cifr
 4. Una cuenta `ACTIVE` puede iniciar sesión; una cuenta pendiente, bloqueada o deshabilitada no.
 5. Cinco intentos fallidos consecutivos provocan un bloqueo temporal.
 
+El contenedor local utiliza `RMM_APP_AUTO_VERIFY_REGISTRATION=true` porque no envía correos. En ese
+entorno la cuenta pasa a `ACTIVE` dentro de la misma transacción de registro y la respuesta indica
+`verificationRequired: false`. La propiedad es `false` por defecto en el backend y no debe activarse
+en entornos que dispongan de correo o que representen un despliegue real.
+
 Las solicitudes de reenvío y recuperación no confirman si el correo existe, evitando la enumeración
 de cuentas.
 
@@ -81,8 +86,10 @@ incluso si el cierre remoto no puede completarse por falta de conexión.
 nueva de entre 12 y 72 caracteres. El cambio de contraseña revoca las sesiones activas.
 
 Los tokens de verificación y recuperación se almacenan mediante hash y dejan de ser válidos cuando
-se usan o caducan. En desarrollo, `RMM_APP_MAIL_ENABLED=false` utiliza la entrega local configurada.
-Las credenciales SMTP se suministran mediante variables de entorno.
+se usan o caducan. En desarrollo, `RMM_APP_MAIL_ENABLED=false` no entrega ni registra los tokens.
+Por eso el entorno local habilita explícitamente la activación automática; si se desactiva, deberá
+configurarse un medio real de entrega antes de registrar pasajeros. Las credenciales SMTP se
+suministran mediante variables de entorno.
 
 ## Autorización y aislamiento
 
@@ -113,7 +120,22 @@ sesión móvil.
 | `RMM_APP_REFRESH_TOKEN_LIFETIME` | `30d` | Vigencia máxima de renovación. |
 | `RMM_APP_EMAIL_VERIFICATION_LIFETIME` | `24h` | Vigencia de la verificación. |
 | `RMM_APP_PASSWORD_RESET_LIFETIME` | `30m` | Vigencia de recuperación. |
+| `RMM_APP_AUTO_VERIFY_REGISTRATION` | `false` | Activa inmediatamente cuentas nuevas; solo se habilita en el Docker local sin correo. |
 | `RMM_APP_MAIL_ENABLED` | `false` | Activa la entrega mediante SMTP. |
+
+## Comportamiento de RMM App
+
+Los formularios permanecen editables mientras no exista una petición y se bloquean únicamente
+durante el envío. El teclado avanza entre campos y permite finalizar el inicio de sesión sin perder
+el contenido introducido.
+
+La aplicación no presenta directamente los textos técnicos del backend. Traduce los resultados a
+mensajes diferenciados para credenciales incorrectas, cuenta no disponible, correo ya registrado,
+demasiados intentos, datos inválidos, timeout, red inaccesible, backend detenido y respuesta no
+interpretable. Al terminar cualquier fallo, el formulario vuelve a quedar disponible.
+
+Después de un registro, el mensaje depende de `verificationRequired`: solicita revisar el correo en
+el flujo normal o informa de que ya puede iniciarse sesión en el entorno local autoactivado.
 
 Los ejemplos completos se mantienen en los [contratos REST de RMM App](contratos-rest-rmm-app.md).
 La conservación local se describe en los [flujos online y sin conexión](flujos-conectividad.md).
