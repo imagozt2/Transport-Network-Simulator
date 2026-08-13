@@ -23,6 +23,7 @@ public class PassengerRegistrationService {
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
     private final String currentTermsVersion;
+    private final boolean autoVerifyRegistration;
     private final PassengerAccountRecoveryService recoveryService;
 
     public PassengerRegistrationService(
@@ -30,13 +31,16 @@ public class PassengerRegistrationService {
             PasswordEncoder passwordEncoder,
             Clock clock,
             PassengerAccountRecoveryService recoveryService,
-            @Value("${app.rmm-app.current-terms-version}") String currentTermsVersion
+            @Value("${app.rmm-app.current-terms-version}") String currentTermsVersion,
+            @Value("${app.rmm-app.account.auto-verify-registration:false}")
+            boolean autoVerifyRegistration
     ) {
         this.passengerAccountRepository = passengerAccountRepository;
         this.passwordEncoder = passwordEncoder;
         this.clock = clock;
         this.recoveryService = recoveryService;
         this.currentTermsVersion = currentTermsVersion;
+        this.autoVerifyRegistration = autoVerifyRegistration;
     }
 
     @Transactional
@@ -62,9 +66,13 @@ public class PassengerRegistrationService {
                 LocalDateTime.now(clock)
         );
         PassengerAccount persisted = passengerAccountRepository.save(passenger);
-        recoveryService.issueEmailVerification(persisted);
+        if (autoVerifyRegistration) {
+            persisted.verifyEmail(LocalDateTime.now(clock));
+        } else {
+            recoveryService.issueEmailVerification(persisted);
+        }
         return new PassengerRegistrationResponse(
-                PassengerRegistrationUserResponse.from(persisted), true
+                PassengerRegistrationUserResponse.from(persisted), !autoVerifyRegistration
         );
     }
 
