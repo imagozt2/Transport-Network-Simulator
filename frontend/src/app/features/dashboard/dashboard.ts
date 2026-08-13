@@ -1,5 +1,6 @@
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { APPLICATION_ROUTES } from '../../core/navigation/application-routes';
 import { DashboardResponse } from '../../core/models/dashboard.model';
 import { DeviceStatus, DeviceType } from '../../core/models/device-operation.model';
 import { TrainStatus } from '../../core/models/train-operation.model';
@@ -20,6 +21,7 @@ interface StatusItem<T extends string> {
   styleUrl: './dashboard.css'
 })
 export class Dashboard implements OnInit, OnDestroy {
+  protected readonly sectionRoutes = APPLICATION_ROUTES;
   private readonly dashboardService = inject(DashboardService);
   private readonly periodicRefresh = new PeriodicRefresh(5_000, () => this.loadSummary());
 

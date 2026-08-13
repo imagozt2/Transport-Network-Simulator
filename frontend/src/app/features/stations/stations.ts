@@ -1,6 +1,7 @@
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
+import { APPLICATION_ROUTES } from '../../core/navigation/application-routes';
 import {
   StationArrival,
   StationOperation,
@@ -25,6 +26,7 @@ type LineCountFilter = 'ALL' | '1' | '2' | '3_PLUS';
   styleUrls: ['./stations.css', './stations-arrivals.css']
 })
 export class Stations implements OnInit, OnDestroy {
+  protected readonly sectionRoutes = APPLICATION_ROUTES;
   private readonly stationOperationsService = inject(StationOperationsService);
   private readonly route = inject(ActivatedRoute);
   private readonly periodicRefresh = new PeriodicRefresh(15_000, () => this.loadOperations());

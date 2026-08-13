@@ -85,8 +85,8 @@
                     <div><span>Validadores de salida</span><strong>{{ station.devices.exitValidators }}</strong></div>
                   </div>
                   <nav class="station-context-actions" aria-label="Acciones sobre las máquinas de la estación">
-                    <a class="context-link" [routerLink]="['/devices']" [queryParams]="{ stationCode: station.code }">Ver máquinas</a>
-                    <a class="context-link" [routerLink]="['/logs']" [queryParams]="{ stationCode: station.code }">Ver logs</a>
+                    <a class="context-link" [routerLink]="sectionRoutes.devices" [queryParams]="{ stationCode: station.code }">Ver máquinas</a>
+                    <a class="context-link" [routerLink]="sectionRoutes.logs" [queryParams]="{ stationCode: station.code }">Ver logs</a>
                   </nav>
                 </section>
 
@@ -103,7 +103,7 @@
                             <em>{{ line.serviceOpen ? line.activeTrainCount + ' trenes' : 'Cerrada' }}</em>
                             <a
                               class="context-link"
-                              [routerLink]="['/trains']"
+                              [routerLink]="sectionRoutes.trains"
                               [queryParams]="{ lineCode: line.code, status: 'IN_SERVICE' }"
                               [attr.aria-label]="'Ver trenes en servicio de ' + line.name"
                             >Ver trenes</a>

@@ -1,6 +1,7 @@
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
+import { APPLICATION_ROUTES } from '../../core/navigation/application-routes';
 import {
   LineOperation,
   LineOperationArrival,
@@ -24,6 +25,7 @@ import { SummaryCard } from '../../shared/summary-card/summary-card';
   styleUrls: ['./lines.css', './lines-circulation.css', './lines-depots.css']
 })
 export class Lines implements OnInit, OnDestroy {
+  protected readonly sectionRoutes = APPLICATION_ROUTES;
   private readonly lineOperationsService = inject(LineOperationsService);
   private readonly periodicRefresh = new PeriodicRefresh(5_000, () => this.loadOperations());
   private readonly expandedLineIds = new Set<number>();
