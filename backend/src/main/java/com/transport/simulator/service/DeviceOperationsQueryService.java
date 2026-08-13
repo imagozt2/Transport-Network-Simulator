@@ -99,13 +99,8 @@ public class DeviceOperationsQueryService {
     }
 
     private DeviceConnectivityResponse toConnectivityResponse(Device device) {
-        DeviceConnectivityState state = !device.isMqttManaged()
-                ? DeviceConnectivityState.NOT_MONITORED
-                : device.getMqttPresence() == DeviceMqttPresence.ONLINE
-                        ? DeviceConnectivityState.CONNECTED
-                        : DeviceConnectivityState.DISCONNECTED;
         return new DeviceConnectivityResponse(
-                state,
+                connectivityState(device),
                 device.getMqttPresence(),
                 device.getOperationalState(),
                 device.getLastCommunicationAt(),
@@ -143,18 +138,29 @@ public class DeviceOperationsQueryService {
     ) {
         Map<DeviceType, Long> byType = initializeCounts(DeviceType.class);
         Map<DeviceStatus, Long> byStatus = initializeCounts(DeviceStatus.class);
+        Map<DeviceConnectivityState, Long> byConnectivity = initializeCounts(
+                DeviceConnectivityState.class);
 
         devices.forEach(device -> {
             byType.compute(device.getType(), (ignored, count) -> count + 1);
             byStatus.compute(device.getStatus(), (ignored, count) -> count + 1);
+            byConnectivity.compute(connectivityState(device), (ignored, count) -> count + 1);
         });
 
         return new DeviceOperationSummaryResponse(
                 devices.size(),
                 filteredDeviceCount,
                 byType,
-                byStatus
+                byStatus,
+                byConnectivity
         );
+    }
+
+    private DeviceConnectivityState connectivityState(Device device) {
+        if (!device.isMqttManaged()) return DeviceConnectivityState.NOT_MONITORED;
+        return device.getMqttPresence() == DeviceMqttPresence.ONLINE
+                ? DeviceConnectivityState.CONNECTED
+                : DeviceConnectivityState.DISCONNECTED;
     }
 
     private boolean matchesSearch(Device device, String normalizedSearch) {

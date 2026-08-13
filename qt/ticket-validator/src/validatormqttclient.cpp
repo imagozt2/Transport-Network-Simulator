@@ -3,12 +3,28 @@
 
 #include <rmm/localservices.h>
 
+#include <QDateTime>
 #include <QMqttClient>
 #include <QMqttTopicName>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QProcessEnvironment>
 #include <QSslConfiguration>
 #include <QTimer>
 #include <QUuid>
+
+namespace {
+QByteArray presencePayload(const QString &state, const QString &reason)
+{
+    return QJsonDocument(QJsonObject {
+        {QStringLiteral("schemaVersion"), 1},
+        {QStringLiteral("state"), state},
+        {QStringLiteral("reason"), reason},
+        {QStringLiteral("changedAt"),
+         QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs)}
+    }).toJson(QJsonDocument::Compact);
+}
+}
 
 ValidatorMqttClient::ValidatorMqttClient(
     const ValidatorConfiguration &configuration,
@@ -18,7 +34,8 @@ ValidatorMqttClient::ValidatorMqttClient(
       m_client(new QMqttClient(this)),
       m_timeout(new QTimer(this)),
       m_reconnectTimer(new QTimer(this)),
-      m_publishRetryTimer(new QTimer(this))
+      m_publishRetryTimer(new QTimer(this)),
+      m_presenceTimer(new QTimer(this))
 {
     const auto environment = QProcessEnvironment::systemEnvironment();
     m_client->setHostname(QString::fromUtf8(
@@ -34,6 +51,7 @@ ValidatorMqttClient::ValidatorMqttClient(
     m_reconnectTimer->setSingleShot(true);
     m_publishRetryTimer->setSingleShot(true);
     m_publishRetryTimer->setInterval(1500);
+    m_presenceTimer->setInterval(30000);
 
     connect(m_client, &QMqttClient::connected, this, [this] {
         m_reconnectAttempt = 0;
@@ -45,10 +63,13 @@ ValidatorMqttClient::ValidatorMqttClient(
             scheduleReconnect();
             return;
         }
+        publishPresence();
+        m_presenceTimer->start();
         emit connectionStateChanged(true);
         publishPending();
     });
     connect(m_client, &QMqttClient::disconnected, this, [this] {
+        m_presenceTimer->stop();
         m_packetId = -1;
         m_timeout->stop();
         emit connectionStateChanged(false);
@@ -94,6 +115,8 @@ ValidatorMqttClient::ValidatorMqttClient(
             scheduleReconnect();
         }
     });
+    connect(m_presenceTimer, &QTimer::timeout,
+            this, &ValidatorMqttClient::publishPresence);
 
     QTimer::singleShot(0, this, [this] {
         if (m_client->password().isEmpty()) {
@@ -137,11 +160,26 @@ bool ValidatorMqttClient::hasPendingValidation() const
 void ValidatorMqttClient::connectToBroker()
 {
     if (m_client->state() != QMqttClient::Disconnected || m_client->password().isEmpty()) return;
+    m_client->setWillTopic(QMqttTopicName(
+        QStringLiteral("rmm/v1/devices/%1/presence").arg(m_configuration.deviceCode)));
+    m_client->setWillMessage(presencePayload(
+        QStringLiteral("OFFLINE"), QStringLiteral("CONNECTION_LOST")));
+    m_client->setWillQoS(1);
+    m_client->setWillRetain(true);
     if (rmm::config::mqttTlsEnabled) {
         m_client->connectToHostEncrypted(QSslConfiguration::defaultConfiguration());
     } else {
         m_client->connectToHost();
     }
+}
+
+void ValidatorMqttClient::publishPresence()
+{
+    if (m_client->state() != QMqttClient::Connected) return;
+    m_client->publish(
+        QMqttTopicName(QStringLiteral("rmm/v1/devices/%1/presence")
+            .arg(m_configuration.deviceCode)),
+        presencePayload(QStringLiteral("ONLINE"), QStringLiteral("HEARTBEAT")), 1, true);
 }
 
 void ValidatorMqttClient::publishPending()

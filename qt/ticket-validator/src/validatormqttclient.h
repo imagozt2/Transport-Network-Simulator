@@ -34,12 +34,14 @@ private:
     void schedulePublishRetry();
     void failPending(const QString &reason);
     void clearPending();
+    void publishPresence();
 
     ValidatorConfiguration m_configuration;
     QMqttClient *m_client;
     QTimer *m_timeout;
     QTimer *m_reconnectTimer;
     QTimer *m_publishRetryTimer;
+    QTimer *m_presenceTimer;
     QByteArray m_pendingPayload;
     QString m_pendingReference;
     qint32 m_packetId = -1;

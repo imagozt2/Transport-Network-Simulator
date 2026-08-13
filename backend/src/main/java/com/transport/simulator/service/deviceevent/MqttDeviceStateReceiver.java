@@ -4,6 +4,7 @@ import com.transport.simulator.enums.DeviceMqttPresence;
 import com.transport.simulator.enums.DeviceOperationalState;
 import com.transport.simulator.mqtt.AuthenticatedMqttMessage;
 import com.transport.simulator.mqtt.AuthenticatedMqttMessageRouter;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -15,11 +16,13 @@ import tools.jackson.databind.ObjectMapper;
 public class MqttDeviceStateReceiver {
     private final MqttDeviceStateService stateService;
     private final ObjectMapper objectMapper;
+    private final Clock clock;
 
     public MqttDeviceStateReceiver(AuthenticatedMqttMessageRouter router,
-            MqttDeviceStateService stateService, ObjectMapper objectMapper) {
+            MqttDeviceStateService stateService, ObjectMapper objectMapper, Clock clock) {
         this.stateService = stateService;
         this.objectMapper = objectMapper;
+        this.clock = clock;
         router.register(this::receive);
     }
 
@@ -33,8 +36,9 @@ public class MqttDeviceStateReceiver {
         requireSchema(value);
         DeviceMqttPresence presence = enumValue(DeviceMqttPresence.class, text(value, "state"));
         text(value, "reason");
+        dateTime(text(value, "changedAt"));
         stateService.updatePresence(message.machine(), presence,
-                dateTime(text(value, "changedAt")));
+                LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
     }
 
     private void receiveStatus(AuthenticatedMqttMessage message) {
