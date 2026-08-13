@@ -44,6 +44,27 @@ sustituirse esa dirección por `localhost` dentro de RMM App.
 
 Android Studio compilará, instalará y abrirá RMM App en el dispositivo seleccionado.
 
+### Acceso local a RMM App
+
+Con el ecosistema de Docker iniciado, el procedimiento desde el emulador es:
+
+1. Comprueba en `config/local-services.properties` o en su archivo de ejemplo que
+   `RMM_API_ANDROID_BASE_URL` sea `http://10.0.2.2:8080/api/rmm-app/v1`.
+2. Sincroniza el proyecto Android después de cualquier cambio de esa dirección.
+3. Abre RMM App y selecciona **Crear cuenta**.
+4. Introduce nombre, apellidos, un correo no registrado y una contraseña de 12 a 72 caracteres con
+   mayúsculas, minúsculas y números.
+5. Acepta los términos y crea la cuenta. El entorno local de Docker la activa automáticamente porque
+   no dispone de entrega de correo.
+6. Regresa a **Iniciar sesión** y utiliza el correo y la contraseña recién registrados.
+7. Para finalizar, abre **Cuenta**, pulsa **Cerrar sesión** y confirma la operación.
+
+No existen credenciales predeterminadas para pasajeros. Las credenciales `admin` pertenecen al
+centro de control web y no permiten acceder a RMM App.
+
+`RMM_APP_AUTO_VERIFY_REGISTRATION=true` se limita al entorno local. Los entornos con correo deben
+mantenerlo en `false` y completar la verificación mediante el enlace entregado al pasajero.
+
 ### Compilación y pruebas desde PowerShell
 
 Desde la raíz del repositorio:
@@ -52,6 +73,15 @@ Desde la raíz del repositorio:
 Set-Location android
 .\gradlew.bat testDebugUnitTest assembleDebug
 ```
+
+Con un emulador iniciado también pueden compilarse e instalarse las pruebas instrumentadas:
+
+```powershell
+.\gradlew.bat connectedDebugAndroidTest
+```
+
+Estas pruebas cubren la edición de los formularios y el ciclo de registro, inicio de sesión,
+persistencia segura y cierre de sesión mediante un servidor HTTP controlado.
 
 El APK generado queda en `android/app/build/outputs/apk/debug/app-debug.apk`. Para instalarlo desde
 la terminal con un emulador o dispositivo ya conectado:
@@ -130,7 +160,11 @@ constituyen un paquete redistribuible autónomo con todas sus bibliotecas.
 - Si Gradle no encuentra el SDK, configura `ANDROID_HOME`, `ANDROID_SDK_ROOT` o
   `android/local.properties`.
 - Si RMM App no alcanza el backend desde el emulador, comprueba que utiliza `10.0.2.2` y que el
-  backend escucha en el puerto configurado.
+  backend escucha en el puerto configurado. `localhost` dentro del emulador no representa Windows.
+- Si el servidor no puede alcanzarse, RMM App diferencia entre timeout, ausencia de red y backend
+  detenido. Comprueba `http://localhost:8080/api/health` desde Windows antes de reinstalar la app.
+- Si una cuenta local recién creada aparece pendiente, confirma que el backend de Docker recibió
+  `RMM_APP_AUTO_VERIFY_REGISTRATION=true` y reconstruye el contenedor tras cambiarlo.
 - Si CMake no encuentra `Qt6Mqtt`, instala Qt MQTT para el mismo kit y versión de Qt.
 - Si Qt Creator muestra un kit inválido, vuelve a seleccionar CMake, Ninja y el compilador que
   pertenecen a la instalación activa de Qt.
