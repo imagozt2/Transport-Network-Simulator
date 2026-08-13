@@ -14,6 +14,7 @@ const response: DeviceOperationsResponse = {
     filteredDevices: 2,
     byType: { TICKET_MACHINE: 2, ENTRY_VALIDATOR: 0, EXIT_VALIDATOR: 0 },
     byStatus: { ONLINE: 2, OFFLINE: 0, MAINTENANCE: 0, ERROR: 0 },
+    byConnectivity: { CONNECTED: 1, DISCONNECTED: 1, NOT_MONITORED: 0 },
   },
   devices: [
     {

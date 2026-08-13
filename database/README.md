@@ -11,6 +11,35 @@ Definición de MySQL 8 y datos iniciales de la red de transporte de Macegocia.
 - `data/03_ticket_products.sql`: catálogo inicial de productos de transporte.
 - `data/04_service_configuration.sql`: calendarios, franjas, frecuencias, tiempos y cocheras por línea.
 - `verification/verify_database.sql`: recuentos esperados y comprobaciones de integridad.
+- `verification/verify_encoding.sql`: comprueba los literales canónicos almacenados y posibles
+  secuencias de texto mal decodificado.
+- `tests/database-source-encoding-tests.ps1`: valida que todos los scripts SQL sean UTF-8 y que los
+  nombres con caracteres especiales permanezcan intactos antes de cargar MySQL.
+
+## Codificación de los datos
+
+Todos los archivos SQL se versionan en UTF-8 y la conexión de carga utiliza `utf8mb4`. El esquema,
+las tablas y las columnas de texto emplean una intercalación `utf8mb4`, por lo que nombres como
+`Ramón y Cajal`, `Museo Marítimo` o `El Espigón` no deben transliterarse ni convertirse a una página
+de códigos local.
+
+La codificación se verifica en dos niveles:
+
+1. `database-source-encoding-tests.ps1` rechaza bytes que no formen UTF-8 válido, indicadores de
+   mojibake y la pérdida de literales canónicos en los archivos fuente.
+2. `verify_encoding.sql` comprueba los valores una vez importados en MySQL. La prueba del ecosistema
+   ejecuta esta consulta contra el contenedor real y exige un resultado de cero incidencias.
+
+En PowerShell debe indicarse la codificación al leer los scripts para no depender de la versión ni
+de la página de códigos de la consola:
+
+```powershell
+Get-Content database/data/01_transport_network.sql -Raw -Encoding utf8 |
+    mysql --user=$env:DB_USERNAME transport_simulator_db
+```
+
+Las API y los mensajes MQTT transportan JSON UTF-8. El backend conserva los caracteres recibidos,
+pero nunca utiliza el nombre visible de una estación o máquina como identidad técnica.
 
 El esquema incluye `operator_accounts` para las cuentas del centro de control. Esta tabla almacena
 únicamente el hash de la contraseña junto con la identidad, el rol, el estado y los datos de
@@ -67,13 +96,14 @@ cliente de MySQL mediante la entrada estándar. Por ejemplo, después de definir
 temporalmente `MYSQL_PWD`:
 
 ```powershell
-Get-Content database/schema/01_create_database.sql -Raw | mysql --user=$env:DB_USERNAME
-Get-Content database/schema/02_create_tables.sql -Raw | mysql --user=$env:DB_USERNAME
-Get-Content database/data/01_transport_network.sql -Raw | mysql --user=$env:DB_USERNAME
-Get-Content database/data/02_operations.sql -Raw | mysql --user=$env:DB_USERNAME
-Get-Content database/data/03_ticket_products.sql -Raw | mysql --user=$env:DB_USERNAME
-Get-Content database/data/04_service_configuration.sql -Raw | mysql --user=$env:DB_USERNAME
-Get-Content database/verification/verify_database.sql -Raw | mysql --user=$env:DB_USERNAME
+Get-Content database/schema/01_create_database.sql -Raw -Encoding utf8 | mysql --user=$env:DB_USERNAME
+Get-Content database/schema/02_create_tables.sql -Raw -Encoding utf8 | mysql --user=$env:DB_USERNAME
+Get-Content database/data/01_transport_network.sql -Raw -Encoding utf8 | mysql --user=$env:DB_USERNAME
+Get-Content database/data/02_operations.sql -Raw -Encoding utf8 | mysql --user=$env:DB_USERNAME
+Get-Content database/data/03_ticket_products.sql -Raw -Encoding utf8 | mysql --user=$env:DB_USERNAME
+Get-Content database/data/04_service_configuration.sql -Raw -Encoding utf8 | mysql --user=$env:DB_USERNAME
+Get-Content database/verification/verify_database.sql -Raw -Encoding utf8 | mysql --user=$env:DB_USERNAME
+Get-Content database/verification/verify_encoding.sql -Raw -Encoding utf8 | mysql --user=$env:DB_USERNAME
 Remove-Item Env:MYSQL_PWD
 ```
 

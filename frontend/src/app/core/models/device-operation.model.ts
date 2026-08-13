@@ -61,6 +61,7 @@ export interface DeviceOperationSummary {
   filteredDevices: number;
   byType: Record<DeviceType, number>;
   byStatus: Record<DeviceStatus, number>;
+  byConnectivity: Record<DeviceConnectivityState, number>;
 }
 
 export interface DeviceOperationsResponse {

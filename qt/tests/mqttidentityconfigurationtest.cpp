@@ -14,6 +14,8 @@ private slots:
     void ticketMachineRejectsForeignAndLegacyIdentities_data();
     void ticketMachineRejectsForeignAndLegacyIdentities();
     void validatorBuildsAnEntryIdentityByDefault();
+    void validatorResolvesAccentedStationNamesFromItsIdentity_data();
+    void validatorResolvesAccentedStationNamesFromItsIdentity();
     void validatorAcceptsAnExitIdentityInExitMode();
     void validatorRejectsAnIdentityForAnotherMode_data();
     void validatorRejectsAnIdentityForAnotherMode();
@@ -67,8 +69,9 @@ void MqttIdentityConfigurationTest::validatorBuildsAnEntryIdentityByDefault()
     QVERIFY(configuration.valid);
     QVERIFY(configuration.isEntry());
     QCOMPARE(configuration.modeCode(), QStringLiteral("ENTRY"));
-    QCOMPARE(configuration.stationCode, QStringLiteral("ST038"));
-    QCOMPARE(configuration.deviceCode, QStringLiteral("RMM-EN-ST038-01"));
+    QCOMPARE(configuration.stationCode, QStringLiteral("ST046"));
+    QCOMPARE(configuration.stationName, QStringLiteral("El Espigón"));
+    QCOMPARE(configuration.deviceCode, QStringLiteral("RMM-EN-ST046-01"));
 }
 
 void MqttIdentityConfigurationTest::validatorAcceptsAnExitIdentityInExitMode()
@@ -85,7 +88,37 @@ void MqttIdentityConfigurationTest::validatorAcceptsAnExitIdentityInExitMode()
     QVERIFY(!configuration.isEntry());
     QCOMPARE(configuration.modeCode(), QStringLiteral("EXIT"));
     QCOMPARE(configuration.stationCode, QStringLiteral("ST010"));
+    QCOMPARE(configuration.stationName, QStringLiteral("Gueto Norte"));
     QCOMPARE(configuration.deviceCode, QStringLiteral("RMM-EX-ST010-02"));
+}
+
+void MqttIdentityConfigurationTest::validatorResolvesAccentedStationNamesFromItsIdentity_data()
+{
+    QTest::addColumn<QString>("stationCode");
+    QTest::addColumn<QString>("stationName");
+    QTest::newRow("ramon-y-cajal")
+        << QStringLiteral("ST004") << QStringLiteral("Ramón y Cajal");
+    QTest::newRow("museo-maritimo")
+        << QStringLiteral("ST014") << QStringLiteral("Museo Marítimo");
+    QTest::newRow("estadio-olimpico")
+        << QStringLiteral("ST017") << QStringLiteral("Estadio Olímpico");
+    QTest::newRow("el-espigon")
+        << QStringLiteral("ST046") << QStringLiteral("El Espigón");
+}
+
+void MqttIdentityConfigurationTest::validatorResolvesAccentedStationNamesFromItsIdentity()
+{
+    QFETCH(QString, stationCode);
+    QFETCH(QString, stationName);
+    QProcessEnvironment environment;
+    environment.insert(QStringLiteral("RMM_VALIDATOR_DEVICE_CODE"),
+                       QStringLiteral("RMM-EN-%1-01").arg(stationCode));
+
+    const auto configuration = ValidatorConfiguration::fromEnvironment(environment);
+
+    QVERIFY(configuration.valid);
+    QCOMPARE(configuration.stationCode, stationCode);
+    QCOMPARE(configuration.stationName, stationName);
 }
 
 void MqttIdentityConfigurationTest::validatorRejectsAnIdentityForAnotherMode_data()

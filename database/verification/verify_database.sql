@@ -1,4 +1,5 @@
 USE transport_simulator_db;
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 SELECT COUNT(*) AS operator_account_count
 FROM operator_accounts;

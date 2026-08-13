@@ -1,4 +1,5 @@
 USE transport_simulator_db;
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 INSERT INTO service_calendars (
     code, name, day_type, service_start_time, service_end_time, valid_from, valid_until, active

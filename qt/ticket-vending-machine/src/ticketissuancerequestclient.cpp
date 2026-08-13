@@ -4,6 +4,8 @@
 #include <rmm/localservices.h>
 
 #include <QDateTime>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QMqttClient>
 #include <QMqttTopicName>
 #include <QProcessEnvironment>
@@ -12,12 +14,26 @@
 #include <QTimer>
 #include <QUuid>
 
+namespace {
+QByteArray presencePayload(const QString &state, const QString &reason)
+{
+    return QJsonDocument(QJsonObject {
+        {QStringLiteral("schemaVersion"), 1},
+        {QStringLiteral("state"), state},
+        {QStringLiteral("reason"), reason},
+        {QStringLiteral("changedAt"),
+         QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs)}
+    }).toJson(QJsonDocument::Compact);
+}
+}
+
 TicketIssuanceRequestClient::TicketIssuanceRequestClient(QObject *parent)
     : QObject(parent),
       m_client(new QMqttClient(this)),
       m_timeout(new QTimer(this)),
       m_reconnectTimer(new QTimer(this)),
-      m_publishRetryTimer(new QTimer(this))
+      m_publishRetryTimer(new QTimer(this)),
+      m_presenceTimer(new QTimer(this))
 {
     const auto environment = QProcessEnvironment::systemEnvironment();
     const auto configuration = TicketMachineConfiguration::fromEnvironment(environment);
@@ -36,6 +52,7 @@ TicketIssuanceRequestClient::TicketIssuanceRequestClient(QObject *parent)
     m_reconnectTimer->setSingleShot(true);
     m_publishRetryTimer->setSingleShot(true);
     m_publishRetryTimer->setInterval(1500);
+    m_presenceTimer->setInterval(30000);
 
     connect(m_client, &QMqttClient::connected, this, [this] {
         m_reconnectAttempt = 0;
@@ -43,10 +60,13 @@ TicketIssuanceRequestClient::TicketIssuanceRequestClient(QObject *parent)
         emit connectionStateChanged(true, 0);
         m_client->subscribe(
             QMqttTopicFilter(QStringLiteral("rmm/v1/devices/%1/commands").arg(m_deviceCode)), 1);
+        publishPresence();
+        m_presenceTimer->start();
         flushQueuedMessages();
         publishPending();
     });
     connect(m_client, &QMqttClient::disconnected, this, [this] {
+        m_presenceTimer->stop();
         m_packetId = -1;
         emit connectionStateChanged(false, 0);
         scheduleReconnect();
@@ -133,6 +153,8 @@ TicketIssuanceRequestClient::TicketIssuanceRequestClient(QObject *parent)
     connect(m_timeout, &QTimer::timeout, this, [this] {
         fail(QStringLiteral("MQTT_TIMEOUT"));
     });
+    connect(m_presenceTimer, &QTimer::timeout,
+            this, &TicketIssuanceRequestClient::publishPresence);
 
     if (m_configurationValid && !m_client->password().isEmpty()) {
         connectToBroker();
@@ -144,11 +166,25 @@ void TicketIssuanceRequestClient::connectToBroker()
     if (m_client->password().isEmpty() || m_client->state() != QMqttClient::Disconnected) {
         return;
     }
+    m_client->setWillTopic(
+        QStringLiteral("rmm/v1/devices/%1/presence").arg(m_deviceCode));
+    m_client->setWillMessage(presencePayload(
+        QStringLiteral("OFFLINE"), QStringLiteral("CONNECTION_LOST")));
+    m_client->setWillQoS(1);
+    m_client->setWillRetain(true);
     if (rmm::config::mqttTlsEnabled) {
         m_client->connectToHostEncrypted(QSslConfiguration::defaultConfiguration());
     } else {
         m_client->connectToHost();
     }
+}
+
+void TicketIssuanceRequestClient::publishPresence()
+{
+    if (m_client->state() != QMqttClient::Connected) return;
+    m_client->publish(
+        QMqttTopicName(QStringLiteral("rmm/v1/devices/%1/presence").arg(m_deviceCode)),
+        presencePayload(QStringLiteral("ONLINE"), QStringLiteral("HEARTBEAT")), 1, true);
 }
 
 void TicketIssuanceRequestClient::scheduleReconnect()

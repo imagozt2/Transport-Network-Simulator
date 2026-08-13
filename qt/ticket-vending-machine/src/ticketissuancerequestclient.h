@@ -56,6 +56,7 @@ private:
     void flushQueuedMessages();
     void publishOrQueue(const QString &topic, const QByteArray &payload);
     void publishPending();
+    void publishPresence();
     void publishCommandAcknowledgement(
         const QString &commandId,
         const QString &issuanceCode,
@@ -67,6 +68,7 @@ private:
     QTimer *m_timeout;
     QTimer *m_reconnectTimer;
     QTimer *m_publishRetryTimer;
+    QTimer *m_presenceTimer;
     QQueue<QueuedMessage> m_queuedMessages;
     QByteArray m_pendingPayload;
     QString m_pendingReference;

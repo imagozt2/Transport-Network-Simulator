@@ -1,4 +1,5 @@
 USE transport_simulator_db;
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE operator_accounts (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,

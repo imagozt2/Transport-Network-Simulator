@@ -189,9 +189,7 @@ export class Devices implements OnInit, OnDestroy {
   }
 
   connectedMqttDevices(): number {
-    return this.operations?.devices.filter(
-      (device) => device.connectivity.state === 'CONNECTED'
-    ).length ?? 0;
+    return this.operations?.summary.byConnectivity.CONNECTED ?? 0;
   }
 
   eventSourceLabel(source: DeviceEventSource): string {
