@@ -459,18 +459,28 @@ const englishPhrases: Readonly<Record<string, string>> = {
   'Idioma de la interfaz': 'Interface language',
   'Selecciona el idioma utilizado en los menús y contenidos de la aplicación.': 'Select the language used in the application menus and content.',
   'Zona horaria': 'Time zone',
-  'Actualización de datos': 'Data updates',
-  'Automática': 'Automatic',
-  'La zona horaria y la actualización de datos forman parte de la configuración operativa y no pueden modificarse desde una cuenta de operador.': 'The time zone and data updates are part of the operational configuration and cannot be changed from an operator account.',
+  'Determina cómo se muestran las fechas y horas en todo el centro de control.': 'Determines how dates and times are displayed throughout the control centre.',
+  'Madrid (Europa)': 'Madrid (Europe)',
+  'Londres (Europa)': 'London (Europe)',
+  'Nueva York (América)': 'New York (America)',
+  'Ciudad de México (América)': 'Mexico City (America)',
+  'Buenos Aires (América)': 'Buenos Aires (America)',
+  'Tokio (Asia)': 'Tokyo (Asia)',
+  'Tema de la interfaz': 'Interface theme',
+  'Adapta la paleta del centro de control a un entorno claro u oscuro.': 'Adapts the control centre palette to a light or dark environment.',
+  'Claro': 'Light',
+  'Oscuro': 'Dark',
   'Accesibilidad': 'Accessibility',
   'Preferencias guardadas únicamente en este navegador.': 'Preferences stored only in this browser.',
   'Reducir animaciones': 'Reduce animations',
   'Minimiza transiciones y movimientos de la interfaz.': 'Minimise interface transitions and motion.',
   'Preferencias del navegador': 'Browser preferences',
-  'Los cambios de idioma y accesibilidad se guardarán en este dispositivo.': 'Language and accessibility changes will be saved on this device.',
+  'La zona horaria y el tema se guardan en la cuenta; el idioma y la accesibilidad, en este dispositivo.': 'The time zone and theme are stored in the account; language and accessibility are stored on this device.',
   'Restablecer': 'Reset',
   'Guardar preferencias': 'Save preferences',
-  'Las preferencias se han guardado correctamente.': 'Preferences have been saved successfully.'
+  'Las preferencias se han guardado correctamente.': 'Preferences have been saved successfully.',
+  'No se han podido cargar las preferencias del operador.': 'The operator preferences could not be loaded.',
+  'No se han podido guardar las preferencias del operador.': 'The operator preferences could not be saved.'
 };
 
 const englishPatterns: ReadonlyArray<readonly [RegExp, string]> = [

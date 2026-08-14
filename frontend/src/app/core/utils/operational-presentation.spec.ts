@@ -8,7 +8,6 @@ import {
   stationStatusLabel,
   trainStatusLabel
 } from './operation-labels';
-import { formatCountdown, formatDateTime, formatDuration, formatTime } from './temporal-formatters';
 
 describe('operational presentation utilities', () => {
   it('should resolve line colors and their contrasting text consistently', () => {
@@ -27,16 +26,5 @@ describe('operational presentation utilities', () => {
     expect(fleetRoleLabel('HISTORIC')).toBe('Histórico');
     expect(depotStatusLabel('HIGH_OCCUPANCY')).toBe('Ocupación alta');
     expect(deviceStatusLabel('MAINTENANCE')).toBe('Mantenimiento');
-  });
-
-  it('should format operational times using the same rules', () => {
-    const date = '2026-07-22T08:30:45';
-
-    expect(formatTime(date)).toMatch(/08:30/);
-    expect(formatTime(date, true)).toMatch(/08:30:45/);
-    expect(formatDateTime(date)).toMatch(/22\/07\/2026.*08:30:45/);
-    expect(formatDuration(1_940)).toBe('32 min 20 s');
-    expect(formatCountdown(81)).toBe('1:21');
-    expect(formatCountdown(-1)).toBe('0:00');
   });
 });

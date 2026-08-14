@@ -54,6 +54,13 @@ valores y mantenerlos fuera del repositorio.
 La contraseña original no puede recuperarse de la base de datos y nunca forma parte de las
 respuestas de la API.
 
+`operator_display_preferences` mantiene una relación uno a uno con la cuenta y conserva:
+
+- una zona horaria IANA, con `Europe/Madrid` como valor inicial;
+- el tema `LIGHT` o `DARK`, con `LIGHT` como valor inicial.
+
+Estas preferencias se crean bajo demanda si una cuenta anterior todavía no dispone de registro.
+
 ## Inicio de sesión y bloqueo
 
 La pantalla `/login` acepta el usuario o el correo electrónico junto con la contraseña. El flujo es:
@@ -86,12 +93,18 @@ La duración por defecto de una sesión inactiva es de 30 minutos. Puede configu
 El menú del operador en la cabecera ofrece:
 
 - **Mi cuenta** (`/account`): identidad, rol, estado y actividad de acceso;
-- **Configuración** (`/settings`): parámetros operativos de solo lectura y preferencia local para
-  reducir animaciones;
+- **Configuración** (`/settings`): idioma, zona horaria, tema y preferencia para reducir
+  animaciones;
 - **Cerrar sesión**: invalida la sesión y regresa a `/login`.
 
-La preferencia de accesibilidad se guarda únicamente en el navegador. No modifica la cuenta del
-operador ni se sincroniza con el backend.
+La zona horaria y el tema se guardan en la cuenta mediante el backend y se restauran al cargar el
+layout protegido. El idioma y la reducción de animaciones se conservan únicamente en el navegador.
+La pantalla no ofrece una opción para desactivar las actualizaciones periódicas: cada sección
+gestiona su refresco automáticamente y suspende las consultas cuando la pestaña queda oculta.
+
+La zona horaria determina exclusivamente la presentación de fechas e instantes. No cambia la hora
+del motor ferroviario ni los valores persistidos. El modo oscuro modifica superficies, textos y
+controles, pero conserva los colores operativos de las líneas.
 
 ## Contrato de autenticación
 
@@ -101,6 +114,8 @@ operador ni se sincroniza con el backend.
 | `POST` | `/api/auth/login` | Público con CSRF | Cuenta segura del operador y nueva sesión. |
 | `GET` | `/api/auth/me` | Autenticado | Datos de la cuenta de la sesión. |
 | `POST` | `/api/auth/logout` | Autenticado con CSRF | Respuesta `204` e invalidación de sesión. |
+| `GET` | `/api/operators/me/display-preferences` | Autenticado | Zona horaria y tema de la cuenta. |
+| `PUT` | `/api/operators/me/display-preferences` | Autenticado con CSRF | Valida y persiste ambas preferencias. |
 
 Los endpoints operativos devuelven `401` cuando falta una sesión válida y `403` cuando una cuenta
 autenticada no dispone de autorización suficiente.

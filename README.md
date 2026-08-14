@@ -40,8 +40,8 @@ La aplicación incluye actualmente:
 - un ciclo administrativo para crear, bloquear, reactivar y eliminar cuentas de pasajeros;
 - una sección de incidencias con filtros, detalle, comentarios, cambios de estado y trazabilidad del
   operador responsable;
-- interfaz disponible en español e inglés, con preferencias locales persistentes de idioma,
-  reducción de movimiento y densidad visual;
+- interfaz disponible en español e inglés, con preferencias persistentes de zona horaria y tema por
+  operador, además de idioma y reducción de movimiento locales;
 - recorridos ordenados y correspondencias entre líneas;
 - calendarios, franjas horarias, frecuencias y tiempos de recorrido configurables;
 - flota regular, de reserva e histórica diferenciada;

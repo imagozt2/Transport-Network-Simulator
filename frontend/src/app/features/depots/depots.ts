@@ -11,11 +11,11 @@ import {
 } from '../../core/models/depot-operation.model';
 import { FleetRole, TrainStatus } from '../../core/models/train-operation.model';
 import { DepotOperationsService } from '../../core/services/depot-operations.service';
+import { TemporalFormatService } from '../../core/services/temporal-format.service';
 import { depotShortCode } from '../../core/utils/depot-visuals';
 import { contrastingTextColor, lineColor } from '../../core/utils/line-visuals';
 import { depotStatusLabel, fleetRoleLabel, trainStatusLabel } from '../../core/utils/operation-labels';
 import { PeriodicRefresh } from '../../core/utils/periodic-refresh';
-import { formatTime } from '../../core/utils/temporal-formatters';
 import { SummaryCard } from '../../shared/summary-card/summary-card';
 
 type StatusFilter = DepotOperationStatus | 'ALL';
@@ -30,6 +30,7 @@ const AGENDA_WINDOW_MS = 12 * 60 * 60 * 1_000;
 export class Depots implements OnInit, OnDestroy {
   protected readonly sectionRoutes = APPLICATION_ROUTES;
   private readonly depotOperationsService = inject(DepotOperationsService);
+  private readonly temporalFormat = inject(TemporalFormatService);
   private readonly route = inject(ActivatedRoute);
   private readonly periodicRefresh = new PeriodicRefresh(15_000, () => this.loadOperations());
   private readonly expandedDepotIds = new Set<number>();
@@ -180,7 +181,9 @@ export class Depots implements OnInit, OnDestroy {
     0) ?? 0;
   }
 
-  movementTimeLabel(movement: DepotMovement): string { return formatTime(movement.scheduledAt); }
+  movementTimeLabel(movement: DepotMovement): string {
+    return this.temporalFormat.formatTime(movement.scheduledAt);
+  }
   getLineColor(movement: DepotMovement): string { return lineColor(movement.line.code, movement.line.color); }
   getLineTextColor(color: string): string { return contrastingTextColor(color); }
 

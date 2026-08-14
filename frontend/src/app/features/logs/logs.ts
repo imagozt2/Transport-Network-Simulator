@@ -16,7 +16,7 @@ import {
   OperationalLogFilters,
   OperationalLogsService
 } from '../../core/services/operational-logs.service';
-import { formatDateTime } from '../../core/utils/temporal-formatters';
+import { TemporalFormatService } from '../../core/services/temporal-format.service';
 import { deviceTypeLabel } from '../../core/utils/operation-labels';
 import { deviceEventSourceLabel } from '../../core/utils/operation-labels';
 
@@ -38,6 +38,7 @@ type PaginationItem =
 export class Logs implements OnInit {
   protected readonly sectionRoutes = APPLICATION_ROUTES;
   private readonly logsService = inject(OperationalLogsService);
+  private readonly temporalFormat = inject(TemporalFormatService);
   private readonly devicesService = inject(DeviceOperationsService);
   private readonly route = inject(ActivatedRoute);
 
@@ -378,7 +379,7 @@ export class Logs implements OnInit {
   }
 
   formatDateTime(value: string): string {
-    return formatDateTime(value);
+    return this.temporalFormat.formatDateTime(value);
   }
 
   private buildFilters(): OperationalLogFilters {

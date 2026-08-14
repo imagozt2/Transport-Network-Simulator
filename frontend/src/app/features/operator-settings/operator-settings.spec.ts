@@ -1,24 +1,52 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { of } from 'rxjs';
+
+import { OperatorDisplayPreferences } from '../../core/models/operator-display-preferences.model';
+import { OperatorDisplayPreferencesService } from '../../core/services/operator-display-preferences.service';
 
 import { OperatorSettingsPage } from './operator-settings';
 
 describe('OperatorSettingsPage', () => {
+  const preferencesState = signal<OperatorDisplayPreferences>({
+    timeZone: 'Europe/Madrid',
+    theme: 'LIGHT'
+  });
+  const preferencesService = {
+    preferences: preferencesState.asReadonly(),
+    load: () => of(preferencesState()),
+    update: (preferences: OperatorDisplayPreferences) => {
+      preferencesState.set(preferences);
+      document.documentElement.classList.toggle('theme-dark', preferences.theme === 'DARK');
+      document.documentElement.style.colorScheme = preferences.theme === 'DARK' ? 'dark' : 'light';
+      return of(preferences);
+    }
+  };
+
   beforeEach(() => {
     localStorage.clear();
     document.documentElement.classList.remove('reduce-motion');
+    document.documentElement.classList.remove('theme-dark');
+    document.documentElement.style.colorScheme = '';
+    preferencesState.set({ timeZone: 'Europe/Madrid', theme: 'LIGHT' });
   });
 
   afterEach(() => {
     localStorage.clear();
     document.documentElement.classList.remove('reduce-motion');
+    document.documentElement.classList.remove('theme-dark');
+    document.documentElement.style.colorScheme = '';
     document.documentElement.lang = 'es';
   });
 
   async function createPage() {
     await TestBed.configureTestingModule({
       imports: [OperatorSettingsPage],
-      providers: [provideRouter([])]
+      providers: [
+        provideRouter([]),
+        { provide: OperatorDisplayPreferencesService, useValue: preferencesService }
+      ]
     }).compileComponents();
 
     const fixture = TestBed.createComponent(OperatorSettingsPage);
@@ -80,6 +108,33 @@ describe('OperatorSettingsPage', () => {
     expect(localStorage.getItem('rmm.language')).toBe('es');
     expect(document.documentElement.classList.contains('reduce-motion')).toBe(false);
     expect(document.documentElement.lang).toBe('es');
+    expect(component.saved).toBe(true);
+  });
+
+  it('should persist and apply the dark theme', async () => {
+    const fixture = await createPage();
+    const component = fixture.componentInstance;
+
+    component.selectTheme('DARK');
+    component.savePreferences();
+
+    expect(preferencesState().theme).toBe('DARK');
+    expect(document.documentElement.classList.contains('theme-dark')).toBe(true);
+    expect(document.documentElement.style.colorScheme).toBe('dark');
+  });
+
+  it('should restore account preferences and persist a new time zone with its theme', async () => {
+    preferencesState.set({ timeZone: 'America/New_York', theme: 'DARK' });
+    const fixture = await createPage();
+    const component = fixture.componentInstance;
+
+    expect(component.selectedTimeZone).toBe('America/New_York');
+    expect(component.selectedTheme).toBe('DARK');
+
+    component.selectTimeZone('UTC');
+    component.savePreferences();
+
+    expect(preferencesState()).toEqual({ timeZone: 'UTC', theme: 'DARK' });
     expect(component.saved).toBe(true);
   });
 });

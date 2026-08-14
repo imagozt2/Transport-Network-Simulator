@@ -13,7 +13,7 @@ import {
 } from '../../core/models/incident.model';
 import { IncidentsService } from '../../core/services/incidents.service';
 import { OperatorAuthService } from '../../core/services/operator-auth.service';
-import { formatDateTime } from '../../core/utils/temporal-formatters';
+import { TemporalFormatService } from '../../core/services/temporal-format.service';
 
 type OptionalStatus = IncidentStatus | 'ALL';
 type OptionalPriority = IncidentPriority | 'ALL';
@@ -26,6 +26,7 @@ type OptionalCategory = IncidentCategory | 'ALL';
 })
 export class Incidents implements OnInit {
   private readonly incidentsService = inject(IncidentsService);
+  private readonly temporalFormat = inject(TemporalFormatService);
   private readonly operatorAuthService = inject(OperatorAuthService);
   private readonly route = inject(ActivatedRoute, { optional: true });
 
@@ -428,7 +429,7 @@ export class Incidents implements OnInit {
   }
 
   formatDate(value: string): string {
-    return formatDateTime(value, 'Sin fecha');
+    return this.temporalFormat.formatDateTime(value, 'Sin fecha');
   }
 
   private refreshSelectedIncident(): void {

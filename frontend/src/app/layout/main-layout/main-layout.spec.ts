@@ -1,6 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { of } from 'rxjs';
+
+import { OperatorDisplayPreferencesService } from '../../core/services/operator-display-preferences.service';
 import { MainLayout } from './main-layout';
 
 @Component({ template: '' })
@@ -10,7 +13,16 @@ describe('MainLayout', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [MainLayout],
-      providers: [provideRouter([{ path: '**', component: NavigationTarget }])],
+      providers: [
+        provideRouter([{ path: '**', component: NavigationTarget }]),
+        {
+          provide: OperatorDisplayPreferencesService,
+          useValue: {
+            preferences: signal({ timeZone: 'Europe/Madrid', theme: 'LIGHT' }).asReadonly(),
+            load: () => of({ timeZone: 'Europe/Madrid', theme: 'LIGHT' })
+          }
+        }
+      ],
     }).compileComponents();
   });
 
