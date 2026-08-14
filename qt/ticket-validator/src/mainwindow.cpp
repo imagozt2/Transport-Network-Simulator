@@ -33,6 +33,15 @@ constexpr auto windowStyle = R"(
     QLabel#connectionState[configurationValid="false"] {
         background-color: #fee2e2; color: #991b1b;
     }
+    QFrame#locationBadge {
+        border: 1px solid #dbe3ec; border-radius: 14px; background-color: white;
+    }
+    QLabel#locationCode {
+        min-width: 54px; padding: 7px 10px; border-radius: 10px;
+        background-color: #0f172a; color: white; font-size: 13px; font-weight: 900;
+    }
+    QLabel#locationName { color: #0f172a; font-size: 14px; font-weight: 800; }
+    QLabel#locationCaption { color: #64748b; font-size: 11px; font-weight: 700; }
     QFrame#turnstilePanel, QFrame#scannerPanel, QFrame#devicePanel {
         border: 1px solid #dbe3ec; border-radius: 18px; background-color: white;
     }
@@ -91,6 +100,17 @@ constexpr auto windowStyle = R"(
     QFrame#directionBadge[mode="exit"] { background-color: #334155; }
     QLabel#directionIcon { color: white; font-size: 26px; font-weight: 900; }
     QLabel#directionText { color: white; font-size: 14px; font-weight: 800; }
+    QFrame#identityCard, QFrame#stationCard {
+        border: 1px solid #dbe3ec; border-radius: 14px; background-color: #f8fafc;
+    }
+    QLabel#deviceIdentity {
+        color: #0f172a; font-family: Consolas; font-size: 17px; font-weight: 900;
+    }
+    QLabel#stationName { color: #0f172a; font-size: 21px; font-weight: 900; }
+    QLabel#stationCode {
+        padding: 5px 9px; border-radius: 9px; background-color: #e0f2fe;
+        color: #075985; font-size: 12px; font-weight: 900;
+    }
 )";
 }
 
@@ -181,9 +201,34 @@ QWidget *MainWindow::createHeader()
         m_connectionState->setToolTip(m_configuration.error);
     }
 
+    auto *location = new QFrame(header);
+    location->setObjectName(QStringLiteral("locationBadge"));
+    location->setAccessibleName(tr("Ubicación del dispositivo: %1, %2")
+                                    .arg(m_configuration.stationCode,
+                                         m_configuration.stationName));
+    auto *locationLayout = new QHBoxLayout(location);
+    locationLayout->setContentsMargins(8, 6, 12, 6);
+    locationLayout->setSpacing(10);
+    auto *locationCode = new QLabel(m_configuration.stationCode, location);
+    locationCode->setObjectName(QStringLiteral("locationCode"));
+    locationCode->setAlignment(Qt::AlignCenter);
+    auto *locationCopy = new QWidget(location);
+    auto *locationCopyLayout = new QVBoxLayout(locationCopy);
+    locationCopyLayout->setContentsMargins(0, 0, 0, 0);
+    locationCopyLayout->setSpacing(0);
+    auto *locationCaption = new QLabel(tr("UBICACIÓN"), locationCopy);
+    locationCaption->setObjectName(QStringLiteral("locationCaption"));
+    auto *locationName = new QLabel(m_configuration.stationName, locationCopy);
+    locationName->setObjectName(QStringLiteral("locationName"));
+    locationCopyLayout->addWidget(locationCaption);
+    locationCopyLayout->addWidget(locationName);
+    locationLayout->addWidget(locationCode);
+    locationLayout->addWidget(locationCopy);
+
     layout->addWidget(brandMark);
     layout->addWidget(identity);
     layout->addStretch();
+    layout->addWidget(location);
     layout->addWidget(m_connectionState);
     return header;
 }
@@ -320,7 +365,7 @@ QWidget *MainWindow::createDevicePanel()
         layout->addWidget(container);
     };
 
-    auto *eyebrow = new QLabel(tr("CONTEXTO DEL TORNIQUETE"), panel);
+    auto *eyebrow = new QLabel(tr("IDENTIDAD Y UBICACIÓN"), panel);
     eyebrow->setObjectName(QStringLiteral("eyebrow"));
     layout->addWidget(eyebrow);
 
@@ -342,10 +387,51 @@ QWidget *MainWindow::createDevicePanel()
     directionLayout->addStretch();
     layout->addWidget(direction);
 
-    addDetail(tr("ESTACIÓN"), m_configuration.stationName, m_configuration.stationCode);
-    addDetail(tr("DISPOSITIVO"), m_configuration.deviceCode);
-    addDetail(tr("SENTIDO DEL PASO"),
-              m_configuration.isEntry() ? tr("Entrada a la red") : tr("Salida de la red"));
+    auto *identityCard = new QFrame(panel);
+    identityCard->setObjectName(QStringLiteral("identityCard"));
+    identityCard->setAccessibleName(tr("Identidad MQTT %1").arg(m_configuration.deviceCode));
+    auto *identityLayout = new QVBoxLayout(identityCard);
+    identityLayout->setContentsMargins(16, 14, 16, 14);
+    identityLayout->setSpacing(5);
+    auto *identityLabel = new QLabel(tr("IDENTIDAD DEL DISPOSITIVO"), identityCard);
+    identityLabel->setObjectName(QStringLiteral("detailLabel"));
+    auto *identityValue = new QLabel(m_configuration.deviceCode, identityCard);
+    identityValue->setObjectName(QStringLiteral("deviceIdentity"));
+    identityValue->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    auto *identityType = new QLabel(
+        m_configuration.isEntry() ? tr("Validadora de entrada") : tr("Validadora de salida"),
+        identityCard);
+    identityType->setObjectName(QStringLiteral("detailHint"));
+    identityLayout->addWidget(identityLabel);
+    identityLayout->addWidget(identityValue);
+    identityLayout->addWidget(identityType);
+    layout->addWidget(identityCard);
+
+    auto *stationCard = new QFrame(panel);
+    stationCard->setObjectName(QStringLiteral("stationCard"));
+    stationCard->setAccessibleName(tr("Ubicación operativa %1, %2")
+                                       .arg(m_configuration.stationCode,
+                                            m_configuration.stationName));
+    auto *stationLayout = new QVBoxLayout(stationCard);
+    stationLayout->setContentsMargins(16, 14, 16, 14);
+    stationLayout->setSpacing(7);
+    auto *stationLabel = new QLabel(tr("ESTACIÓN ASIGNADA"), stationCard);
+    stationLabel->setObjectName(QStringLiteral("detailLabel"));
+    auto *stationName = new QLabel(m_configuration.stationName, stationCard);
+    stationName->setObjectName(QStringLiteral("stationName"));
+    stationName->setWordWrap(true);
+    auto *stationCode = new QLabel(m_configuration.stationCode, stationCard);
+    stationCode->setObjectName(QStringLiteral("stationCode"));
+    stationCode->setAlignment(Qt::AlignCenter);
+    stationCode->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
+    stationLayout->addWidget(stationLabel);
+    stationLayout->addWidget(stationName);
+    stationLayout->addWidget(stationCode, 0, Qt::AlignLeft);
+    layout->addWidget(stationCard);
+
+    addDetail(tr("FUNCIÓN OPERATIVA"),
+              m_configuration.isEntry() ? tr("Acceso a la red") : tr("Salida de la red"),
+              tr("La identidad y la estación proceden del inventario de RMM"));
 
     layout->addStretch();
     m_gateState = new QLabel(tr("Torniquete cerrado"), panel);
