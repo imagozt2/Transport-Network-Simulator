@@ -2,6 +2,7 @@
 #include "qrcodescannerwidget.h"
 #include "validatormqttclient.h"
 
+#include <QApplication>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -144,6 +145,7 @@ MainWindow::MainWindow(QWidget *parent)
             : tr("No se ha podido obtener una respuesta del centro de control");
         setValidationState(QStringLiteral("rejected"),
                            tr("Validación no disponible"), detail, false);
+        playValidationSound(false);
         if (reason == QStringLiteral("MQTT_CREDENTIALS_MISSING")) {
             m_connected = false;
         }
@@ -451,12 +453,14 @@ void MainWindow::submitQrCode(const QString &detectedQrValue)
     if (qrValue.isEmpty() || qrValue.size() > maximumQrLength) {
         setValidationState(QStringLiteral("rejected"), tr("Código QR no válido"),
                            tr("No se ha podido leer un billete RMM válido"), false);
+        playValidationSound(false);
         restartCameraAfterResult();
         return;
     }
     if (!m_configuration.valid || !m_connected) {
         setValidationState(QStringLiteral("rejected"), tr("Validación no disponible"),
                            tr("No hay conexión con el centro de control"), false);
+        playValidationSound(false);
         restartCameraAfterResult();
         return;
     }
@@ -473,7 +477,21 @@ void MainWindow::showValidationResult(const ValidationResult &result)
     setValidationState(
         result.isAccepted() ? QStringLiteral("accepted") : QStringLiteral("rejected"),
         result.title(), result.detail(), result.isAccepted());
+    playValidationSound(result.isAccepted());
     restartCameraAfterResult();
+}
+
+void MainWindow::playValidationSound(bool accepted)
+{
+    QApplication::beep();
+    if (!accepted) {
+        QTimer::singleShot(180, this, [] {
+            QApplication::beep();
+        });
+        QTimer::singleShot(360, this, [] {
+            QApplication::beep();
+        });
+    }
 }
 
 void MainWindow::restartCameraAfterResult()

@@ -27,6 +27,7 @@ private:
     void configureWindow();
     void submitQrCode(const QString &qrValue);
     void restartCameraAfterResult();
+    void playValidationSound(bool accepted);
     void setValidationState(const QString &state, const QString &title,
                             const QString &detail, bool gateOpen);
 
