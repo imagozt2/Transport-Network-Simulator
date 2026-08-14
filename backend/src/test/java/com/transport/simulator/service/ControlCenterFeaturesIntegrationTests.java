@@ -31,6 +31,7 @@ import com.transport.simulator.entity.TicketQrCredential;
 import com.transport.simulator.entity.TransportLine;
 import com.transport.simulator.enums.CompensatoryIssuanceStatus;
 import com.transport.simulator.enums.DeviceMqttCommandType;
+import com.transport.simulator.enums.DeviceMqttPresence;
 import com.transport.simulator.enums.DeviceEventType;
 import com.transport.simulator.enums.DeviceStatus;
 import com.transport.simulator.enums.DeviceType;
@@ -114,6 +115,8 @@ class ControlCenterFeaturesIntegrationTests {
         when(device.getName()).thenReturn("Máquina de Aeropuerto 1");
         when(device.getType()).thenReturn(DeviceType.TICKET_MACHINE);
         when(device.getStatus()).thenReturn(DeviceStatus.ONLINE);
+        when(device.isMqttManaged()).thenReturn(true);
+        when(device.getMqttPresence()).thenReturn(DeviceMqttPresence.ONLINE);
         when(device.getStation()).thenReturn(origin);
         OperatorAccount operator = operator(7L, "admin", OperatorRole.ADMINISTRATOR);
 

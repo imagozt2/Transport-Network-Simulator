@@ -11,6 +11,7 @@ public record CompensatoryTicketIssuanceResponse(
         Long id,
         String code,
         CompensatoryIssuanceStatus status,
+        boolean simulated,
         String ticketCode,
         String qrToken,
         String productCode,
@@ -30,7 +31,10 @@ public record CompensatoryTicketIssuanceResponse(
     public static CompensatoryTicketIssuanceResponse from(CompensatoryTicketIssuance issuance) {
         return new CompensatoryTicketIssuanceResponse(
                 issuance.getId(), issuance.getCode(), issuance.getStatus(),
-                issuance.getIssuedTicket().getCode(), issuance.getIssuedTicket().getQrToken(),
+                issuance.getDeliveryMethod() == CompensatoryDeliveryMethod.PHYSICAL_DEVICE
+                        && issuance.getIssuedTicket() == null,
+                issuance.getIssuedTicket() == null ? null : issuance.getIssuedTicket().getCode(),
+                issuance.getIssuedTicket() == null ? null : issuance.getIssuedTicket().getQrToken(),
                 issuance.getProduct().getCode(), issuance.getProduct().getProductType(),
                 issuance.getDeliveryMethod(),
                 issuance.getTargetDevice() == null ? null : issuance.getTargetDevice().getCode(),

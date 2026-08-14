@@ -9,6 +9,7 @@ import com.transport.simulator.entity.PassengerAccount;
 import com.transport.simulator.entity.Station;
 import com.transport.simulator.entity.TicketProduct;
 import com.transport.simulator.enums.DeviceMqttCommandType;
+import com.transport.simulator.enums.DeviceMqttPresence;
 import com.transport.simulator.enums.CompensatoryDeliveryMethod;
 import com.transport.simulator.enums.DeviceStatus;
 import com.transport.simulator.enums.DeviceType;
@@ -127,6 +128,13 @@ public class CompensatoryTicketIssuanceService {
             return CompensatoryTicketIssuanceResponse.from(issuance);
         }
 
+        if (!device.isMqttManaged()) {
+            issuance.completeSimulated(now);
+            issuanceRepository.save(issuance);
+            eventRegistrationService.registerCompleted(issuance, now);
+            return CompensatoryTicketIssuanceResponse.from(issuance);
+        }
+
         String linkingCode = UUID.randomUUID().toString().replace("-", "")
                 .substring(0, 8).toUpperCase(Locale.ROOT);
         IssuedTicket issued = ticketIssuanceService.issuePhysical(
@@ -164,6 +172,10 @@ public class CompensatoryTicketIssuanceService {
         if (device.getStatus() != DeviceStatus.ONLINE) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT, "The selected ticket machine is not online");
+        }
+        if (device.isMqttManaged() && device.getMqttPresence() != DeviceMqttPresence.ONLINE) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "The selected ticket machine is not connected through MQTT");
         }
         return device;
     }

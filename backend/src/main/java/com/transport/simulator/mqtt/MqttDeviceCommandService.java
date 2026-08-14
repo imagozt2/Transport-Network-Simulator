@@ -4,6 +4,7 @@ import com.transport.simulator.entity.Device;
 import com.transport.simulator.entity.DeviceMqttCommand;
 import com.transport.simulator.entity.DeviceMqttIdentity;
 import com.transport.simulator.enums.DeviceMqttCommandType;
+import com.transport.simulator.enums.DeviceMqttPresence;
 import com.transport.simulator.enums.DeviceType;
 import com.transport.simulator.repository.DeviceMqttCommandRepository;
 import com.transport.simulator.repository.DeviceMqttIdentityRepository;
@@ -57,6 +58,10 @@ public class MqttDeviceCommandService {
         if (type == DeviceMqttCommandType.TICKET_ISSUE
                 && device.getType() != DeviceType.TICKET_MACHINE) {
             throw new IllegalArgumentException("Ticket issue commands require a ticket machine");
+        }
+        if (type == DeviceMqttCommandType.TICKET_ISSUE
+                && device.getMqttPresence() != DeviceMqttPresence.ONLINE) {
+            throw new IllegalStateException("Ticket issue commands require a connected MQTT ticket machine");
         }
         if (validity == null || validity.isZero() || validity.isNegative()) {
             throw new IllegalArgumentException("Command validity must be positive");

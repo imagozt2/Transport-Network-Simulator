@@ -149,6 +149,16 @@ public class CompensatoryTicketIssuance extends AuditableEntity {
         status = CompensatoryIssuanceStatus.COMPLETED;
     }
 
+    public void completeSimulated(LocalDateTime at) {
+        if (deliveryMethod != CompensatoryDeliveryMethod.PHYSICAL_DEVICE
+                || status != CompensatoryIssuanceStatus.REQUESTED || issuedTicket != null) {
+            throw new IllegalStateException(
+                    "Only a requested physical issuance without a ticket can be simulated");
+        }
+        completedAt = Objects.requireNonNull(at);
+        status = CompensatoryIssuanceStatus.COMPLETED;
+    }
+
     public void fail(String reason, LocalDateTime at) {
         if (status == CompensatoryIssuanceStatus.COMPLETED) {
             throw new IllegalStateException("A completed issuance cannot fail");
