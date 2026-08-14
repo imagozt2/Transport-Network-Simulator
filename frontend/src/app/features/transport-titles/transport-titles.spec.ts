@@ -98,8 +98,9 @@ describe('TransportTitles', () => {
   it('should validate and submit a compensatory single-trip issuance form', async () => {
     const issueCompensatoryTicket = vi.fn().mockReturnValue(of({
       id: 1, code: 'COMP-1', status: 'COMPLETED', simulated: false,
-      ticketCode: 'RMM-1', qrToken: 'qr-token',
-      productCode: 'SINGLE_TRIP', productType: 'SINGLE_TRIP', deviceCode: 'TM-ST001-01',
+      ticketCode: 'RMM-1', qrToken: 'qr-token', qrPngBase64: 'cXItcG5n',
+      productCode: 'SINGLE_TRIP', productName: 'Billete sencillo',
+      productType: 'SINGLE_TRIP', deviceCode: 'TM-ST001-01',
       deliveryMethod: 'PHYSICAL_DEVICE', passengerPublicId: null, passengerEmail: null,
       deviceName: 'Máquina Aeropuerto', stationCode: 'ST001', stationName: 'Aeropuerto',
       operatorUsername: 'admin', chargedAmount: 0,
@@ -179,6 +180,7 @@ describe('TransportTitles', () => {
     expect(component.issuanceTitle).toBe(response.titles[0]);
     expect(component.issuanceProgress).toBe('COMPLETED');
     expect(component.issuanceResult?.ticketCode).toBe('RMM-1');
+    expect(component.issuanceQrSource(component.issuanceResult!)).toBe('data:image/png;base64,cXItcG5n');
     expect(component.issuanceResultMessage()).toContain('finalizado correctamente');
     expect(component.issuanceConfirmation).toContain('RMM-1');
   });

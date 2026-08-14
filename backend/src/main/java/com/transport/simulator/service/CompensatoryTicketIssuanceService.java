@@ -125,14 +125,14 @@ public class CompensatoryTicketIssuanceService {
             issuance.complete(now);
             issuanceRepository.save(issuance);
             eventRegistrationService.registerCompleted(issuance, now);
-            return CompensatoryTicketIssuanceResponse.from(issuance);
+            return response(issuance);
         }
 
         if (!device.isMqttManaged()) {
             issuance.completeSimulated(now);
             issuanceRepository.save(issuance);
             eventRegistrationService.registerCompleted(issuance, now);
-            return CompensatoryTicketIssuanceResponse.from(issuance);
+            return response(issuance);
         }
 
         String linkingCode = UUID.randomUUID().toString().replace("-", "")
@@ -159,7 +159,16 @@ public class CompensatoryTicketIssuanceService {
         commandService.send(device.getCode(), DeviceMqttCommandType.TICKET_ISSUE,
                 Map.of("issuanceKind", "COMPENSATORY", "issuanceCode", issuance.getCode(), "ticket", ticket),
                 Duration.ofMinutes(2));
-        return CompensatoryTicketIssuanceResponse.from(issuance);
+        return response(issuance);
+    }
+
+    private CompensatoryTicketIssuanceResponse response(CompensatoryTicketIssuance issuance) {
+        String qrPngBase64 = issuance.getIssuedTicket() == null ? null : qrCredentialRepository
+                .findFirstByTicketIdAndStatusOrderByIssuedAtDesc(
+                        issuance.getIssuedTicket().getId(), TicketQrCredentialStatus.ACTIVE)
+                .map(credential -> qrImageService.pngBase64(credential.getQrValue()))
+                .orElse(null);
+        return CompensatoryTicketIssuanceResponse.from(issuance, qrPngBase64);
     }
 
     private Device requiredTicketMachine(String deviceCode) {

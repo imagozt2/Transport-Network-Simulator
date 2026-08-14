@@ -47,3 +47,21 @@
   .title-card-header { grid-template-columns: auto minmax(0, 1fr); }
   .status-pill { grid-column: 1 / -1; justify-self: start; }
 }
+.issued-ticket { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 18px; align-items: center; margin-top: 20px; border: 2px solid #0f172a; border-radius: 17px; padding: 18px; color: #0f172a; background: #fff; text-align: left; box-shadow: 0 10px 25px rgba(15, 23, 42, .08); }
+.issued-ticket-brand { display: inline-grid; min-width: 48px; height: 32px; place-items: center; border-radius: 10px; padding: 0 10px; color: #fff; background: #38bdf8; font-size: 14px; font-weight: 950; }
+.issued-ticket-copy > p { margin: 13px 0 2px; color: #64748b; font-size: 9px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+.issued-ticket h4 { margin: 0 0 14px; font-size: 18px; }
+.issued-ticket dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px 14px; margin: 0; }
+.issued-ticket dt { color: #64748b; font-size: 9px; font-weight: 850; }
+.issued-ticket dd { overflow-wrap: anywhere; margin: 2px 0 0; font-size: 11px; font-weight: 900; }
+.issued-ticket-qr { display: flex; flex-direction: column; align-items: center; margin: 0; }
+.issued-ticket-qr img { width: 140px; height: 140px; image-rendering: pixelated; }
+.issued-ticket-qr figcaption { margin-top: 4px; color: #64748b; font-size: 9px; font-weight: 850; }
+.ticket-not-generated { width: 100%; display: flex; flex-direction: column; gap: 3px; margin-top: 18px; border: 1px solid #cbd5e1; border-radius: 12px; padding: 12px 14px; color: #334155; background: #f8fafc; text-align: left; }
+.ticket-not-generated strong { font-size: 12px; }
+.ticket-not-generated span { font-size: 10px; line-height: 1.4; }
+
+@media (max-width: 520px) {
+  .issued-ticket { grid-template-columns: 1fr; }
+  .issued-ticket dl { grid-template-columns: 1fr; }
+}

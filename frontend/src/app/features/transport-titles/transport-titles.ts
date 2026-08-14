@@ -16,6 +16,7 @@ import { DeviceOperationsService } from '../../core/services/device-operations.s
 import { NetworkMapService } from '../../core/services/network-map.service';
 import { PassengerAccount } from '../../core/models/passenger-account.model';
 import { PassengerAccountsService } from '../../core/services/passenger-accounts.service';
+import { TemporalFormatService } from '../../core/services/temporal-format.service';
 
 type TypeFilter = TransportTitleType | 'ALL';
 type StatusFilter = 'ALL' | 'ACTIVE' | 'INACTIVE';
@@ -31,6 +32,7 @@ export class TransportTitles implements OnInit {
   private readonly deviceOperationsService = inject(DeviceOperationsService);
   private readonly networkMapService = inject(NetworkMapService);
   private readonly passengerAccountsService = inject(PassengerAccountsService);
+  private readonly temporalFormat = inject(TemporalFormatService);
 
   catalog: TransportTitlesResponse | null = null;
   loading = true;
@@ -321,6 +323,18 @@ export class TransportTitles implements OnInit {
       return 'La emisión se ha simulado y ha quedado registrada sin generar un billete.';
     }
     return 'La emisión ha finalizado correctamente.';
+  }
+
+  issuanceQrSource(result: CompensatoryTicketIssuanceResponse): string | null {
+    return result.qrPngBase64 ? `data:image/png;base64,${result.qrPngBase64}` : null;
+  }
+
+  issuanceProductType(type: TransportTitleType): string {
+    return this.typeLabel(type);
+  }
+
+  issuanceDate(value: string): string {
+    return this.temporalFormat.formatDateTime(value);
   }
 
   private loadIssuanceOptions(): void {

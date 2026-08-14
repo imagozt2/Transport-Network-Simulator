@@ -65,7 +65,9 @@ export interface CompensatoryTicketIssuanceResponse {
   simulated: boolean;
   ticketCode: string | null;
   qrToken: string | null;
+  qrPngBase64: string | null;
   productCode: string;
+  productName: string;
   productType: TransportTitleType;
   deliveryMethod: CompensatoryDeliveryMethod;
   deviceCode: string | null;
