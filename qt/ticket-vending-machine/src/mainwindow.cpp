@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "ticketmachineconfiguration.h"
+#include "qrcodescannerwidget.h"
 
 #include <algorithm>
 #include <QFrame>
@@ -78,6 +79,34 @@ constexpr auto windowStyle = R"(
     QPushButton#languageFlag:hover, QPushButton#languageFlag:focus {
         border-color: #93c5fd;
         background-color: #eff6ff;
+    }
+    QLabel#scannerTitle {
+        font-size: 25px;
+        font-weight: 900;
+    }
+    QLabel#scannerInstructions {
+        color: #64748b;
+        font-size: 15px;
+    }
+    QPushButton#scannerCancel {
+        min-width: 120px;
+        min-height: 44px;
+        border: 0;
+        border-radius: 12px;
+        background-color: #0f172a;
+        color: white;
+        font-weight: 800;
+    }
+    QFrame#cameraViewport {
+        background-color: #020617;
+        border: 2px solid #cbd5e1;
+        border-radius: 20px;
+    }
+    QLabel#scannerStatus {
+        min-height: 24px;
+        color: #334155;
+        font-size: 14px;
+        font-weight: 700;
     }
     QPushButton#languageFlag:checked {
         border-color: #2294f2;
@@ -283,6 +312,8 @@ MainWindow::MainWindow(QWidget *parent)
     m_catalogPanel = createCatalogPanel();
     m_contentStack->addWidget(m_homePanel);
     m_contentStack->addWidget(m_catalogPanel);
+    m_rechargeScanner = new QrCodeScannerWidget(m_contentStack);
+    m_contentStack->addWidget(m_rechargeScanner);
     layout->addWidget(m_contentStack, 1);
     layout->addWidget(createFooter());
 
@@ -293,6 +324,10 @@ MainWindow::MainWindow(QWidget *parent)
         ? UiLanguage::English
         : UiLanguage::Spanish;
     connect(this, &MainWindow::purchaseRequested, this, &MainWindow::showCatalog);
+    connect(this, &MainWindow::rechargeRequested, this, &MainWindow::showRechargeScanner);
+    connect(m_rechargeScanner, &QrCodeScannerWidget::cancelled, this, &MainWindow::showHome);
+    connect(m_rechargeScanner, &QrCodeScannerWidget::qrDetected,
+            this, &MainWindow::rechargeQrScanned);
     connect(this, &MainWindow::configurationSelected, this, &MainWindow::preparePayment);
     connect(this, &MainWindow::paymentApproved, this,
             [this](const QString &productCode, const QString &originStationCode,
@@ -699,8 +734,22 @@ void MainWindow::showCatalog()
 
 void MainWindow::showHome()
 {
+    if (m_rechargeScanner) {
+        m_rechargeScanner->stop();
+    }
     m_pendingPayment.reset();
     leavePurchaseFlow(m_homePanel);
+}
+
+void MainWindow::showRechargeScanner()
+{
+    if (m_purchaseFlowPanel) {
+        leavePurchaseFlow(m_rechargeScanner);
+    } else {
+        m_contentStack->setCurrentWidget(m_rechargeScanner);
+    }
+    m_rechargeScanner->setSpanish(m_language == UiLanguage::Spanish);
+    m_rechargeScanner->start();
 }
 
 void MainWindow::showPurchaseFlowPanel(QWidget *panel)
@@ -1333,6 +1382,9 @@ QString MainWindow::productRules(const TicketProduct &product) const
 
 void MainWindow::retranslateUi()
 {
+    if (m_rechargeScanner) {
+        m_rechargeScanner->setSpanish(m_language == UiLanguage::Spanish);
+    }
     const bool spanish = m_language == UiLanguage::Spanish;
     setWindowTitle(spanish ? QStringLiteral("Máquina de venta · RMM")
                            : QStringLiteral("Ticket machine · RMM"));

@@ -11,6 +11,7 @@ class QLabel;
 class QGridLayout;
 class QPushButton;
 class QStackedWidget;
+class QrCodeScannerWidget;
 
 enum class UiLanguage
 {
@@ -28,6 +29,7 @@ public:
 signals:
     void purchaseRequested();
     void rechargeRequested();
+    void rechargeQrScanned(const QString &qrValue);
     void configurationSelected(
         const QString &productCode,
         const QString &originStationCode,
@@ -52,6 +54,7 @@ private:
     void retranslateUi();
     void showCatalog();
     void showHome();
+    void showRechargeScanner();
     void renderCatalog();
     void showPurchaseFlowPanel(QWidget *panel);
     void leavePurchaseFlow(QWidget *destination);
@@ -90,6 +93,7 @@ private:
     QWidget *m_homePanel = nullptr;
     QWidget *m_catalogPanel = nullptr;
     QWidget *m_purchaseFlowPanel = nullptr;
+    QrCodeScannerWidget *m_rechargeScanner = nullptr;
     QLabel *m_catalogTitle = nullptr;
     QLabel *m_catalogHint = nullptr;
     QLabel *m_catalogState = nullptr;
