@@ -7,6 +7,7 @@ import { NetworkMapResponse } from '../../core/models/network-map.model';
 import { TransportTitlesService } from '../../core/services/transport-titles.service';
 import { DeviceOperationsService } from '../../core/services/device-operations.service';
 import { NetworkMapService } from '../../core/services/network-map.service';
+import { PassengerAccountsService } from '../../core/services/passenger-accounts.service';
 import { TransportTitles } from './transport-titles';
 
 const response: TransportTitlesResponse = {
@@ -95,8 +96,10 @@ describe('TransportTitles', () => {
 
   it('should validate and submit a compensatory single-trip issuance form', async () => {
     const issueCompensatoryTicket = vi.fn().mockReturnValue(of({
-      id: 1, code: 'COMP-1', status: 'COMPLETED', ticketCode: 'RMM-1', qrToken: 'qr-token',
+      id: 1, code: 'COMP-1', status: 'COMPLETED', simulated: false,
+      ticketCode: 'RMM-1', qrToken: 'qr-token',
       productCode: 'SINGLE_TRIP', productType: 'SINGLE_TRIP', deviceCode: 'TM-ST001-01',
+      deliveryMethod: 'PHYSICAL_DEVICE', passengerPublicId: null, passengerEmail: null,
       deviceName: 'Máquina Aeropuerto', stationCode: 'ST001', stationName: 'Aeropuerto',
       operatorUsername: 'admin', chargedAmount: 0,
       requestedAt: '2026-08-05T10:00:00', completedAt: '2026-08-05T10:00:00'
@@ -129,7 +132,15 @@ describe('TransportTitles', () => {
           { id: 1, code: 'ST001', name: 'Aeropuerto', stationOrder: 1 },
           { id: 2, code: 'ST002', name: 'Plaza de la Merced', stationOrder: 2 }
         ]
-      }] })
+      }] }),
+      () => of({
+        summary: {
+          totalAccounts: 0, activeAccounts: 0, blockedAccounts: 0,
+          disabledAccounts: 0, pendingVerificationAccounts: 0
+        },
+        users: [], page: 0, pageSize: 100, totalElements: 0, totalPages: 0,
+        first: true, last: true, empty: true
+      })
     );
     const fixture = TestBed.createComponent(TransportTitles);
     fixture.detectChanges();
@@ -147,7 +158,8 @@ describe('TransportTitles', () => {
     component.submitCompensatoryIssuance();
 
     expect(issueCompensatoryTicket).toHaveBeenCalledWith(1, {
-      deviceCode: 'TM-ST001-01', reason: 'Fallo durante la compra',
+      deliveryMethod: 'PHYSICAL_DEVICE', deviceCode: 'TM-ST001-01',
+      reason: 'Fallo durante la compra',
       originStationCode: 'ST001', destinationStationCode: 'ST002'
     });
     expect(component.issuanceTitle).toBeNull();
@@ -171,14 +183,23 @@ async function configureWith(
   getTitles: () => Observable<TransportTitlesResponse>,
   issueCompensatoryTicket = vi.fn(),
   getOperations: () => Observable<DeviceOperationsResponse> = vi.fn(),
-  getNetworkMap: () => Observable<NetworkMapResponse> = vi.fn()
+  getNetworkMap: () => Observable<NetworkMapResponse> = vi.fn(),
+  getAccounts = () => of({
+    summary: {
+      totalAccounts: 0, activeAccounts: 0, blockedAccounts: 0,
+      disabledAccounts: 0, pendingVerificationAccounts: 0
+    },
+    users: [], page: 0, pageSize: 100, totalElements: 0, totalPages: 0,
+    first: true, last: true, empty: true
+  })
 ) {
   await TestBed.configureTestingModule({
     imports: [TransportTitles],
     providers: [
       { provide: TransportTitlesService, useValue: { getTitles, issueCompensatoryTicket } },
       { provide: DeviceOperationsService, useValue: { getOperations } },
-      { provide: NetworkMapService, useValue: { getNetworkMap } }
+      { provide: NetworkMapService, useValue: { getNetworkMap } },
+      { provide: PassengerAccountsService, useValue: { getAccounts } }
     ]
   }).compileComponents();
 }

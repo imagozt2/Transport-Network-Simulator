@@ -136,16 +136,45 @@
           <div class="dialog-state" role="status">Cargando máquinas y estaciones…</div>
         } @else {
           <form class="issuance-form" (submit)="$event.preventDefault(); submitCompensatoryIssuance()">
-            <label class="dialog-field full-width">
-              <span>Máquina de emisión</span>
-              <select required [value]="selectedDeviceCode" (change)="selectedDeviceCode = $any($event.target).value">
-                <option value="">Selecciona una máquina online</option>
-                @for (machine of ticketMachines; track machine.id) {
-                  <option [value]="machine.code">{{ machine.name }} · {{ machine.station.name }}</option>
-                }
-              </select>
-              @if (ticketMachines.length === 0) { <small>No hay máquinas de venta online disponibles.</small> }
-            </label>
+            <fieldset class="delivery-method full-width">
+              <legend>Canal de entrega</legend>
+              <button type="button" [class.selected]="selectedDeliveryMethod === 'PHYSICAL_DEVICE'"
+                (click)="setDeliveryMethod('PHYSICAL_DEVICE')">
+                <strong>Billete físico</strong>
+                <span>Emitir desde una máquina de venta</span>
+              </button>
+              <button type="button" [class.selected]="selectedDeliveryMethod === 'DIGITAL_WALLET'"
+                (click)="setDeliveryMethod('DIGITAL_WALLET')">
+                <strong>Billete digital</strong>
+                <span>Entregar en la cartera de un pasajero</span>
+              </button>
+            </fieldset>
+
+            @if (selectedDeliveryMethod === 'PHYSICAL_DEVICE') {
+              <label class="dialog-field full-width">
+                <span>Máquina de emisión</span>
+                <select required [value]="selectedDeviceCode" (change)="selectedDeviceCode = $any($event.target).value">
+                  <option value="">Selecciona una máquina online</option>
+                  @for (machine of ticketMachines; track machine.id) {
+                    <option [value]="machine.code">{{ machine.name }} · {{ machine.station.name }} · {{ machineDeliveryLabel(machine) }}</option>
+                  }
+                </select>
+                @if (ticketMachines.length === 0) { <small>No hay máquinas de venta disponibles.</small> }
+                <small>Las máquinas MQTT emitirán el billete real; las no monitorizadas simularán la operación.</small>
+              </label>
+            } @else {
+              <label class="dialog-field full-width">
+                <span>Pasajero destinatario</span>
+                <select required [value]="selectedPassengerPublicId" (change)="selectedPassengerPublicId = $any($event.target).value">
+                  <option value="">Selecciona una cuenta activa</option>
+                  @for (passenger of passengers; track passenger.publicId) {
+                    <option [value]="passenger.publicId">{{ passenger.firstName }} {{ passenger.lastName }} · {{ passenger.email }}</option>
+                  }
+                </select>
+                @if (passengers.length === 0) { <small>No hay cuentas activas disponibles.</small> }
+                <small>El billete aparecerá directamente en la cartera digital del pasajero.</small>
+              </label>
+            }
 
             @switch (issuanceTitle.type) {
               @case ('SINGLE_TRIP') {

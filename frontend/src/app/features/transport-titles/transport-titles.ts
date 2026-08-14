@@ -2,6 +2,7 @@ import { Component, HostListener, inject, OnInit } from '@angular/core';
 import { forkJoin } from 'rxjs';
 
 import {
+  CompensatoryDeliveryMethod,
   CompensatoryTicketIssuanceRequest,
   TransportTitle,
   TransportTitlesResponse,
@@ -12,6 +13,8 @@ import { DeviceOperation } from '../../core/models/device-operation.model';
 import { NetworkMapStation } from '../../core/models/network-map.model';
 import { DeviceOperationsService } from '../../core/services/device-operations.service';
 import { NetworkMapService } from '../../core/services/network-map.service';
+import { PassengerAccount } from '../../core/models/passenger-account.model';
+import { PassengerAccountsService } from '../../core/services/passenger-accounts.service';
 
 type TypeFilter = TransportTitleType | 'ALL';
 type StatusFilter = 'ALL' | 'ACTIVE' | 'INACTIVE';
@@ -25,6 +28,7 @@ export class TransportTitles implements OnInit {
   private readonly transportTitlesService = inject(TransportTitlesService);
   private readonly deviceOperationsService = inject(DeviceOperationsService);
   private readonly networkMapService = inject(NetworkMapService);
+  private readonly passengerAccountsService = inject(PassengerAccountsService);
 
   catalog: TransportTitlesResponse | null = null;
   loading = true;
@@ -34,12 +38,15 @@ export class TransportTitles implements OnInit {
   selectedStatus: StatusFilter = 'ALL';
   issuanceTitle: TransportTitle | null = null;
   ticketMachines: DeviceOperation[] = [];
+  passengers: PassengerAccount[] = [];
   stations: NetworkMapStation[] = [];
   loadingIssuanceOptions = false;
   issuingTicket = false;
   issuanceError = '';
   issuanceConfirmation = '';
   selectedDeviceCode = '';
+  selectedPassengerPublicId = '';
+  selectedDeliveryMethod: CompensatoryDeliveryMethod = 'PHYSICAL_DEVICE';
   issuanceReason = '';
   originStationCode = '';
   destinationStationCode = '';
@@ -208,7 +215,13 @@ export class TransportTitles implements OnInit {
       next: (issuance) => {
         this.issuingTicket = false;
         this.issuanceTitle = null;
-        this.issuanceConfirmation = `Billete ${issuance.ticketCode} emitido en ${issuance.deviceName}.`;
+        if (issuance.deliveryMethod === 'DIGITAL_WALLET') {
+          this.issuanceConfirmation = `Billete ${issuance.ticketCode} entregado a ${issuance.passengerEmail}.`;
+        } else if (issuance.simulated) {
+          this.issuanceConfirmation = `Emisión simulada correctamente en ${issuance.deviceName}.`;
+        } else {
+          this.issuanceConfirmation = `Billete ${issuance.ticketCode} enviado a ${issuance.deviceName}.`;
+        }
       },
       error: () => {
         this.issuingTicket = false;
@@ -219,8 +232,10 @@ export class TransportTitles implements OnInit {
 
   canSubmitIssuance(): boolean {
     const title = this.issuanceTitle;
+    const hasDestination = this.selectedDeliveryMethod === 'PHYSICAL_DEVICE'
+      ? !!this.selectedDeviceCode : !!this.selectedPassengerPublicId;
     if (!title || this.loadingIssuanceOptions || this.issuingTicket
-      || !this.selectedDeviceCode || !this.issuanceReason.trim()) {
+      || !hasDestination || !this.issuanceReason.trim()) {
       return false;
     }
     switch (title.type) {
@@ -244,17 +259,37 @@ export class TransportTitles implements OnInit {
     if (field === 'balance') this.balanceAmount = normalized;
   }
 
+  setDeliveryMethod(method: CompensatoryDeliveryMethod): void {
+    this.selectedDeliveryMethod = method;
+    this.selectedDeviceCode = '';
+    this.selectedPassengerPublicId = '';
+    this.issuanceError = '';
+  }
+
+  machineDeliveryLabel(machine: DeviceOperation): string {
+    return machine.connectivity.state === 'CONNECTED'
+      ? 'Conectada por MQTT' : 'Emisión simulada';
+  }
+
   private loadIssuanceOptions(): void {
     this.loadingIssuanceOptions = true;
     this.issuanceError = '';
     forkJoin({
       devices: this.deviceOperationsService.getOperations(),
-      network: this.networkMapService.getNetworkMap()
+      network: this.networkMapService.getNetworkMap(),
+      passengers: this.passengerAccountsService.getAccounts(0, 100, {
+        status: 'ACTIVE', sortBy: 'name', direction: 'ASC'
+      })
     }).subscribe({
-      next: ({ devices, network }) => {
+      next: ({ devices, network, passengers }) => {
         this.ticketMachines = devices.devices
-          .filter((device) => device.type === 'TICKET_MACHINE' && device.status === 'ONLINE')
+          .filter((device) => device.type === 'TICKET_MACHINE' && device.status === 'ONLINE'
+            && device.connectivity.state !== 'DISCONNECTED')
           .sort((first, second) => first.name.localeCompare(second.name, 'es'));
+        this.passengers = passengers.users
+          .filter((passenger) => passenger.status === 'ACTIVE')
+          .sort((first, second) => `${first.firstName} ${first.lastName}`
+            .localeCompare(`${second.firstName} ${second.lastName}`, 'es'));
         const byCode = new Map<string, NetworkMapStation>();
         network.lines.flatMap((line) => line.stations)
           .forEach((station) => byCode.set(station.code, station));
@@ -273,6 +308,8 @@ export class TransportTitles implements OnInit {
     this.issuanceError = '';
     this.issuanceConfirmation = '';
     this.selectedDeviceCode = '';
+    this.selectedPassengerPublicId = '';
+    this.selectedDeliveryMethod = 'PHYSICAL_DEVICE';
     this.issuanceReason = '';
     this.originStationCode = '';
     this.destinationStationCode = '';
@@ -283,9 +320,14 @@ export class TransportTitles implements OnInit {
 
   private issuanceRequest(title: TransportTitle): CompensatoryTicketIssuanceRequest {
     const request: CompensatoryTicketIssuanceRequest = {
-      deviceCode: this.selectedDeviceCode,
+      deliveryMethod: this.selectedDeliveryMethod,
       reason: this.issuanceReason.trim()
     };
+    if (this.selectedDeliveryMethod === 'PHYSICAL_DEVICE') {
+      request.deviceCode = this.selectedDeviceCode;
+    } else {
+      request.passengerPublicId = this.selectedPassengerPublicId;
+    }
     if (title.type === 'SINGLE_TRIP') {
       request.originStationCode = this.originStationCode;
       request.destinationStationCode = this.destinationStationCode;
