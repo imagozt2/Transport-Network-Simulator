@@ -1,12 +1,31 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { of } from 'rxjs';
+
+import { OperatorDisplayPreferences } from '../../core/models/operator-display-preferences.model';
+import { OperatorDisplayPreferencesService } from '../../core/services/operator-display-preferences.service';
 
 import { OperatorSettingsPage } from './operator-settings';
 
 describe('OperatorSettingsPage', () => {
+  const preferencesState = signal<OperatorDisplayPreferences>({
+    timeZone: 'Europe/Madrid',
+    theme: 'LIGHT'
+  });
+  const preferencesService = {
+    preferences: preferencesState.asReadonly(),
+    load: () => of(preferencesState()),
+    update: (preferences: OperatorDisplayPreferences) => {
+      preferencesState.set(preferences);
+      return of(preferences);
+    }
+  };
+
   beforeEach(() => {
     localStorage.clear();
     document.documentElement.classList.remove('reduce-motion');
+    preferencesState.set({ timeZone: 'Europe/Madrid', theme: 'LIGHT' });
   });
 
   afterEach(() => {
@@ -18,7 +37,10 @@ describe('OperatorSettingsPage', () => {
   async function createPage() {
     await TestBed.configureTestingModule({
       imports: [OperatorSettingsPage],
-      providers: [provideRouter([])]
+      providers: [
+        provideRouter([]),
+        { provide: OperatorDisplayPreferencesService, useValue: preferencesService }
+      ]
     }).compileComponents();
 
     const fixture = TestBed.createComponent(OperatorSettingsPage);

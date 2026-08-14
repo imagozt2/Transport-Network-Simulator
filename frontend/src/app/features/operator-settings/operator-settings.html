@@ -34,11 +34,25 @@
         </select>
       </label>
 
+      <label class="language-setting time-zone-setting">
+        <span>
+          <strong>Zona horaria</strong>
+          <small>Determina cómo se muestran las fechas y horas en todo el centro de control.</small>
+        </span>
+        <select
+          [value]="selectedTimeZone"
+          [disabled]="loadingPreferences || savingPreferences"
+          (change)="selectTimeZone($any($event.target).value)"
+        >
+          @for (timeZone of timeZoneOptions; track timeZone.id) {
+            <option [value]="timeZone.id" [selected]="timeZone.id === selectedTimeZone">
+              {{ timeZone.label }}
+            </option>
+          }
+        </select>
+      </label>
+
       <dl class="fixed-settings operational-settings">
-        <div>
-          <dt>Zona horaria</dt>
-          <dd>Europe/Madrid</dd>
-        </div>
         <div>
           <dt>Actualización de datos</dt>
           <dd>Automática</dd>
@@ -46,8 +60,8 @@
       </dl>
 
       <p class="settings-note">
-        La zona horaria y la actualización de datos forman parte de la configuración operativa y
-        no pueden modificarse desde una cuenta de operador.
+        La zona horaria se guarda en la cuenta del operador y se aplica en cualquier dispositivo.
+        La actualización de datos forma parte de la configuración operativa.
       </p>
     </article>
 
@@ -78,13 +92,13 @@
   <footer class="preferences-footer">
     <div>
       <strong>Preferencias del navegador</strong>
-      <span>Los cambios de idioma y accesibilidad se guardarán en este dispositivo.</span>
+      <span>La zona horaria se guarda en la cuenta; el idioma y la accesibilidad, en este dispositivo.</span>
     </div>
     <div class="settings-actions">
-      <button class="secondary-button" type="button" (click)="resetPreferences()">
+      <button class="secondary-button" type="button" [disabled]="savingPreferences" (click)="resetPreferences()">
         Restablecer
       </button>
-      <button class="primary-button" type="button" (click)="savePreferences()">
+      <button class="primary-button" type="button" [disabled]="savingPreferences" (click)="savePreferences()">
         Guardar preferencias
       </button>
     </div>
@@ -92,5 +106,8 @@
 
   @if (saved) {
     <p class="saved-message" role="status">Las preferencias se han guardado correctamente.</p>
+  }
+  @if (errorMessage) {
+    <p class="error-message" role="alert">{{ errorMessage }}</p>
   }
 </section>
