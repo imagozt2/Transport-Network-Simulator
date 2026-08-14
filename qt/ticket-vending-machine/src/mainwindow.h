@@ -8,9 +8,9 @@
 #include <optional>
 
 class QLabel;
+class QGridLayout;
 class QPushButton;
 class QStackedWidget;
-class QVBoxLayout;
 
 enum class UiLanguage
 {
@@ -86,7 +86,7 @@ private:
     QLabel *m_catalogState = nullptr;
     QPushButton *m_catalogBackButton = nullptr;
     QPushButton *m_catalogRetryButton = nullptr;
-    QVBoxLayout *m_catalogList = nullptr;
+    QGridLayout *m_catalogGrid = nullptr;
     TicketCatalogClient *m_catalogClient = nullptr;
     StationCatalogClient *m_stationClient = nullptr;
     JourneyQuoteClient *m_journeyClient = nullptr;

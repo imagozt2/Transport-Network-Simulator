@@ -5,6 +5,7 @@
 #include <QComboBox>
 #include <QDialog>
 #include <QDoubleSpinBox>
+#include <QGridLayout>
 #include <QHBoxLayout>
 #include <QLocale>
 #include <QLabel>
@@ -13,7 +14,6 @@
 #include <QPixmap>
 #include <QSizePolicy>
 #include <QSettings>
-#include <QScrollArea>
 #include <QStackedWidget>
 #include <QSpinBox>
 #include <QTimer>
@@ -646,15 +646,15 @@ QWidget *MainWindow::createCatalogPanel()
     m_catalogRetryButton->setCursor(Qt::PointingHandCursor);
     m_catalogRetryButton->hide();
 
-    auto *scrollArea = new QScrollArea(panel);
-    scrollArea->setWidgetResizable(true);
-    scrollArea->setFrameShape(QFrame::NoFrame);
-    auto *catalogContent = new QWidget(scrollArea);
-    m_catalogList = new QVBoxLayout(catalogContent);
-    m_catalogList->setContentsMargins(0, 0, 8, 0);
-    m_catalogList->setSpacing(12);
-    m_catalogList->addStretch();
-    scrollArea->setWidget(catalogContent);
+    auto *catalogContent = new QWidget(panel);
+    m_catalogGrid = new QGridLayout(catalogContent);
+    m_catalogGrid->setContentsMargins(0, 0, 0, 0);
+    m_catalogGrid->setHorizontalSpacing(14);
+    m_catalogGrid->setVerticalSpacing(14);
+    m_catalogGrid->setColumnStretch(0, 1);
+    m_catalogGrid->setColumnStretch(1, 1);
+    m_catalogGrid->setRowStretch(0, 1);
+    m_catalogGrid->setRowStretch(1, 1);
 
     connect(m_catalogBackButton, &QPushButton::clicked, this, &MainWindow::showHome);
     connect(m_catalogRetryButton, &QPushButton::clicked, m_catalogClient, [this] {
@@ -669,7 +669,7 @@ QWidget *MainWindow::createCatalogPanel()
     layout->addWidget(heading);
     layout->addWidget(m_catalogState);
     layout->addWidget(m_catalogRetryButton, 0, Qt::AlignCenter);
-    layout->addWidget(scrollArea, 1);
+    layout->addWidget(catalogContent, 1);
     return panel;
 }
 
@@ -708,7 +708,7 @@ void MainWindow::showHome()
 
 void MainWindow::renderCatalog()
 {
-    while (auto *item = m_catalogList->takeAt(0)) {
+    while (auto *item = m_catalogGrid->takeAt(0)) {
         delete item->widget();
         delete item;
     }
@@ -717,15 +717,16 @@ void MainWindow::renderCatalog()
             m_language == UiLanguage::Spanish ? QStringLiteral("No hay títulos disponibles.")
                                               : QStringLiteral("No ticket products are available."));
         m_catalogState->show();
-        m_catalogList->addStretch();
         return;
     }
 
     m_catalogState->hide();
     m_catalogRetryButton->hide();
-    for (const auto &product : m_products) {
+    for (qsizetype index = 0; index < m_products.size(); ++index) {
+        const auto &product = m_products.at(index);
         auto *card = new QFrame(m_catalogPanel);
         card->setObjectName(QStringLiteral("productCard"));
+        card->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         auto *layout = new QVBoxLayout(card);
         layout->setContentsMargins(20, 16, 20, 16);
         layout->setSpacing(5);
@@ -747,6 +748,7 @@ void MainWindow::renderCatalog()
         layout->addWidget(header);
         layout->addWidget(tariff);
         layout->addWidget(rules);
+        layout->addStretch();
         auto *selectButton = new QPushButton(card);
         selectButton->setObjectName(QStringLiteral("selectProduct"));
         selectButton->setCursor(Qt::PointingHandCursor);
@@ -775,9 +777,9 @@ void MainWindow::renderCatalog()
             showProductConfiguration(product);
         });
         layout->addWidget(selectButton, 0, Qt::AlignRight);
-        m_catalogList->addWidget(card);
+        m_catalogGrid->addWidget(card, static_cast<int>(index / 2),
+                                 static_cast<int>(index % 2));
     }
-    m_catalogList->addStretch();
 }
 
 void MainWindow::showProductConfiguration(const TicketProduct &product)
