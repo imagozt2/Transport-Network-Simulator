@@ -18,6 +18,8 @@ qt_add_executable(rmm-ticket-vending-machine WIN32
     src/qrcodescannerwidget.h
     src/ticketrechargelookupclient.cpp
     src/ticketrechargelookupclient.h
+    src/ticketrechargequoteclient.cpp
+    src/ticketrechargequoteclient.h
 )
 
 target_link_libraries(rmm-ticket-vending-machine

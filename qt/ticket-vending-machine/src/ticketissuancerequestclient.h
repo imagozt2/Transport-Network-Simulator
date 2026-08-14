@@ -17,6 +17,7 @@ class TicketIssuanceRequestClient final : public QObject
 public:
     explicit TicketIssuanceRequestClient(QObject *parent = nullptr);
     void submit(const TicketIssuanceRequest &request);
+    void submitRecharge(const TicketRechargeRequest &request);
     void publishOperationEvent(
         const QString &eventCode,
         const QString &purchaseReference,
@@ -29,6 +30,7 @@ public:
 signals:
     void connectionStateChanged(bool connected, int retryDelaySeconds);
     void submitted(const QString &requestReference);
+    void rechargeSubmitted(const QString &rechargeReference);
     void failed(const QString &reason);
     void ticketIssued(
         const QString &ticketCode,
@@ -43,6 +45,7 @@ signals:
         const QByteArray &qrPng,
         const QString &qrValue,
         const QString &linkingCode);
+    void ticketRecharged(const TicketRechargeResult &result);
 
 private:
     struct QueuedMessage
@@ -73,6 +76,8 @@ private:
     QByteArray m_pendingPayload;
     QString m_pendingReference;
     QString m_awaitedReference;
+    QString m_awaitedRechargeReference;
+    bool m_pendingIsRecharge = false;
     QString m_deviceCode;
     bool m_configurationValid = false;
     qint32 m_packetId = -1;

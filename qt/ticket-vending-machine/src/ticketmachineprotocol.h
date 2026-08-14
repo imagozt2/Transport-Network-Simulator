@@ -15,6 +15,32 @@ struct TicketIssuanceRequest
     double paidAmount = 0.0;
 };
 
+struct TicketRechargeRequest
+{
+    QString qrValue;
+    QString originStationCode;
+    QString destinationStationCode;
+    int trips = 0;
+    int days = 0;
+    double balanceAmount = 0.0;
+    double paidAmount = 0.0;
+};
+
+struct TicketRechargeResult
+{
+    bool valid = false;
+    QString rechargeReference;
+    QString rechargeCode;
+    QString ticketCode;
+    QString productType;
+    QString ticketStatus;
+    QString currency;
+    int remainingTrips = 0;
+    QString validUntil;
+    double balanceAmount = 0.0;
+    double totalAmount = 0.0;
+};
+
 Q_DECLARE_METATYPE(TicketIssuanceRequest)
 
 namespace rmm::ticketmachine {
@@ -46,6 +72,17 @@ QByteArray buildPurchaseRequest(
     const QString &purchaseReference,
     const QString &messageId,
     const QDateTime &now);
+
+QByteArray buildRechargeRequest(
+    const TicketRechargeRequest &request,
+    const QString &deviceCode,
+    const QString &rechargeReference,
+    const QString &messageId,
+    const QDateTime &now);
+
+TicketRechargeResult parseRechargeResponse(
+    const QByteArray &message,
+    const QString &awaitedReference);
 
 IssueCommand parseIssueCommand(
     const QByteArray &message,

@@ -66,6 +66,68 @@ QByteArray buildPurchaseRequest(
         deviceCode, now, payload)).toJson(QJsonDocument::Compact);
 }
 
+QByteArray buildRechargeRequest(
+    const TicketRechargeRequest &request,
+    const QString &deviceCode,
+    const QString &rechargeReference,
+    const QString &messageId,
+    const QDateTime &now)
+{
+    QJsonObject configuration;
+    if (!request.originStationCode.isEmpty()) {
+        configuration.insert(QStringLiteral("originStationCode"), request.originStationCode);
+        configuration.insert(QStringLiteral("destinationStationCode"), request.destinationStationCode);
+    }
+    if (request.trips > 0) configuration.insert(QStringLiteral("trips"), request.trips);
+    if (request.days > 0) configuration.insert(QStringLiteral("days"), request.days);
+    if (request.balanceAmount > 0) {
+        configuration.insert(QStringLiteral("balanceAmount"), request.balanceAmount);
+    }
+    const QJsonObject payload{
+        {QStringLiteral("rechargeReference"), rechargeReference},
+        {QStringLiteral("qrValue"), request.qrValue},
+        {QStringLiteral("paymentMethod"), QStringLiteral("SIMULATED")},
+        {QStringLiteral("paidAmount"), request.paidAmount},
+        {QStringLiteral("currency"), QStringLiteral("EUR")},
+        {QStringLiteral("configuration"), configuration},
+    };
+    return QJsonDocument(envelope(
+        messageId, QJsonValue::Null, QStringLiteral("ticket.recharge-requested"),
+        deviceCode, now, payload)).toJson(QJsonDocument::Compact);
+}
+
+TicketRechargeResult parseRechargeResponse(
+    const QByteArray &message,
+    const QString &awaitedReference)
+{
+    QJsonParseError parseError;
+    const auto document = QJsonDocument::fromJson(message, &parseError);
+    if (parseError.error != QJsonParseError::NoError || !document.isObject()) return {};
+    const auto root = document.object();
+    if (root.value(QStringLiteral("schemaVersion")).toInt() != 1
+        || root.value(QStringLiteral("type")).toString() != QStringLiteral("ticket.recharge-completed")) {
+        return {};
+    }
+    const auto payload = root.value(QStringLiteral("payload")).toObject();
+    TicketRechargeResult result{
+        .rechargeReference = payload.value(QStringLiteral("rechargeReference")).toString(),
+        .rechargeCode = payload.value(QStringLiteral("rechargeCode")).toString(),
+        .ticketCode = payload.value(QStringLiteral("ticketCode")).toString(),
+        .productType = payload.value(QStringLiteral("productType")).toString(),
+        .ticketStatus = payload.value(QStringLiteral("ticketStatus")).toString(),
+        .currency = payload.value(QStringLiteral("currency")).toString(QStringLiteral("EUR")),
+        .remainingTrips = payload.value(QStringLiteral("remainingTrips")).toInt(),
+        .validUntil = payload.value(QStringLiteral("validUntil")).toString(),
+        .balanceAmount = payload.value(QStringLiteral("balanceAmount")).toDouble(),
+        .totalAmount = payload.value(QStringLiteral("totalAmount")).toDouble(),
+    };
+    result.valid = !awaitedReference.isEmpty()
+        && result.rechargeReference == awaitedReference
+        && !result.rechargeCode.isEmpty() && !result.ticketCode.isEmpty()
+        && payload.value(QStringLiteral("status")).toString() == QStringLiteral("COMPLETED");
+    return result;
+}
+
 IssueCommand parseIssueCommand(
     const QByteArray &message,
     const QString &awaitedReference,
@@ -123,7 +185,7 @@ QByteArray buildOperationEvent(
     if (!resultCode.isEmpty()) details.insert(QStringLiteral("resultCode"), resultCode);
     const QJsonObject payload{
         {QStringLiteral("eventCode"), eventCode},
-        {QStringLiteral("severity"), eventCode == QStringLiteral("TICKET_PURCHASE_FAILED")
+        {QStringLiteral("severity"), eventCode.endsWith(QStringLiteral("_FAILED"))
             ? QStringLiteral("ERROR") : QStringLiteral("INFO")},
         {QStringLiteral("details"), details},
     };

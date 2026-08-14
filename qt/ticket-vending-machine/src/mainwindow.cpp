@@ -301,6 +301,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_journeyClient = new JourneyQuoteClient(this);
     m_issuanceClient = new TicketIssuanceRequestClient(this);
     m_rechargeLookupClient = new TicketRechargeLookupClient(this);
+    m_rechargeQuoteClient = new TicketRechargeQuoteClient(this);
     const auto machineConfiguration = TicketMachineConfiguration::fromEnvironment(
         QProcessEnvironment::systemEnvironment());
     m_machineStationCode = machineConfiguration.stationCode;
@@ -355,6 +356,32 @@ MainWindow::MainWindow(QWidget *parent)
                 : QStringLiteral("No rechargeable ticket could be identified from that QR code."));
         showRechargeScanner();
     });
+    connect(this, &MainWindow::rechargeConfigurationSelected, this,
+            [this](const QString &qrValue, const QString &originStationCode,
+                   const QString &destinationStationCode, int trips, int days,
+                   double balanceAmount) {
+        showRechargeLookupProgress();
+        m_rechargeQuoteClient->quote(TicketRechargeConfiguration{
+            qrValue, originStationCode, destinationStationCode,
+            trips, days, balanceAmount
+        });
+    });
+    connect(m_rechargeQuoteClient, &TicketRechargeQuoteClient::loaded, this,
+            [this](const TicketRechargeQuote &quote) {
+        m_pendingRechargeQuote = quote;
+        showRechargeConfirmation(quote);
+    });
+    connect(m_rechargeQuoteClient, &TicketRechargeQuoteClient::failed, this, [this] {
+        QMessageBox::warning(
+            this,
+            m_language == UiLanguage::Spanish ? QStringLiteral("Recarga no disponible")
+                                              : QStringLiteral("Recharge unavailable"),
+            m_language == UiLanguage::Spanish
+                ? QStringLiteral("No se ha podido calcular el importe de la recarga.")
+                : QStringLiteral("The recharge amount could not be calculated."));
+        if (m_pendingRecharge) showRechargeOptions(*m_pendingRecharge);
+        else showHome();
+    });
     connect(this, &MainWindow::configurationSelected, this, &MainWindow::preparePayment);
     connect(this, &MainWindow::paymentApproved, this,
             [this](const QString &productCode, const QString &originStationCode,
@@ -378,6 +405,21 @@ MainWindow::MainWindow(QWidget *parent)
             m_language == UiLanguage::Spanish ? QStringLiteral("Solicitud enviada")
                                               : QStringLiteral("Request sent"));
         m_connectionState->setToolTip(reference);
+    });
+    connect(m_issuanceClient, &TicketIssuanceRequestClient::rechargeSubmitted, this,
+            [this](const QString &reference) {
+        m_connectionState->setText(
+            m_language == UiLanguage::Spanish ? QStringLiteral("Procesando recarga")
+                                              : QStringLiteral("Processing recharge"));
+        m_connectionState->setToolTip(reference);
+    });
+    connect(m_issuanceClient, &TicketIssuanceRequestClient::ticketRecharged, this,
+            [this](const TicketRechargeResult &result) {
+        m_connectionState->setText(
+            m_language == UiLanguage::Spanish ? QStringLiteral("Recarga completada")
+                                              : QStringLiteral("Recharge completed"));
+        m_connectionState->setToolTip(result.rechargeCode);
+        showRechargeResult(result);
     });
     connect(m_issuanceClient, &TicketIssuanceRequestClient::connectionStateChanged, this,
             [this](bool connected, int retryDelaySeconds) {
@@ -474,6 +516,24 @@ MainWindow::MainWindow(QWidget *parent)
             m_language == UiLanguage::Spanish ? QStringLiteral("Conexión no disponible")
                                               : QStringLiteral("Connection unavailable"));
         const bool missingCredentials = reason == QStringLiteral("MQTT_CREDENTIALS_MISSING");
+        if (m_pendingRechargeQuote) {
+            QMessageBox::warning(
+                this,
+                m_language == UiLanguage::Spanish
+                    ? QStringLiteral("No se pudo completar la recarga")
+                    : QStringLiteral("Recharge could not be completed"),
+                m_language == UiLanguage::Spanish
+                    ? (missingCredentials
+                        ? QStringLiteral("Falta configurar la credencial MQTT local de esta máquina.")
+                        : QStringLiteral("No se ha podido confirmar la recarga. No se ha realizado un nuevo cobro."))
+                    : (missingCredentials
+                        ? QStringLiteral("This machine's local MQTT credential is not configured.")
+                        : QStringLiteral("The recharge could not be confirmed. No new payment was made.")));
+            m_pendingRechargeQuote.reset();
+            if (m_pendingRecharge) showRechargeOptions(*m_pendingRecharge);
+            else showHome();
+            return;
+        }
         QMessageBox::warning(
             this,
             m_language == UiLanguage::Spanish ? QStringLiteral("No se pudo solicitar la emisión")
@@ -772,6 +832,7 @@ void MainWindow::showHome()
     }
     m_pendingPayment.reset();
     m_pendingRecharge.reset();
+    m_pendingRechargeQuote.reset();
     leavePurchaseFlow(m_homePanel);
 }
 
@@ -974,6 +1035,155 @@ void MainWindow::showRechargeOptions(const RechargeableTicket &ticket)
             ticket.productType == QStringLiteral("TIME_PASS") ? option : 0,
             amount ? amount->value() : 0.0);
     });
+    showPurchaseFlowPanel(panel);
+}
+
+void MainWindow::showRechargeConfirmation(const TicketRechargeQuote &quote)
+{
+    const bool spanish = m_language == UiLanguage::Spanish;
+    const QLocale locale = spanish ? QLocale(QLocale::Spanish, QLocale::Spain)
+                                   : QLocale(QLocale::English, QLocale::UnitedKingdom);
+    auto *panel = new QFrame(m_contentStack);
+    panel->setObjectName(QStringLiteral("purchaseFlowPanel"));
+    auto *layout = new QVBoxLayout(panel);
+    layout->setContentsMargins(36, 28, 36, 28);
+    layout->setSpacing(14);
+    auto *title = new QLabel(spanish ? QStringLiteral("Confirmar recarga")
+                                    : QStringLiteral("Confirm recharge"), panel);
+    title->setObjectName(QStringLiteral("dialogTitle"));
+    auto *ticketLabel = new QLabel(
+        spanish ? QStringLiteral("Billete %1").arg(quote.ticketCode)
+                : QStringLiteral("Ticket %1").arg(quote.ticketCode), panel);
+    ticketLabel->setObjectName(QStringLiteral("productName"));
+    auto *summary = new QLabel(panel);
+    summary->setObjectName(QStringLiteral("screenHint"));
+    summary->setWordWrap(true);
+    if (quote.productType == QStringLiteral("SINGLE_TRIP")) {
+        summary->setText(
+            (spanish ? QStringLiteral("Nuevo trayecto: %1 → %2 · %3 estaciones")
+                     : QStringLiteral("New journey: %1 → %2 · %3 stations"))
+                .arg(quote.configuration.originStationCode,
+                     quote.configuration.destinationStationCode)
+                .arg(quote.stationCount));
+    } else if (quote.productType == QStringLiteral("MULTI_TRIP")) {
+        summary->setText(
+            (spanish ? QStringLiteral("Se añadirán %1 viajes · saldo resultante: %2")
+                     : QStringLiteral("%1 trips will be added · resulting balance: %2"))
+                .arg(quote.configuration.trips).arg(quote.resultingTrips));
+    } else if (quote.productType == QStringLiteral("TIME_PASS")) {
+        summary->setText(
+            (spanish ? QStringLiteral("El abono tendrá una validez de %1 días.")
+                     : QStringLiteral("The pass will be valid for %1 days."))
+                .arg(quote.configuration.days));
+    } else {
+        summary->setText(
+            (spanish ? QStringLiteral("Se añadirán %1 · saldo resultante: %2")
+                     : QStringLiteral("%1 will be added · resulting balance: %2"))
+                .arg(locale.toCurrencyString(quote.configuration.balanceAmount, quote.currency),
+                     locale.toCurrencyString(quote.resultingBalanceAmount, quote.currency)));
+    }
+    auto *amount = new QLabel(locale.toCurrencyString(quote.totalAmount, quote.currency), panel);
+    amount->setObjectName(QStringLiteral("paymentAmount"));
+    amount->setAlignment(Qt::AlignCenter);
+    auto *paymentHint = new QLabel(
+        spanish ? QStringLiteral("Pago simulado. La referencia impide aplicar dos veces la misma recarga.")
+                : QStringLiteral("Simulated payment. The reference prevents applying the same recharge twice."), panel);
+    paymentHint->setObjectName(QStringLiteral("screenHint"));
+    paymentHint->setWordWrap(true);
+    paymentHint->setAlignment(Qt::AlignCenter);
+    layout->addWidget(title);
+    layout->addWidget(ticketLabel);
+    layout->addWidget(summary);
+    layout->addStretch();
+    layout->addWidget(amount);
+    layout->addWidget(paymentHint);
+    layout->addStretch();
+    auto *actions = new QHBoxLayout;
+    auto *back = new QPushButton(spanish ? QStringLiteral("Modificar")
+                                        : QStringLiteral("Change"), panel);
+    back->setObjectName(QStringLiteral("backAction"));
+    auto *pay = new QPushButton(spanish ? QStringLiteral("Simular pago y recargar")
+                                       : QStringLiteral("Simulate payment and recharge"), panel);
+    pay->setObjectName(QStringLiteral("confirmAction"));
+    actions->addStretch();
+    actions->addWidget(back);
+    actions->addWidget(pay);
+    layout->addLayout(actions);
+    connect(back, &QPushButton::clicked, this, [this] {
+        m_pendingRechargeQuote.reset();
+        if (m_pendingRecharge) showRechargeOptions(*m_pendingRecharge);
+    });
+    connect(pay, &QPushButton::clicked, this, [this, quote, pay] {
+        pay->setEnabled(false);
+        m_connectionState->setText(
+            m_language == UiLanguage::Spanish ? QStringLiteral("Enviando recarga…")
+                                              : QStringLiteral("Sending recharge…"));
+        m_issuanceClient->submitRecharge(TicketRechargeRequest{
+            quote.configuration.qrValue,
+            quote.configuration.originStationCode,
+            quote.configuration.destinationStationCode,
+            quote.configuration.trips,
+            quote.configuration.days,
+            quote.configuration.balanceAmount,
+            quote.totalAmount
+        });
+    });
+    showPurchaseFlowPanel(panel);
+}
+
+void MainWindow::showRechargeResult(const TicketRechargeResult &result)
+{
+    const bool spanish = m_language == UiLanguage::Spanish;
+    const QLocale locale = spanish ? QLocale(QLocale::Spanish, QLocale::Spain)
+                                   : QLocale(QLocale::English, QLocale::UnitedKingdom);
+    auto *panel = new QFrame(m_contentStack);
+    panel->setObjectName(QStringLiteral("purchaseFlowPanel"));
+    auto *layout = new QVBoxLayout(panel);
+    layout->setContentsMargins(36, 30, 36, 30);
+    layout->setSpacing(14);
+    auto *title = new QLabel(spanish ? QStringLiteral("Recarga completada")
+                                    : QStringLiteral("Recharge completed"), panel);
+    title->setObjectName(QStringLiteral("dialogTitle"));
+    auto *ticket = new QLabel(result.ticketCode, panel);
+    ticket->setObjectName(QStringLiteral("productName"));
+    ticket->setAlignment(Qt::AlignCenter);
+    auto *details = new QLabel(panel);
+    details->setAlignment(Qt::AlignCenter);
+    if (result.productType == QStringLiteral("MULTI_TRIP")) {
+        details->setText((spanish ? QStringLiteral("Saldo disponible: %1 viajes")
+                                  : QStringLiteral("Available balance: %1 trips"))
+                             .arg(result.remainingTrips));
+    } else if (result.productType == QStringLiteral("TIME_PASS")) {
+        const QDateTime validUntil = QDateTime::fromString(result.validUntil, Qt::ISODate);
+        details->setText((spanish ? QStringLiteral("Válido hasta: %1")
+                                  : QStringLiteral("Valid until: %1"))
+                             .arg(locale.toString(validUntil.toLocalTime(), QLocale::ShortFormat)));
+    } else if (result.productType == QStringLiteral("SMART_BALANCE")) {
+        details->setText((spanish ? QStringLiteral("Saldo disponible: %1")
+                                  : QStringLiteral("Available balance: %1"))
+                             .arg(locale.toCurrencyString(result.balanceAmount, result.currency)));
+    } else {
+        details->setText(spanish ? QStringLiteral("Nuevo trayecto disponible")
+                                 : QStringLiteral("New journey available"));
+    }
+    auto *reference = new QLabel(
+        (spanish ? QStringLiteral("Operación: %1") : QStringLiteral("Operation: %1"))
+            .arg(result.rechargeCode), panel);
+    reference->setObjectName(QStringLiteral("screenHint"));
+    reference->setAlignment(Qt::AlignCenter);
+    auto *finish = new QPushButton(spanish ? QStringLiteral("Finalizar")
+                                          : QStringLiteral("Finish"), panel);
+    finish->setObjectName(QStringLiteral("confirmAction"));
+    layout->addStretch();
+    layout->addWidget(title, 0, Qt::AlignCenter);
+    layout->addWidget(ticket);
+    layout->addWidget(details);
+    layout->addWidget(reference);
+    layout->addStretch();
+    layout->addWidget(finish, 0, Qt::AlignCenter);
+    connect(finish, &QPushButton::clicked, this, &MainWindow::showHome);
+    m_pendingRechargeQuote.reset();
+    m_pendingRecharge.reset();
     showPurchaseFlowPanel(panel);
 }
 
