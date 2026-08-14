@@ -79,13 +79,18 @@ La emisión solicitada por un operador utiliza `REQUESTED`, `PROCESSING`, `COMPL
 `CANCELLED`, pero cumple además estas reglas:
 
 - el importe cobrado siempre es cero;
-- exige operador, motivo y máquina de destino;
-- la máquina confirma que ha presentado o impreso el billete;
-- el backend conserva la relación entre solicitud, operador, máquina y billete;
-- repetir la misma referencia devuelve el resultado existente y no emite un segundo billete.
+- exige operador, motivo y un pasajero o máquina de destino;
+- la entrega digital se completa en la cartera del pasajero;
+- una máquina MQTT confirma que ha presentado o impreso el billete;
+- una máquina online no monitorizada simula la entrega sin crear billete;
+- el backend conserva las relaciones aplicables entre solicitud, operador, destino y billete;
+- los acuses MQTT repetidos se procesan de forma idempotente y no completan dos veces la emisión.
 
 Si la máquina no confirma la orden dentro del plazo configurado, la solicitud no se marca como
 completada. Podrá permanecer pendiente o fallar de forma recuperable según el contrato MQTT.
+
+La descripción completa se encuentra en
+[Emisión administrativa de billetes](emision-administrativa-billetes.md).
 
 ## Estados del billete
 
