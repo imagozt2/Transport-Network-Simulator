@@ -233,7 +233,7 @@ export class TransportTitles implements OnInit {
   canSubmitIssuance(): boolean {
     const title = this.issuanceTitle;
     const hasDestination = this.selectedDeliveryMethod === 'PHYSICAL_DEVICE'
-      ? !!this.selectedDeviceCode : !!this.selectedPassengerPublicId;
+      ? this.selectedMachine() !== null : this.selectedPassenger() !== null;
     if (!title || this.loadingIssuanceOptions || this.issuingTicket
       || !hasDestination || !this.issuanceReason.trim()) {
       return false;
@@ -264,6 +264,27 @@ export class TransportTitles implements OnInit {
     this.selectedDeviceCode = '';
     this.selectedPassengerPublicId = '';
     this.issuanceError = '';
+  }
+
+  selectDevice(code: string): void {
+    this.selectedDeviceCode = this.ticketMachines.some((machine) => machine.code === code)
+      ? code : '';
+    this.selectedPassengerPublicId = '';
+  }
+
+  selectPassenger(publicId: string): void {
+    this.selectedPassengerPublicId = this.passengers.some((passenger) =>
+      passenger.publicId === publicId && passenger.status === 'ACTIVE') ? publicId : '';
+    this.selectedDeviceCode = '';
+  }
+
+  selectedMachine(): DeviceOperation | null {
+    return this.ticketMachines.find((machine) => machine.code === this.selectedDeviceCode) ?? null;
+  }
+
+  selectedPassenger(): PassengerAccount | null {
+    return this.passengers.find((passenger) =>
+      passenger.publicId === this.selectedPassengerPublicId && passenger.status === 'ACTIVE') ?? null;
   }
 
   machineDeliveryLabel(machine: DeviceOperation): string {

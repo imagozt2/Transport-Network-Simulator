@@ -153,7 +153,7 @@
             @if (selectedDeliveryMethod === 'PHYSICAL_DEVICE') {
               <label class="dialog-field full-width">
                 <span>Máquina de emisión</span>
-                <select required [value]="selectedDeviceCode" (change)="selectedDeviceCode = $any($event.target).value">
+                <select required [value]="selectedDeviceCode" (change)="selectDevice($any($event.target).value)">
                   <option value="">Selecciona una máquina online</option>
                   @for (machine of ticketMachines; track machine.id) {
                     <option [value]="machine.code">{{ machine.name }} · {{ machine.station.name }} · {{ machineDeliveryLabel(machine) }}</option>
@@ -161,11 +161,17 @@
                 </select>
                 @if (ticketMachines.length === 0) { <small>No hay máquinas de venta disponibles.</small> }
                 <small>Las máquinas MQTT emitirán el billete real; las no monitorizadas simularán la operación.</small>
+                @if (selectedMachine(); as machine) {
+                  <span class="delivery-selection">
+                    <strong>{{ machine.name }}</strong>
+                    <small>{{ machine.station.name }} · {{ machineDeliveryLabel(machine) }}</small>
+                  </span>
+                }
               </label>
             } @else {
               <label class="dialog-field full-width">
                 <span>Pasajero destinatario</span>
-                <select required [value]="selectedPassengerPublicId" (change)="selectedPassengerPublicId = $any($event.target).value">
+                <select required [value]="selectedPassengerPublicId" (change)="selectPassenger($any($event.target).value)">
                   <option value="">Selecciona una cuenta activa</option>
                   @for (passenger of passengers; track passenger.publicId) {
                     <option [value]="passenger.publicId">{{ passenger.firstName }} {{ passenger.lastName }} · {{ passenger.email }}</option>
@@ -173,6 +179,12 @@
                 </select>
                 @if (passengers.length === 0) { <small>No hay cuentas activas disponibles.</small> }
                 <small>El billete aparecerá directamente en la cartera digital del pasajero.</small>
+                @if (selectedPassenger(); as passenger) {
+                  <span class="delivery-selection">
+                    <strong>{{ passenger.firstName }} {{ passenger.lastName }}</strong>
+                    <small>{{ passenger.email }}</small>
+                  </span>
+                }
               </label>
             }
 

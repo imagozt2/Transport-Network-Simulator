@@ -27,6 +27,9 @@
 .dialog-field textarea { min-height: 82px; padding-top: 11px; resize: vertical; }
 .dialog-field select:focus, .dialog-field input:focus, .dialog-field textarea:focus { border-color: #0284c7; box-shadow: 0 0 0 3px rgba(14, 165, 233, .12); }
 .dialog-field small { color: #64748b; font-size: 10px; }
+.dialog-field .delivery-selection { display: flex; flex-direction: column; gap: 3px; margin-top: 2px; border: 1px solid #cbd5e1; border-left: 4px solid #0f172a; border-radius: 11px; padding: 10px 12px; color: #0f172a; background: #f8fafc; }
+.delivery-selection strong { font-size: 12px; }
+.delivery-selection small { color: #475569; font-size: 10px; }
 .money-input { position: relative; }
 .money-input input { padding-right: 54px; }
 .money-input span { position: absolute; top: 50%; right: 13px; transform: translateY(-50%); color: #64748b; font-size: 11px; font-weight: 900; }

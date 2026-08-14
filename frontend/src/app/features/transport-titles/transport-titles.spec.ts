@@ -4,6 +4,7 @@ import { Observable, of, throwError } from 'rxjs';
 import { TransportTitlesResponse } from '../../core/models/transport-title.model';
 import { DeviceOperationsResponse } from '../../core/models/device-operation.model';
 import { NetworkMapResponse } from '../../core/models/network-map.model';
+import { PassengerAccountsPage } from '../../core/models/passenger-account.model';
 import { TransportTitlesService } from '../../core/services/transport-titles.service';
 import { DeviceOperationsService } from '../../core/services/device-operations.service';
 import { NetworkMapService } from '../../core/services/network-map.service';
@@ -138,8 +139,13 @@ describe('TransportTitles', () => {
           totalAccounts: 0, activeAccounts: 0, blockedAccounts: 0,
           disabledAccounts: 0, pendingVerificationAccounts: 0
         },
-        users: [], page: 0, pageSize: 100, totalElements: 0, totalPages: 0,
-        first: true, last: true, empty: true
+        users: [{
+          publicId: 'passenger-1', email: 'ana@example.com', firstName: 'Ana', lastName: 'Ruiz',
+          status: 'ACTIVE', emailVerified: true, emailVerifiedAt: null,
+          lastLoginAt: null, registeredAt: '', updatedAt: ''
+        }],
+        page: 0, pageSize: 100, totalElements: 1, totalPages: 1,
+        first: true, last: true, empty: false
       })
     );
     const fixture = TestBed.createComponent(TransportTitles);
@@ -148,8 +154,16 @@ describe('TransportTitles', () => {
 
     component.openIssuanceDialog(response.titles[0]);
     expect(component.ticketMachines).toHaveLength(1);
+    expect(component.passengers).toHaveLength(1);
     expect(component.stations).toHaveLength(2);
-    component.selectedDeviceCode = 'TM-ST001-01';
+    component.selectDevice('TM-ST001-01');
+    expect(component.selectedPassengerPublicId).toBe('');
+    component.setDeliveryMethod('DIGITAL_WALLET');
+    component.selectPassenger('passenger-1');
+    expect(component.selectedDeviceCode).toBe('');
+    expect(component.selectedPassenger()?.email).toBe('ana@example.com');
+    component.setDeliveryMethod('PHYSICAL_DEVICE');
+    component.selectDevice('TM-ST001-01');
     component.originStationCode = 'ST001';
     component.destinationStationCode = 'ST002';
     component.issuanceReason = '  Fallo durante la compra  ';
@@ -184,7 +198,7 @@ async function configureWith(
   issueCompensatoryTicket = vi.fn(),
   getOperations: () => Observable<DeviceOperationsResponse> = vi.fn(),
   getNetworkMap: () => Observable<NetworkMapResponse> = vi.fn(),
-  getAccounts = () => of({
+  getAccounts: () => Observable<PassengerAccountsPage> = () => of({
     summary: {
       totalAccounts: 0, activeAccounts: 0, blockedAccounts: 0,
       disabledAccounts: 0, pendingVerificationAccounts: 0
