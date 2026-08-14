@@ -145,6 +145,7 @@ jobs:
           host: windows
           target: desktop
           arch: win64_msvc2022_64
+          modules: qtmultimedia
           cache: true
           cache-key-prefix: qt-6.9.2-msvc2022
 

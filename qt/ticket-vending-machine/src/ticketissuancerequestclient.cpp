@@ -60,6 +60,8 @@ TicketIssuanceRequestClient::TicketIssuanceRequestClient(QObject *parent)
         emit connectionStateChanged(true, 0);
         m_client->subscribe(
             QMqttTopicFilter(QStringLiteral("rmm/v1/devices/%1/commands").arg(m_deviceCode)), 1);
+        m_client->subscribe(
+            QMqttTopicFilter(QStringLiteral("rmm/v1/devices/%1/responses").arg(m_deviceCode)), 1);
         publishPresence();
         m_presenceTimer->start();
         flushQueuedMessages();
@@ -73,6 +75,22 @@ TicketIssuanceRequestClient::TicketIssuanceRequestClient(QObject *parent)
     });
     connect(m_client, &QMqttClient::messageReceived, this,
             [this](const QByteArray &message, const QMqttTopicName &) {
+        const auto recharge = rmm::ticketmachine::parseRechargeResponse(
+            message, m_awaitedRechargeReference);
+        if (recharge.valid) {
+            m_timeout->stop();
+            m_awaitedRechargeReference.clear();
+            m_pendingIsRecharge = false;
+            publishOperationEvent(
+                QStringLiteral("TICKET_RECHARGE_COMPLETED"), recharge.rechargeReference,
+                recharge.ticketCode, QStringLiteral("COMPLETED"),
+                {{QStringLiteral("productType"), recharge.productType},
+                 {QStringLiteral("amount"), recharge.totalAmount},
+                 {QStringLiteral("currency"), recharge.currency},
+                 {QStringLiteral("rechargeCode"), recharge.rechargeCode}});
+            emit ticketRecharged(recharge);
+            return;
+        }
         const auto command = rmm::ticketmachine::parseIssueCommand(
             message, m_awaitedReference, QDateTime::currentDateTimeUtc());
         if (command.result == rmm::ticketmachine::IssueCommandResult::Ignored) {
@@ -134,7 +152,8 @@ TicketIssuanceRequestClient::TicketIssuanceRequestClient(QObject *parent)
         m_publishAttempt = 0;
         m_publishRetryTimer->stop();
         m_timeout->start();
-        emit submitted(reference);
+        if (m_pendingIsRecharge) emit rechargeSubmitted(reference);
+        else emit submitted(reference);
     });
     connect(m_client, &QMqttClient::errorChanged, this, [this](QMqttClient::ClientError error) {
         if (error != QMqttClient::NoError) {
@@ -254,7 +273,8 @@ void TicketIssuanceRequestClient::publishOperationEvent(
     const QString &eventCode,
     const QString &purchaseReference,
     const QString &ticketCode,
-    const QString &resultCode)
+    const QString &resultCode,
+    const QVariantMap &details)
 {
     if (eventCode.isEmpty()) {
         return;
@@ -263,12 +283,13 @@ void TicketIssuanceRequestClient::publishOperationEvent(
     publishOrQueue(topic, rmm::ticketmachine::buildOperationEvent(
         m_deviceCode, eventCode, purchaseReference, ticketCode, resultCode,
         QUuid::createUuid().toString(QUuid::WithoutBraces),
-        QDateTime::currentDateTimeUtc()));
+        QDateTime::currentDateTimeUtc(), details));
 }
 
 void TicketIssuanceRequestClient::submit(const TicketIssuanceRequest &request)
 {
-    if (!m_pendingReference.isEmpty() || !m_awaitedReference.isEmpty()) {
+    if (!m_pendingReference.isEmpty() || !m_awaitedReference.isEmpty()
+        || !m_awaitedRechargeReference.isEmpty()) {
         emit failed(QStringLiteral("REQUEST_ALREADY_IN_PROGRESS"));
         return;
     }
@@ -282,6 +303,7 @@ void TicketIssuanceRequestClient::submit(const TicketIssuanceRequest &request)
     }
 
     m_pendingReference = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    m_pendingIsRecharge = false;
     m_awaitedReference = m_pendingReference;
     const QString messageId = QUuid::createUuid().toString(QUuid::WithoutBraces);
     m_pendingPayload = rmm::ticketmachine::buildPurchaseRequest(
@@ -296,12 +318,49 @@ void TicketIssuanceRequestClient::submit(const TicketIssuanceRequest &request)
     }
 }
 
+void TicketIssuanceRequestClient::submitRecharge(const TicketRechargeRequest &request)
+{
+    if (!m_pendingReference.isEmpty() || !m_awaitedReference.isEmpty()
+        || !m_awaitedRechargeReference.isEmpty()) {
+        emit failed(QStringLiteral("REQUEST_ALREADY_IN_PROGRESS"));
+        return;
+    }
+    if (!m_configurationValid) {
+        emit failed(QStringLiteral("MQTT_IDENTITY_INVALID"));
+        return;
+    }
+    if (m_client->password().isEmpty()) {
+        emit failed(QStringLiteral("MQTT_CREDENTIALS_MISSING"));
+        return;
+    }
+    m_pendingReference = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    m_awaitedRechargeReference = m_pendingReference;
+    m_pendingIsRecharge = true;
+    m_pendingPayload = rmm::ticketmachine::buildRechargeRequest(
+        request, m_deviceCode, m_pendingReference,
+        QUuid::createUuid().toString(QUuid::WithoutBraces), QDateTime::currentDateTimeUtc());
+    m_timeout->start();
+    if (m_client->state() == QMqttClient::Connected) publishPending();
+    else {
+        connectToBroker();
+        scheduleReconnect();
+    }
+    publishOperationEvent(
+        QStringLiteral("TICKET_RECHARGE_REQUESTED"), m_awaitedRechargeReference,
+        QString(), QStringLiteral("PAYMENT_SIMULATED"),
+        {{QStringLiteral("productType"), request.productType},
+         {QStringLiteral("amount"), request.paidAmount},
+         {QStringLiteral("currency"), QStringLiteral("EUR")}});
+}
+
 void TicketIssuanceRequestClient::publishPending()
 {
     if (m_pendingPayload.isEmpty()) {
         return;
     }
-    const QString topic = QStringLiteral("rmm/v1/devices/%1/requests/purchases").arg(m_deviceCode);
+    const QString topic = QStringLiteral("rmm/v1/devices/%1/requests/%2").arg(
+        m_deviceCode, m_pendingIsRecharge ? QStringLiteral("recharges")
+                                         : QStringLiteral("purchases"));
     m_packetId = m_client->publish(topic, m_pendingPayload, 1, false);
     if (m_packetId < 0) {
         m_packetId = -1;
@@ -316,7 +375,12 @@ void TicketIssuanceRequestClient::publishPending()
 
 void TicketIssuanceRequestClient::fail(const QString &reason)
 {
-    if (!m_awaitedReference.isEmpty()) {
+    if (!m_awaitedRechargeReference.isEmpty()) {
+        publishOperationEvent(
+            QStringLiteral("TICKET_RECHARGE_FAILED"), m_awaitedRechargeReference,
+            QString(), reason,
+            {{QStringLiteral("operation"), QStringLiteral("RECHARGE")}});
+    } else if (!m_awaitedReference.isEmpty()) {
         publishOperationEvent(
             QStringLiteral("TICKET_PURCHASE_FAILED"), m_awaitedReference, QString(), reason);
     }
@@ -325,6 +389,8 @@ void TicketIssuanceRequestClient::fail(const QString &reason)
     m_pendingPayload.clear();
     m_pendingReference.clear();
     m_awaitedReference.clear();
+    m_awaitedRechargeReference.clear();
+    m_pendingIsRecharge = false;
     m_packetId = -1;
     m_publishAttempt = 0;
     emit failed(reason);

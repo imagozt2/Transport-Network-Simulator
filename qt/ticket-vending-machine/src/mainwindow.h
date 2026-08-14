@@ -5,12 +5,15 @@
 #include "stationcatalogclient.h"
 #include "journeyquoteclient.h"
 #include "ticketissuancerequestclient.h"
+#include "ticketrechargelookupclient.h"
+#include "ticketrechargequoteclient.h"
 #include <optional>
 
 class QLabel;
 class QGridLayout;
 class QPushButton;
 class QStackedWidget;
+class QrCodeScannerWidget;
 
 enum class UiLanguage
 {
@@ -28,6 +31,14 @@ public:
 signals:
     void purchaseRequested();
     void rechargeRequested();
+    void rechargeQrScanned(const QString &qrValue);
+    void rechargeConfigurationSelected(
+        const QString &qrValue,
+        const QString &originStationCode,
+        const QString &destinationStationCode,
+        int trips,
+        int days,
+        double balanceAmount);
     void configurationSelected(
         const QString &productCode,
         const QString &originStationCode,
@@ -52,6 +63,11 @@ private:
     void retranslateUi();
     void showCatalog();
     void showHome();
+    void showRechargeScanner();
+    void showRechargeLookupProgress();
+    void showRechargeOptions(const RechargeableTicket &ticket);
+    void showRechargeConfirmation(const TicketRechargeQuote &quote);
+    void showRechargeResult(const TicketRechargeResult &result);
     void renderCatalog();
     void showPurchaseFlowPanel(QWidget *panel);
     void leavePurchaseFlow(QWidget *destination);
@@ -90,6 +106,7 @@ private:
     QWidget *m_homePanel = nullptr;
     QWidget *m_catalogPanel = nullptr;
     QWidget *m_purchaseFlowPanel = nullptr;
+    QrCodeScannerWidget *m_rechargeScanner = nullptr;
     QLabel *m_catalogTitle = nullptr;
     QLabel *m_catalogHint = nullptr;
     QLabel *m_catalogState = nullptr;
@@ -100,10 +117,14 @@ private:
     StationCatalogClient *m_stationClient = nullptr;
     JourneyQuoteClient *m_journeyClient = nullptr;
     TicketIssuanceRequestClient *m_issuanceClient = nullptr;
+    TicketRechargeLookupClient *m_rechargeLookupClient = nullptr;
+    TicketRechargeQuoteClient *m_rechargeQuoteClient = nullptr;
     QVector<TicketProduct> m_products;
     QVector<NetworkStation> m_stations;
     QString m_machineStationCode;
     bool m_stationLoadFailed = false;
+    std::optional<RechargeableTicket> m_pendingRecharge;
+    std::optional<TicketRechargeQuote> m_pendingRechargeQuote;
     struct PendingPayment
     {
         TicketProduct product;

@@ -14,6 +14,7 @@ La aplicación permite:
 - configurar origen y destino, viajes, días o saldo según el producto;
 - simular el pago y solicitar al backend la emisión autoritativa;
 - presentar el QR firmado y el código de vinculación del billete físico;
+- leer mediante cámara el QR de un billete físico y recargar sus derechos;
 - publicar eventos del proceso mediante MQTT;
 - recibir y entregar emisiones compensatorias sin cobrar al viajero;
 - recuperarse de interrupciones temporales conservando la identidad de cada solicitud.
@@ -72,6 +73,52 @@ billete llegó a emitirse y solicita al viajero que pida asistencia.
 La misma referencia de compra y el mismo mensaje se conservan durante los reintentos. La
 idempotencia del backend impide que una reconexión emita dos billetes para una sola compra.
 
+## Flujo de recarga
+
+La pantalla inicial ofrece **Recargar billete** como operación independiente de una compra. El
+flujo se desarrolla dentro del área principal:
+
+```text
+Inicio → Lectura del QR → Opciones compatibles → Revisión y pago → Resultado
+```
+
+1. La máquina abre la cámara y muestra un marco de encuadre para centrar el QR. El usuario también
+   puede cancelar y regresar al inicio sin crear ninguna operación.
+2. Al detectar un código, la máquina detiene la lectura y consulta su elegibilidad mediante
+   `POST /api/public/v1/ticket-recharges/lookup`.
+3. El backend verifica la firma, el soporte, el estado del billete y las reglas del producto. La
+   respuesta contiene únicamente las opciones que todavía son válidas para ese billete.
+4. El usuario configura la recarga y la máquina solicita un precio autoritativo en
+   `POST /api/public/v1/ticket-recharges/quotes`.
+5. La pantalla de revisión muestra el producto, la configuración elegida, el resultado previsto y
+   el importe. Confirmar simula el pago; volver atrás conserva la selección.
+6. La máquina publica `ticket.recharge-requested` en
+   `rmm/v1/devices/{deviceCode}/requests/recharges`, utilizando una referencia UUID estable.
+7. El backend vuelve a verificar el billete y el importe, bloquea el billete durante la escritura,
+   aplica la recarga, persiste la compra y su operación histórica en una única transacción.
+8. La respuesta `ticket.recharge-completed` actualiza la pantalla con el código de recarga, el
+   estado del billete y sus derechos resultantes. La interfaz permite finalizar y volver al inicio.
+
+La configuración depende del producto:
+
+| Producto | Selección de la recarga | Resultado mostrado |
+| --- | --- | --- |
+| `SINGLE_TRIP` | Nuevo origen y destino distintos | Estaciones e importe del nuevo trayecto |
+| `MULTI_TRIP` | Viajes disponibles sin superar el máximo total | Viajes resultantes |
+| `TIME_PASS` | Días comprendidos entre los límites del producto | Nueva vigencia |
+| `SMART_BALANCE` | Importe dentro del mínimo y máximo admitidos | Saldo resultante |
+
+La máquina nunca confía en un precio calculado localmente. Si el importe pagado no coincide con la
+cotización vigente, el backend rechaza la petición sin modificar el billete. Una referencia ya
+completada devuelve el resultado existente si la petición es idéntica y se rechaza si sus datos han
+cambiado; de este modo, un reintento no suma dos veces viajes, días o saldo.
+
+El valor firmado del QR se utiliza únicamente en las peticiones que necesitan verificar el billete.
+No se copia en logs ni eventos operativos. La máquina publica, según avance el flujo,
+`QR_TICKET_SCANNED`, `TICKET_RECHARGE_REQUESTED`, `TICKET_RECHARGE_COMPLETED` o
+`TICKET_RECHARGE_FAILED`; sus detalles se limitan al código del billete, producto, soporte, importe,
+moneda, referencia y resultado.
+
 ## Emisiones compensatorias
 
 El centro de control puede ordenar la entrega gratuita de un billete cuando una venta anterior no
@@ -103,6 +150,8 @@ Ante una desconexión:
 - los eventos y ACK pendientes permanecen en una cola durante la ejecución;
 - al reconectar se recupera la suscripción a órdenes y se vacía la cola;
 - una solicitud de compra dispone de 45 segundos antes de finalizar con `MQTT_TIMEOUT`.
+- una solicitud de recarga conserva su referencia durante los reintentos y aplica el mismo límite
+  temporal que las demás operaciones pagadas.
 
 La aplicación inicia la conexión al arrancar, aunque todavía no exista una compra, para poder
 recibir órdenes compensatorias en todo momento.
@@ -140,8 +189,10 @@ PowerShell está en la [guía de aplicaciones cliente](ejecucion-aplicaciones-cl
 
 La cobertura automatizada valida las configuraciones de los cuatro productos, la lectura de
 emisiones normales y compensatorias, el rechazo de órdenes caducadas o inválidas y la estructura de
-eventos y ACK. El escenario regular recorre el contrato completo desde la solicitud pagada hasta
-`QR_TICKET_GENERATED` y `TICKET_PURCHASE_COMPLETED`:
+eventos y ACK. También cubre la lectura y elegibilidad del QR, las opciones y precios de recarga, el
+pago simulado, la persistencia, la idempotencia y el contrato MQTT. El escenario regular recorre el
+contrato completo desde la solicitud pagada hasta `QR_TICKET_GENERATED` y
+`TICKET_PURCHASE_COMPLETED`:
 
 ```powershell
 & D:\Qt\Tools\CMake_64\bin\ctest.exe `
@@ -154,6 +205,7 @@ La prueba correspondiente aparece como `rmm-ticket-machine-purchase-issuance-eve
 ## Límites de la simulación
 
 - El pago se aprueba de forma simulada y no integra una pasarela financiera.
+- La lectura de QR depende de una cámara accesible para Qt; no se almacena ninguna captura.
 - El QR se representa en pantalla; no existe una impresora física.
 - La cola de eventos desconectados se conserva durante la ejecución, no tras cerrar el proceso.
 - El backend y Mosquitto deben estar disponibles para completar una compra o una orden administrativa.

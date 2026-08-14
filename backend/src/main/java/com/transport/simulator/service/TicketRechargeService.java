@@ -6,12 +6,14 @@ import com.transport.simulator.entity.Purchase;
 import com.transport.simulator.entity.Ticket;
 import com.transport.simulator.enums.PaymentMethod;
 import com.transport.simulator.enums.PurchaseOrigin;
+import com.transport.simulator.enums.PurchaseType;
 import com.transport.simulator.enums.DeviceStatus;
 import com.transport.simulator.enums.DeviceType;
 import com.transport.simulator.enums.PassengerAccountStatus;
 import com.transport.simulator.repository.PurchaseRepository;
 import com.transport.simulator.repository.TicketRepository;
 import com.transport.simulator.service.model.TicketRechargeParameters;
+import com.transport.simulator.service.model.TicketRechargeQuote;
 import com.transport.simulator.service.model.TicketSnapshot;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -32,6 +34,7 @@ public class TicketRechargeService {
     private final TimePassTicketService timePassService;
     private final SmartBalanceTicketService smartBalanceService;
     private final TicketOperationRegistrationService operationRegistrationService;
+    private final TicketRechargePricingService pricingService;
     private final Clock clock;
 
     public TicketRechargeService(
@@ -42,6 +45,7 @@ public class TicketRechargeService {
             TimePassTicketService timePassService,
             SmartBalanceTicketService smartBalanceService,
             TicketOperationRegistrationService operationRegistrationService,
+            TicketRechargePricingService pricingService,
             Clock clock
     ) {
         this.ticketRepository = ticketRepository;
@@ -51,6 +55,7 @@ public class TicketRechargeService {
         this.timePassService = timePassService;
         this.smartBalanceService = smartBalanceService;
         this.operationRegistrationService = operationRegistrationService;
+        this.pricingService = pricingService;
         this.clock = clock;
     }
 
@@ -73,9 +78,9 @@ public class TicketRechargeService {
                 .orElseThrow(() -> new IllegalArgumentException("Ticket not found"));
         Purchase previous = purchaseRepository.findByExternalReference(reference).orElse(null);
         if (previous != null) {
-            if (!previous.getTicket().getCode().equals(normalizedTicketCode)) {
-                throw new IllegalArgumentException("The external reference belongs to another ticket");
-            }
+            requireMatchingReplay(
+                    previous, normalizedTicketCode, parameters, origin, paymentMethod, device, passenger
+            );
             return previous;
         }
 
@@ -85,6 +90,7 @@ public class TicketRechargeService {
         Objects.requireNonNull(parameters, "parameters are required");
         validateContext(origin, device, passenger, current);
         TicketSnapshot before = TicketSnapshot.from(current);
+        TicketRechargeQuote quote = pricingService.quote(current, parameters);
 
         Ticket updated = switch (current.getProductType()) {
             case SINGLE_TRIP -> rechargeSingleTrip(current, parameters);
@@ -93,7 +99,7 @@ public class TicketRechargeService {
             case SMART_BALANCE -> rechargeSmartBalance(current, parameters);
         };
 
-        BigDecimal total = calculatePrice(updated, parameters);
+        BigDecimal total = quote.totalAmount();
         Purchase purchase = Purchase.completedRecharge(
                 uniqueCode("RMM-RCH"), updated, origin, paymentMethod, reference,
                 device, passenger, total, LocalDateTime.now(clock)
@@ -126,17 +132,6 @@ public class TicketRechargeService {
         return smartBalanceService.recharge(
                 ticket.getCode(), Objects.requireNonNull(parameters.balanceAmount(), "balanceAmount is required")
         );
-    }
-
-    private BigDecimal calculatePrice(Ticket ticket, TicketRechargeParameters parameters) {
-        return switch (ticket.getProductType()) {
-            case SINGLE_TRIP -> ticket.getRoutePriceAmount();
-            case MULTI_TRIP -> ticket.getProduct().getPricePerTrip()
-                    .multiply(BigDecimal.valueOf(parameters.trips()));
-            case TIME_PASS -> ticket.getProduct().getPricePerDay()
-                    .multiply(BigDecimal.valueOf(parameters.days()));
-            case SMART_BALANCE -> parameters.balanceAmount();
-        };
     }
 
     private void configurePurchase(
@@ -172,6 +167,64 @@ public class TicketRechargeService {
                 || !ticket.getPassengerAccount().getPublicId().equals(passenger.getPublicId()))) {
             throw new IllegalArgumentException("RMM App can only recharge a ticket owned by its active passenger");
         }
+    }
+
+    private void requireMatchingReplay(
+            Purchase previous,
+            String ticketCode,
+            TicketRechargeParameters parameters,
+            PurchaseOrigin origin,
+            PaymentMethod paymentMethod,
+            Device device,
+            PassengerAccount passenger
+    ) {
+        Objects.requireNonNull(parameters, "parameters are required");
+        boolean sameDevice = sameId(previous.getDevice(), device);
+        boolean samePassenger = sameId(previous.getPassengerAccount(), passenger);
+        boolean sameConfiguration = switch (previous.getProduct().getProductType()) {
+            case SINGLE_TRIP -> sameCode(previous.getOriginStation(), parameters.originStationCode())
+                    && sameCode(previous.getDestinationStation(), parameters.destinationStationCode())
+                    && parameters.trips() == null && parameters.days() == null
+                    && parameters.balanceAmount() == null;
+            case MULTI_TRIP -> Objects.equals(previous.getSelectedTrips(), parameters.trips())
+                    && emptyRoute(parameters) && parameters.days() == null
+                    && parameters.balanceAmount() == null;
+            case TIME_PASS -> Objects.equals(previous.getSelectedDays(), parameters.days())
+                    && emptyRoute(parameters) && parameters.trips() == null
+                    && parameters.balanceAmount() == null;
+            case SMART_BALANCE -> sameMoney(previous.getRechargeAmount(), parameters.balanceAmount())
+                    && emptyRoute(parameters) && parameters.trips() == null && parameters.days() == null;
+        };
+        if (previous.getType() != PurchaseType.RECHARGE
+                || !previous.getTicket().getCode().equals(ticketCode)
+                || previous.getOrigin() != origin
+                || previous.getPaymentMethod() != paymentMethod
+                || !sameDevice || !samePassenger || !sameConfiguration) {
+            throw new IllegalArgumentException("The external reference is already used by another operation");
+        }
+    }
+
+    private boolean sameId(Device left, Device right) {
+        return left == null ? right == null
+                : right != null && Objects.equals(left.getId(), right.getId());
+    }
+
+    private boolean sameId(PassengerAccount left, PassengerAccount right) {
+        return left == null ? right == null
+                : right != null && Objects.equals(left.getId(), right.getId());
+    }
+
+    private boolean sameCode(com.transport.simulator.entity.Station station, String code) {
+        return station != null && hasText(code)
+                && station.getCode().equalsIgnoreCase(code.trim());
+    }
+
+    private boolean sameMoney(BigDecimal left, BigDecimal right) {
+        return left != null && right != null && left.compareTo(right) == 0;
+    }
+
+    private boolean emptyRoute(TicketRechargeParameters parameters) {
+        return !hasText(parameters.originStationCode()) && !hasText(parameters.destinationStationCode());
     }
 
     private void requireOnly(

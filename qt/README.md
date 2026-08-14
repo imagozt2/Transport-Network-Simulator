@@ -52,6 +52,7 @@ Desde la raíz del repositorio:
 Los ejecutables `RMMTicketVendingMachine.exe` y `RMMTicketValidator.exe` se generan dentro de
 `qt/build`.
 
-La máquina de venta integra el catálogo y la red mediante HTTP, y las compras, emisiones, eventos
-y órdenes compensatorias mediante MQTT. La validadora publica entradas y salidas, interpreta las
-decisiones del backend y se recupera de desconexiones temporales.
+La máquina de venta integra el catálogo, la red y la consulta de billetes recargables mediante HTTP;
+las compras, recargas, emisiones, eventos y órdenes compensatorias se completan mediante MQTT. La
+validadora publica entradas y salidas, interpreta las decisiones del backend y se recupera de
+desconexiones temporales.

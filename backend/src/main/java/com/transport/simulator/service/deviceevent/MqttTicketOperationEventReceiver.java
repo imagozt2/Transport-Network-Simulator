@@ -8,9 +8,12 @@ import com.transport.simulator.mqtt.AuthenticatedMqttMachine;
 import com.transport.simulator.mqtt.AuthenticatedMqttMessage;
 import com.transport.simulator.mqtt.AuthenticatedMqttMessageRouter;
 import com.transport.simulator.mqtt.MqttTicketValidationResponsePublisher;
+import com.transport.simulator.mqtt.MqttTicketRechargeResponsePublisher;
+import com.transport.simulator.service.TicketMachineRechargeService;
 import com.transport.simulator.service.TicketMachinePurchaseService;
 import com.transport.simulator.service.TicketValidationService;
 import com.transport.simulator.service.model.TicketMachinePurchaseRequest;
+import com.transport.simulator.service.model.TicketMachineRechargeRequest;
 import com.transport.simulator.service.model.TicketValidationRequest;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -40,28 +43,72 @@ public class MqttTicketOperationEventReceiver {
     private final TicketMachinePurchaseService purchaseService;
     private final TicketValidationService validationService;
     private final MqttTicketValidationResponsePublisher validationPublisher;
+    private final TicketMachineRechargeService rechargeService;
+    private final MqttTicketRechargeResponsePublisher rechargePublisher;
 
     public MqttTicketOperationEventReceiver(AuthenticatedMqttMessageRouter router,
             DeviceEventIngress ingress, ObjectMapper objectMapper,
             TicketMachinePurchaseService purchaseService,
             TicketValidationService validationService,
-            MqttTicketValidationResponsePublisher validationPublisher) {
+            MqttTicketValidationResponsePublisher validationPublisher,
+            TicketMachineRechargeService rechargeService,
+            MqttTicketRechargeResponsePublisher rechargePublisher) {
         this.ingress = ingress;
         this.objectMapper = objectMapper;
         this.purchaseService = purchaseService;
         this.validationService = validationService;
         this.validationPublisher = validationPublisher;
+        this.rechargeService = rechargeService;
+        this.rechargePublisher = rechargePublisher;
         router.register(this::receive);
     }
 
     private void receive(AuthenticatedMqttMessage authenticated) {
         if (authenticated.topic().endsWith("/requests/validations")) {
             receiveValidationRequest(authenticated);
+        } else if (authenticated.topic().endsWith("/requests/recharges")) {
+            receiveRechargeRequest(authenticated);
         } else if (authenticated.topic().endsWith("/requests/purchases")) {
             receivePurchaseRequest(authenticated);
         } else if (authenticated.topic().contains("/events/operation")) {
             receiveOperationEvent(authenticated);
         }
+    }
+
+    private void receiveRechargeRequest(AuthenticatedMqttMessage authenticated) {
+        Map<String, Object> envelope = envelope(authenticated.payload());
+        verifyEnvelope(envelope, authenticated.machine());
+        if (!"ticket.recharge-requested".equals(text(envelope, "type"))) {
+            throw new IllegalArgumentException("Unexpected recharge message type");
+        }
+        if (authenticated.machine().deviceType() != DeviceType.TICKET_MACHINE) {
+            throw new IllegalArgumentException("Only a ticket machine can request a recharge");
+        }
+        Map<String, Object> payload = object(envelope, "payload");
+        String reference = text(payload, "rechargeReference");
+        UUID.fromString(reference);
+        if (!"SIMULATED".equals(text(payload, "paymentMethod"))) {
+            throw new IllegalArgumentException("Ticket machines only support simulated payments");
+        }
+        if (!"EUR".equals(text(payload, "currency"))) {
+            throw new IllegalArgumentException("Unsupported recharge currency");
+        }
+        BigDecimal paidAmount = requiredDecimal(payload, "paidAmount");
+        Map<String, Object> configuration = object(payload, "configuration");
+        var result = rechargeService.recharge(
+                authenticated.machine().deviceId(),
+                new TicketMachineRechargeRequest(
+                        reference,
+                        text(payload, "qrValue"),
+                        nullableText(configuration, "originStationCode"),
+                        nullableText(configuration, "destinationStationCode"),
+                        nullableInteger(configuration, "trips"),
+                        nullableInteger(configuration, "days"),
+                        nullableDecimal(configuration, "balanceAmount"),
+                        paidAmount
+                )
+        );
+        rechargePublisher.publish(authenticated.machine(), text(envelope, "messageId"), result);
     }
 
     private void receivePurchaseRequest(AuthenticatedMqttMessage authenticated) {
@@ -237,6 +284,14 @@ public class MqttTicketOperationEventReceiver {
         return value instanceof Number number ? BigDecimal.valueOf(number.doubleValue()) : null;
     }
 
+    private BigDecimal requiredDecimal(Map<String, Object> source, String field) {
+        BigDecimal value = nullableDecimal(source, field);
+        if (value == null || value.signum() <= 0) {
+            throw new IllegalArgumentException("A positive " + field + " is required");
+        }
+        return value;
+    }
+
     private <E extends Enum<E>> E enumValue(Class<E> type, String value, String field) {
         try {
             return Enum.valueOf(type, value);
@@ -247,6 +302,10 @@ public class MqttTicketOperationEventReceiver {
 
     private String description(DeviceEventType type) {
         return switch (type) {
+            case TICKET_RECHARGE_REQUESTED -> "Recarga de título solicitada";
+            case TICKET_RECHARGE_COMPLETED -> "Recarga de título completada";
+            case TICKET_RECHARGE_FAILED -> "Recarga de título rechazada";
+            case QR_TICKET_SCANNED -> "Código QR de billete leído";
             case TICKET_PURCHASE_REQUESTED -> "Venta de título solicitada";
             case TICKET_PURCHASE_COMPLETED -> "Venta de título completada";
             case TICKET_PURCHASE_FAILED -> "Venta de título rechazada";
@@ -264,6 +323,10 @@ public class MqttTicketOperationEventReceiver {
                 || type == DeviceEventType.TICKET_PURCHASE_COMPLETED
                 || type == DeviceEventType.TICKET_PURCHASE_FAILED;
         purchase = purchase || type == DeviceEventType.QR_TICKET_GENERATED;
+        purchase = purchase || type == DeviceEventType.QR_TICKET_SCANNED
+                || type == DeviceEventType.TICKET_RECHARGE_REQUESTED
+                || type == DeviceEventType.TICKET_RECHARGE_COMPLETED
+                || type == DeviceEventType.TICKET_RECHARGE_FAILED;
         if (purchase && machine.deviceType() != DeviceType.TICKET_MACHINE) {
             throw new IllegalArgumentException("A validator cannot report ticket sales");
         }

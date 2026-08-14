@@ -87,8 +87,22 @@ target_include_directories(
     INTERFACE "${CMAKE_CURRENT_BINARY_DIR}/generated"
 )
 
-find_package(Qt6 6.9 REQUIRED COMPONENTS Core Gui Widgets Network Mqtt)
+find_package(Qt6 6.9 REQUIRED COMPONENTS Core Gui Widgets Network Mqtt Multimedia MultimediaWidgets)
 qt_standard_project_setup(REQUIRES 6.9)
+
+include(FetchContent)
+set(ZXING_READERS ON CACHE BOOL "Build ZXing readers" FORCE)
+set(ZXING_WRITERS OFF CACHE BOOL "Build ZXing writers" FORCE)
+set(ZXING_EXAMPLES OFF CACHE BOOL "Build ZXing examples" FORCE)
+set(ZXING_BLACKBOX_TESTS OFF CACHE BOOL "Build ZXing black-box tests" FORCE)
+FetchContent_Declare(
+    zxing_cpp
+    GIT_REPOSITORY https://github.com/zxing-cpp/zxing-cpp.git
+    GIT_TAG v2.3.0
+    GIT_SHALLOW TRUE
+    GIT_SUBMODULES ""
+)
+FetchContent_MakeAvailable(zxing_cpp)
 
 add_subdirectory(ticket-vending-machine)
 add_subdirectory(ticket-validator)

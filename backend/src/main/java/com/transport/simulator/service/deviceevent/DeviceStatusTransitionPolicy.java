@@ -10,6 +10,7 @@ class DeviceStatusTransitionPolicy {
         return switch (event.type()) {
             case DEVICE_ONLINE, DEVICE_MAINTENANCE_FINISHED,
                     TICKET_PURCHASE_REQUESTED, TICKET_PURCHASE_COMPLETED,
+                    TICKET_RECHARGE_REQUESTED, TICKET_RECHARGE_COMPLETED,
                     COMPENSATORY_TICKET_ISSUANCE_REQUESTED, COMPENSATORY_TICKET_ISSUED,
                     QR_TICKET_GENERATED, QR_TICKET_SCANNED,
                     VALIDATION_REQUESTED, VALIDATION_ACCEPTED,
@@ -19,7 +20,7 @@ class DeviceStatusTransitionPolicy {
 
             case DEVICE_MAINTENANCE_STARTED -> DeviceStatus.MAINTENANCE;
 
-            case DEVICE_ERROR, TICKET_PURCHASE_FAILED,
+            case DEVICE_ERROR, TICKET_PURCHASE_FAILED, TICKET_RECHARGE_FAILED,
                     VALIDATION_FAILED -> DeviceStatus.ERROR;
 
             case DEVICE_STATUS_CHANGED -> currentStatus;

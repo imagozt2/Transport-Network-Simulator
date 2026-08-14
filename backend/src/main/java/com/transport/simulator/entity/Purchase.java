@@ -226,9 +226,17 @@ public class Purchase extends AuditableEntity {
     public PurchaseStatus getStatus() { return status; }
     public TicketProduct getProduct() { return product; }
     public PaymentMethod getPaymentMethod() { return paymentMethod; }
+    public Device getDevice() { return device; }
+    public Station getOriginStation() { return originStation; }
+    public Station getDestinationStation() { return destinationStation; }
+    public Integer getStationCount() { return stationCount; }
+    public Integer getSelectedTrips() { return selectedTrips; }
+    public Integer getSelectedDays() { return selectedDays; }
+    public BigDecimal getRechargeAmount() { return rechargeAmount; }
     public PassengerAccount getPassengerAccount() { return passengerAccount; }
     public LocalDateTime getRequestedAt() { return requestedAt; }
     public BigDecimal getTotalAmount() { return totalAmount; }
+    public String getCurrency() { return currency; }
     public String getExternalReference() { return externalReference; }
     public LocalDateTime getCompletedAt() { return completedAt; }
 }

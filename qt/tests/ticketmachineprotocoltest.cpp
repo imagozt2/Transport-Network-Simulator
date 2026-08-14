@@ -59,6 +59,7 @@ private slots:
     void buildsOperationalEventsAndAcknowledgements();
     void completesARegularPurchaseContract();
     void completesACompensatoryIssuanceContract();
+    void completesARechargeContract();
 };
 
 void TicketMachineProtocolTest::buildsPurchaseConfigurations_data()
@@ -281,6 +282,61 @@ void TicketMachineProtocolTest::completesACompensatoryIssuanceContract()
              QStringLiteral("TICKET_PRESENTED"));
     QCOMPARE(completedPayload.value(QStringLiteral("issuanceCode")).toString(),
              command.issuanceCode);
+}
+
+void TicketMachineProtocolTest::completesARechargeContract()
+{
+    const QString reference = QStringLiteral("9561ad31-6273-42d9-b76f-2dabb0b60955");
+    const auto request = object(rmm::ticketmachine::buildRechargeRequest(
+        TicketRechargeRequest{QStringLiteral("RMM:TICKET:1:signed"), {}, {}, 5, 0, 0.0, 5.0},
+        QStringLiteral("RMM-TM-ST001-01"), reference, QStringLiteral("message-1"), Now));
+    const auto payload = request.value(QStringLiteral("payload")).toObject();
+    QCOMPARE(request.value(QStringLiteral("type")).toString(),
+             QStringLiteral("ticket.recharge-requested"));
+    QCOMPARE(payload.value(QStringLiteral("rechargeReference")).toString(), reference);
+    QCOMPARE(payload.value(QStringLiteral("configuration")).toObject()
+                 .value(QStringLiteral("trips")).toInt(), 5);
+    QCOMPARE(payload.value(QStringLiteral("paidAmount")).toDouble(), 5.0);
+
+    const QJsonObject responsePayload{
+        {QStringLiteral("rechargeReference"), reference},
+        {QStringLiteral("rechargeCode"), QStringLiteral("RMM-RCH-001")},
+        {QStringLiteral("status"), QStringLiteral("COMPLETED")},
+        {QStringLiteral("ticketCode"), QStringLiteral("RMM-TICKET-001")},
+        {QStringLiteral("productType"), QStringLiteral("MULTI_TRIP")},
+        {QStringLiteral("ticketStatus"), QStringLiteral("ACTIVE")},
+        {QStringLiteral("totalAmount"), 5.0},
+        {QStringLiteral("currency"), QStringLiteral("EUR")},
+        {QStringLiteral("remainingTrips"), 9},
+    };
+    const QByteArray response = QJsonDocument(QJsonObject{
+        {QStringLiteral("schemaVersion"), 1},
+        {QStringLiteral("type"), QStringLiteral("ticket.recharge-completed")},
+        {QStringLiteral("payload"), responsePayload},
+    }).toJson(QJsonDocument::Compact);
+    const auto result = rmm::ticketmachine::parseRechargeResponse(response, reference);
+    QVERIFY(result.valid);
+    QCOMPARE(result.rechargeCode, QStringLiteral("RMM-RCH-001"));
+    QCOMPARE(result.remainingTrips, 9);
+    QVERIFY(!rmm::ticketmachine::parseRechargeResponse(
+        response, QStringLiteral("different-reference")).valid);
+
+    const auto event = object(rmm::ticketmachine::buildOperationEvent(
+        QStringLiteral("RMM-TM-ST001-01"),
+        QStringLiteral("TICKET_RECHARGE_COMPLETED"), reference,
+        result.ticketCode, QStringLiteral("COMPLETED"),
+        QStringLiteral("event-1"), Now,
+        {{QStringLiteral("productType"), result.productType},
+         {QStringLiteral("amount"), result.totalAmount}}));
+    const auto eventPayload = event.value(QStringLiteral("payload")).toObject();
+    const auto details = eventPayload.value(QStringLiteral("details")).toObject();
+    QCOMPARE(eventPayload.value(QStringLiteral("eventCode")).toString(),
+             QStringLiteral("TICKET_RECHARGE_COMPLETED"));
+    QCOMPARE(eventPayload.value(QStringLiteral("severity")).toString(), QStringLiteral("INFO"));
+    QCOMPARE(details.value(QStringLiteral("productType")).toString(),
+             QStringLiteral("MULTI_TRIP"));
+    QCOMPARE(details.value(QStringLiteral("resultCode")).toString(),
+             QStringLiteral("COMPLETED"));
 }
 
 QTEST_APPLESS_MAIN(TicketMachineProtocolTest)
