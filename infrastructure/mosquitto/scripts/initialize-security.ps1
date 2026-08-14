@@ -94,6 +94,7 @@ $acl.Add("topic read rmm/v1/devices/+/telemetry")
 $acl.Add("topic read rmm/v1/devices/+/events/+")
 $acl.Add("topic read rmm/v1/devices/+/requests/validations")
 $acl.Add("topic read rmm/v1/devices/+/requests/purchases")
+$acl.Add("topic read rmm/v1/devices/+/requests/recharges")
 $acl.Add("topic read rmm/v1/devices/+/acks")
 $acl.Add("topic write rmm/v1/devices/+/commands")
 $acl.Add("topic write rmm/v1/devices/+/responses")
@@ -113,6 +114,7 @@ foreach ($username in $credentials.Keys | Where-Object { $_ -ne "rmm-backend" })
     }
     if ($username.StartsWith("RMM-TM-")) {
         $acl.Add("topic write rmm/v1/devices/$username/requests/purchases")
+        $acl.Add("topic write rmm/v1/devices/$username/requests/recharges")
     }
     $acl.Add("topic read rmm/v1/devices/$username/commands")
     $acl.Add("topic read rmm/v1/devices/$username/responses")

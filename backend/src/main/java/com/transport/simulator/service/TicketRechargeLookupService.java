@@ -33,7 +33,7 @@ public class TicketRechargeLookupService {
     }
 
     VerifiedTicketQr requireRechargeableTicket(String qrValue) {
-        VerifiedTicketQr verified = verify(qrValue);
+        VerifiedTicketQr verified = verifyTicket(qrValue);
         Ticket ticket = verified.credential().getTicket();
 
         if (verified.credential().getSupport().getStatus() != TicketSupportStatus.ACTIVE
@@ -46,7 +46,7 @@ public class TicketRechargeLookupService {
         return verified;
     }
 
-    private VerifiedTicketQr verify(String qrValue) {
+    VerifiedTicketQr verifyTicket(String qrValue) {
         try {
             return qrVerifier.verify(qrValue);
         } catch (TicketQrVerificationException exception) {

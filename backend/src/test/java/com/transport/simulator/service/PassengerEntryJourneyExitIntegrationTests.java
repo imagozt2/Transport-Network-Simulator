@@ -20,6 +20,7 @@ import com.transport.simulator.mqtt.AuthenticatedMqttMachine;
 import com.transport.simulator.mqtt.AuthenticatedMqttMessage;
 import com.transport.simulator.mqtt.AuthenticatedMqttMessageRouter;
 import com.transport.simulator.mqtt.MqttTicketValidationResponsePublisher;
+import com.transport.simulator.mqtt.MqttTicketRechargeResponsePublisher;
 import com.transport.simulator.repository.StationRepository;
 import com.transport.simulator.repository.TicketJourneyRepository;
 import com.transport.simulator.repository.TicketOperationRepository;
@@ -156,7 +157,9 @@ class PassengerEntryJourneyExitIntegrationTests {
         new MqttTicketOperationEventReceiver(
                 router, ingress, new ObjectMapper(), mock(TicketMachinePurchaseService.class),
                 mock(TicketValidationService.class),
-                mock(MqttTicketValidationResponsePublisher.class));
+                mock(MqttTicketValidationResponsePublisher.class),
+                mock(TicketMachineRechargeService.class),
+                mock(MqttTicketRechargeResponsePublisher.class));
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Consumer<AuthenticatedMqttMessage>> consumerCaptor =
                 ArgumentCaptor.forClass(Consumer.class);
