@@ -126,6 +126,7 @@ QrCodeScannerWidget::QrCodeScannerWidget(QWidget *parent)
 
     auto *viewport = new CameraViewport(this);
     viewport->setMinimumHeight(390);
+    m_viewport = viewport;
     m_videoWidget = viewport->video();
     layout->addWidget(viewport, 1);
 
@@ -208,6 +209,14 @@ void QrCodeScannerWidget::setSpanish(bool spanish)
 {
     m_spanish = spanish;
     retranslateUi();
+}
+
+void QrCodeScannerWidget::setKioskMode(bool kioskMode)
+{
+    m_title->setVisible(!kioskMode);
+    m_instructions->setVisible(!kioskMode);
+    m_cancelButton->setVisible(!kioskMode);
+    m_viewport->setMinimumHeight(kioskMode ? 230 : 390);
 }
 
 void QrCodeScannerWidget::processFrame(const QVideoFrame &frame)

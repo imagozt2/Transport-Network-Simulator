@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "qrcodescannerwidget.h"
 #include "validatormqttclient.h"
 
 #include <QFrame>
@@ -8,6 +9,7 @@
 #include <QPushButton>
 #include <QSizePolicy>
 #include <QStyle>
+#include <QTimer>
 #include <QVBoxLayout>
 #include <QWidget>
 
@@ -131,7 +133,11 @@ MainWindow::MainWindow(QWidget *parent)
             m_connected = false;
         }
         updateQrInputState();
+        restartCameraAfterResult();
     });
+    if (m_configuration.valid) {
+        m_cameraScanner->start();
+    }
 }
 
 void MainWindow::configureWindow()
@@ -222,11 +228,18 @@ QWidget *MainWindow::createScannerPanel()
     readerTitle->setObjectName(QStringLiteral("eyebrow"));
     readerTitle->setAlignment(Qt::AlignCenter);
     auto *readerHint = new QLabel(
-        tr("Presenta el código ante el lector conectado o pega su contenido en la simulación."),
+        tr("Sitúa el código completo dentro del objetivo o utiliza la entrada manual."),
         scannerWell);
     readerHint->setObjectName(QStringLiteral("screenDescription"));
     readerHint->setAlignment(Qt::AlignCenter);
     readerHint->setWordWrap(true);
+    m_cameraScanner = new QrCodeScannerWidget(scannerWell);
+    m_cameraScanner->setSpanish(true);
+    m_cameraScanner->setKioskMode(true);
+    m_cameraScanner->setAccessibleName(tr("Cámara del lector de códigos QR"));
+
+    auto *manualLabel = new QLabel(tr("ENTRADA MANUAL PARA LA SIMULACIÓN"), scannerWell);
+    manualLabel->setObjectName(QStringLiteral("detailLabel"));
     m_qrInput = new QPlainTextEdit(scannerWell);
     m_qrInput->setObjectName(QStringLiteral("qrInput"));
     m_qrInput->setPlaceholderText(QStringLiteral("RMM:TICKET:1:<JWS>"));
@@ -239,6 +252,8 @@ QWidget *MainWindow::createScannerPanel()
     m_qrCounter->setAlignment(Qt::AlignRight);
     scannerLayout->addWidget(readerTitle);
     scannerLayout->addWidget(readerHint);
+    scannerLayout->addWidget(m_cameraScanner, 1);
+    scannerLayout->addWidget(manualLabel);
     scannerLayout->addWidget(m_qrInput);
     scannerLayout->addWidget(m_qrCounter);
 
@@ -259,6 +274,11 @@ QWidget *MainWindow::createScannerPanel()
     m_scanButton->setEnabled(false);
     connect(m_scanButton, &QPushButton::clicked, this, &MainWindow::readQrCode);
     connect(m_qrInput, &QPlainTextEdit::textChanged, this, &MainWindow::updateQrInputState);
+    connect(m_cameraScanner, &QrCodeScannerWidget::qrDetected, this,
+            [this](const QString &qrValue) {
+        m_qrInput->setPlainText(qrValue);
+        readQrCode();
+    });
 
     layout->addWidget(eyebrow);
     layout->addWidget(title);
@@ -362,6 +382,7 @@ void MainWindow::readQrCode()
     }
 
     m_lastQrValue = qrValue;
+    m_cameraScanner->stop();
     m_validationState->setProperty("state", QStringLiteral("read"));
     m_validationDetail->setText(tr("Comprobando el billete con el centro de control"));
     m_gateState->setProperty("state", QString());
@@ -397,6 +418,20 @@ void MainWindow::showValidationResult(const ValidationResult &result)
     setValidationState(
         result.isAccepted() ? QStringLiteral("accepted") : QStringLiteral("rejected"),
         result.title(), result.detail(), result.isAccepted());
+    restartCameraAfterResult();
+}
+
+void MainWindow::restartCameraAfterResult()
+{
+    QTimer::singleShot(3000, this, [this] {
+        if (!m_configuration.valid || (m_validationClient != nullptr
+                && m_validationClient->hasPendingValidation())) {
+            return;
+        }
+        m_qrInput->clear();
+        m_lastQrValue.clear();
+        m_cameraScanner->start();
+    });
 }
 
 void MainWindow::setValidationState(const QString &state, const QString &title,

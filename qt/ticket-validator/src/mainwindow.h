@@ -8,6 +8,7 @@
 class QLabel;
 class QPlainTextEdit;
 class QPushButton;
+class QrCodeScannerWidget;
 class ValidatorMqttClient;
 
 class MainWindow final : public QMainWindow
@@ -26,6 +27,7 @@ private:
     [[nodiscard]] QWidget *createFooter();
     void configureWindow();
     void readQrCode();
+    void restartCameraAfterResult();
     void updateQrInputState();
     void setValidationState(const QString &state, const QString &title,
                             const QString &detail, bool gateOpen);
@@ -36,6 +38,7 @@ private:
     QLabel *m_gateState = nullptr;
     QLabel *m_qrCounter = nullptr;
     QPlainTextEdit *m_qrInput = nullptr;
+    QrCodeScannerWidget *m_cameraScanner = nullptr;
     QPushButton *m_scanButton = nullptr;
     ValidatorMqttClient *m_validationClient = nullptr;
     ValidatorConfiguration m_configuration;
