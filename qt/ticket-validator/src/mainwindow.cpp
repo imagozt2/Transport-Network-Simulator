@@ -1,10 +1,10 @@
 #include "mainwindow.h"
-#include "qrreaderdialog.h"
 #include "validatormqttclient.h"
 
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QPlainTextEdit>
 #include <QPushButton>
 #include <QSizePolicy>
 #include <QStyle>
@@ -12,6 +12,7 @@
 #include <QWidget>
 
 namespace {
+constexpr qsizetype maximumQrLength = 4096;
 constexpr auto windowStyle = R"(
     QMainWindow { background-color: #f4f7fa; }
     QLabel { color: #0f172a; font-family: "Segoe UI"; }
@@ -36,11 +37,14 @@ constexpr auto windowStyle = R"(
     QFrame#scannerWell {
         border: 2px solid #bfdbfe; border-radius: 22px; background-color: #eff8ff;
     }
-    QLabel#scannerMark {
-        min-width: 150px; min-height: 150px; max-width: 150px; max-height: 150px;
-        border: 4px solid #2294f2; border-radius: 24px; background-color: white;
-        color: #0f172a; font-size: 34px; font-weight: 900;
+    QPlainTextEdit#qrInput {
+        min-height: 118px; border: 2px solid #bfdbfe; border-radius: 14px;
+        padding: 14px; background-color: white; color: #0f172a;
+        font-family: Consolas; font-size: 13px;
     }
+    QPlainTextEdit#qrInput:focus { border-color: #2294f2; }
+    QLabel#qrCounter { color: #64748b; font-size: 12px; }
+    QLabel#qrCounter[invalid="true"] { color: #b91c1c; font-weight: 700; }
     QLabel#screenTitle { font-size: 28px; font-weight: 800; }
     QLabel#eyebrow, QLabel#detailLabel {
         color: #0060a8; font-size: 12px; font-weight: 700;
@@ -107,10 +111,10 @@ MainWindow::MainWindow(QWidget *parent)
     m_validationClient = new ValidatorMqttClient(m_configuration, this);
     connect(m_validationClient, &ValidatorMqttClient::connectionStateChanged,
             this, [this](bool connected) {
+        m_connected = connected;
         m_connectionState->setProperty("configurationValid", connected);
         m_connectionState->setText(connected ? tr("Preparada") : tr("Sin conexión"));
-        m_scanButton->setEnabled(connected && m_configuration.valid
-                                 && !m_validationClient->hasPendingValidation());
+        updateQrInputState();
         m_connectionState->style()->unpolish(m_connectionState);
         m_connectionState->style()->polish(m_connectionState);
     });
@@ -124,8 +128,9 @@ MainWindow::MainWindow(QWidget *parent)
         setValidationState(QStringLiteral("rejected"),
                            tr("Validación no disponible"), detail, false);
         if (reason == QStringLiteral("MQTT_CREDENTIALS_MISSING")) {
-            m_scanButton->setEnabled(false);
+            m_connected = false;
         }
+        updateQrInputState();
     });
 }
 
@@ -213,11 +218,29 @@ QWidget *MainWindow::createScannerPanel()
     auto *scannerLayout = new QVBoxLayout(scannerWell);
     scannerLayout->setContentsMargins(24, 24, 24, 24);
     scannerLayout->setAlignment(Qt::AlignCenter);
-    auto *scannerMark = new QLabel(QStringLiteral("QR"), scannerWell);
-    scannerMark->setObjectName(QStringLiteral("scannerMark"));
-    scannerMark->setAlignment(Qt::AlignCenter);
-    scannerMark->setAccessibleName(tr("Zona de lectura del código QR"));
-    scannerLayout->addWidget(scannerMark);
+    auto *readerTitle = new QLabel(tr("LECTOR QR"), scannerWell);
+    readerTitle->setObjectName(QStringLiteral("eyebrow"));
+    readerTitle->setAlignment(Qt::AlignCenter);
+    auto *readerHint = new QLabel(
+        tr("Presenta el código ante el lector conectado o pega su contenido en la simulación."),
+        scannerWell);
+    readerHint->setObjectName(QStringLiteral("screenDescription"));
+    readerHint->setAlignment(Qt::AlignCenter);
+    readerHint->setWordWrap(true);
+    m_qrInput = new QPlainTextEdit(scannerWell);
+    m_qrInput->setObjectName(QStringLiteral("qrInput"));
+    m_qrInput->setPlaceholderText(QStringLiteral("RMM:TICKET:1:<JWS>"));
+    m_qrInput->setAccessibleName(tr("Contenido del código QR"));
+    m_qrInput->setAccessibleDescription(
+        tr("Campo que recibe el valor del lector físico o pegado para la simulación"));
+    m_qrInput->setTabChangesFocus(true);
+    m_qrCounter = new QLabel(scannerWell);
+    m_qrCounter->setObjectName(QStringLiteral("qrCounter"));
+    m_qrCounter->setAlignment(Qt::AlignRight);
+    scannerLayout->addWidget(readerTitle);
+    scannerLayout->addWidget(readerHint);
+    scannerLayout->addWidget(m_qrInput);
+    scannerLayout->addWidget(m_qrCounter);
 
     m_validationState = new QLabel(tr("Esperando un billete"), panel);
     m_validationState->setObjectName(QStringLiteral("validationState"));
@@ -228,13 +251,14 @@ QWidget *MainWindow::createScannerPanel()
     m_validationDetail->setAlignment(Qt::AlignCenter);
     m_validationDetail->setWordWrap(true);
     m_validationState->setAccessibleName(tr("Resultado de la validación"));
-    m_scanButton = new QPushButton(tr("Escanear código QR"), panel);
+    m_scanButton = new QPushButton(tr("Validar billete"), panel);
     m_scanButton->setObjectName(QStringLiteral("scanAction"));
     m_scanButton->setCursor(Qt::PointingHandCursor);
     m_scanButton->setAccessibleDescription(
-        tr("Abre el lector de códigos QR del torniquete"));
-    m_scanButton->setEnabled(m_configuration.valid);
+        tr("Envía el código QR introducido al centro de control"));
+    m_scanButton->setEnabled(false);
     connect(m_scanButton, &QPushButton::clicked, this, &MainWindow::readQrCode);
+    connect(m_qrInput, &QPlainTextEdit::textChanged, this, &MainWindow::updateQrInputState);
 
     layout->addWidget(eyebrow);
     layout->addWidget(title);
@@ -243,6 +267,7 @@ QWidget *MainWindow::createScannerPanel()
     layout->addWidget(m_validationState);
     layout->addWidget(m_validationDetail);
     layout->addWidget(m_scanButton);
+    updateQrInputState();
     return panel;
 }
 
@@ -329,12 +354,14 @@ QWidget *MainWindow::createFooter()
 
 void MainWindow::readQrCode()
 {
-    QrReaderDialog reader(this);
-    if (reader.exec() != QDialog::Accepted) {
+    const QString qrValue = m_qrInput->toPlainText().trimmed();
+    if (qrValue.isEmpty() || qrValue.size() > maximumQrLength
+            || !m_configuration.valid || !m_connected
+            || m_validationClient->hasPendingValidation()) {
         return;
     }
 
-    m_lastQrValue = reader.qrValue();
+    m_lastQrValue = qrValue;
     m_validationState->setProperty("state", QStringLiteral("read"));
     m_validationDetail->setText(tr("Comprobando el billete con el centro de control"));
     m_gateState->setProperty("state", QString());
@@ -347,6 +374,22 @@ void MainWindow::readQrCode()
     m_gateState->style()->polish(m_gateState);
     m_validationState->setFocus(Qt::OtherFocusReason);
     m_validationClient->submit(m_lastQrValue);
+}
+
+void MainWindow::updateQrInputState()
+{
+    if (m_qrInput == nullptr || m_qrCounter == nullptr || m_scanButton == nullptr) {
+        return;
+    }
+    const qsizetype length = m_qrInput->toPlainText().trimmed().size();
+    const bool validInput = length > 0 && length <= maximumQrLength;
+    const bool pending = m_validationClient != nullptr
+        && m_validationClient->hasPendingValidation();
+    m_scanButton->setEnabled(validInput && m_configuration.valid && m_connected && !pending);
+    m_qrCounter->setText(tr("%1 de %2 caracteres").arg(length).arg(maximumQrLength));
+    m_qrCounter->setProperty("invalid", length > maximumQrLength);
+    m_qrCounter->style()->unpolish(m_qrCounter);
+    m_qrCounter->style()->polish(m_qrCounter);
 }
 
 void MainWindow::showValidationResult(const ValidationResult &result)
@@ -365,7 +408,7 @@ void MainWindow::setValidationState(const QString &state, const QString &title,
     m_gateState->setProperty(
         "state", gateOpen ? QStringLiteral("open") : QStringLiteral("closed-rejected"));
     m_gateState->setText(gateOpen ? tr("Paso autorizado") : tr("Torniquete cerrado"));
-    m_scanButton->setEnabled(m_configuration.valid);
+    updateQrInputState();
 
     m_validationState->style()->unpolish(m_validationState);
     m_validationState->style()->polish(m_validationState);

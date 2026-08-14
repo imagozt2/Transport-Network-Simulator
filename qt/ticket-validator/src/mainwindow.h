@@ -6,6 +6,7 @@
 #include <QMainWindow>
 
 class QLabel;
+class QPlainTextEdit;
 class QPushButton;
 class ValidatorMqttClient;
 
@@ -25,6 +26,7 @@ private:
     [[nodiscard]] QWidget *createFooter();
     void configureWindow();
     void readQrCode();
+    void updateQrInputState();
     void setValidationState(const QString &state, const QString &title,
                             const QString &detail, bool gateOpen);
 
@@ -32,8 +34,11 @@ private:
     QLabel *m_validationState = nullptr;
     QLabel *m_validationDetail = nullptr;
     QLabel *m_gateState = nullptr;
+    QLabel *m_qrCounter = nullptr;
+    QPlainTextEdit *m_qrInput = nullptr;
     QPushButton *m_scanButton = nullptr;
     ValidatorMqttClient *m_validationClient = nullptr;
     ValidatorConfiguration m_configuration;
     QString m_lastQrValue;
+    bool m_connected = false;
 };
