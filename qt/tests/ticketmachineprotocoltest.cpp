@@ -38,6 +38,7 @@ QByteArray issueCommand(
         {QStringLiteral("ticket"), ticket},
     };
     return QJsonDocument(QJsonObject{
+        {QStringLiteral("schemaVersion"), 1},
         {QStringLiteral("type"), QStringLiteral("ticket.issue-command")},
         {QStringLiteral("payload"), payload},
     }).toJson(QJsonDocument::Compact);
@@ -73,6 +74,9 @@ void TicketMachineProtocolTest::buildsPurchaseConfigurations_data()
     QTest::newRow("multi-trip")
         << TicketIssuanceRequest{QStringLiteral("MULTI_TRIP"), {}, {}, 10, 0.0, 10.0}
         << QStringLiteral("quantity") << QVariant(10);
+    QTest::newRow("time-pass")
+        << TicketIssuanceRequest{QStringLiteral("TIME_PASS"), {}, {}, 7, 0.0, 14.0}
+        << QStringLiteral("quantity") << QVariant(7);
     QTest::newRow("smart-balance")
         << TicketIssuanceRequest{QStringLiteral("SMART_BALANCE"), {}, {}, 0, 20.0, 20.0}
         << QStringLiteral("rechargeAmount") << QVariant(20.0);
@@ -204,18 +208,40 @@ void TicketMachineProtocolTest::completesARegularPurchaseContract()
         purchaseReference, Now);
     QCOMPARE(issued.result, IssueCommandResult::Regular);
     QCOMPARE(issued.ticketCode, QStringLiteral("RMM-TICKET-001"));
+    QCOMPARE(issued.qrValue, QStringLiteral("signed-qr"));
+    QCOMPARE(issued.qrPng, QByteArray("png-data"));
+    QCOMPARE(issued.linkingCode, QStringLiteral("LINK1234"));
 
-    const auto operationEvent = object(rmm::ticketmachine::buildOperationEvent(
+    const auto qrGeneratedEvent = object(rmm::ticketmachine::buildOperationEvent(
         deviceCode, QStringLiteral("QR_TICKET_GENERATED"), purchaseReference,
         issued.ticketCode, QStringLiteral("QR_PRESENTED"),
         QStringLiteral("7f941a86-b297-4b14-8058-272798622c45"), Now));
-    QCOMPARE(operationEvent.value(QStringLiteral("correlationId")).toString(),
+    QCOMPARE(qrGeneratedEvent.value(QStringLiteral("type")).toString(),
+             QStringLiteral("device.operation-event"));
+    QCOMPARE(qrGeneratedEvent.value(QStringLiteral("correlationId")).toString(),
              purchaseReference);
-    const auto details = operationEvent.value(QStringLiteral("payload")).toObject()
-                             .value(QStringLiteral("details")).toObject();
-    QCOMPARE(details.value(QStringLiteral("ticketCode")).toString(), issued.ticketCode);
-    QCOMPARE(details.value(QStringLiteral("resultCode")).toString(),
+    const auto qrDetails = qrGeneratedEvent.value(QStringLiteral("payload")).toObject()
+                               .value(QStringLiteral("details")).toObject();
+    QCOMPARE(qrDetails.value(QStringLiteral("ticketCode")).toString(), issued.ticketCode);
+    QCOMPARE(qrDetails.value(QStringLiteral("resultCode")).toString(),
              QStringLiteral("QR_PRESENTED"));
+
+    const auto completedEvent = object(rmm::ticketmachine::buildOperationEvent(
+        deviceCode, QStringLiteral("TICKET_PURCHASE_COMPLETED"), purchaseReference,
+        issued.ticketCode, QStringLiteral("TICKET_PRESENTED"),
+        QStringLiteral("64be0d67-1a3f-4b38-88ac-d9fa2e4ddd1a"), Now.addSecs(30)));
+    const auto completedPayload = completedEvent.value(QStringLiteral("payload")).toObject();
+    const auto completedDetails = completedPayload.value(QStringLiteral("details")).toObject();
+    QCOMPARE(completedEvent.value(QStringLiteral("correlationId")).toString(),
+             purchaseReference);
+    QCOMPARE(completedPayload.value(QStringLiteral("eventCode")).toString(),
+             QStringLiteral("TICKET_PURCHASE_COMPLETED"));
+    QCOMPARE(completedPayload.value(QStringLiteral("severity")).toString(),
+             QStringLiteral("INFO"));
+    QCOMPARE(completedDetails.value(QStringLiteral("ticketCode")).toString(),
+             issued.ticketCode);
+    QCOMPARE(completedDetails.value(QStringLiteral("resultCode")).toString(),
+             QStringLiteral("TICKET_PRESENTED"));
 }
 
 void TicketMachineProtocolTest::completesACompensatoryIssuanceContract()

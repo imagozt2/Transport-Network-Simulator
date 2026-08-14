@@ -27,6 +27,7 @@ void MqttIdentityConfigurationTest::ticketMachineUsesItsInventoriedIdentityByDef
 
     QVERIFY(configuration.valid);
     QCOMPARE(configuration.deviceCode, QStringLiteral("RMM-TM-ST046-01"));
+    QCOMPARE(configuration.stationCode, QStringLiteral("ST046"));
 }
 
 void MqttIdentityConfigurationTest::ticketMachineNormalizesACanonicalIdentity()
@@ -39,6 +40,7 @@ void MqttIdentityConfigurationTest::ticketMachineNormalizesACanonicalIdentity()
 
     QVERIFY(configuration.valid);
     QCOMPARE(configuration.deviceCode, QStringLiteral("RMM-TM-ST001-03"));
+    QCOMPARE(configuration.stationCode, QStringLiteral("ST001"));
 }
 
 void MqttIdentityConfigurationTest::ticketMachineRejectsForeignAndLegacyIdentities_data()
@@ -59,6 +61,7 @@ void MqttIdentityConfigurationTest::ticketMachineRejectsForeignAndLegacyIdentiti
     const auto configuration = TicketMachineConfiguration::fromEnvironment(environment);
 
     QVERIFY(!configuration.valid);
+    QVERIFY(configuration.stationCode.isEmpty());
     QVERIFY(!configuration.error.isEmpty());
 }
 

@@ -21,23 +21,53 @@ La aplicación permite:
 La máquina no calcula por sí sola precios definitivos, derechos de uso ni firmas. Estas decisiones
 pertenecen al backend para evitar resultados diferentes entre los canales de venta.
 
+## Interfaz táctil
+
+La cabecera mantiene visible la identidad de RMM y presenta las banderas de España y Reino Unido
+como únicos controles de idioma. La información técnica de conexión se sitúa en el pie para no
+interrumpir el recorrido del viajero.
+
+El catálogo distribuye los cuatro títulos en una cuadrícula de dos columnas y dos filas. Al elegir
+un producto, la compra continúa dentro del área principal como una sucesión de pantallas, sin abrir
+diálogos intermedios:
+
+```text
+Inicio → Catálogo → Configuración → Revisión y pago → Espera de emisión
+```
+
+Los selectores de estaciones permiten escribir parte del nombre o del código y filtran las
+coincidencias sin distinguir mayúsculas. También ofrecen una acción para intercambiar origen y
+destino. Los viajes y días se eligen mediante botones táctiles `−` y `+`; el valor, el mínimo y el
+máximo permanecen visibles y no dependen de los pequeños controles nativos del sistema operativo.
+
+La identidad inventariada determina la ubicación de la máquina. Por ejemplo,
+`RMM-TM-ST046-01` pertenece a `ST046`, por lo que esa estación aparece inicialmente como origen de
+un billete sencillo. Es una selección predeterminada, no un valor obligatorio: el usuario puede
+cambiarla. Si regresa desde el pago a la configuración, prevalecen los datos que ya había elegido.
+
 ## Flujo de compra
 
-1. La pantalla principal permite elegir idioma e iniciar una compra.
-2. La máquina consulta títulos en `GET /api/public/v1/ticket-products`.
+1. La pantalla principal permite iniciar una compra y la cabecera permite cambiar el idioma.
+2. La máquina consulta títulos en `GET /api/public/v1/ticket-products` y los muestra en una
+   cuadrícula de dos por dos.
 3. Para un billete sencillo consulta las estaciones y solicita el trayecto a
    `GET /api/public/v1/journeys`.
-4. El usuario configura el producto:
-   - origen y destino para `SINGLE_TRIP`;
-   - cantidad de viajes para `MULTI_TRIP`;
-   - número de días para `TIME_PASS`;
+4. El usuario configura el producto mediante controles táctiles:
+   - origen predeterminado por la identidad de la máquina y destino para `SINGLE_TRIP`;
+   - cantidad de viajes dentro de los límites para `MULTI_TRIP`;
+   - número de días dentro de los límites para `TIME_PASS`;
    - importe de recarga para `SMART_BALANCE`.
 5. Tras confirmar el pago simulado, publica `ticket.purchase-requested` mediante MQTT.
 6. El backend valida el producto y el pago, emite el soporte físico y responde con
    `ticket.issue-command`.
-7. La máquina comprueba la correlación, la caducidad y el contenido de la orden antes de mostrar el
-   QR, el identificador del billete y su código de vinculación.
-8. Al finalizar publica el evento `TICKET_PURCHASE_COMPLETED`.
+7. La máquina comprueba la correlación, la caducidad y el contenido de la orden antes de abrir una
+   ventana nueva con el QR, el identificador del billete y su código de vinculación.
+8. El viajero puede pulsar **Finalizar** o esperar la cuenta atrás de 30 segundos. En ambos casos se
+   publica una sola vez `TICKET_PURCHASE_COMPLETED`, se cierra la ventana y se regresa al inicio.
+
+Si el PNG recibido no puede interpretarse como un QR, la aplicación no queda bloqueada en la
+pantalla de espera: registra `TICKET_PURCHASE_FAILED` con `INVALID_QR_IMAGE`, informa de que el
+billete llegó a emitirse y solicita al viajero que pida asistencia.
 
 La misma referencia de compra y el mismo mensaje se conservan durante los reintentos. La
 idempotencia del backend impide que una reconexión emita dos billetes para una sola compra.
@@ -108,8 +138,10 @@ Desde Qt Creator se abre `qt/CMakeLists.txt` y se ejecuta el objetivo
 `rmm-ticket-vending-machine` con el kit Qt 6.11.1 MinGW 64-bit. El procedimiento completo mediante
 PowerShell está en la [guía de aplicaciones cliente](ejecucion-aplicaciones-cliente.md).
 
-La cobertura automatizada valida las configuraciones de compra, la lectura de emisiones normales y
-compensatorias, el rechazo de órdenes caducadas o inválidas y la estructura de eventos y ACK:
+La cobertura automatizada valida las configuraciones de los cuatro productos, la lectura de
+emisiones normales y compensatorias, el rechazo de órdenes caducadas o inválidas y la estructura de
+eventos y ACK. El escenario regular recorre el contrato completo desde la solicitud pagada hasta
+`QR_TICKET_GENERATED` y `TICKET_PURCHASE_COMPLETED`:
 
 ```powershell
 & D:\Qt\Tools\CMake_64\bin\ctest.exe `

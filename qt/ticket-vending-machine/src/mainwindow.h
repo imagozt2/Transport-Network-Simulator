@@ -8,9 +8,9 @@
 #include <optional>
 
 class QLabel;
+class QGridLayout;
 class QPushButton;
 class QStackedWidget;
-class QVBoxLayout;
 
 enum class UiLanguage
 {
@@ -28,8 +28,6 @@ public:
 signals:
     void purchaseRequested();
     void rechargeRequested();
-    void accessibilityRequested();
-    void languageRequested();
     void configurationSelected(
         const QString &productCode,
         const QString &originStationCode,
@@ -50,12 +48,13 @@ private:
     [[nodiscard]] QWidget *createCatalogPanel();
     [[nodiscard]] QWidget *createFooter();
     void configureWindow();
-    void showLanguageSelector();
     void setLanguage(UiLanguage language);
     void retranslateUi();
     void showCatalog();
     void showHome();
     void renderCatalog();
+    void showPurchaseFlowPanel(QWidget *panel);
+    void leavePurchaseFlow(QWidget *destination);
     void showProductConfiguration(const TicketProduct &product);
     void preparePayment(
         const QString &productCode,
@@ -63,7 +62,13 @@ private:
         const QString &destinationStationCode,
         int quantity,
         double rechargeAmount);
-    void showPaymentDialog(const TicketProduct &product, double amount);
+    void showPaymentScreen(const TicketProduct &product, double amount);
+    void showIssuedTicketWindow(
+        const QString &ticketCode,
+        const QByteArray &qrPng,
+        const QString &qrValue,
+        const QString &linkingCode,
+        const QString &purchaseReference);
     [[nodiscard]] QString productName(const TicketProduct &product) const;
     [[nodiscard]] QString productTariff(const TicketProduct &product) const;
     [[nodiscard]] QString productRules(const TicketProduct &product) const;
@@ -79,23 +84,25 @@ private:
     QLabel *m_footerContext = nullptr;
     QPushButton *m_purchaseButton = nullptr;
     QPushButton *m_rechargeButton = nullptr;
-    QPushButton *m_accessibilityButton = nullptr;
-    QPushButton *m_languageButton = nullptr;
+    QPushButton *m_spanishLanguageButton = nullptr;
+    QPushButton *m_englishLanguageButton = nullptr;
     QStackedWidget *m_contentStack = nullptr;
     QWidget *m_homePanel = nullptr;
     QWidget *m_catalogPanel = nullptr;
+    QWidget *m_purchaseFlowPanel = nullptr;
     QLabel *m_catalogTitle = nullptr;
     QLabel *m_catalogHint = nullptr;
     QLabel *m_catalogState = nullptr;
     QPushButton *m_catalogBackButton = nullptr;
     QPushButton *m_catalogRetryButton = nullptr;
-    QVBoxLayout *m_catalogList = nullptr;
+    QGridLayout *m_catalogGrid = nullptr;
     TicketCatalogClient *m_catalogClient = nullptr;
     StationCatalogClient *m_stationClient = nullptr;
     JourneyQuoteClient *m_journeyClient = nullptr;
     TicketIssuanceRequestClient *m_issuanceClient = nullptr;
     QVector<TicketProduct> m_products;
     QVector<NetworkStation> m_stations;
+    QString m_machineStationCode;
     bool m_stationLoadFailed = false;
     struct PendingPayment
     {

@@ -17,6 +17,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -90,5 +91,36 @@ class MqttDeviceCommandPublisherTests {
         assertThat(command.getStatus()).isEqualTo(DeviceMqttCommandStatus.PUBLISH_FAILED);
         assertThat(command.getPublicationAttempts()).isEqualTo(1);
         assertThat(command.getLastPublicationError()).isEqualTo("Broker unavailable");
+    }
+
+    @Test
+    void shouldCorrelateATicketResponseWithItsPurchase() throws Exception {
+        Device device = command.getDevice();
+        LocalDateTime requestedAt = LocalDateTime.ofInstant(NOW, SERVICE_ZONE).minusSeconds(5);
+        String purchaseReference = "9561ad31-6273-42d9-b76f-2dabb0b60955";
+        DeviceMqttCommand ticketCommand = new DeviceMqttCommand(
+                "cmd-ticket", "344de998-f2da-45d2-be7f-ec3e63457333", device,
+                DeviceMqttCommandType.TICKET_ISSUE,
+                new ObjectMapper().writeValueAsString(Map.of(
+                        "issuanceKind", "PURCHASE",
+                        "purchaseReference", purchaseReference,
+                        "issuanceCode", "RMM-PUR-001",
+                        "ticket", Map.of("ticketCode", "RMM-TICKET-001")
+                )), requestedAt, requestedAt.plusMinutes(2));
+        DeviceMqttIdentity identity = mock(DeviceMqttIdentity.class);
+        when(commandRepository.findByIdForPublication(8L)).thenReturn(Optional.of(ticketCommand));
+        when(identityRepository.findByDeviceId(21L)).thenReturn(Optional.of(identity));
+        when(identity.canAuthenticate(LocalDateTime.ofInstant(NOW, SERVICE_ZONE))).thenReturn(true);
+        when(identity.getMqttClientId()).thenReturn("TVM-ST001-01");
+        ArgumentCaptor<String> payload = ArgumentCaptor.forClass(String.class);
+
+        publisher.republish(8L);
+
+        verify(mqttClient).publish(eq("rmm/v1/devices/TVM-ST001-01/commands"),
+                payload.capture(), eq(1), eq(false));
+        assertThat(payload.getValue())
+                .contains("\"correlationId\":\"" + purchaseReference + "\"")
+                .contains("\"issuanceKind\":\"PURCHASE\"")
+                .contains("\"purchaseReference\":\"" + purchaseReference + "\"");
     }
 }
