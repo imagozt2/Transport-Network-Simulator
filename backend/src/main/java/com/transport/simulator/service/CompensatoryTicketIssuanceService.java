@@ -53,6 +53,7 @@ public class CompensatoryTicketIssuanceService {
     private final TicketIssuanceEventRegistrationService eventRegistrationService;
     private final NetworkJourneyPlanningService journeyPlanningService;
     private final TicketIssuanceService ticketIssuanceService;
+    private final PassengerTicketWalletDeliveryService walletDeliveryService;
     private final TicketQrImageService qrImageService;
     private final MqttDeviceCommandService commandService;
     private final Clock clock;
@@ -68,6 +69,7 @@ public class CompensatoryTicketIssuanceService {
             TicketIssuanceEventRegistrationService eventRegistrationService,
             NetworkJourneyPlanningService journeyPlanningService,
             TicketIssuanceService ticketIssuanceService,
+            PassengerTicketWalletDeliveryService walletDeliveryService,
             TicketQrImageService qrImageService,
             MqttDeviceCommandService commandService,
             Clock clock
@@ -82,6 +84,7 @@ public class CompensatoryTicketIssuanceService {
         this.eventRegistrationService = eventRegistrationService;
         this.journeyPlanningService = journeyPlanningService;
         this.ticketIssuanceService = ticketIssuanceService;
+        this.walletDeliveryService = walletDeliveryService;
         this.qrImageService = qrImageService;
         this.commandService = commandService;
         this.clock = clock;
@@ -116,7 +119,7 @@ public class CompensatoryTicketIssuanceService {
         issuanceRepository.save(issuance);
         eventRegistrationService.registerRequested(issuance, now);
         if (deliveryMethod == CompensatoryDeliveryMethod.DIGITAL_WALLET) {
-            IssuedTicket issued = ticketIssuanceService.issueDigital(product, parameters, passenger);
+            IssuedTicket issued = walletDeliveryService.deliver(product, parameters, passenger);
             issuance.beginProcessing(issued.ticket());
             issuance.complete(now);
             issuanceRepository.save(issuance);

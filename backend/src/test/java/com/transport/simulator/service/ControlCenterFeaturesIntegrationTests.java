@@ -151,7 +151,8 @@ class ControlCenterFeaturesIntegrationTests {
         CompensatoryTicketIssuanceService issuanceService = new CompensatoryTicketIssuanceService(
                 productRepository, deviceRepository, stationRepository, operatorRepository,
                 passengerRepository, qrCredentialRepository, issuanceRepository, eventService, journeyService,
-                ticketIssuanceService, qrImageService, commandService, CLOCK
+                ticketIssuanceService, new PassengerTicketWalletDeliveryService(ticketIssuanceService),
+                qrImageService, commandService, CLOCK
         );
 
         NetworkJourney plannedJourney = journeyService.calculate("ST001", "ST003");
