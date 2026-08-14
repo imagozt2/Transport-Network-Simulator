@@ -107,6 +107,7 @@ class ControlCenterFeaturesIntegrationTests {
         TicketProduct product = mock(TicketProduct.class);
         when(product.isActive()).thenReturn(true);
         when(product.getCode()).thenReturn("SINGLE_TRIP");
+        when(product.getName()).thenReturn("Billete sencillo");
         when(product.getProductType()).thenReturn(TicketProductType.SINGLE_TRIP);
         when(product.getBasePrice()).thenReturn(new BigDecimal("0.50"));
         when(product.getPricePerStation()).thenReturn(new BigDecimal("0.05"));
@@ -176,6 +177,8 @@ class ControlCenterFeaturesIntegrationTests {
         assertThat(plannedJourney.stationCount()).isEqualTo(3);
         assertThat(ReflectionTestUtils.getField(issuance.getValue(), "stationCount")).isEqualTo(3);
         assertThat(response.status()).isEqualTo(CompensatoryIssuanceStatus.PROCESSING);
+        assertThat(response.productName()).isEqualTo("Billete sencillo");
+        assertThat(response.qrPngBase64()).isEqualTo("qr-png-base64");
         assertThat(response.chargedAmount()).isZero();
         assertThat(response.stationCode()).isEqualTo("ST001");
         assertThat(logs.getAllValues()).extracting(DeviceEventLog::getEventType)

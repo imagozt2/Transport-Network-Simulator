@@ -1,7 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 import { Observable, of, throwError } from 'rxjs';
 
-import { TransportTitlesResponse } from '../../core/models/transport-title.model';
+import {
+  CompensatoryTicketIssuanceResponse,
+  TransportTitlesResponse
+} from '../../core/models/transport-title.model';
 import { DeviceOperationsResponse } from '../../core/models/device-operation.model';
 import { NetworkMapResponse } from '../../core/models/network-map.model';
 import { PassengerAccountsPage } from '../../core/models/passenger-account.model';
@@ -96,16 +99,7 @@ describe('TransportTitles', () => {
   });
 
   it('should validate and submit a compensatory single-trip issuance form', async () => {
-    const issueCompensatoryTicket = vi.fn().mockReturnValue(of({
-      id: 1, code: 'COMP-1', status: 'COMPLETED', simulated: false,
-      ticketCode: 'RMM-1', qrToken: 'qr-token', qrPngBase64: 'cXItcG5n',
-      productCode: 'SINGLE_TRIP', productName: 'Billete sencillo',
-      productType: 'SINGLE_TRIP', deviceCode: 'TM-ST001-01',
-      deliveryMethod: 'PHYSICAL_DEVICE', passengerPublicId: null, passengerEmail: null,
-      deviceName: 'Máquina Aeropuerto', stationCode: 'ST001', stationName: 'Aeropuerto',
-      operatorUsername: 'admin', chargedAmount: 0,
-      requestedAt: '2026-08-05T10:00:00', completedAt: '2026-08-05T10:00:00'
-    }));
+    const issueCompensatoryTicket = vi.fn().mockReturnValue(of(issuanceResponse()));
     await configureWith(
       () => of(response),
       issueCompensatoryTicket,
@@ -185,6 +179,107 @@ describe('TransportTitles', () => {
     expect(component.issuanceConfirmation).toContain('RMM-1');
   });
 
+  it('should show a completed digital delivery in the passenger wallet', async () => {
+    const issuance = issuanceResponse({
+      deliveryMethod: 'DIGITAL_WALLET', deviceCode: null, deviceName: null,
+      stationCode: null, stationName: null, passengerPublicId: 'passenger-1',
+      passengerEmail: 'ana@example.com'
+    });
+    await configureWith(() => of(response), vi.fn().mockReturnValue(of(issuance)));
+    const fixture = TestBed.createComponent(TransportTitles);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.issuanceTitle = response.titles[1];
+    component.setDeliveryMethod('DIGITAL_WALLET');
+    component.selectedPassengerPublicId = 'passenger-1';
+    vi.spyOn(component, 'selectedPassenger').mockReturnValue({ email: 'ana@example.com' } as never);
+    component.selectedTrips = 2;
+    component.issuanceReason = 'Compensación digital';
+
+    component.submitCompensatoryIssuance();
+
+    expect(component.issuanceProgress).toBe('COMPLETED');
+    expect(component.issuanceResultMessage()).toContain('cartera del pasajero');
+    expect(component.issuanceQrSource(issuance)).toContain('data:image/png;base64');
+  });
+
+  it('should keep a physical MQTT delivery pending until the machine confirms it', async () => {
+    const issuance = issuanceResponse({ status: 'PROCESSING', completedAt: null });
+    await configureWith(() => of(response), vi.fn().mockReturnValue(of(issuance)));
+    const fixture = TestBed.createComponent(TransportTitles);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.issuanceTitle = response.titles[1];
+    component.selectedDeviceCode = 'TM-ST001-01';
+    vi.spyOn(component, 'selectedMachine').mockReturnValue({ code: 'TM-ST001-01' } as never);
+    component.selectedTrips = 2;
+    component.issuanceReason = 'Reimpresión pendiente';
+
+    component.submitCompensatoryIssuance();
+
+    expect(component.issuanceProgress).toBe('PROCESSING');
+    expect(component.issuanceResultMessage()).toContain('pendiente de confirmación');
+  });
+
+  it('should explain a simulated physical delivery without creating a ticket or QR', async () => {
+    const issuance = issuanceResponse({
+      simulated: true, ticketCode: null, qrToken: null, qrPngBase64: null
+    });
+    await configureWith(() => of(response), vi.fn().mockReturnValue(of(issuance)));
+    const fixture = TestBed.createComponent(TransportTitles);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.issuanceTitle = response.titles[1];
+    component.selectedDeviceCode = 'TM-ST001-01';
+    vi.spyOn(component, 'selectedMachine').mockReturnValue({ code: 'TM-ST001-01' } as never);
+    component.selectedTrips = 2;
+    component.issuanceReason = 'Simulación administrativa';
+
+    component.submitCompensatoryIssuance();
+
+    expect(component.issuanceResultMessage()).toContain('sin generar un billete');
+    expect(component.issuanceQrSource(issuance)).toBeNull();
+  });
+
+  it('should preserve the form and expose a recoverable error when issuance fails', async () => {
+    await configureWith(
+      () => of(response),
+      vi.fn().mockReturnValue(throwError(() => new Error('issuance failed')))
+    );
+    const fixture = TestBed.createComponent(TransportTitles);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.issuanceTitle = response.titles[1];
+    component.selectedDeviceCode = 'TM-ST001-01';
+    vi.spyOn(component, 'selectedMachine').mockReturnValue({ code: 'TM-ST001-01' } as never);
+    component.selectedTrips = 2;
+    component.issuanceReason = 'Reintento de emisión';
+
+    component.submitCompensatoryIssuance();
+
+    expect(component.issuanceProgress).toBe('FAILED');
+    expect(component.issuanceResult).toBeNull();
+    expect(component.issuanceError).toContain('No se ha podido completar');
+  });
+
+  it('should render the stable ticket identity and its verifiable QR', async () => {
+    await configureWith(() => of(response));
+    const fixture = TestBed.createComponent(TransportTitles);
+    const component = fixture.componentInstance;
+    component.issuanceTitle = response.titles[0];
+    component.issuanceProgress = 'COMPLETED';
+    component.issuanceResult = issuanceResponse();
+
+    fixture.detectChanges();
+    const ticket = fixture.nativeElement.querySelector('.issued-ticket') as HTMLElement;
+
+    expect(ticket.textContent).toContain('Billete sencillo');
+    expect(ticket.textContent).toContain('RMM-1');
+    expect(ticket.textContent).not.toContain('viajes restantes');
+    expect(ticket.querySelector<HTMLImageElement>('.issued-ticket-qr img')?.src)
+      .toContain('data:image/png;base64,cXItcG5n');
+  });
+
   it('should retain tablet and mobile layouts for cards and the issuance dialog', async () => {
     await configureWith(() => of(response));
     const fixture = TestBed.createComponent(TransportTitles);
@@ -227,4 +322,20 @@ function loadedComponentStyles(): string {
   return Array.from(document.head.querySelectorAll('style'))
     .map((style) => style.textContent ?? '')
     .join('\n');
+}
+
+function issuanceResponse(
+  overrides: Partial<CompensatoryTicketIssuanceResponse> = {}
+): CompensatoryTicketIssuanceResponse {
+  return {
+    id: 1, code: 'COMP-1', status: 'COMPLETED', simulated: false,
+    ticketCode: 'RMM-1', qrToken: 'qr-token', qrPngBase64: 'cXItcG5n',
+    productCode: 'SINGLE_TRIP', productName: 'Billete sencillo',
+    productType: 'SINGLE_TRIP', deviceCode: 'TM-ST001-01',
+    deliveryMethod: 'PHYSICAL_DEVICE', passengerPublicId: null, passengerEmail: null,
+    deviceName: 'Máquina Aeropuerto', stationCode: 'ST001', stationName: 'Aeropuerto',
+    operatorUsername: 'admin', chargedAmount: 0,
+    requestedAt: '2026-08-05T10:00:00', completedAt: '2026-08-05T10:00:00',
+    ...overrides
+  };
 }
