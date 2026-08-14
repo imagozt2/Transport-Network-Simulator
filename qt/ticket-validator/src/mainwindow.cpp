@@ -129,6 +129,10 @@ MainWindow::MainWindow(QWidget *parent)
 
     setCentralWidget(centralWidget);
 
+    m_readerResetTimer = new QTimer(this);
+    m_readerResetTimer->setSingleShot(true);
+    connect(m_readerResetTimer, &QTimer::timeout, this, &MainWindow::resetReader);
+
     m_validationClient = new ValidatorMqttClient(m_configuration, this);
     connect(m_validationClient, &ValidatorMqttClient::connectionStateChanged,
             this, [this](bool connected) {
@@ -137,6 +141,16 @@ MainWindow::MainWindow(QWidget *parent)
         m_connectionState->setText(connected ? tr("Preparada") : tr("Sin conexión"));
         m_connectionState->style()->unpolish(m_connectionState);
         m_connectionState->style()->polish(m_connectionState);
+        if (connected) {
+            resetReader();
+        } else {
+            m_readerResetTimer->stop();
+            m_cameraScanner->stop();
+            if (!m_validationClient->hasPendingValidation()) {
+                setValidationState(QStringLiteral("rejected"), tr("Lector no disponible"),
+                                   tr("Reconectando con el centro de control"), false);
+            }
+        }
     });
     connect(m_validationClient, &ValidatorMqttClient::validationCompleted,
             this, &MainWindow::showValidationResult);
@@ -151,10 +165,11 @@ MainWindow::MainWindow(QWidget *parent)
         if (reason == QStringLiteral("MQTT_CREDENTIALS_MISSING")) {
             m_connected = false;
         }
-        restartCameraAfterResult(rejectedStateDurationMs);
+        scheduleReaderReset(rejectedStateDurationMs);
     });
-    if (m_configuration.valid) {
-        m_cameraScanner->start();
+    if (!m_configuration.valid) {
+        setValidationState(QStringLiteral("rejected"), tr("Configuración no válida"),
+                           m_configuration.error, false);
     }
 }
 
@@ -456,14 +471,14 @@ void MainWindow::submitQrCode(const QString &detectedQrValue)
         setValidationState(QStringLiteral("rejected"), tr("Código QR no válido"),
                            tr("No se ha podido leer un billete RMM válido"), false);
         playValidationSound(false);
-        restartCameraAfterResult(rejectedStateDurationMs);
+        scheduleReaderReset(rejectedStateDurationMs);
         return;
     }
     if (!m_configuration.valid || !m_connected) {
         setValidationState(QStringLiteral("rejected"), tr("Validación no disponible"),
                            tr("No hay conexión con el centro de control"), false);
         playValidationSound(false);
-        restartCameraAfterResult(rejectedStateDurationMs);
+        scheduleReaderReset(rejectedStateDurationMs);
         return;
     }
 
@@ -480,7 +495,7 @@ void MainWindow::showValidationResult(const ValidationResult &result)
         result.isAccepted() ? QStringLiteral("accepted") : QStringLiteral("rejected"),
         result.title(), result.detail(), result.isAccepted());
     playValidationSound(result.isAccepted());
-    restartCameraAfterResult(result.isAccepted()
+    scheduleReaderReset(result.isAccepted()
         ? acceptedStateDurationMs : rejectedStateDurationMs);
 }
 
@@ -497,18 +512,22 @@ void MainWindow::playValidationSound(bool accepted)
     }
 }
 
-void MainWindow::restartCameraAfterResult(int delayMilliseconds)
+void MainWindow::scheduleReaderReset(int delayMilliseconds)
 {
-    QTimer::singleShot(delayMilliseconds, this, [this] {
-        if (!m_configuration.valid || (m_validationClient != nullptr
-                && m_validationClient->hasPendingValidation())) {
-            return;
-        }
-        m_lastQrValue.clear();
-        setValidationState(QStringLiteral("waiting"), tr("Esperando un billete"),
-                           tr("Presenta el código QR en el lector"), false);
-        m_cameraScanner->start();
-    });
+    m_readerResetTimer->start(delayMilliseconds);
+}
+
+void MainWindow::resetReader()
+{
+    if (!m_configuration.valid || !m_connected || m_validationClient == nullptr
+            || m_validationClient->hasPendingValidation()) {
+        return;
+    }
+    m_readerResetTimer->stop();
+    m_lastQrValue.clear();
+    setValidationState(QStringLiteral("waiting"), tr("Esperando un billete"),
+                       tr("Presenta el código QR en el lector"), false);
+    m_cameraScanner->start();
 }
 
 void MainWindow::setValidationState(const QString &state, const QString &title,
