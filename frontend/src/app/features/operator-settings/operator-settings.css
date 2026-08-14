@@ -15,6 +15,8 @@
 .language-setting select { min-width: 145px; border: 1px solid #cbd5e1; border-radius: 10px; padding: 10px 34px 10px 11px; color: #111827; background: #fff; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
 .time-zone-setting { border-color: #cbd5e1; background: #f8fafc; }
 .time-zone-setting select { min-width: 230px; }
+.theme-setting { border-color: #cbd5e1; background: #f8fafc; }
+.theme-setting select { min-width: 145px; }
 .language-setting select:disabled, .settings-actions button:disabled { cursor: wait; opacity: 0.6; }
 .preference-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-top: 20px; border: 1px solid #e2e8f0; border-radius: 14px; padding: 15px; background: #f8fafc; cursor: pointer; }
 .preference-row > span { display: flex; flex-direction: column; gap: 4px; }

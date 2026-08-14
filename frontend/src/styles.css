@@ -64,3 +64,94 @@ html.reduce-motion *::after {
   animation-duration: 0.01ms !important;
   animation-iteration-count: 1 !important;
 }
+
+/* The operator theme is applied at document level so lazy-loaded views inherit it. */
+html.theme-dark,
+html.theme-dark body {
+  color: #e5e7eb;
+  background: #0b1120;
+}
+
+html.theme-dark .control-center-layout,
+html.theme-dark .content {
+  background-color: #0b1120 !important;
+}
+
+html.theme-dark :is(
+  .header,
+  .settings-card,
+  .preferences-footer,
+  .summary-card,
+  .filters-card,
+  .filter-card,
+  .line-card,
+  .station-card,
+  .train-card,
+  .depot-card,
+  .device-card,
+  .ticket-card,
+  .incident-card,
+  .panel,
+  .card,
+  .dialog,
+  .modal,
+  .user-menu
+) {
+  border-color: #334155 !important;
+  background-color: #111827 !important;
+  box-shadow: 0 14px 34px rgb(0 0 0 / 24%) !important;
+}
+
+html.theme-dark :is(
+  h1, h2, h3, h4,
+  strong,
+  th,
+  label,
+  .user-button,
+  .card-title,
+  .metric-value
+) {
+  color: #f8fafc !important;
+}
+
+html.theme-dark :is(p, small, td, .subtitle, .description, .metadata, .help-text) {
+  color: #94a3b8;
+}
+
+html.theme-dark :is(
+  input,
+  select,
+  textarea,
+  .language-setting,
+  .preference-row,
+  .user-menu header,
+  .user-button,
+  .table-container,
+  table
+) {
+  border-color: #475569 !important;
+  color: #e5e7eb !important;
+  background-color: #1e293b !important;
+}
+
+html.theme-dark :is(input, select, textarea)::placeholder {
+  color: #94a3b8;
+}
+
+html.theme-dark :is(tr, td, th) {
+  border-color: #334155 !important;
+}
+
+html.theme-dark .secondary-button {
+  color: #e5e7eb;
+  background: #334155;
+}
+
+html.theme-dark .secondary-button:hover {
+  background: #475569;
+}
+
+html.theme-dark .nav-link.active {
+  color: #f8fafc;
+  background: #334155;
+}

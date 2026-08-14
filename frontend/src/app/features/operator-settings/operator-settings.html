@@ -52,6 +52,21 @@
         </select>
       </label>
 
+      <label class="language-setting theme-setting">
+        <span>
+          <strong>Tema de la interfaz</strong>
+          <small>Adapta la paleta del centro de control a un entorno claro u oscuro.</small>
+        </span>
+        <select
+          [value]="selectedTheme"
+          [disabled]="loadingPreferences || savingPreferences"
+          (change)="selectTheme($any($event.target).value)"
+        >
+          <option value="LIGHT" [selected]="selectedTheme === 'LIGHT'">Claro</option>
+          <option value="DARK" [selected]="selectedTheme === 'DARK'">Oscuro</option>
+        </select>
+      </label>
+
     </article>
 
     <article class="settings-card">
@@ -81,7 +96,7 @@
   <footer class="preferences-footer">
     <div>
       <strong>Preferencias del navegador</strong>
-      <span>La zona horaria se guarda en la cuenta; el idioma y la accesibilidad, en este dispositivo.</span>
+      <span>La zona horaria y el tema se guardan en la cuenta; el idioma y la accesibilidad, en este dispositivo.</span>
     </div>
     <div class="settings-actions">
       <button class="secondary-button" type="button" [disabled]="savingPreferences" (click)="resetPreferences()">

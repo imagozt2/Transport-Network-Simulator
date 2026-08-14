@@ -44,5 +44,7 @@ export class OperatorDisplayPreferencesService {
   private apply(preferences: OperatorDisplayPreferences): void {
     this.preferencesState.set(preferences);
     this.temporalFormat.setTimeZone(preferences.timeZone);
+    document.documentElement.classList.toggle('theme-dark', preferences.theme === 'DARK');
+    document.documentElement.style.colorScheme = preferences.theme === 'DARK' ? 'dark' : 'light';
   }
 }

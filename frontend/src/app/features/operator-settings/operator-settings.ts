@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 
 import { AppLanguage } from '../../core/i18n/i18n.model';
 import { I18nService } from '../../core/i18n/i18n.service';
+import { OperatorTheme } from '../../core/models/operator-display-preferences.model';
 import { OperatorDisplayPreferencesService } from '../../core/services/operator-display-preferences.service';
 
 const REDUCE_MOTION_STORAGE_KEY = 'rmm.reduce-motion';
@@ -29,6 +30,7 @@ export class OperatorSettingsPage implements OnInit {
   ] as const;
   selectedLanguage: AppLanguage = this.i18n.language();
   selectedTimeZone = this.displayPreferences.preferences().timeZone;
+  selectedTheme: OperatorTheme = this.displayPreferences.preferences().theme;
   reduceMotion = localStorage.getItem(REDUCE_MOTION_STORAGE_KEY) === 'true';
   loadingPreferences = true;
   savingPreferences = false;
@@ -43,6 +45,7 @@ export class OperatorSettingsPage implements OnInit {
     this.displayPreferences.load().subscribe({
       next: (preferences) => {
         this.selectedTimeZone = preferences.timeZone;
+        this.selectedTheme = preferences.theme;
         this.loadingPreferences = false;
       },
       error: () => {
@@ -63,6 +66,7 @@ export class OperatorSettingsPage implements OnInit {
     this.selectedLanguage = 'es';
     this.reduceMotion = false;
     this.selectedTimeZone = 'Europe/Madrid';
+    this.selectedTheme = 'LIGHT';
     this.i18n.setLanguage(this.selectedLanguage);
     localStorage.removeItem(REDUCE_MOTION_STORAGE_KEY);
     document.documentElement.classList.remove('reduce-motion');
@@ -85,13 +89,19 @@ export class OperatorSettingsPage implements OnInit {
     this.markAsPending();
   }
 
+  selectTheme(theme: string): void {
+    if (theme !== 'LIGHT' && theme !== 'DARK') return;
+    this.selectedTheme = theme;
+    this.markAsPending();
+  }
+
   private persistDisplayPreferences(): void {
     this.savingPreferences = true;
     this.saved = false;
     this.errorMessage = '';
     this.displayPreferences.update({
       timeZone: this.selectedTimeZone,
-      theme: this.displayPreferences.preferences().theme
+      theme: this.selectedTheme
     }).subscribe({
       next: () => {
         this.savingPreferences = false;

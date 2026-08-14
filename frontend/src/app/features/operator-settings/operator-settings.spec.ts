@@ -18,6 +18,8 @@ describe('OperatorSettingsPage', () => {
     load: () => of(preferencesState()),
     update: (preferences: OperatorDisplayPreferences) => {
       preferencesState.set(preferences);
+      document.documentElement.classList.toggle('theme-dark', preferences.theme === 'DARK');
+      document.documentElement.style.colorScheme = preferences.theme === 'DARK' ? 'dark' : 'light';
       return of(preferences);
     }
   };
@@ -25,12 +27,16 @@ describe('OperatorSettingsPage', () => {
   beforeEach(() => {
     localStorage.clear();
     document.documentElement.classList.remove('reduce-motion');
+    document.documentElement.classList.remove('theme-dark');
+    document.documentElement.style.colorScheme = '';
     preferencesState.set({ timeZone: 'Europe/Madrid', theme: 'LIGHT' });
   });
 
   afterEach(() => {
     localStorage.clear();
     document.documentElement.classList.remove('reduce-motion');
+    document.documentElement.classList.remove('theme-dark');
+    document.documentElement.style.colorScheme = '';
     document.documentElement.lang = 'es';
   });
 
@@ -103,5 +109,17 @@ describe('OperatorSettingsPage', () => {
     expect(document.documentElement.classList.contains('reduce-motion')).toBe(false);
     expect(document.documentElement.lang).toBe('es');
     expect(component.saved).toBe(true);
+  });
+
+  it('should persist and apply the dark theme', async () => {
+    const fixture = await createPage();
+    const component = fixture.componentInstance;
+
+    component.selectTheme('DARK');
+    component.savePreferences();
+
+    expect(preferencesState().theme).toBe('DARK');
+    expect(document.documentElement.classList.contains('theme-dark')).toBe(true);
+    expect(document.documentElement.style.colorScheme).toBe('dark');
   });
 });
