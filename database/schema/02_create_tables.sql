@@ -35,6 +35,22 @@ CREATE INDEX idx_operator_accounts_role_status
 CREATE INDEX idx_operator_accounts_locked_until
     ON operator_accounts (locked_until);
 
+CREATE TABLE operator_display_preferences (
+    operator_account_id BIGINT PRIMARY KEY,
+    time_zone VARCHAR(64) NOT NULL DEFAULT 'Europe/Madrid',
+    theme VARCHAR(20) NOT NULL DEFAULT 'LIGHT',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_operator_display_preferences_account FOREIGN KEY (operator_account_id)
+        REFERENCES operator_accounts (id) ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT chk_operator_display_preferences_time_zone CHECK (
+        CHAR_LENGTH(TRIM(time_zone)) > 0
+    ),
+    CONSTRAINT chk_operator_display_preferences_theme CHECK (
+        theme IN ('LIGHT', 'DARK')
+    )
+);
+
 CREATE TABLE passenger_accounts (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     public_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,

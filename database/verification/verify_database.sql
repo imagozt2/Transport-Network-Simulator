@@ -4,6 +4,9 @@ SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 SELECT COUNT(*) AS operator_account_count
 FROM operator_accounts;
 
+SELECT COUNT(*) AS operator_display_preference_count
+FROM operator_display_preferences;
+
 SELECT COUNT(*) AS passenger_account_count
 FROM passenger_accounts;
 
@@ -89,6 +92,13 @@ WHERE CHAR_LENGTH(TRIM(username)) < 3
    OR operator_role NOT IN ('OPERATOR', 'ADMINISTRATOR')
    OR account_status NOT IN ('ACTIVE', 'DISABLED', 'LOCKED')
    OR failed_login_attempts < 0;
+
+SELECT preferences.operator_account_id, preferences.time_zone, preferences.theme
+FROM operator_display_preferences preferences
+LEFT JOIN operator_accounts operators ON operators.id = preferences.operator_account_id
+WHERE operators.id IS NULL
+   OR CHAR_LENGTH(TRIM(preferences.time_zone)) = 0
+   OR preferences.theme NOT IN ('LIGHT', 'DARK');
 
 SELECT id, public_id, email, account_status
 FROM passenger_accounts
