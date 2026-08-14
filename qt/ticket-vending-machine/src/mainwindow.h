@@ -102,6 +102,7 @@ private:
     TicketIssuanceRequestClient *m_issuanceClient = nullptr;
     QVector<TicketProduct> m_products;
     QVector<NetworkStation> m_stations;
+    QString m_machineStationCode;
     bool m_stationLoadFailed = false;
     struct PendingPayment
     {

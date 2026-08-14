@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "ticketmachineconfiguration.h"
 
 #include <algorithm>
 #include <QFrame>
@@ -13,6 +14,7 @@
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QProcessEnvironment>
 #include <QPixmap>
 #include <QSizePolicy>
 #include <QSettings>
@@ -269,6 +271,9 @@ MainWindow::MainWindow(QWidget *parent)
     m_stationClient = new StationCatalogClient(this);
     m_journeyClient = new JourneyQuoteClient(this);
     m_issuanceClient = new TicketIssuanceRequestClient(this);
+    const auto machineConfiguration = TicketMachineConfiguration::fromEnvironment(
+        QProcessEnvironment::systemEnvironment());
+    m_machineStationCode = machineConfiguration.stationCode;
     auto *layout = new QVBoxLayout(centralWidget);
     layout->setContentsMargins(28, 24, 28, 22);
     layout->setSpacing(18);
@@ -945,6 +950,9 @@ void MainWindow::showProductConfiguration(const TicketProduct &product)
         }
         if (quantity) quantity->setValue(m_pendingPayment->quantity);
         if (amount) amount->setValue(m_pendingPayment->rechargeAmount);
+    } else if (origin && !m_machineStationCode.isEmpty()) {
+        const int machineStationIndex = origin->findData(m_machineStationCode);
+        if (machineStationIndex >= 0) origin->setCurrentIndex(machineStationIndex);
     }
 
     auto *validation = new QLabel(panel);
