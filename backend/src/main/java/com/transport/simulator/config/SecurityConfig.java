@@ -36,7 +36,10 @@ public class SecurityConfig {
                 .cors(cors -> {
                 })
                 .csrf(csrf -> csrf
-                        .ignoringRequestMatchers("/api/rmm-app/v1/**")
+                        .ignoringRequestMatchers(
+                                "/api/rmm-app/v1/**",
+                                "/api/public/v1/ticket-recharges/lookup"
+                        )
                         .csrfTokenRepository(csrfRepository))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
@@ -45,6 +48,7 @@ public class SecurityConfig {
                                 "/api/public/v1/ticket-products",
                                 "/api/public/v1/stations",
                                 "/api/public/v1/journeys",
+                                "/api/public/v1/ticket-recharges/lookup",
                                 "/api/auth/csrf",
                                 "/api/auth/login",
                                 "/api/rmm-app/v1/auth/register"
