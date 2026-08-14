@@ -57,6 +57,7 @@ class TicketRechargeLookupServiceTests {
         when(product.getName()).thenReturn("Billete multiviaje");
         when(product.getMinTrips()).thenReturn(2);
         when(product.getMaxTrips()).thenReturn(30);
+        when(product.isUsesTripBalance()).thenReturn(true);
         when(product.getPricePerTrip()).thenReturn(new BigDecimal("1.00"));
 
         TicketRechargeLookupResponse result = service.findRechargeableTicket(QR_VALUE);
@@ -68,6 +69,7 @@ class TicketRechargeLookupServiceTests {
         assertThat(result.remainingTrips()).isEqualTo(4);
         assertThat(result.minTrips()).isEqualTo(2);
         assertThat(result.maxTrips()).isEqualTo(30);
+        assertThat(result.tripOptions()).startsWith(2, 3).endsWith(25, 26);
         assertThat(result.pricePerTrip()).isEqualByComparingTo("1.00");
         verify(qrVerifier).verify(QR_VALUE);
     }

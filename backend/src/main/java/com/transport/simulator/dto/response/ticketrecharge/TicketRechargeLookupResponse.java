@@ -5,6 +5,8 @@ import com.transport.simulator.entity.TicketProduct;
 import com.transport.simulator.enums.TicketSupportType;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.IntStream;
 
 public record TicketRechargeLookupResponse(
         String ticketCode,
@@ -27,7 +29,9 @@ public record TicketRechargeLookupResponse(
         BigDecimal basePrice,
         BigDecimal pricePerStation,
         BigDecimal pricePerTrip,
-        BigDecimal pricePerDay
+        BigDecimal pricePerDay,
+        List<Integer> tripOptions,
+        List<Integer> dayOptions
 ) {
     public static TicketRechargeLookupResponse from(Ticket ticket, TicketSupportType supportType) {
         TicketProduct product = ticket.getProduct();
@@ -39,7 +43,28 @@ public record TicketRechargeLookupResponse(
                 product.getMaxTrips(), product.getMinDays(), product.getMaxDays(),
                 product.getMinRechargeAmount(), product.getMaxRechargeAmount(),
                 product.getBasePrice(), product.getPricePerStation(), product.getPricePerTrip(),
-                product.getPricePerDay()
+                product.getPricePerDay(), tripOptions(ticket, product), dayOptions(product)
         );
+    }
+
+    private static List<Integer> tripOptions(Ticket ticket, TicketProduct product) {
+        if (!product.isUsesTripBalance() || product.getMinTrips() == null
+                || product.getMaxTrips() == null) {
+            return List.of();
+        }
+        int currentTrips = ticket.getRemainingTrips() == null ? 0 : ticket.getRemainingTrips();
+        int maximumRecharge = product.getMaxTrips() - currentTrips;
+        if (maximumRecharge < product.getMinTrips()) {
+            return List.of();
+        }
+        return IntStream.rangeClosed(product.getMinTrips(), maximumRecharge).boxed().toList();
+    }
+
+    private static List<Integer> dayOptions(TicketProduct product) {
+        if (!product.isUsesDayValidity() || product.getMinDays() == null
+                || product.getMaxDays() == null) {
+            return List.of();
+        }
+        return IntStream.rangeClosed(product.getMinDays(), product.getMaxDays()).boxed().toList();
     }
 }

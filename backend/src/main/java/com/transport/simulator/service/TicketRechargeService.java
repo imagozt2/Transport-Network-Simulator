@@ -12,6 +12,7 @@ import com.transport.simulator.enums.PassengerAccountStatus;
 import com.transport.simulator.repository.PurchaseRepository;
 import com.transport.simulator.repository.TicketRepository;
 import com.transport.simulator.service.model.TicketRechargeParameters;
+import com.transport.simulator.service.model.TicketRechargeQuote;
 import com.transport.simulator.service.model.TicketSnapshot;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -32,6 +33,7 @@ public class TicketRechargeService {
     private final TimePassTicketService timePassService;
     private final SmartBalanceTicketService smartBalanceService;
     private final TicketOperationRegistrationService operationRegistrationService;
+    private final TicketRechargePricingService pricingService;
     private final Clock clock;
 
     public TicketRechargeService(
@@ -42,6 +44,7 @@ public class TicketRechargeService {
             TimePassTicketService timePassService,
             SmartBalanceTicketService smartBalanceService,
             TicketOperationRegistrationService operationRegistrationService,
+            TicketRechargePricingService pricingService,
             Clock clock
     ) {
         this.ticketRepository = ticketRepository;
@@ -51,6 +54,7 @@ public class TicketRechargeService {
         this.timePassService = timePassService;
         this.smartBalanceService = smartBalanceService;
         this.operationRegistrationService = operationRegistrationService;
+        this.pricingService = pricingService;
         this.clock = clock;
     }
 
@@ -85,6 +89,7 @@ public class TicketRechargeService {
         Objects.requireNonNull(parameters, "parameters are required");
         validateContext(origin, device, passenger, current);
         TicketSnapshot before = TicketSnapshot.from(current);
+        TicketRechargeQuote quote = pricingService.quote(current, parameters);
 
         Ticket updated = switch (current.getProductType()) {
             case SINGLE_TRIP -> rechargeSingleTrip(current, parameters);
@@ -93,7 +98,7 @@ public class TicketRechargeService {
             case SMART_BALANCE -> rechargeSmartBalance(current, parameters);
         };
 
-        BigDecimal total = calculatePrice(updated, parameters);
+        BigDecimal total = quote.totalAmount();
         Purchase purchase = Purchase.completedRecharge(
                 uniqueCode("RMM-RCH"), updated, origin, paymentMethod, reference,
                 device, passenger, total, LocalDateTime.now(clock)
@@ -126,17 +131,6 @@ public class TicketRechargeService {
         return smartBalanceService.recharge(
                 ticket.getCode(), Objects.requireNonNull(parameters.balanceAmount(), "balanceAmount is required")
         );
-    }
-
-    private BigDecimal calculatePrice(Ticket ticket, TicketRechargeParameters parameters) {
-        return switch (ticket.getProductType()) {
-            case SINGLE_TRIP -> ticket.getRoutePriceAmount();
-            case MULTI_TRIP -> ticket.getProduct().getPricePerTrip()
-                    .multiply(BigDecimal.valueOf(parameters.trips()));
-            case TIME_PASS -> ticket.getProduct().getPricePerDay()
-                    .multiply(BigDecimal.valueOf(parameters.days()));
-            case SMART_BALANCE -> parameters.balanceAmount();
-        };
     }
 
     private void configurePurchase(

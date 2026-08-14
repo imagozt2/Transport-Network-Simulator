@@ -38,7 +38,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf
                         .ignoringRequestMatchers(
                                 "/api/rmm-app/v1/**",
-                                "/api/public/v1/ticket-recharges/lookup"
+                                "/api/public/v1/ticket-recharges/**"
                         )
                         .csrfTokenRepository(csrfRepository))
                 .authorizeHttpRequests(authorize -> authorize
@@ -48,7 +48,7 @@ public class SecurityConfig {
                                 "/api/public/v1/ticket-products",
                                 "/api/public/v1/stations",
                                 "/api/public/v1/journeys",
-                                "/api/public/v1/ticket-recharges/lookup",
+                                "/api/public/v1/ticket-recharges/**",
                                 "/api/auth/csrf",
                                 "/api/auth/login",
                                 "/api/rmm-app/v1/auth/register"
