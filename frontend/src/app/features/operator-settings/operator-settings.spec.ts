@@ -122,4 +122,19 @@ describe('OperatorSettingsPage', () => {
     expect(document.documentElement.classList.contains('theme-dark')).toBe(true);
     expect(document.documentElement.style.colorScheme).toBe('dark');
   });
+
+  it('should restore account preferences and persist a new time zone with its theme', async () => {
+    preferencesState.set({ timeZone: 'America/New_York', theme: 'DARK' });
+    const fixture = await createPage();
+    const component = fixture.componentInstance;
+
+    expect(component.selectedTimeZone).toBe('America/New_York');
+    expect(component.selectedTheme).toBe('DARK');
+
+    component.selectTimeZone('UTC');
+    component.savePreferences();
+
+    expect(preferencesState()).toEqual({ timeZone: 'UTC', theme: 'DARK' });
+    expect(component.saved).toBe(true);
+  });
 });
