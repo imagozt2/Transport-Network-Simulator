@@ -6,6 +6,7 @@
 #include <QMainWindow>
 
 class QLabel;
+class QFrame;
 class QrCodeScannerWidget;
 class ValidatorMqttClient;
 
@@ -30,6 +31,8 @@ private:
                             const QString &detail, bool gateOpen);
 
     QLabel *m_connectionState = nullptr;
+    QFrame *m_resultPanel = nullptr;
+    QLabel *m_validationIcon = nullptr;
     QLabel *m_validationState = nullptr;
     QLabel *m_validationDetail = nullptr;
     QLabel *m_gateState = nullptr;
