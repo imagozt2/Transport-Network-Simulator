@@ -28,8 +28,6 @@ public:
 signals:
     void purchaseRequested();
     void rechargeRequested();
-    void accessibilityRequested();
-    void languageRequested();
     void configurationSelected(
         const QString &productCode,
         const QString &originStationCode,
@@ -50,7 +48,6 @@ private:
     [[nodiscard]] QWidget *createCatalogPanel();
     [[nodiscard]] QWidget *createFooter();
     void configureWindow();
-    void showLanguageSelector();
     void setLanguage(UiLanguage language);
     void retranslateUi();
     void showCatalog();
@@ -79,8 +76,6 @@ private:
     QLabel *m_footerContext = nullptr;
     QPushButton *m_purchaseButton = nullptr;
     QPushButton *m_rechargeButton = nullptr;
-    QPushButton *m_accessibilityButton = nullptr;
-    QPushButton *m_languageButton = nullptr;
     QStackedWidget *m_contentStack = nullptr;
     QWidget *m_homePanel = nullptr;
     QWidget *m_catalogPanel = nullptr;

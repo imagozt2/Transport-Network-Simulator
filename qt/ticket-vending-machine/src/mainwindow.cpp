@@ -108,39 +108,9 @@ constexpr auto windowStyle = R"(
     QPushButton#secondaryAction:pressed {
         background-color: #dceefe;
     }
-    QPushButton#footerAction {
-        min-height: 48px;
-        padding: 8px 18px;
-        border: 1px solid #cbd5e1;
-        border-radius: 14px;
-        background-color: #ffffff;
-        font-size: 14px;
-        font-weight: 700;
-    }
-    QPushButton#footerAction:hover, QPushButton#footerAction:focus {
-        border-color: #2294f2;
-        background-color: #eaf5fe;
-    }
-    QDialog#languageDialog {
-        background-color: #ffffff;
-    }
     QLabel#dialogTitle {
         font-size: 25px;
         font-weight: 800;
-    }
-    QPushButton#languageOption {
-        min-height: 72px;
-        padding: 12px 20px;
-        border: 2px solid #cbd5e1;
-        border-radius: 16px;
-        background-color: #f8fafc;
-        font-size: 18px;
-        font-weight: 700;
-    }
-    QPushButton#languageOption:hover, QPushButton#languageOption:focus,
-    QPushButton#languageOption:checked {
-        border-color: #2294f2;
-        background-color: #eaf5fe;
     }
     QPushButton#backAction, QPushButton#retryAction {
         min-height: 48px;
@@ -255,7 +225,6 @@ MainWindow::MainWindow(QWidget *parent)
                          .toString() == QStringLiteral("en")
         ? UiLanguage::English
         : UiLanguage::Spanish;
-    connect(this, &MainWindow::languageRequested, this, &MainWindow::showLanguageSelector);
     connect(this, &MainWindow::purchaseRequested, this, &MainWindow::showCatalog);
     connect(this, &MainWindow::configurationSelected, this, &MainWindow::preparePayment);
     connect(this, &MainWindow::paymentApproved, this,
@@ -598,20 +567,8 @@ QWidget *MainWindow::createFooter()
     m_footerContext = new QLabel(footer);
     m_footerContext->setObjectName(QStringLiteral("footerContext"));
 
-    m_accessibilityButton = new QPushButton(footer);
-    m_accessibilityButton->setObjectName(QStringLiteral("footerAction"));
-    m_accessibilityButton->setCursor(Qt::PointingHandCursor);
-    m_languageButton = new QPushButton(footer);
-    m_languageButton->setObjectName(QStringLiteral("footerAction"));
-    m_languageButton->setCursor(Qt::PointingHandCursor);
-
-    connect(m_accessibilityButton, &QPushButton::clicked, this, &MainWindow::accessibilityRequested);
-    connect(m_languageButton, &QPushButton::clicked, this, &MainWindow::languageRequested);
-
     layout->addWidget(m_footerContext);
     layout->addStretch();
-    layout->addWidget(m_accessibilityButton);
-    layout->addWidget(m_languageButton);
 
     return footer;
 }
@@ -676,75 +633,6 @@ QWidget *MainWindow::createCatalogPanel()
     layout->addWidget(m_catalogRetryButton, 0, Qt::AlignCenter);
     layout->addWidget(scrollArea, 1);
     return panel;
-}
-
-void MainWindow::showLanguageSelector()
-{
-    QDialog dialog(this);
-    dialog.setObjectName(QStringLiteral("languageDialog"));
-    dialog.setModal(true);
-    dialog.setMinimumWidth(460);
-    dialog.setWindowTitle(
-        m_language == UiLanguage::Spanish ? QStringLiteral("Seleccionar idioma")
-                                          : QStringLiteral("Select language"));
-
-    auto *layout = new QVBoxLayout(&dialog);
-    layout->setContentsMargins(28, 26, 28, 24);
-    layout->setSpacing(14);
-
-    auto *title = new QLabel(
-        m_language == UiLanguage::Spanish ? QStringLiteral("Selecciona el idioma")
-                                          : QStringLiteral("Select your language"),
-        &dialog);
-    title->setObjectName(QStringLiteral("dialogTitle"));
-    auto *description = new QLabel(
-        m_language == UiLanguage::Spanish
-            ? QStringLiteral("El cambio se aplicará ahora y se conservará para el próximo uso.")
-            : QStringLiteral("The change will apply now and be remembered for your next visit."),
-        &dialog);
-    description->setObjectName(QStringLiteral("screenHint"));
-    description->setWordWrap(true);
-
-    auto *spanishButton = new QPushButton(QStringLiteral("Español"), &dialog);
-    spanishButton->setObjectName(QStringLiteral("languageOption"));
-    spanishButton->setCheckable(true);
-    spanishButton->setChecked(m_language == UiLanguage::Spanish);
-    spanishButton->setAccessibleName(QStringLiteral("Español"));
-    spanishButton->setCursor(Qt::PointingHandCursor);
-
-    auto *englishButton = new QPushButton(QStringLiteral("English"), &dialog);
-    englishButton->setObjectName(QStringLiteral("languageOption"));
-    englishButton->setCheckable(true);
-    englishButton->setChecked(m_language == UiLanguage::English);
-    englishButton->setAccessibleName(QStringLiteral("English"));
-    englishButton->setCursor(Qt::PointingHandCursor);
-
-    auto *cancelButton = new QPushButton(
-        m_language == UiLanguage::Spanish ? QStringLiteral("Cancelar")
-                                          : QStringLiteral("Cancel"),
-        &dialog);
-    cancelButton->setObjectName(QStringLiteral("footerAction"));
-    cancelButton->setCursor(Qt::PointingHandCursor);
-
-    connect(spanishButton, &QPushButton::clicked, &dialog, [this, &dialog] {
-        setLanguage(UiLanguage::Spanish);
-        dialog.accept();
-    });
-    connect(englishButton, &QPushButton::clicked, &dialog, [this, &dialog] {
-        setLanguage(UiLanguage::English);
-        dialog.accept();
-    });
-    connect(cancelButton, &QPushButton::clicked, &dialog, &QDialog::reject);
-
-    layout->addWidget(title);
-    layout->addWidget(description);
-    layout->addSpacing(8);
-    layout->addWidget(spanishButton);
-    layout->addWidget(englishButton);
-    layout->addSpacing(6);
-    layout->addWidget(cancelButton, 0, Qt::AlignRight);
-
-    dialog.exec();
 }
 
 void MainWindow::setLanguage(UiLanguage language)
@@ -1245,13 +1133,6 @@ void MainWindow::retranslateUi()
     m_footerContext->setText(
         spanish ? QStringLiteral("Máquina disponible para operaciones simuladas")
                 : QStringLiteral("Machine available for simulated operations"));
-    m_accessibilityButton->setText(
-        spanish ? QStringLiteral("Accesibilidad") : QStringLiteral("Accessibility"));
-    m_languageButton->setText(
-        spanish ? QStringLiteral("Idioma · ES") : QStringLiteral("Language · EN"));
-    m_languageButton->setAccessibleName(
-        spanish ? QStringLiteral("Cambiar idioma. Idioma actual: español")
-                : QStringLiteral("Change language. Current language: English"));
     m_catalogTitle->setText(
         spanish ? QStringLiteral("Títulos y tarifas") : QStringLiteral("Tickets and fares"));
     m_catalogHint->setText(
