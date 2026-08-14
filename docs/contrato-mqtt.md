@@ -85,6 +85,8 @@ rmm/v1/devices/{deviceCode}/presence
 rmm/v1/devices/{deviceCode}/status
 rmm/v1/devices/{deviceCode}/telemetry
 rmm/v1/devices/{deviceCode}/events/{eventType}
+rmm/v1/devices/{deviceCode}/requests/purchases
+rmm/v1/devices/{deviceCode}/requests/recharges
 rmm/v1/devices/{deviceCode}/requests/validations
 rmm/v1/devices/{deviceCode}/acks
 ```
@@ -109,6 +111,8 @@ pertenecen al payload para simplificar las ACL y evitar su aparición en registr
 | `devices/{deviceCode}/status` | 1 | Sí | Máquina |
 | `devices/{deviceCode}/telemetry` | 0 | No | Máquina |
 | `devices/{deviceCode}/events/{eventType}` | 1 | No | Máquina |
+| `devices/{deviceCode}/requests/purchases` | 1 | No | Máquina de venta |
+| `devices/{deviceCode}/requests/recharges` | 1 | No | Máquina de venta |
 | `devices/{deviceCode}/requests/validations` | 1 | No | Máquina |
 | `devices/{deviceCode}/acks` | 1 | No | Máquina |
 | `devices/{deviceCode}/commands` | 1 | No | Backend |
@@ -405,7 +409,7 @@ ACL conceptual de una máquina `{deviceCode}`:
 
 | Identidad | Publicación adicional | Topics comunes |
 | --- | --- | --- |
-| `RMM-TM-*` | `requests/purchases` | Su `presence`, `status`, `telemetry`, `events/+` y `acks` |
+| `RMM-TM-*` | `requests/purchases` y `requests/recharges` | Su `presence`, `status`, `telemetry`, `events/+` y `acks` |
 | `RMM-EN-*` | `requests/validations` de entrada | Su `presence`, `status`, `telemetry`, `events/+` y `acks` |
 | `RMM-EX-*` | `requests/validations` de salida | Su `presence`, `status`, `telemetry`, `events/+` y `acks` |
 
