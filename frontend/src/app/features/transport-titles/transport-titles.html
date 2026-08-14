@@ -135,6 +135,7 @@
         @if (loadingIssuanceOptions) {
           <div class="dialog-state" role="status">Cargando máquinas y estaciones…</div>
         } @else {
+          @if (issuanceProgress === 'FORM' || issuanceProgress === 'FAILED') {
           <form class="issuance-form" (submit)="$event.preventDefault(); submitCompensatoryIssuance()">
             <fieldset class="delivery-method full-width">
               <legend>Canal de entrega</legend>
@@ -250,6 +251,48 @@
               <button type="submit" class="primary-button" [disabled]="!canSubmitIssuance()">{{ issuingTicket ? 'Emitiendo…' : 'Confirmar emisión' }}</button>
             </footer>
           </form>
+          } @else {
+            <section class="issuance-progress" aria-live="polite">
+              <ol class="progress-steps" aria-label="Progreso de la emisión">
+                <li class="done"><span>1</span><strong>Solicitud registrada</strong></li>
+                <li [class.done]="issuanceProgress !== 'SUBMITTING'" [class.active]="issuanceProgress === 'SUBMITTING'">
+                  <span>2</span><strong>{{ issuanceProgress === 'SUBMITTING' ? 'Preparando entrega' : 'Entrega procesada' }}</strong>
+                </li>
+                <li [class.done]="issuanceProgress === 'COMPLETED'" [class.active]="issuanceProgress === 'PROCESSING'">
+                  <span>3</span><strong>{{ issuanceProgress === 'PROCESSING' ? 'Esperando confirmación' : 'Resultado' }}</strong>
+                </li>
+              </ol>
+
+              @if (issuanceProgress === 'SUBMITTING') {
+                <div class="progress-state" role="status">
+                  <span class="progress-spinner" aria-hidden="true"></span>
+                  <h3>Registrando la emisión</h3>
+                  <p>Estamos validando el producto, el soporte y el destino seleccionado.</p>
+                </div>
+              } @else if (issuanceResult; as result) {
+                <div class="result-state" [class.pending]="issuanceProgress === 'PROCESSING'">
+                  <span class="result-icon" aria-hidden="true">{{ issuanceProgress === 'PROCESSING' ? '…' : '✓' }}</span>
+                  <h3>{{ issuanceProgress === 'PROCESSING' ? 'Emisión en proceso' : 'Emisión completada' }}</h3>
+                  <p>{{ issuanceResultMessage() }}</p>
+                  <dl class="issuance-result-details">
+                    <div><dt>Referencia</dt><dd>{{ result.code }}</dd></div>
+                    <div><dt>Canal</dt><dd>{{ result.deliveryMethod === 'DIGITAL_WALLET' ? 'Cartera digital' : 'Máquina de venta' }}</dd></div>
+                    <div><dt>Destino</dt><dd>{{ result.passengerEmail || result.deviceName }}</dd></div>
+                    <div><dt>Billete</dt><dd>{{ result.ticketCode || (result.simulated ? 'No generado (simulación)' : 'Pendiente') }}</dd></div>
+                  </dl>
+                </div>
+              }
+
+              <footer class="dialog-actions progress-actions">
+                @if (issuanceProgress === 'COMPLETED') {
+                  <button type="button" class="secondary-button" (click)="returnToIssuanceForm()">Realizar otra emisión</button>
+                }
+                <button type="button" class="secondary-button" (click)="closeIssuanceDialog()">
+                  {{ issuanceProgress === 'PROCESSING' ? 'Cerrar y consultar logs' : 'Cerrar' }}
+                </button>
+              </footer>
+            </section>
+          }
         }
       </section>
     </div>

@@ -4,6 +4,7 @@ import { forkJoin } from 'rxjs';
 import {
   CompensatoryDeliveryMethod,
   CompensatoryTicketIssuanceRequest,
+  CompensatoryTicketIssuanceResponse,
   TransportTitle,
   TransportTitlesResponse,
   TransportTitleType
@@ -18,6 +19,7 @@ import { PassengerAccountsService } from '../../core/services/passenger-accounts
 
 type TypeFilter = TransportTitleType | 'ALL';
 type StatusFilter = 'ALL' | 'ACTIVE' | 'INACTIVE';
+type IssuanceProgress = 'FORM' | 'SUBMITTING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 
 @Component({
   selector: 'app-transport-titles',
@@ -44,6 +46,8 @@ export class TransportTitles implements OnInit {
   issuingTicket = false;
   issuanceError = '';
   issuanceConfirmation = '';
+  issuanceProgress: IssuanceProgress = 'FORM';
+  issuanceResult: CompensatoryTicketIssuanceResponse | null = null;
   selectedDeviceCode = '';
   selectedPassengerPublicId = '';
   selectedDeliveryMethod: CompensatoryDeliveryMethod = 'PHYSICAL_DEVICE';
@@ -210,11 +214,14 @@ export class TransportTitles implements OnInit {
       return;
     }
     this.issuingTicket = true;
+    this.issuanceProgress = 'SUBMITTING';
+    this.issuanceResult = null;
     this.issuanceError = '';
     this.transportTitlesService.issueCompensatoryTicket(title.id, this.issuanceRequest(title)).subscribe({
       next: (issuance) => {
         this.issuingTicket = false;
-        this.issuanceTitle = null;
+        this.issuanceResult = issuance;
+        this.issuanceProgress = issuance.status === 'PROCESSING' ? 'PROCESSING' : 'COMPLETED';
         if (issuance.deliveryMethod === 'DIGITAL_WALLET') {
           this.issuanceConfirmation = `Billete ${issuance.ticketCode} entregado a ${issuance.passengerEmail}.`;
         } else if (issuance.simulated) {
@@ -225,6 +232,7 @@ export class TransportTitles implements OnInit {
       },
       error: () => {
         this.issuingTicket = false;
+        this.issuanceProgress = 'FAILED';
         this.issuanceError = 'No se ha podido completar la emisión compensatoria.';
       }
     });
@@ -292,6 +300,29 @@ export class TransportTitles implements OnInit {
       ? 'Conectada por MQTT' : 'Emisión simulada';
   }
 
+  returnToIssuanceForm(): void {
+    if (!this.issuingTicket) {
+      this.issuanceProgress = 'FORM';
+      this.issuanceError = '';
+      this.issuanceResult = null;
+    }
+  }
+
+  issuanceResultMessage(): string {
+    const issuance = this.issuanceResult;
+    if (!issuance) return '';
+    if (issuance.status === 'PROCESSING') {
+      return 'La orden se ha enviado a la máquina y está pendiente de confirmación.';
+    }
+    if (issuance.deliveryMethod === 'DIGITAL_WALLET') {
+      return 'El billete digital ya está disponible en la cartera del pasajero.';
+    }
+    if (issuance.simulated) {
+      return 'La emisión se ha simulado y ha quedado registrada sin generar un billete.';
+    }
+    return 'La emisión ha finalizado correctamente.';
+  }
+
   private loadIssuanceOptions(): void {
     this.loadingIssuanceOptions = true;
     this.issuanceError = '';
@@ -327,6 +358,8 @@ export class TransportTitles implements OnInit {
 
   private resetIssuanceForm(title: TransportTitle): void {
     this.issuanceError = '';
+    this.issuanceProgress = 'FORM';
+    this.issuanceResult = null;
     this.issuanceConfirmation = '';
     this.selectedDeviceCode = '';
     this.selectedPassengerPublicId = '';

@@ -176,7 +176,10 @@ describe('TransportTitles', () => {
       reason: 'Fallo durante la compra',
       originStationCode: 'ST001', destinationStationCode: 'ST002'
     });
-    expect(component.issuanceTitle).toBeNull();
+    expect(component.issuanceTitle).toBe(response.titles[0]);
+    expect(component.issuanceProgress).toBe('COMPLETED');
+    expect(component.issuanceResult?.ticketCode).toBe('RMM-1');
+    expect(component.issuanceResultMessage()).toContain('finalizado correctamente');
     expect(component.issuanceConfirmation).toContain('RMM-1');
   });
 

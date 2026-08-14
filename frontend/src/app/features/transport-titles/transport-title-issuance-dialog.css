@@ -39,6 +39,30 @@
 .dialog-error { border-radius: 12px; padding: 11px 13px; color: #991b1b; background: #fef2f2; font-size: 12px; font-weight: 750; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 3px; }
 .secondary-button { color: #334155; background: #e2e8f0; }
+.issuance-progress { padding: 22px 24px 24px; }
+.progress-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0 0 24px; padding: 0; list-style: none; }
+.progress-steps li { position: relative; display: flex; align-items: center; gap: 8px; min-width: 0; color: #94a3b8; font-size: 10px; }
+.progress-steps li:not(:last-child)::after { position: absolute; z-index: 0; top: 15px; left: 30px; right: -8px; height: 2px; content: ''; background: #e2e8f0; }
+.progress-steps span { position: relative; z-index: 1; display: grid; width: 30px; height: 30px; flex: 0 0 auto; place-items: center; border: 2px solid #cbd5e1; border-radius: 50%; color: #64748b; background: #fff; font-weight: 950; }
+.progress-steps strong { position: relative; z-index: 1; max-width: 104px; line-height: 1.25; }
+.progress-steps li.done, .progress-steps li.active { color: #0f172a; }
+.progress-steps li.done span { border-color: #0f172a; color: #fff; background: #0f172a; }
+.progress-steps li.done:not(:last-child)::after { background: #0f172a; }
+.progress-steps li.active span { border-color: #0284c7; color: #0369a1; background: #e0f2fe; }
+.progress-state, .result-state { display: flex; flex-direction: column; align-items: center; min-height: 230px; justify-content: center; border: 1px solid #bbf7d0; border-radius: 17px; padding: 25px; color: #166534; background: #f0fdf4; text-align: center; }
+.progress-state, .result-state.pending { border-color: #bae6fd; color: #075985; background: #f0f9ff; }
+.progress-state h3, .result-state h3 { margin: 13px 0 5px; color: #0f172a; font-size: 18px; }
+.progress-state p, .result-state > p { max-width: 470px; margin: 0; font-size: 12px; line-height: 1.5; }
+.progress-spinner, .result-icon { display: grid; width: 48px; height: 48px; place-items: center; border-radius: 50%; font-size: 25px; font-weight: 950; }
+.progress-spinner { border: 4px solid #bae6fd; border-top-color: #0284c7; animation: issuance-spin .8s linear infinite; }
+.result-icon { color: #fff; background: #16a34a; }
+.result-state.pending .result-icon { color: #075985; background: #bae6fd; }
+.issuance-result-details { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin: 20px 0 0; text-align: left; }
+.issuance-result-details div { min-width: 0; border: 1px solid rgba(148, 163, 184, .32); border-radius: 11px; padding: 10px 12px; background: rgba(255, 255, 255, .72); }
+.issuance-result-details dt { color: #64748b; font-size: 9px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; }
+.issuance-result-details dd { overflow-wrap: anywhere; margin: 4px 0 0; color: #0f172a; font-size: 12px; font-weight: 850; }
+.progress-actions { margin-top: 16px; }
+@keyframes issuance-spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 520px) {
   .dialog-backdrop { padding: 10px; }
@@ -48,6 +72,10 @@
   .full-width { grid-column: auto; }
   .delivery-method { grid-template-columns: 1fr; }
   .delivery-method legend { grid-column: auto; }
+  .issuance-progress { padding: 18px 16px; }
+  .progress-steps { grid-template-columns: 1fr; }
+  .progress-steps li:not(:last-child)::after { top: 30px; right: auto; bottom: -8px; left: 14px; width: 2px; height: auto; }
+  .issuance-result-details { grid-template-columns: 1fr; }
   .dialog-actions { flex-direction: column-reverse; }
   .dialog-actions button { width: 100%; }
 }
