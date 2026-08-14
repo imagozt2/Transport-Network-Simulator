@@ -177,9 +177,10 @@ QByteArray buildOperationEvent(
     const QString &ticketCode,
     const QString &resultCode,
     const QString &messageId,
-    const QDateTime &now)
+    const QDateTime &now,
+    const QVariantMap &extraDetails)
 {
-    QJsonObject details;
+    QJsonObject details = QJsonObject::fromVariantMap(extraDetails);
     if (!purchaseReference.isEmpty()) details.insert(QStringLiteral("purchaseReference"), purchaseReference);
     if (!ticketCode.isEmpty()) details.insert(QStringLiteral("ticketCode"), ticketCode);
     if (!resultCode.isEmpty()) details.insert(QStringLiteral("resultCode"), resultCode);

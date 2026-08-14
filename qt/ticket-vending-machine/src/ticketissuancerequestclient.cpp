@@ -82,8 +82,12 @@ TicketIssuanceRequestClient::TicketIssuanceRequestClient(QObject *parent)
             m_awaitedRechargeReference.clear();
             m_pendingIsRecharge = false;
             publishOperationEvent(
-                QStringLiteral("TICKET_RECHARGED"), recharge.rechargeReference,
-                recharge.ticketCode, recharge.productType);
+                QStringLiteral("TICKET_RECHARGE_COMPLETED"), recharge.rechargeReference,
+                recharge.ticketCode, QStringLiteral("COMPLETED"),
+                {{QStringLiteral("productType"), recharge.productType},
+                 {QStringLiteral("amount"), recharge.totalAmount},
+                 {QStringLiteral("currency"), recharge.currency},
+                 {QStringLiteral("rechargeCode"), recharge.rechargeCode}});
             emit ticketRecharged(recharge);
             return;
         }
@@ -269,7 +273,8 @@ void TicketIssuanceRequestClient::publishOperationEvent(
     const QString &eventCode,
     const QString &purchaseReference,
     const QString &ticketCode,
-    const QString &resultCode)
+    const QString &resultCode,
+    const QVariantMap &details)
 {
     if (eventCode.isEmpty()) {
         return;
@@ -278,7 +283,7 @@ void TicketIssuanceRequestClient::publishOperationEvent(
     publishOrQueue(topic, rmm::ticketmachine::buildOperationEvent(
         m_deviceCode, eventCode, purchaseReference, ticketCode, resultCode,
         QUuid::createUuid().toString(QUuid::WithoutBraces),
-        QDateTime::currentDateTimeUtc()));
+        QDateTime::currentDateTimeUtc(), details));
 }
 
 void TicketIssuanceRequestClient::submit(const TicketIssuanceRequest &request)
@@ -340,6 +345,12 @@ void TicketIssuanceRequestClient::submitRecharge(const TicketRechargeRequest &re
         connectToBroker();
         scheduleReconnect();
     }
+    publishOperationEvent(
+        QStringLiteral("TICKET_RECHARGE_REQUESTED"), m_awaitedRechargeReference,
+        QString(), QStringLiteral("PAYMENT_SIMULATED"),
+        {{QStringLiteral("productType"), request.productType},
+         {QStringLiteral("amount"), request.paidAmount},
+         {QStringLiteral("currency"), QStringLiteral("EUR")}});
 }
 
 void TicketIssuanceRequestClient::publishPending()
@@ -367,7 +378,8 @@ void TicketIssuanceRequestClient::fail(const QString &reason)
     if (!m_awaitedRechargeReference.isEmpty()) {
         publishOperationEvent(
             QStringLiteral("TICKET_RECHARGE_FAILED"), m_awaitedRechargeReference,
-            QString(), reason);
+            QString(), reason,
+            {{QStringLiteral("operation"), QStringLiteral("RECHARGE")}});
     } else if (!m_awaitedReference.isEmpty()) {
         publishOperationEvent(
             QStringLiteral("TICKET_PURCHASE_FAILED"), m_awaitedReference, QString(), reason);

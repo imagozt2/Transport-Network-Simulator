@@ -337,6 +337,11 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_rechargeLookupClient, &TicketRechargeLookupClient::loaded, this,
             [this](const RechargeableTicket &ticket) {
         m_pendingRecharge = ticket;
+        m_issuanceClient->publishOperationEvent(
+            QStringLiteral("QR_TICKET_SCANNED"), QString(), ticket.ticketCode,
+            QStringLiteral("RECHARGE_LOOKUP"),
+            {{QStringLiteral("productType"), ticket.productType},
+             {QStringLiteral("supportType"), ticket.supportType}});
         showRechargeOptions(ticket);
         if (ticket.requiresOriginDestination && m_stations.isEmpty()) {
             m_stationLoadFailed = false;
@@ -1125,7 +1130,8 @@ void MainWindow::showRechargeConfirmation(const TicketRechargeQuote &quote)
             quote.configuration.trips,
             quote.configuration.days,
             quote.configuration.balanceAmount,
-            quote.totalAmount
+            quote.totalAmount,
+            quote.productType
         });
     });
     showPurchaseFlowPanel(panel);

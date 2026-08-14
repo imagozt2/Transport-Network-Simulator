@@ -6,6 +6,7 @@
 #include <QObject>
 #include <QQueue>
 #include <QString>
+#include <QVariantMap>
 
 class QMqttClient;
 class QTimer;
@@ -22,7 +23,8 @@ public:
         const QString &eventCode,
         const QString &purchaseReference,
         const QString &ticketCode,
-        const QString &resultCode = QString());
+        const QString &resultCode = QString(),
+        const QVariantMap &details = {});
     void completeCompensatoryIssuance(
         const QString &commandId,
         const QString &issuanceCode);

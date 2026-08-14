@@ -320,6 +320,23 @@ void TicketMachineProtocolTest::completesARechargeContract()
     QCOMPARE(result.remainingTrips, 9);
     QVERIFY(!rmm::ticketmachine::parseRechargeResponse(
         response, QStringLiteral("different-reference")).valid);
+
+    const auto event = object(rmm::ticketmachine::buildOperationEvent(
+        QStringLiteral("RMM-TM-ST001-01"),
+        QStringLiteral("TICKET_RECHARGE_COMPLETED"), reference,
+        result.ticketCode, QStringLiteral("COMPLETED"),
+        QStringLiteral("event-1"), Now,
+        {{QStringLiteral("productType"), result.productType},
+         {QStringLiteral("amount"), result.totalAmount}}));
+    const auto eventPayload = event.value(QStringLiteral("payload")).toObject();
+    const auto details = eventPayload.value(QStringLiteral("details")).toObject();
+    QCOMPARE(eventPayload.value(QStringLiteral("eventCode")).toString(),
+             QStringLiteral("TICKET_RECHARGE_COMPLETED"));
+    QCOMPARE(eventPayload.value(QStringLiteral("severity")).toString(), QStringLiteral("INFO"));
+    QCOMPARE(details.value(QStringLiteral("productType")).toString(),
+             QStringLiteral("MULTI_TRIP"));
+    QCOMPARE(details.value(QStringLiteral("resultCode")).toString(),
+             QStringLiteral("COMPLETED"));
 }
 
 QTEST_APPLESS_MAIN(TicketMachineProtocolTest)

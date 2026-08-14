@@ -4,6 +4,7 @@
 #include <QDateTime>
 #include <QMetaType>
 #include <QString>
+#include <QVariantMap>
 
 struct TicketIssuanceRequest
 {
@@ -24,6 +25,7 @@ struct TicketRechargeRequest
     int days = 0;
     double balanceAmount = 0.0;
     double paidAmount = 0.0;
+    QString productType;
 };
 
 struct TicketRechargeResult
@@ -96,7 +98,8 @@ QByteArray buildOperationEvent(
     const QString &ticketCode,
     const QString &resultCode,
     const QString &messageId,
-    const QDateTime &now);
+    const QDateTime &now,
+    const QVariantMap &extraDetails = {});
 
 QByteArray buildCommandAcknowledgement(
     const QString &deviceCode,
