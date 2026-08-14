@@ -63,7 +63,7 @@ private:
         int quantity,
         double rechargeAmount);
     void showPaymentScreen(const TicketProduct &product, double amount);
-    void showIssuedTicketScreen(
+    void showIssuedTicketWindow(
         const QString &ticketCode,
         const QByteArray &qrPng,
         const QString &qrValue,

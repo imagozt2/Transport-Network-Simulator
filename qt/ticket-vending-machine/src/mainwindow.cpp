@@ -340,7 +340,7 @@ MainWindow::MainWindow(QWidget *parent)
             [this](const QString &ticketCode, const QByteArray &qrPng,
                    const QString &qrValue, const QString &linkingCode,
                    const QString &purchaseReference) {
-        showIssuedTicketScreen(ticketCode, qrPng, qrValue, linkingCode, purchaseReference);
+        showIssuedTicketWindow(ticketCode, qrPng, qrValue, linkingCode, purchaseReference);
     });
     connect(m_issuanceClient, &TicketIssuanceRequestClient::compensatoryTicketIssued, this,
             [this](const QString &commandId, const QString &issuanceCode,
@@ -1144,7 +1144,7 @@ void MainWindow::showPaymentScreen(const TicketProduct &product, double rawAmoun
     showPurchaseFlowPanel(panel);
 }
 
-void MainWindow::showIssuedTicketScreen(
+void MainWindow::showIssuedTicketWindow(
     const QString &ticketCode,
     const QByteArray &qrPng,
     const QString &qrValue,
@@ -1152,48 +1152,67 @@ void MainWindow::showIssuedTicketScreen(
     const QString &purchaseReference)
 {
     QPixmap qr;
-    if (!qr.loadFromData(qrPng, "PNG")) return;
     const bool spanish = m_language == UiLanguage::Spanish;
-    auto *panel = new QFrame(m_contentStack);
-    panel->setObjectName(QStringLiteral("purchaseFlowPanel"));
-    auto *layout = new QVBoxLayout(panel);
+    if (!qr.loadFromData(qrPng, "PNG")) {
+        m_issuanceClient->publishOperationEvent(
+            QStringLiteral("TICKET_PURCHASE_FAILED"), purchaseReference,
+            ticketCode, QStringLiteral("INVALID_QR_IMAGE"));
+        QMessageBox::critical(
+            this,
+            spanish ? QStringLiteral("No se puede mostrar el billete")
+                    : QStringLiteral("Ticket cannot be displayed"),
+            spanish
+                ? QStringLiteral("El billete se ha emitido, pero la imagen QR recibida no es válida. Solicita asistencia antes de abandonar la máquina.")
+                : QStringLiteral("The ticket was issued, but the received QR image is invalid. Request assistance before leaving the machine."));
+        showHome();
+        return;
+    }
+
+    QDialog dialog(this);
+    dialog.setObjectName(QStringLiteral("configurationDialog"));
+    dialog.setModal(true);
+    dialog.setWindowFlag(Qt::WindowCloseButtonHint, false);
+    dialog.setMinimumSize(600, 680);
+    dialog.setWindowTitle(spanish ? QStringLiteral("Billete emitido")
+                                  : QStringLiteral("Ticket issued"));
+    auto *layout = new QVBoxLayout(&dialog);
     layout->setContentsMargins(36, 28, 36, 28);
     layout->setSpacing(12);
 
     auto *title = new QLabel(spanish ? QStringLiteral("Tu billete está listo")
-                                    : QStringLiteral("Your ticket is ready"), panel);
+                                    : QStringLiteral("Your ticket is ready"), &dialog);
     title->setObjectName(QStringLiteral("dialogTitle"));
     auto *hint = new QLabel(
         spanish ? QStringLiteral("Escanea el QR o conserva el soporte físico que simula esta máquina.")
                 : QStringLiteral("Scan the QR or keep the physical support simulated by this machine."),
-        panel);
+        &dialog);
     hint->setObjectName(QStringLiteral("screenHint"));
     hint->setWordWrap(true);
-    auto *qrLabel = new QLabel(panel);
+    auto *qrLabel = new QLabel(&dialog);
     qrLabel->setAlignment(Qt::AlignCenter);
-    qrLabel->setPixmap(qr);
+    qrLabel->setPixmap(qr.scaled(340, 340, Qt::KeepAspectRatio, Qt::SmoothTransformation));
     qrLabel->setAccessibleName(spanish ? QStringLiteral("Código QR del billete")
                                       : QStringLiteral("Ticket QR code"));
-    auto *code = new QLabel(ticketCode, panel);
+    auto *code = new QLabel(ticketCode, &dialog);
     code->setObjectName(QStringLiteral("productCode"));
     code->setAlignment(Qt::AlignCenter);
     code->setTextInteractionFlags(Qt::TextSelectableByMouse);
     auto *link = new QLabel(
         spanish ? QStringLiteral("Código de vinculación: %1").arg(linkingCode)
-                : QStringLiteral("Linking code: %1").arg(linkingCode), panel);
+                : QStringLiteral("Linking code: %1").arg(linkingCode), &dialog);
     link->setObjectName(QStringLiteral("productName"));
     link->setAlignment(Qt::AlignCenter);
     auto *finish = new QPushButton(spanish ? QStringLiteral("Finalizar")
-                                          : QStringLiteral("Finish"), panel);
+                                          : QStringLiteral("Finish"), &dialog);
     finish->setObjectName(QStringLiteral("confirmAction"));
     finish->setCursor(Qt::PointingHandCursor);
     finish->setProperty("qrValue", qrValue);
-    connect(finish, &QPushButton::clicked, panel,
-            [this, purchaseReference, ticketCode] {
+    connect(finish, &QPushButton::clicked, &dialog,
+            [this, &dialog, purchaseReference, ticketCode] {
         m_issuanceClient->publishOperationEvent(
             QStringLiteral("TICKET_PURCHASE_COMPLETED"), purchaseReference,
             ticketCode, QStringLiteral("TICKET_PRESENTED"));
-        showHome();
+        dialog.accept();
     });
 
     layout->addWidget(title);
@@ -1205,7 +1224,8 @@ void MainWindow::showIssuedTicketScreen(
     layout->addWidget(finish, 0, Qt::AlignRight);
     m_connectionState->setText(spanish ? QStringLiteral("Billete emitido")
                                       : QStringLiteral("Ticket issued"));
-    showPurchaseFlowPanel(panel);
+    dialog.exec();
+    showHome();
 }
 
 QString MainWindow::productName(const TicketProduct &product) const
