@@ -86,9 +86,14 @@ El cierre de sesión elimina el estado local incluso cuando falla la petición r
 usuario a `/login`. Cuenta y Configuración se abren desde la cabecera y no duplican entradas en el
 menú operativo.
 
-Las preferencias de idioma, densidad visual y reducción de movimiento son locales al navegador y
-no forman parte de la sesión. La interfaz pública, operativa y administrativa está disponible en
+El idioma y la reducción de movimiento son locales al navegador. La zona horaria y el tema claro u
+oscuro se persisten en la cuenta mediante `/api/operators/me/display-preferences` y se aplican al
+cargar el layout autenticado. La interfaz pública, operativa y administrativa está disponible en
 español e inglés; cambiar el idioma actualiza la vista sin volver a autenticar al operador.
+
+La zona horaria solo transforma la presentación de fechas y horas; los instantes recibidos de la API
+mantienen su significado. El tema oscuro utiliza una paleta común para superficies, formularios y
+tablas sin sustituir los colores semánticos de las líneas ferroviarias.
 
 ## Actualización, rendimiento y consistencia visual
 

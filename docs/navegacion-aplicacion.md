@@ -124,10 +124,16 @@ operador puede volver a ejecutar de forma explícita.
 
 ## Idioma y preferencias
 
-La pantalla `/settings` permite elegir español o inglés, ajustar la densidad visual y reducir las
-animaciones. Estas preferencias se guardan en el navegador y se restauran en visitas posteriores;
-no modifican la cuenta del operador ni se envían al backend. Los textos públicos, operativos y
-administrativos utilizan el mismo servicio de internacionalización.
+La pantalla `/settings` permite elegir español o inglés, seleccionar una zona horaria, utilizar el
+tema claro u oscuro y reducir las animaciones. La zona horaria y el tema pertenecen a la cuenta del
+operador y se sincronizan con el backend. El idioma y la accesibilidad se guardan en el navegador.
+Los textos públicos, operativos y administrativos utilizan el mismo servicio de
+internacionalización.
+
+El formato temporal se resuelve de forma centralizada usando la zona IANA seleccionada. El tema se
+aplica en el elemento raíz para alcanzar también las vistas cargadas de forma diferida. No existe un
+control de actualización automática en Configuración: la periodicidad forma parte del comportamiento
+operativo de cada pantalla.
 
 ## Incorporación de nuevas secciones
 

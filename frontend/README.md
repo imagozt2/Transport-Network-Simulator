@@ -41,7 +41,7 @@ sesión se abre siempre `/dashboard`.
 | `/devices` | Inventario y estado operativo de las máquinas. |
 | `/logs` | Consulta filtrada y paginada de eventos de máquinas. |
 | `/account` | Datos de la cuenta del operador autenticado. |
-| `/settings` | Idioma y preferencias locales de presentación y accesibilidad. |
+| `/settings` | Idioma, zona horaria, tema y preferencias de accesibilidad. |
 
 El mapa incluye un planificador de trayectos. El itinerario calculado por el backend se presenta por
 tramos, muestra el sentido de cada línea y se representa sobre la red sin añadir transbordos
@@ -89,7 +89,11 @@ Líneas, Estaciones, Trenes y Cocheras utilizan `SummaryCard`.
 - Los iconos decorativos se ocultan a las tecnologías de asistencia.
 - Las tablas identifican semánticamente sus cabeceras de columna.
 - La preferencia «Reducir animaciones» se guarda únicamente en el navegador.
-- El idioma y la densidad visual también se conservan localmente y no alteran la cuenta del operador.
+- El idioma también se conserva localmente y no altera la cuenta del operador.
+- La zona horaria y el tema claro u oscuro se guardan en la cuenta y se restauran al cargar la
+  aplicación autenticada.
+- Las fechas y horas utilizan un formateador centralizado; el tema oscuro mantiene los colores
+  operativos de las líneas.
 - El sidebar pasa a modo superpuesto hasta 900 píxeles y las cuadrículas reducen progresivamente sus
   columnas en pantallas estrechas.
 
@@ -101,8 +105,8 @@ npm run build -- --configuration production
 ```
 
 La cobertura incluye servicios HTTP, sesión y guards, rutas, navegación contextual, filtros
-inicializados desde la URL, refresco periódico, presentación operativa, accesibilidad y layout
-adaptable.
+inicializados desde la URL, refresco periódico, zona horaria, persistencia del tema, presentación
+operativa, accesibilidad y layout adaptable.
 
 ## Organización principal
 
