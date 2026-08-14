@@ -3,12 +3,14 @@
 #include <algorithm>
 #include <QFrame>
 #include <QComboBox>
+#include <QCompleter>
 #include <QDialog>
 #include <QDoubleSpinBox>
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QLocale>
 #include <QLabel>
+#include <QLineEdit>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QPixmap>
@@ -183,6 +185,39 @@ constexpr auto windowStyle = R"(
         background-color: #cbd5e1;
         color: #64748b;
     }
+    QPushButton#stepAction {
+        min-width: 58px;
+        min-height: 58px;
+        max-width: 58px;
+        max-height: 58px;
+        border: 0;
+        border-radius: 16px;
+        background-color: #e2e8f0;
+        color: #0f172a;
+        font-size: 28px;
+        font-weight: 900;
+    }
+    QPushButton#stepAction:hover, QPushButton#stepAction:focus {
+        background-color: #bfdbfe;
+        color: #075985;
+    }
+    QPushButton#stepAction:disabled {
+        background-color: #f1f5f9;
+        color: #94a3b8;
+    }
+    QPushButton#swapStationsAction {
+        min-height: 44px;
+        padding: 6px 16px;
+        border: 1px solid #cbd5e1;
+        border-radius: 13px;
+        background-color: #f8fafc;
+        font-size: 14px;
+        font-weight: 800;
+    }
+    QPushButton#swapStationsAction:hover, QPushButton#swapStationsAction:focus {
+        border-color: #2294f2;
+        background-color: #eaf5fe;
+    }
     QDialog#configurationDialog {
         background-color: #ffffff;
     }
@@ -215,6 +250,11 @@ constexpr auto windowStyle = R"(
     }
     QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {
         border-color: #2294f2;
+    }
+    QSpinBox#quantityValue {
+        min-width: 150px;
+        font-size: 26px;
+        font-weight: 900;
     }
 )";
 }
@@ -779,18 +819,68 @@ void MainWindow::showProductConfiguration(const TicketProduct &product)
     QComboBox *destination = nullptr;
     QSpinBox *quantity = nullptr;
     QDoubleSpinBox *amount = nullptr;
+    const auto addQuantityField = [&](const QString &labelText, const QString &rangeText,
+                                      const QString &decreaseName, const QString &increaseName,
+                                      int minimum, int maximum) {
+        auto *label = new QLabel(labelText, panel);
+        label->setObjectName(QStringLiteral("fieldLabel"));
+        auto *range = new QLabel(rangeText, panel);
+        range->setObjectName(QStringLiteral("screenHint"));
+        auto *selector = new QSpinBox(panel);
+        selector->setObjectName(QStringLiteral("quantityValue"));
+        selector->setRange(minimum, maximum);
+        selector->setButtonSymbols(QAbstractSpinBox::NoButtons);
+        selector->setAlignment(Qt::AlignCenter);
+        selector->setReadOnly(true);
+        auto *decrease = new QPushButton(QStringLiteral("−"), panel);
+        auto *increase = new QPushButton(QStringLiteral("+"), panel);
+        decrease->setObjectName(QStringLiteral("stepAction"));
+        increase->setObjectName(QStringLiteral("stepAction"));
+        decrease->setCursor(Qt::PointingHandCursor);
+        increase->setCursor(Qt::PointingHandCursor);
+        decrease->setAccessibleName(decreaseName);
+        increase->setAccessibleName(increaseName);
+        auto *selectorLayout = new QHBoxLayout();
+        selectorLayout->addStretch();
+        selectorLayout->addWidget(decrease);
+        selectorLayout->addWidget(selector);
+        selectorLayout->addWidget(increase);
+        selectorLayout->addStretch();
+        connect(decrease, &QPushButton::clicked, selector,
+                [selector] { selector->setValue(selector->value() - 1); });
+        connect(increase, &QPushButton::clicked, selector,
+                [selector] { selector->setValue(selector->value() + 1); });
+        connect(selector, &QSpinBox::valueChanged, panel,
+                [selector, decrease, increase](int value) {
+            decrease->setEnabled(value > selector->minimum());
+            increase->setEnabled(value < selector->maximum());
+        });
+        decrease->setEnabled(false);
+        layout->addWidget(label);
+        layout->addWidget(range);
+        layout->addLayout(selectorLayout);
+        return selector;
+    };
 
     if (product.type == QStringLiteral("SINGLE_TRIP")) {
         const auto addStationField = [&](const QString &labelText) {
             auto *label = new QLabel(labelText, panel);
             label->setObjectName(QStringLiteral("fieldLabel"));
             auto *selector = new QComboBox(panel);
-            selector->addItem(spanish ? QStringLiteral("Selecciona una estación")
-                                      : QStringLiteral("Choose a station"));
+            selector->setEditable(true);
+            selector->setInsertPolicy(QComboBox::NoInsert);
+            selector->setAccessibleName(labelText);
             for (const auto &station : m_stations) {
                 selector->addItem(QStringLiteral("%1 · %2").arg(station.name, station.code),
                                   station.code);
             }
+            selector->setCurrentIndex(-1);
+            selector->lineEdit()->setPlaceholderText(
+                spanish ? QStringLiteral("Busca por nombre o código")
+                        : QStringLiteral("Search by name or code"));
+            selector->completer()->setCaseSensitivity(Qt::CaseInsensitive);
+            selector->completer()->setFilterMode(Qt::MatchContains);
+            selector->completer()->setCompletionMode(QCompleter::PopupCompletion);
             layout->addWidget(label);
             layout->addWidget(selector);
             return selector;
@@ -799,22 +889,40 @@ void MainWindow::showProductConfiguration(const TicketProduct &product)
                                          : QStringLiteral("Origin station"));
         destination = addStationField(spanish ? QStringLiteral("Estación de destino")
                                               : QStringLiteral("Destination station"));
+        auto *swapStations = new QPushButton(
+            spanish ? QStringLiteral("⇅ Intercambiar estaciones")
+                    : QStringLiteral("⇅ Swap stations"), panel);
+        swapStations->setObjectName(QStringLiteral("swapStationsAction"));
+        swapStations->setCursor(Qt::PointingHandCursor);
+        swapStations->setAccessibleName(
+            spanish ? QStringLiteral("Intercambiar origen y destino")
+                    : QStringLiteral("Swap origin and destination"));
+        connect(swapStations, &QPushButton::clicked, panel, [origin, destination] {
+            const int originIndex = origin->currentIndex();
+            origin->setCurrentIndex(destination->currentIndex());
+            destination->setCurrentIndex(originIndex);
+        });
+        layout->addWidget(swapStations, 0, Qt::AlignRight);
     } else if (product.type == QStringLiteral("MULTI_TRIP")) {
-        auto *label = new QLabel(spanish ? QStringLiteral("Número de viajes")
-                                        : QStringLiteral("Number of trips"), panel);
-        label->setObjectName(QStringLiteral("fieldLabel"));
-        quantity = new QSpinBox(panel);
-        quantity->setRange(product.minTrips.value_or(2), product.maxTrips.value_or(30));
-        layout->addWidget(label);
-        layout->addWidget(quantity);
+        const int minimum = product.minTrips.value_or(2);
+        const int maximum = product.maxTrips.value_or(30);
+        quantity = addQuantityField(
+            spanish ? QStringLiteral("Número de viajes") : QStringLiteral("Number of trips"),
+            spanish ? QStringLiteral("Selecciona entre %1 y %2 viajes").arg(minimum).arg(maximum)
+                    : QStringLiteral("Choose between %1 and %2 trips").arg(minimum).arg(maximum),
+            spanish ? QStringLiteral("Quitar un viaje") : QStringLiteral("Remove one trip"),
+            spanish ? QStringLiteral("Añadir un viaje") : QStringLiteral("Add one trip"),
+            minimum, maximum);
     } else if (product.type == QStringLiteral("TIME_PASS")) {
-        auto *label = new QLabel(spanish ? QStringLiteral("Número de días")
-                                        : QStringLiteral("Number of days"), panel);
-        label->setObjectName(QStringLiteral("fieldLabel"));
-        quantity = new QSpinBox(panel);
-        quantity->setRange(product.minDays.value_or(2), product.maxDays.value_or(30));
-        layout->addWidget(label);
-        layout->addWidget(quantity);
+        const int minimum = product.minDays.value_or(2);
+        const int maximum = product.maxDays.value_or(30);
+        quantity = addQuantityField(
+            spanish ? QStringLiteral("Número de días") : QStringLiteral("Number of days"),
+            spanish ? QStringLiteral("Selecciona entre %1 y %2 días").arg(minimum).arg(maximum)
+                    : QStringLiteral("Choose between %1 and %2 days").arg(minimum).arg(maximum),
+            spanish ? QStringLiteral("Quitar un día") : QStringLiteral("Remove one day"),
+            spanish ? QStringLiteral("Añadir un día") : QStringLiteral("Add one day"),
+            minimum, maximum);
     } else if (product.type == QStringLiteral("SMART_BALANCE")) {
         auto *label = new QLabel(spanish ? QStringLiteral("Importe de la recarga")
                                         : QStringLiteral("Recharge amount"), panel);
