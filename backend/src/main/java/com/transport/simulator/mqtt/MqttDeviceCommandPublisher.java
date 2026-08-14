@@ -83,7 +83,7 @@ public class MqttDeviceCommandPublisher {
             Map<String, Object> envelope = new LinkedHashMap<>();
             envelope.put("schemaVersion", 1);
             envelope.put("messageId", command.getMessageId());
-            envelope.put("correlationId", null);
+            envelope.put("correlationId", correlationId(commandPayload));
             envelope.put("type", command.getType().messageType());
             envelope.put("deviceCode", command.getDevice().getCode());
             envelope.put("occurredAt", instant(command.getRequestedAt()));
@@ -97,6 +97,13 @@ public class MqttDeviceCommandPublisher {
 
     private String topic(DeviceMqttCommand command) {
         return "rmm/v1/devices/" + command.getDevice().getCode() + "/commands";
+    }
+
+    private Object correlationId(Map<String, Object> payload) {
+        Object purchaseReference = payload.get("purchaseReference");
+        if (purchaseReference instanceof String value && !value.isBlank()) return value;
+        Object issuanceCode = payload.get("issuanceCode");
+        return issuanceCode instanceof String value && !value.isBlank() ? value : null;
     }
 
     private String instant(LocalDateTime value) {

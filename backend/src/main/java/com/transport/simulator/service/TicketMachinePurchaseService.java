@@ -111,6 +111,7 @@ public class TicketMachinePurchaseService {
         }
         commandService.send(device.getCode(), DeviceMqttCommandType.TICKET_ISSUE,
                 Map.of(
+                        "issuanceKind", "PURCHASE",
                         "purchaseReference", request.purchaseReference(),
                         "issuanceCode", persisted.getCode(),
                         "ticket", ticket

@@ -2,6 +2,7 @@
 
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonParseError>
 #include <QJsonValue>
 
 namespace {
@@ -71,21 +72,27 @@ IssueCommand parseIssueCommand(
     const QDateTime &now)
 {
     IssueCommand result;
-    const auto document = QJsonDocument::fromJson(message);
-    if (!document.isObject()
-            || document.object().value(QStringLiteral("type")).toString()
+    QJsonParseError parseError;
+    const auto document = QJsonDocument::fromJson(message, &parseError);
+    if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
+        return result;
+    }
+    const auto root = document.object();
+    if (root.value(QStringLiteral("schemaVersion")).toInt() != 1
+            || root.value(QStringLiteral("type")).toString()
                 != QStringLiteral("ticket.issue-command")) {
         return result;
     }
-    const auto payload = document.object().value(QStringLiteral("payload")).toObject();
+    const auto payload = root.value(QStringLiteral("payload")).toObject();
     result.commandId = payload.value(QStringLiteral("commandId")).toString();
     result.issuanceCode = payload.value(QStringLiteral("issuanceCode")).toString();
     result.purchaseReference = payload.value(QStringLiteral("purchaseReference")).toString();
-    result.compensatory = payload.value(QStringLiteral("issuanceKind")).toString()
-        == QStringLiteral("COMPENSATORY");
+    const QString issuanceKind = payload.value(QStringLiteral("issuanceKind")).toString();
+    result.compensatory = issuanceKind == QStringLiteral("COMPENSATORY");
     const QDateTime expiresAt = QDateTime::fromString(
-        payload.value(QStringLiteral("expiresAt")).toString(), Qt::ISODateWithMs);
+        payload.value(QStringLiteral("expiresAt")).toString(), Qt::ISODate);
     if (result.commandId.isEmpty() || !expiresAt.isValid() || expiresAt < now.toUTC()
+            || (!result.compensatory && issuanceKind != QStringLiteral("PURCHASE"))
             || (!result.compensatory && result.purchaseReference != awaitedReference)) {
         return {};
     }

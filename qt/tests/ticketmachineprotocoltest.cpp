@@ -38,6 +38,7 @@ QByteArray issueCommand(
         {QStringLiteral("ticket"), ticket},
     };
     return QJsonDocument(QJsonObject{
+        {QStringLiteral("schemaVersion"), 1},
         {QStringLiteral("type"), QStringLiteral("ticket.issue-command")},
         {QStringLiteral("payload"), payload},
     }).toJson(QJsonDocument::Compact);
