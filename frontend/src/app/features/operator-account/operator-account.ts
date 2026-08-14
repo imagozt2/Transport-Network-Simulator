@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 
 import { OperatorRole } from '../../core/models/operator-auth.model';
 import { OperatorAuthService } from '../../core/services/operator-auth.service';
-import { formatDateTime } from '../../core/utils/temporal-formatters';
+import { TemporalFormatService } from '../../core/services/temporal-format.service';
 
 @Component({
   selector: 'app-operator-account',
@@ -13,6 +13,7 @@ import { formatDateTime } from '../../core/utils/temporal-formatters';
 })
 export class OperatorAccountPage {
   private readonly authService = inject(OperatorAuthService);
+  private readonly temporalFormat = inject(TemporalFormatService);
 
   readonly operator = this.authService.currentOperator;
 
@@ -25,6 +26,6 @@ export class OperatorAccountPage {
   }
 
   formatDateTime(value: string | null, emptyLabel: string): string {
-    return formatDateTime(value, emptyLabel);
+    return this.temporalFormat.formatDateTime(value, emptyLabel);
   }
 }

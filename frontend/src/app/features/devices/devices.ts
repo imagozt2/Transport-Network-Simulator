@@ -11,6 +11,7 @@ import {
   DeviceType
 } from '../../core/models/device-operation.model';
 import { DeviceOperationsService } from '../../core/services/device-operations.service';
+import { TemporalFormatService } from '../../core/services/temporal-format.service';
 import {
   deviceConnectivityLabel,
   deviceStatusLabel,
@@ -19,7 +20,6 @@ import {
   deviceTypeShortLabel
 } from '../../core/utils/operation-labels';
 import { PeriodicRefresh } from '../../core/utils/periodic-refresh';
-import { formatDateTime } from '../../core/utils/temporal-formatters';
 import { DeviceEventSource } from '../../core/models/operational-log.types';
 
 type TypeFilter = DeviceType | 'ALL';
@@ -35,6 +35,7 @@ type ConnectivityFilter = DeviceConnectivityState | 'ALL';
 export class Devices implements OnInit, OnDestroy {
   protected readonly sectionRoutes = APPLICATION_ROUTES;
   private readonly deviceOperationsService = inject(DeviceOperationsService);
+  private readonly temporalFormat = inject(TemporalFormatService);
   private readonly periodicRefresh = new PeriodicRefresh(15_000, () => this.loadOperations());
   private readonly route = inject(ActivatedRoute);
 
@@ -199,7 +200,7 @@ export class Devices implements OnInit, OnDestroy {
   }
 
   formatDateTime(value: string | null): string {
-    return formatDateTime(value, 'Sin conexión registrada');
+    return this.temporalFormat.formatDateTime(value, 'Sin conexión registrada');
   }
 
 }

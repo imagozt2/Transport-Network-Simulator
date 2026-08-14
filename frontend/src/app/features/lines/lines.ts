@@ -12,10 +12,10 @@ import {
   ServicePeriodType
 } from '../../core/models/line-operation.model';
 import { LineOperationsService } from '../../core/services/line-operations.service';
+import { TemporalFormatService } from '../../core/services/temporal-format.service';
 import { contrastingTextColor, lineColor } from '../../core/utils/line-visuals';
 import { servicePeriodLabel, servicePhaseLabel } from '../../core/utils/operation-labels';
 import { PeriodicRefresh } from '../../core/utils/periodic-refresh';
-import { formatCountdown, formatDuration, formatTime } from '../../core/utils/temporal-formatters';
 import { SummaryCard } from '../../shared/summary-card/summary-card';
 
 @Component({
@@ -27,6 +27,7 @@ import { SummaryCard } from '../../shared/summary-card/summary-card';
 export class Lines implements OnInit, OnDestroy {
   protected readonly sectionRoutes = APPLICATION_ROUTES;
   private readonly lineOperationsService = inject(LineOperationsService);
+  private readonly temporalFormat = inject(TemporalFormatService);
   private readonly periodicRefresh = new PeriodicRefresh(5_000, () => this.loadOperations());
   private readonly expandedLineIds = new Set<number>();
   private hasInitializedExpansion = false;
@@ -153,7 +154,7 @@ export class Lines implements OnInit, OnDestroy {
   }
 
   formatCountdown(seconds: number): string {
-    return formatCountdown(seconds);
+    return this.temporalFormat.formatCountdown(seconds);
   }
 
   directionDestination(line: LineOperation, direction: ServiceDirection): string {
@@ -189,11 +190,11 @@ export class Lines implements OnInit, OnDestroy {
   }
 
   formatDuration(seconds: number | null): string {
-    return formatDuration(seconds);
+    return this.temporalFormat.formatDuration(seconds);
   }
 
   formatTime(value: string | null): string {
-    return formatTime(value);
+    return this.temporalFormat.formatTime(value);
   }
 
   phaseLabel(phase: ServiceOperationPhase): string {

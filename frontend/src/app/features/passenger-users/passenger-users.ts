@@ -9,7 +9,7 @@ import {
 } from '../../core/models/passenger-account.model';
 import { OperatorAuthService } from '../../core/services/operator-auth.service';
 import { PassengerAccountsService } from '../../core/services/passenger-accounts.service';
-import { formatDateTime } from '../../core/utils/temporal-formatters';
+import { TemporalFormatService } from '../../core/services/temporal-format.service';
 
 type OptionalStatus = PassengerAccountStatus | 'ALL';
 type VerificationFilter = 'ALL' | 'VERIFIED' | 'PENDING';
@@ -25,6 +25,7 @@ type VerificationFilter = 'ALL' | 'VERIFIED' | 'PENDING';
 })
 export class PassengerUsers implements OnInit {
   private readonly passengerAccountsService = inject(PassengerAccountsService);
+  private readonly temporalFormat = inject(TemporalFormatService);
   private readonly operatorAuthService = inject(OperatorAuthService);
 
   users: PassengerAccount[] = [];
@@ -355,7 +356,7 @@ export class PassengerUsers implements OnInit {
   }
 
   formatDate(value: string | null, emptyLabel = 'Sin accesos'): string {
-    return formatDateTime(value, emptyLabel);
+    return this.temporalFormat.formatDateTime(value, emptyLabel);
   }
 
   private verificationValue(): boolean | undefined {

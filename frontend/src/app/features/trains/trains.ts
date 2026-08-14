@@ -10,11 +10,11 @@ import {
   TrainStatus
 } from '../../core/models/train-operation.model';
 import { TrainOperationsService } from '../../core/services/train-operations.service';
+import { TemporalFormatService } from '../../core/services/temporal-format.service';
 import { depotShortCode } from '../../core/utils/depot-visuals';
 import { contrastingTextColor, lineColor } from '../../core/utils/line-visuals';
 import { fleetRoleLabel, trainStatusLabel } from '../../core/utils/operation-labels';
 import { PeriodicRefresh } from '../../core/utils/periodic-refresh';
-import { formatCountdown } from '../../core/utils/temporal-formatters';
 import { SummaryCard } from '../../shared/summary-card/summary-card';
 
 type StatusFilter = TrainStatus | 'ALL';
@@ -28,6 +28,7 @@ type RoleFilter = FleetRole | 'ALL';
 })
 export class Trains implements OnInit, OnDestroy {
   private readonly trainOperationsService = inject(TrainOperationsService);
+  private readonly temporalFormat = inject(TemporalFormatService);
   private readonly route = inject(ActivatedRoute);
   private readonly periodicRefresh = new PeriodicRefresh(15_000, () => this.loadOperations());
   private readonly expandedTrainIds = new Set<number>();
@@ -190,7 +191,7 @@ export class Trains implements OnInit, OnDestroy {
     if (!location) { return '—'; }
     const elapsedSeconds = Math.floor((this.countdownNowMs - this.snapshotReceivedAtMs) / 1_000);
     const remainingSeconds = Math.max(0, location.secondsUntilNextStation - elapsedSeconds);
-    return formatCountdown(remainingSeconds);
+    return this.temporalFormat.formatCountdown(remainingSeconds);
   }
 
   progressValue(train: TrainOperation): number { return train.serviceLocation?.progressPercentage ?? 0; }

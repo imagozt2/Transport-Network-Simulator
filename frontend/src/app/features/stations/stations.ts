@@ -10,10 +10,10 @@ import {
   StationOperationsResponse
 } from '../../core/models/station-operation.model';
 import { StationOperationsService } from '../../core/services/station-operations.service';
+import { TemporalFormatService } from '../../core/services/temporal-format.service';
 import { contrastingTextColor, lineColor } from '../../core/utils/line-visuals';
 import { stationStatusLabel } from '../../core/utils/operation-labels';
 import { PeriodicRefresh } from '../../core/utils/periodic-refresh';
-import { formatCountdown } from '../../core/utils/temporal-formatters';
 import { SummaryCard } from '../../shared/summary-card/summary-card';
 
 type StatusFilter = StationOperationStatus | 'ALL';
@@ -28,6 +28,7 @@ type LineCountFilter = 'ALL' | '1' | '2' | '3_PLUS';
 export class Stations implements OnInit, OnDestroy {
   protected readonly sectionRoutes = APPLICATION_ROUTES;
   private readonly stationOperationsService = inject(StationOperationsService);
+  private readonly temporalFormat = inject(TemporalFormatService);
   private readonly route = inject(ActivatedRoute);
   private readonly periodicRefresh = new PeriodicRefresh(15_000, () => this.loadOperations());
   private readonly expandedStationIds = new Set<number>();
@@ -152,7 +153,7 @@ export class Stations implements OnInit, OnDestroy {
   arrivalTimeLabel(arrival: StationArrival): string {
     if (arrival.atStation) { return 'En estación'; }
     const remainingSeconds = this.remainingSeconds(arrival);
-    return formatCountdown(remainingSeconds);
+    return this.temporalFormat.formatCountdown(remainingSeconds);
   }
 
   remainingSeconds(arrival: StationArrival): number {
