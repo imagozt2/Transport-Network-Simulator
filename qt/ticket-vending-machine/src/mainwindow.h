@@ -53,6 +53,8 @@ private:
     void showCatalog();
     void showHome();
     void renderCatalog();
+    void showPurchaseFlowPanel(QWidget *panel);
+    void leavePurchaseFlow(QWidget *destination);
     void showProductConfiguration(const TicketProduct &product);
     void preparePayment(
         const QString &productCode,
@@ -60,7 +62,13 @@ private:
         const QString &destinationStationCode,
         int quantity,
         double rechargeAmount);
-    void showPaymentDialog(const TicketProduct &product, double amount);
+    void showPaymentScreen(const TicketProduct &product, double amount);
+    void showIssuedTicketScreen(
+        const QString &ticketCode,
+        const QByteArray &qrPng,
+        const QString &qrValue,
+        const QString &linkingCode,
+        const QString &purchaseReference);
     [[nodiscard]] QString productName(const TicketProduct &product) const;
     [[nodiscard]] QString productTariff(const TicketProduct &product) const;
     [[nodiscard]] QString productRules(const TicketProduct &product) const;
@@ -81,6 +89,7 @@ private:
     QStackedWidget *m_contentStack = nullptr;
     QWidget *m_homePanel = nullptr;
     QWidget *m_catalogPanel = nullptr;
+    QWidget *m_purchaseFlowPanel = nullptr;
     QLabel *m_catalogTitle = nullptr;
     QLabel *m_catalogHint = nullptr;
     QLabel *m_catalogState = nullptr;
