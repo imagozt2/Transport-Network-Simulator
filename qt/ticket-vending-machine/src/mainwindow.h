@@ -5,6 +5,7 @@
 #include "stationcatalogclient.h"
 #include "journeyquoteclient.h"
 #include "ticketissuancerequestclient.h"
+#include "ticketrechargelookupclient.h"
 #include <optional>
 
 class QLabel;
@@ -30,6 +31,13 @@ signals:
     void purchaseRequested();
     void rechargeRequested();
     void rechargeQrScanned(const QString &qrValue);
+    void rechargeConfigurationSelected(
+        const QString &qrValue,
+        const QString &originStationCode,
+        const QString &destinationStationCode,
+        int trips,
+        int days,
+        double balanceAmount);
     void configurationSelected(
         const QString &productCode,
         const QString &originStationCode,
@@ -55,6 +63,8 @@ private:
     void showCatalog();
     void showHome();
     void showRechargeScanner();
+    void showRechargeLookupProgress();
+    void showRechargeOptions(const RechargeableTicket &ticket);
     void renderCatalog();
     void showPurchaseFlowPanel(QWidget *panel);
     void leavePurchaseFlow(QWidget *destination);
@@ -104,10 +114,12 @@ private:
     StationCatalogClient *m_stationClient = nullptr;
     JourneyQuoteClient *m_journeyClient = nullptr;
     TicketIssuanceRequestClient *m_issuanceClient = nullptr;
+    TicketRechargeLookupClient *m_rechargeLookupClient = nullptr;
     QVector<TicketProduct> m_products;
     QVector<NetworkStation> m_stations;
     QString m_machineStationCode;
     bool m_stationLoadFailed = false;
+    std::optional<RechargeableTicket> m_pendingRecharge;
     struct PendingPayment
     {
         TicketProduct product;
