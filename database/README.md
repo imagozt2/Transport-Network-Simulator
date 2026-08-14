@@ -57,11 +57,12 @@ El modelo administrativo se explica en
 [`docs/usuarios-rmm-app.md`](../docs/usuarios-rmm-app.md).
 
 `compensatory_ticket_issuances` registra las emisiones gratuitas solicitadas por un operador ante
-una incidencia de compra. Conserva el producto y sus parámetros, la máquina de venta de destino,
-el operador responsable, el estado de la solicitud y, cuando finaliza, el billete emitido. No se
-incluyen emisiones iniciales: esta tabla contiene exclusivamente actividad administrativa real o
-simulada de la aplicación. Los logs pueden asociarse a la emisión mediante
-`operational_logs.compensatory_issuance_id`.
+una incidencia de compra. Conserva el producto y sus parámetros, el canal de entrega, el operador
+responsable, el estado de la solicitud y, cuando finaliza, el billete emitido. Una entrega
+`PHYSICAL_DEVICE` referencia una máquina de venta; una entrega `DIGITAL_WALLET` referencia la cuenta
+del pasajero destinatario. No se incluyen emisiones iniciales: esta tabla contiene exclusivamente
+actividad administrativa real o simulada de la aplicación. Los logs pueden asociarse a la emisión
+mediante `operational_logs.compensatory_issuance_id`.
 
 El núcleo de ticketing separa el derecho de transporte de su representación. `tickets` conserva el
 producto aplicado, su estado, saldo o vigencia, titularidad y datos de concurrencia. Un billete puede

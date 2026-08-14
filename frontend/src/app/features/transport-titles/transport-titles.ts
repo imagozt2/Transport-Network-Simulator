@@ -2,7 +2,9 @@ import { Component, HostListener, inject, OnInit } from '@angular/core';
 import { forkJoin } from 'rxjs';
 
 import {
+  CompensatoryDeliveryMethod,
   CompensatoryTicketIssuanceRequest,
+  CompensatoryTicketIssuanceResponse,
   TransportTitle,
   TransportTitlesResponse,
   TransportTitleType
@@ -12,9 +14,13 @@ import { DeviceOperation } from '../../core/models/device-operation.model';
 import { NetworkMapStation } from '../../core/models/network-map.model';
 import { DeviceOperationsService } from '../../core/services/device-operations.service';
 import { NetworkMapService } from '../../core/services/network-map.service';
+import { PassengerAccount } from '../../core/models/passenger-account.model';
+import { PassengerAccountsService } from '../../core/services/passenger-accounts.service';
+import { TemporalFormatService } from '../../core/services/temporal-format.service';
 
 type TypeFilter = TransportTitleType | 'ALL';
 type StatusFilter = 'ALL' | 'ACTIVE' | 'INACTIVE';
+type IssuanceProgress = 'FORM' | 'SUBMITTING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 
 @Component({
   selector: 'app-transport-titles',
@@ -25,6 +31,8 @@ export class TransportTitles implements OnInit {
   private readonly transportTitlesService = inject(TransportTitlesService);
   private readonly deviceOperationsService = inject(DeviceOperationsService);
   private readonly networkMapService = inject(NetworkMapService);
+  private readonly passengerAccountsService = inject(PassengerAccountsService);
+  private readonly temporalFormat = inject(TemporalFormatService);
 
   catalog: TransportTitlesResponse | null = null;
   loading = true;
@@ -34,12 +42,17 @@ export class TransportTitles implements OnInit {
   selectedStatus: StatusFilter = 'ALL';
   issuanceTitle: TransportTitle | null = null;
   ticketMachines: DeviceOperation[] = [];
+  passengers: PassengerAccount[] = [];
   stations: NetworkMapStation[] = [];
   loadingIssuanceOptions = false;
   issuingTicket = false;
   issuanceError = '';
   issuanceConfirmation = '';
+  issuanceProgress: IssuanceProgress = 'FORM';
+  issuanceResult: CompensatoryTicketIssuanceResponse | null = null;
   selectedDeviceCode = '';
+  selectedPassengerPublicId = '';
+  selectedDeliveryMethod: CompensatoryDeliveryMethod = 'PHYSICAL_DEVICE';
   issuanceReason = '';
   originStationCode = '';
   destinationStationCode = '';
@@ -203,15 +216,25 @@ export class TransportTitles implements OnInit {
       return;
     }
     this.issuingTicket = true;
+    this.issuanceProgress = 'SUBMITTING';
+    this.issuanceResult = null;
     this.issuanceError = '';
     this.transportTitlesService.issueCompensatoryTicket(title.id, this.issuanceRequest(title)).subscribe({
       next: (issuance) => {
         this.issuingTicket = false;
-        this.issuanceTitle = null;
-        this.issuanceConfirmation = `Billete ${issuance.ticketCode} emitido en ${issuance.deviceName}.`;
+        this.issuanceResult = issuance;
+        this.issuanceProgress = issuance.status === 'PROCESSING' ? 'PROCESSING' : 'COMPLETED';
+        if (issuance.deliveryMethod === 'DIGITAL_WALLET') {
+          this.issuanceConfirmation = `Billete ${issuance.ticketCode} entregado a ${issuance.passengerEmail}.`;
+        } else if (issuance.simulated) {
+          this.issuanceConfirmation = `Emisión simulada correctamente en ${issuance.deviceName}.`;
+        } else {
+          this.issuanceConfirmation = `Billete ${issuance.ticketCode} enviado a ${issuance.deviceName}.`;
+        }
       },
       error: () => {
         this.issuingTicket = false;
+        this.issuanceProgress = 'FAILED';
         this.issuanceError = 'No se ha podido completar la emisión compensatoria.';
       }
     });
@@ -219,8 +242,10 @@ export class TransportTitles implements OnInit {
 
   canSubmitIssuance(): boolean {
     const title = this.issuanceTitle;
+    const hasDestination = this.selectedDeliveryMethod === 'PHYSICAL_DEVICE'
+      ? this.selectedMachine() !== null : this.selectedPassenger() !== null;
     if (!title || this.loadingIssuanceOptions || this.issuingTicket
-      || !this.selectedDeviceCode || !this.issuanceReason.trim()) {
+      || !hasDestination || !this.issuanceReason.trim()) {
       return false;
     }
     switch (title.type) {
@@ -244,17 +269,93 @@ export class TransportTitles implements OnInit {
     if (field === 'balance') this.balanceAmount = normalized;
   }
 
+  setDeliveryMethod(method: CompensatoryDeliveryMethod): void {
+    this.selectedDeliveryMethod = method;
+    this.selectedDeviceCode = '';
+    this.selectedPassengerPublicId = '';
+    this.issuanceError = '';
+  }
+
+  selectDevice(code: string): void {
+    this.selectedDeviceCode = this.ticketMachines.some((machine) => machine.code === code)
+      ? code : '';
+    this.selectedPassengerPublicId = '';
+  }
+
+  selectPassenger(publicId: string): void {
+    this.selectedPassengerPublicId = this.passengers.some((passenger) =>
+      passenger.publicId === publicId && passenger.status === 'ACTIVE') ? publicId : '';
+    this.selectedDeviceCode = '';
+  }
+
+  selectedMachine(): DeviceOperation | null {
+    return this.ticketMachines.find((machine) => machine.code === this.selectedDeviceCode) ?? null;
+  }
+
+  selectedPassenger(): PassengerAccount | null {
+    return this.passengers.find((passenger) =>
+      passenger.publicId === this.selectedPassengerPublicId && passenger.status === 'ACTIVE') ?? null;
+  }
+
+  machineDeliveryLabel(machine: DeviceOperation): string {
+    return machine.connectivity.state === 'CONNECTED'
+      ? 'Conectada por MQTT' : 'Emisión simulada';
+  }
+
+  returnToIssuanceForm(): void {
+    if (!this.issuingTicket) {
+      this.issuanceProgress = 'FORM';
+      this.issuanceError = '';
+      this.issuanceResult = null;
+    }
+  }
+
+  issuanceResultMessage(): string {
+    const issuance = this.issuanceResult;
+    if (!issuance) return '';
+    if (issuance.status === 'PROCESSING') {
+      return 'La orden se ha enviado a la máquina y está pendiente de confirmación.';
+    }
+    if (issuance.deliveryMethod === 'DIGITAL_WALLET') {
+      return 'El billete digital ya está disponible en la cartera del pasajero.';
+    }
+    if (issuance.simulated) {
+      return 'La emisión se ha simulado y ha quedado registrada sin generar un billete.';
+    }
+    return 'La emisión ha finalizado correctamente.';
+  }
+
+  issuanceQrSource(result: CompensatoryTicketIssuanceResponse): string | null {
+    return result.qrPngBase64 ? `data:image/png;base64,${result.qrPngBase64}` : null;
+  }
+
+  issuanceProductType(type: TransportTitleType): string {
+    return this.typeLabel(type);
+  }
+
+  issuanceDate(value: string): string {
+    return this.temporalFormat.formatDateTime(value);
+  }
+
   private loadIssuanceOptions(): void {
     this.loadingIssuanceOptions = true;
     this.issuanceError = '';
     forkJoin({
       devices: this.deviceOperationsService.getOperations(),
-      network: this.networkMapService.getNetworkMap()
+      network: this.networkMapService.getNetworkMap(),
+      passengers: this.passengerAccountsService.getAccounts(0, 100, {
+        status: 'ACTIVE', sortBy: 'name', direction: 'ASC'
+      })
     }).subscribe({
-      next: ({ devices, network }) => {
+      next: ({ devices, network, passengers }) => {
         this.ticketMachines = devices.devices
-          .filter((device) => device.type === 'TICKET_MACHINE' && device.status === 'ONLINE')
+          .filter((device) => device.type === 'TICKET_MACHINE' && device.status === 'ONLINE'
+            && device.connectivity.state !== 'DISCONNECTED')
           .sort((first, second) => first.name.localeCompare(second.name, 'es'));
+        this.passengers = passengers.users
+          .filter((passenger) => passenger.status === 'ACTIVE')
+          .sort((first, second) => `${first.firstName} ${first.lastName}`
+            .localeCompare(`${second.firstName} ${second.lastName}`, 'es'));
         const byCode = new Map<string, NetworkMapStation>();
         network.lines.flatMap((line) => line.stations)
           .forEach((station) => byCode.set(station.code, station));
@@ -271,8 +372,12 @@ export class TransportTitles implements OnInit {
 
   private resetIssuanceForm(title: TransportTitle): void {
     this.issuanceError = '';
+    this.issuanceProgress = 'FORM';
+    this.issuanceResult = null;
     this.issuanceConfirmation = '';
     this.selectedDeviceCode = '';
+    this.selectedPassengerPublicId = '';
+    this.selectedDeliveryMethod = 'PHYSICAL_DEVICE';
     this.issuanceReason = '';
     this.originStationCode = '';
     this.destinationStationCode = '';
@@ -283,9 +388,14 @@ export class TransportTitles implements OnInit {
 
   private issuanceRequest(title: TransportTitle): CompensatoryTicketIssuanceRequest {
     const request: CompensatoryTicketIssuanceRequest = {
-      deviceCode: this.selectedDeviceCode,
+      deliveryMethod: this.selectedDeliveryMethod,
       reason: this.issuanceReason.trim()
     };
+    if (this.selectedDeliveryMethod === 'PHYSICAL_DEVICE') {
+      request.deviceCode = this.selectedDeviceCode;
+    } else {
+      request.passengerPublicId = this.selectedPassengerPublicId;
+    }
     if (title.type === 'SINGLE_TRIP') {
       request.originStationCode = this.originStationCode;
       request.destinationStationCode = this.destinationStationCode;

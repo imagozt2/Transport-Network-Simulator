@@ -31,6 +31,7 @@ import com.transport.simulator.entity.TicketQrCredential;
 import com.transport.simulator.entity.TransportLine;
 import com.transport.simulator.enums.CompensatoryIssuanceStatus;
 import com.transport.simulator.enums.DeviceMqttCommandType;
+import com.transport.simulator.enums.DeviceMqttPresence;
 import com.transport.simulator.enums.DeviceEventType;
 import com.transport.simulator.enums.DeviceStatus;
 import com.transport.simulator.enums.DeviceType;
@@ -106,6 +107,7 @@ class ControlCenterFeaturesIntegrationTests {
         TicketProduct product = mock(TicketProduct.class);
         when(product.isActive()).thenReturn(true);
         when(product.getCode()).thenReturn("SINGLE_TRIP");
+        when(product.getName()).thenReturn("Billete sencillo");
         when(product.getProductType()).thenReturn(TicketProductType.SINGLE_TRIP);
         when(product.getBasePrice()).thenReturn(new BigDecimal("0.50"));
         when(product.getPricePerStation()).thenReturn(new BigDecimal("0.05"));
@@ -114,12 +116,15 @@ class ControlCenterFeaturesIntegrationTests {
         when(device.getName()).thenReturn("Máquina de Aeropuerto 1");
         when(device.getType()).thenReturn(DeviceType.TICKET_MACHINE);
         when(device.getStatus()).thenReturn(DeviceStatus.ONLINE);
+        when(device.isMqttManaged()).thenReturn(true);
+        when(device.getMqttPresence()).thenReturn(DeviceMqttPresence.ONLINE);
         when(device.getStation()).thenReturn(origin);
         OperatorAccount operator = operator(7L, "admin", OperatorRole.ADMINISTRATOR);
 
         TicketProductRepository productRepository = mock(TicketProductRepository.class);
         DeviceRepository deviceRepository = mock(DeviceRepository.class);
         OperatorAccountRepository operatorRepository = mock(OperatorAccountRepository.class);
+        PassengerAccountRepository passengerRepository = mock(PassengerAccountRepository.class);
         TicketQrCredentialRepository qrCredentialRepository = mock(TicketQrCredentialRepository.class);
         CompensatoryTicketIssuanceRepository issuanceRepository =
                 mock(CompensatoryTicketIssuanceRepository.class);
@@ -149,8 +154,9 @@ class ControlCenterFeaturesIntegrationTests {
                 new TicketIssuanceEventRegistrationService(logRepository, new ObjectMapper());
         CompensatoryTicketIssuanceService issuanceService = new CompensatoryTicketIssuanceService(
                 productRepository, deviceRepository, stationRepository, operatorRepository,
-                qrCredentialRepository, issuanceRepository, eventService, journeyService,
-                ticketIssuanceService, qrImageService, commandService, CLOCK
+                passengerRepository, qrCredentialRepository, issuanceRepository, eventService, journeyService,
+                ticketIssuanceService, new PassengerTicketWalletDeliveryService(ticketIssuanceService),
+                qrImageService, commandService, CLOCK
         );
 
         NetworkJourney plannedJourney = journeyService.calculate("ST001", "ST003");
@@ -171,6 +177,8 @@ class ControlCenterFeaturesIntegrationTests {
         assertThat(plannedJourney.stationCount()).isEqualTo(3);
         assertThat(ReflectionTestUtils.getField(issuance.getValue(), "stationCount")).isEqualTo(3);
         assertThat(response.status()).isEqualTo(CompensatoryIssuanceStatus.PROCESSING);
+        assertThat(response.productName()).isEqualTo("Billete sencillo");
+        assertThat(response.qrPngBase64()).isEqualTo("qr-png-base64");
         assertThat(response.chargedAmount()).isZero();
         assertThat(response.stationCode()).isEqualTo("ST001");
         assertThat(logs.getAllValues()).extracting(DeviceEventLog::getEventType)

@@ -119,4 +119,45 @@ class CompensatoryIssuanceAcknowledgementIntegrationTests {
         assertThat(issuance.getIssuedTicket()).isSameAs(ticket);
         verify(eventService).registerCompleted(issuance, LocalDateTime.now(CLOCK));
     }
+
+    @Test
+    void shouldFailTheIssuanceWhenTheTicketMachineRejectsPresentation() {
+        Device device = mock(Device.class);
+        when(device.getId()).thenReturn(41L);
+        TicketProduct product = mock(TicketProduct.class);
+        OperatorAccount operator = mock(OperatorAccount.class);
+        Ticket ticket = mock(Ticket.class);
+        LocalDateTime requestedAt = LocalDateTime.of(2026, 8, 11, 10, 0);
+        CompensatoryTicketIssuance issuance = new CompensatoryTicketIssuance(
+                "COMP-INTEGRATION-FAILED", product, device, operator,
+                "La máquina no pudo presentar el billete", requestedAt
+        );
+        issuance.beginProcessing(ticket);
+        DeviceMqttCommand command = new DeviceMqttCommand(
+                "command-compensatory-failed", "request-failed", device,
+                DeviceMqttCommandType.TICKET_ISSUE, "{}", requestedAt, requestedAt.plusMinutes(5)
+        );
+        command.markPublished(requestedAt.plusSeconds(1));
+        DeviceMqttCommandRepository commandRepository = mock(DeviceMqttCommandRepository.class);
+        CompensatoryTicketIssuanceRepository issuanceRepository =
+                mock(CompensatoryTicketIssuanceRepository.class);
+        TicketIssuanceEventRegistrationService eventService =
+                mock(TicketIssuanceEventRegistrationService.class);
+        when(commandRepository.findByCommandIdForAcknowledgement("command-compensatory-failed"))
+                .thenReturn(Optional.of(command));
+        when(issuanceRepository.findByCodeForUpdate("COMP-INTEGRATION-FAILED"))
+                .thenReturn(Optional.of(issuance));
+        MqttDeviceCommandAcknowledgementService service =
+                new MqttDeviceCommandAcknowledgementService(
+                        commandRepository, issuanceRepository, eventService, CLOCK);
+
+        service.acknowledge(
+                41L, "command-compensatory-failed", "COMP-INTEGRATION-FAILED",
+                DeviceMqttCommandStatus.FAILED, "PRINTER_UNAVAILABLE"
+        );
+
+        assertThat(command.getStatus()).isEqualTo(DeviceMqttCommandStatus.FAILED);
+        assertThat(issuance.getStatus()).isEqualTo(CompensatoryIssuanceStatus.FAILED);
+        verify(eventService).registerFailed(issuance, LocalDateTime.now(CLOCK));
+    }
 }

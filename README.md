@@ -30,8 +30,8 @@ La aplicación incluye actualmente:
   de incidencias;
 - una sección de títulos de transporte con el catálogo tarifario, sus reglas de uso y filtros por
   producto y estado;
-- emisión compensatoria gratuita de billetes desde máquinas de venta, vinculada al operador y
-  registrada en los logs operativos;
+- emisión administrativa gratuita hacia carteras digitales o máquinas de venta, vinculada al
+  operador y registrada en los logs operativos;
 - autenticación de operadores mediante sesiones protegidas, rutas privadas y bloqueo temporal ante
   intentos fallidos;
 - pantallas personales de cuenta y configuración accesibles desde la cabecera;
@@ -321,6 +321,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 - [Máquina validadora de billetes Qt](docs/maquina-validadora.md)
 - [Ciclo de vida de los billetes RMM](docs/ciclo-vida-billetes.md)
 - [Dominio de billetes y reglas de los productos](docs/dominio-billetes.md)
+- [Emisión administrativa de billetes](docs/emision-administrativa-billetes.md)
 - [Seguridad, contrato y firma de los códigos QR](docs/contrato-codigos-qr.md)
 - [Contratos REST para RMM App](docs/contratos-rest-rmm-app.md)
 - [Autenticación, sesiones y dispositivos de RMM App](docs/autenticacion-rmm-app.md)

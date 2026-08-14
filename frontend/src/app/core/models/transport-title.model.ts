@@ -4,6 +4,8 @@ export type TransportTitleType =
   | 'TIME_PASS'
   | 'SMART_BALANCE';
 
+export type CompensatoryDeliveryMethod = 'PHYSICAL_DEVICE' | 'DIGITAL_WALLET';
+
 export interface TransportTitle {
   id: number;
   code: string;
@@ -45,7 +47,9 @@ export interface TransportTitlesResponse {
 }
 
 export interface CompensatoryTicketIssuanceRequest {
-  deviceCode: string;
+  deviceCode?: string;
+  deliveryMethod: CompensatoryDeliveryMethod;
+  passengerPublicId?: string;
   reason: string;
   originStationCode?: string;
   destinationStationCode?: string;
@@ -58,16 +62,22 @@ export interface CompensatoryTicketIssuanceResponse {
   id: number;
   code: string;
   status: 'REQUESTED' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
-  ticketCode: string;
-  qrToken: string;
+  simulated: boolean;
+  ticketCode: string | null;
+  qrToken: string | null;
+  qrPngBase64: string | null;
   productCode: string;
+  productName: string;
   productType: TransportTitleType;
-  deviceCode: string;
-  deviceName: string;
-  stationCode: string;
-  stationName: string;
+  deliveryMethod: CompensatoryDeliveryMethod;
+  deviceCode: string | null;
+  deviceName: string | null;
+  stationCode: string | null;
+  stationName: string | null;
+  passengerPublicId: string | null;
+  passengerEmail: string | null;
   operatorUsername: string;
   chargedAmount: number;
   requestedAt: string;
-  completedAt: string;
+  completedAt: string | null;
 }

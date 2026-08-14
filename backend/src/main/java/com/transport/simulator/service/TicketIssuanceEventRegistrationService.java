@@ -48,12 +48,13 @@ public class TicketIssuanceEventRegistrationService {
             CompensatoryTicketIssuance issuance,
             LocalDateTime occurredAt
     ) {
+        boolean simulated = issuance.getIssuedTicket() == null;
         return register(
                 issuance,
                 issuance.getIssuedTicket(),
                 DeviceEventType.COMPENSATORY_TICKET_ISSUED,
                 "Billete compensatorio " + issuance.getProduct().getProductType()
-                        + " emitido correctamente",
+                        + (simulated ? " emitido en simulación" : " emitido correctamente"),
                 "ISSUED",
                 occurredAt
         );
@@ -106,7 +107,14 @@ public class TicketIssuanceEventRegistrationService {
         payload.put("eventStage", eventStage);
         payload.put("ticketType", issuance.getProduct().getProductType());
         payload.put("productCode", issuance.getProduct().getCode());
-        payload.put("deviceCode", issuance.getTargetDevice().getCode());
+        payload.put("deliveryMethod", issuance.getDeliveryMethod());
+        payload.put("simulated", "ISSUED".equals(eventStage) && ticket == null);
+        if (issuance.getTargetDevice() != null) {
+            payload.put("deviceCode", issuance.getTargetDevice().getCode());
+        }
+        if (issuance.getRecipientPassenger() != null) {
+            payload.put("passengerPublicId", issuance.getRecipientPassenger().getPublicId());
+        }
         payload.put("operatorUsername", issuance.getRequestedBy().getUsername());
         if (ticket != null) {
             payload.put("ticketCode", ticket.getCode());

@@ -135,17 +135,59 @@
         @if (loadingIssuanceOptions) {
           <div class="dialog-state" role="status">Cargando máquinas y estaciones…</div>
         } @else {
+          @if (issuanceProgress === 'FORM' || issuanceProgress === 'FAILED') {
           <form class="issuance-form" (submit)="$event.preventDefault(); submitCompensatoryIssuance()">
-            <label class="dialog-field full-width">
-              <span>Máquina de emisión</span>
-              <select required [value]="selectedDeviceCode" (change)="selectedDeviceCode = $any($event.target).value">
-                <option value="">Selecciona una máquina online</option>
-                @for (machine of ticketMachines; track machine.id) {
-                  <option [value]="machine.code">{{ machine.name }} · {{ machine.station.name }}</option>
+            <fieldset class="delivery-method full-width">
+              <legend>Canal de entrega</legend>
+              <button type="button" [class.selected]="selectedDeliveryMethod === 'PHYSICAL_DEVICE'"
+                (click)="setDeliveryMethod('PHYSICAL_DEVICE')">
+                <strong>Billete físico</strong>
+                <span>Emitir desde una máquina de venta</span>
+              </button>
+              <button type="button" [class.selected]="selectedDeliveryMethod === 'DIGITAL_WALLET'"
+                (click)="setDeliveryMethod('DIGITAL_WALLET')">
+                <strong>Billete digital</strong>
+                <span>Entregar en la cartera de un pasajero</span>
+              </button>
+            </fieldset>
+
+            @if (selectedDeliveryMethod === 'PHYSICAL_DEVICE') {
+              <label class="dialog-field full-width">
+                <span>Máquina de emisión</span>
+                <select required [value]="selectedDeviceCode" (change)="selectDevice($any($event.target).value)">
+                  <option value="">Selecciona una máquina online</option>
+                  @for (machine of ticketMachines; track machine.id) {
+                    <option [value]="machine.code">{{ machine.name }} · {{ machine.station.name }} · {{ machineDeliveryLabel(machine) }}</option>
+                  }
+                </select>
+                @if (ticketMachines.length === 0) { <small>No hay máquinas de venta disponibles.</small> }
+                <small>Las máquinas MQTT emitirán el billete real; las no monitorizadas simularán la operación.</small>
+                @if (selectedMachine(); as machine) {
+                  <span class="delivery-selection">
+                    <strong>{{ machine.name }}</strong>
+                    <small>{{ machine.station.name }} · {{ machineDeliveryLabel(machine) }}</small>
+                  </span>
                 }
-              </select>
-              @if (ticketMachines.length === 0) { <small>No hay máquinas de venta online disponibles.</small> }
-            </label>
+              </label>
+            } @else {
+              <label class="dialog-field full-width">
+                <span>Pasajero destinatario</span>
+                <select required [value]="selectedPassengerPublicId" (change)="selectPassenger($any($event.target).value)">
+                  <option value="">Selecciona una cuenta activa</option>
+                  @for (passenger of passengers; track passenger.publicId) {
+                    <option [value]="passenger.publicId">{{ passenger.firstName }} {{ passenger.lastName }} · {{ passenger.email }}</option>
+                  }
+                </select>
+                @if (passengers.length === 0) { <small>No hay cuentas activas disponibles.</small> }
+                <small>El billete aparecerá directamente en la cartera digital del pasajero.</small>
+                @if (selectedPassenger(); as passenger) {
+                  <span class="delivery-selection">
+                    <strong>{{ passenger.firstName }} {{ passenger.lastName }}</strong>
+                    <small>{{ passenger.email }}</small>
+                  </span>
+                }
+              </label>
+            }
 
             @switch (issuanceTitle.type) {
               @case ('SINGLE_TRIP') {
@@ -209,6 +251,72 @@
               <button type="submit" class="primary-button" [disabled]="!canSubmitIssuance()">{{ issuingTicket ? 'Emitiendo…' : 'Confirmar emisión' }}</button>
             </footer>
           </form>
+          } @else {
+            <section class="issuance-progress" aria-live="polite">
+              <ol class="progress-steps" aria-label="Progreso de la emisión">
+                <li class="done"><span>1</span><strong>Solicitud registrada</strong></li>
+                <li [class.done]="issuanceProgress !== 'SUBMITTING'" [class.active]="issuanceProgress === 'SUBMITTING'">
+                  <span>2</span><strong>{{ issuanceProgress === 'SUBMITTING' ? 'Preparando entrega' : 'Entrega procesada' }}</strong>
+                </li>
+                <li [class.done]="issuanceProgress === 'COMPLETED'" [class.active]="issuanceProgress === 'PROCESSING'">
+                  <span>3</span><strong>{{ issuanceProgress === 'PROCESSING' ? 'Esperando confirmación' : 'Resultado' }}</strong>
+                </li>
+              </ol>
+
+              @if (issuanceProgress === 'SUBMITTING') {
+                <div class="progress-state" role="status">
+                  <span class="progress-spinner" aria-hidden="true"></span>
+                  <h3>Registrando la emisión</h3>
+                  <p>Estamos validando el producto, el soporte y el destino seleccionado.</p>
+                </div>
+              } @else if (issuanceResult; as result) {
+                <div class="result-state" [class.pending]="issuanceProgress === 'PROCESSING'">
+                  <span class="result-icon" aria-hidden="true">{{ issuanceProgress === 'PROCESSING' ? '…' : '✓' }}</span>
+                  <h3>{{ issuanceProgress === 'PROCESSING' ? 'Emisión en proceso' : 'Emisión completada' }}</h3>
+                  <p>{{ issuanceResultMessage() }}</p>
+                  @if (issuanceQrSource(result); as qrSource) {
+                    <article class="issued-ticket" aria-label="Billete emitido">
+                      <div class="issued-ticket-copy">
+                        <span class="issued-ticket-brand">RMM</span>
+                        <p>Título de transporte</p>
+                        <h4>{{ result.productName }}</h4>
+                        <dl>
+                          <div><dt>Tipo de título</dt><dd>{{ issuanceProductType(result.productType) }}</dd></div>
+                          <div><dt>Código del billete</dt><dd>{{ result.ticketCode }}</dd></div>
+                          <div><dt>Emitido</dt><dd>{{ issuanceDate(result.completedAt || result.requestedAt) }}</dd></div>
+                          <div><dt>Soporte</dt><dd>{{ result.deliveryMethod === 'DIGITAL_WALLET' ? 'Digital' : 'Físico' }}</dd></div>
+                        </dl>
+                      </div>
+                      <figure class="issued-ticket-qr">
+                        <img [src]="qrSource" [alt]="'Código QR del billete ' + result.ticketCode">
+                        <figcaption>QR verificable</figcaption>
+                      </figure>
+                    </article>
+                  } @else if (result.simulated) {
+                    <div class="ticket-not-generated">
+                      <strong>Emisión simulada</strong>
+                      <span>Esta máquina no está monitorizada por MQTT, por lo que no se ha generado un billete ni un código QR.</span>
+                    </div>
+                  }
+                  <dl class="issuance-result-details">
+                    <div><dt>Referencia</dt><dd>{{ result.code }}</dd></div>
+                    <div><dt>Canal</dt><dd>{{ result.deliveryMethod === 'DIGITAL_WALLET' ? 'Cartera digital' : 'Máquina de venta' }}</dd></div>
+                    <div><dt>Destino</dt><dd>{{ result.passengerEmail || result.deviceName }}</dd></div>
+                    <div><dt>Billete</dt><dd>{{ result.ticketCode || (result.simulated ? 'No generado (simulación)' : 'Pendiente') }}</dd></div>
+                  </dl>
+                </div>
+              }
+
+              <footer class="dialog-actions progress-actions">
+                @if (issuanceProgress === 'COMPLETED') {
+                  <button type="button" class="secondary-button" (click)="returnToIssuanceForm()">Realizar otra emisión</button>
+                }
+                <button type="button" class="secondary-button" (click)="closeIssuanceDialog()">
+                  {{ issuanceProgress === 'PROCESSING' ? 'Cerrar y consultar logs' : 'Cerrar' }}
+                </button>
+              </footer>
+            </section>
+          }
         }
       </section>
     </div>

@@ -188,16 +188,23 @@ WHERE passengers.id IS NULL
    OR status_changes.previous_status NOT IN ('PENDING_VERIFICATION', 'ACTIVE', 'BLOCKED', 'DISABLED')
    OR status_changes.new_status NOT IN ('PENDING_VERIFICATION', 'ACTIVE', 'BLOCKED', 'DISABLED');
 
-SELECT issuances.id, issuances.code, products.product_type, devices.code AS device_code,
-       devices.device_type, issuances.issuance_status
+SELECT issuances.id, issuances.code, products.product_type, issuances.delivery_method,
+       devices.code AS device_code, devices.device_type,
+       passengers.public_id AS passenger_public_id, issuances.issuance_status
 FROM compensatory_ticket_issuances issuances
 LEFT JOIN ticket_products products ON products.id = issuances.product_id
 LEFT JOIN devices ON devices.id = issuances.target_device_id
+LEFT JOIN passenger_accounts passengers ON passengers.id = issuances.recipient_passenger_account_id
 LEFT JOIN operator_accounts operators ON operators.id = issuances.requested_by_operator_id
 LEFT JOIN tickets ON tickets.id = issuances.issued_ticket_id
 WHERE products.id IS NULL
-   OR devices.id IS NULL
-   OR devices.device_type <> 'TICKET_MACHINE'
+   OR (issuances.delivery_method = 'PHYSICAL_DEVICE'
+       AND (devices.id IS NULL OR devices.device_type <> 'TICKET_MACHINE'
+            OR issuances.recipient_passenger_account_id IS NOT NULL))
+   OR (issuances.delivery_method = 'DIGITAL_WALLET'
+       AND (passengers.id IS NULL OR issuances.target_device_id IS NOT NULL))
+   OR (issuances.target_device_id IS NOT NULL AND devices.id IS NULL)
+   OR (issuances.recipient_passenger_account_id IS NOT NULL AND passengers.id IS NULL)
    OR operators.id IS NULL
    OR (issuances.issued_ticket_id IS NOT NULL AND tickets.id IS NULL)
    OR issuances.charged_amount <> 0

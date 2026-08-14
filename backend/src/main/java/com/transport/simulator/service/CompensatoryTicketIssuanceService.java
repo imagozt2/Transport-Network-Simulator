@@ -5,14 +5,19 @@ import com.transport.simulator.dto.response.transporttitle.CompensatoryTicketIss
 import com.transport.simulator.entity.CompensatoryTicketIssuance;
 import com.transport.simulator.entity.Device;
 import com.transport.simulator.entity.OperatorAccount;
+import com.transport.simulator.entity.PassengerAccount;
 import com.transport.simulator.entity.Station;
 import com.transport.simulator.entity.TicketProduct;
 import com.transport.simulator.enums.DeviceMqttCommandType;
+import com.transport.simulator.enums.DeviceMqttPresence;
+import com.transport.simulator.enums.CompensatoryDeliveryMethod;
 import com.transport.simulator.enums.DeviceStatus;
 import com.transport.simulator.enums.DeviceType;
+import com.transport.simulator.enums.PassengerAccountStatus;
 import com.transport.simulator.repository.CompensatoryTicketIssuanceRepository;
 import com.transport.simulator.repository.DeviceRepository;
 import com.transport.simulator.repository.OperatorAccountRepository;
+import com.transport.simulator.repository.PassengerAccountRepository;
 import com.transport.simulator.repository.StationRepository;
 import com.transport.simulator.repository.TicketProductRepository;
 import com.transport.simulator.repository.TicketQrCredentialRepository;
@@ -43,11 +48,13 @@ public class CompensatoryTicketIssuanceService {
     private final DeviceRepository deviceRepository;
     private final StationRepository stationRepository;
     private final OperatorAccountRepository operatorRepository;
+    private final PassengerAccountRepository passengerRepository;
     private final TicketQrCredentialRepository qrCredentialRepository;
     private final CompensatoryTicketIssuanceRepository issuanceRepository;
     private final TicketIssuanceEventRegistrationService eventRegistrationService;
     private final NetworkJourneyPlanningService journeyPlanningService;
     private final TicketIssuanceService ticketIssuanceService;
+    private final PassengerTicketWalletDeliveryService walletDeliveryService;
     private final TicketQrImageService qrImageService;
     private final MqttDeviceCommandService commandService;
     private final Clock clock;
@@ -57,11 +64,13 @@ public class CompensatoryTicketIssuanceService {
             DeviceRepository deviceRepository,
             StationRepository stationRepository,
             OperatorAccountRepository operatorRepository,
+            PassengerAccountRepository passengerRepository,
             TicketQrCredentialRepository qrCredentialRepository,
             CompensatoryTicketIssuanceRepository issuanceRepository,
             TicketIssuanceEventRegistrationService eventRegistrationService,
             NetworkJourneyPlanningService journeyPlanningService,
             TicketIssuanceService ticketIssuanceService,
+            PassengerTicketWalletDeliveryService walletDeliveryService,
             TicketQrImageService qrImageService,
             MqttDeviceCommandService commandService,
             Clock clock
@@ -70,11 +79,13 @@ public class CompensatoryTicketIssuanceService {
         this.deviceRepository = deviceRepository;
         this.stationRepository = stationRepository;
         this.operatorRepository = operatorRepository;
+        this.passengerRepository = passengerRepository;
         this.qrCredentialRepository = qrCredentialRepository;
         this.issuanceRepository = issuanceRepository;
         this.eventRegistrationService = eventRegistrationService;
         this.journeyPlanningService = journeyPlanningService;
         this.ticketIssuanceService = ticketIssuanceService;
+        this.walletDeliveryService = walletDeliveryService;
         this.qrImageService = qrImageService;
         this.commandService = commandService;
         this.clock = clock;
@@ -90,24 +101,40 @@ public class CompensatoryTicketIssuanceService {
         TicketProduct product = productRepository.findById(productId)
                 .filter(TicketProduct::isActive)
                 .orElseThrow(() -> notFound("Active transport title not found"));
-        Device device = deviceRepository.findByCodeAndActiveTrue(normalizeCode(request.deviceCode()))
-                .orElseThrow(() -> notFound("Active ticket machine not found"));
-        if (device.getType() != DeviceType.TICKET_MACHINE) {
-            throw badRequest("Compensatory tickets can only be issued by a ticket machine");
-        }
-        if (device.getStatus() != DeviceStatus.ONLINE) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "The selected ticket machine is not online");
-        }
-
         LocalDateTime now = LocalDateTime.now(clock);
         String issuanceCode = uniqueCode("COMP");
-        CompensatoryTicketIssuance issuance = new CompensatoryTicketIssuance(
-                issuanceCode, product, device, operator, request.reason().trim(), now
-        );
+        CompensatoryDeliveryMethod deliveryMethod = request.deliveryMethod() == null
+                ? CompensatoryDeliveryMethod.PHYSICAL_DEVICE : request.deliveryMethod();
+        Device device = deliveryMethod == CompensatoryDeliveryMethod.PHYSICAL_DEVICE
+                ? requiredTicketMachine(request.deviceCode()) : null;
+        PassengerAccount passenger = deliveryMethod == CompensatoryDeliveryMethod.DIGITAL_WALLET
+                ? requiredPassenger(request.passengerPublicId()) : null;
+        rejectIncompatibleDestination(request, deliveryMethod);
+        CompensatoryTicketIssuance issuance = deliveryMethod == CompensatoryDeliveryMethod.PHYSICAL_DEVICE
+                ? new CompensatoryTicketIssuance(
+                        issuanceCode, product, device, operator, request.reason().trim(), now)
+                : new CompensatoryTicketIssuance(
+                        issuanceCode, product, passenger, operator, request.reason().trim(), now);
         TicketIssuanceParameters parameters = configure(product, request, issuance);
 
         issuanceRepository.save(issuance);
         eventRegistrationService.registerRequested(issuance, now);
+        if (deliveryMethod == CompensatoryDeliveryMethod.DIGITAL_WALLET) {
+            IssuedTicket issued = walletDeliveryService.deliver(product, parameters, passenger);
+            issuance.beginProcessing(issued.ticket());
+            issuance.complete(now);
+            issuanceRepository.save(issuance);
+            eventRegistrationService.registerCompleted(issuance, now);
+            return response(issuance);
+        }
+
+        if (!device.isMqttManaged()) {
+            issuance.completeSimulated(now);
+            issuanceRepository.save(issuance);
+            eventRegistrationService.registerCompleted(issuance, now);
+            return response(issuance);
+        }
+
         String linkingCode = UUID.randomUUID().toString().replace("-", "")
                 .substring(0, 8).toUpperCase(Locale.ROOT);
         IssuedTicket issued = ticketIssuanceService.issuePhysical(
@@ -132,7 +159,61 @@ public class CompensatoryTicketIssuanceService {
         commandService.send(device.getCode(), DeviceMqttCommandType.TICKET_ISSUE,
                 Map.of("issuanceKind", "COMPENSATORY", "issuanceCode", issuance.getCode(), "ticket", ticket),
                 Duration.ofMinutes(2));
-        return CompensatoryTicketIssuanceResponse.from(issuance);
+        return response(issuance);
+    }
+
+    private CompensatoryTicketIssuanceResponse response(CompensatoryTicketIssuance issuance) {
+        String qrPngBase64 = issuance.getIssuedTicket() == null ? null : qrCredentialRepository
+                .findFirstByTicketIdAndStatusOrderByIssuedAtDesc(
+                        issuance.getIssuedTicket().getId(), TicketQrCredentialStatus.ACTIVE)
+                .map(credential -> qrImageService.pngBase64(credential.getQrValue()))
+                .orElse(null);
+        return CompensatoryTicketIssuanceResponse.from(issuance, qrPngBase64);
+    }
+
+    private Device requiredTicketMachine(String deviceCode) {
+        Device device = deviceRepository.findByCodeAndActiveTrue(
+                        normalizeRequiredCode(deviceCode, "deviceCode"))
+                .orElseThrow(() -> notFound("Active ticket machine not found"));
+        if (device.getType() != DeviceType.TICKET_MACHINE) {
+            throw badRequest("Compensatory tickets can only be issued by a ticket machine");
+        }
+        if (device.getStatus() != DeviceStatus.ONLINE) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "The selected ticket machine is not online");
+        }
+        if (device.isMqttManaged() && device.getMqttPresence() != DeviceMqttPresence.ONLINE) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "The selected ticket machine is not connected through MQTT");
+        }
+        return device;
+    }
+
+    private PassengerAccount requiredPassenger(String publicId) {
+        if (publicId == null || publicId.isBlank()) {
+            throw badRequest("passengerPublicId is required");
+        }
+        PassengerAccount passenger = passengerRepository.findByPublicId(publicId.trim())
+                .orElseThrow(() -> notFound("Passenger account not found"));
+        if (passenger.getStatus() != PassengerAccountStatus.ACTIVE) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "The passenger account is not active");
+        }
+        return passenger;
+    }
+
+    private void rejectIncompatibleDestination(
+            CompensatoryTicketIssuanceRequest request,
+            CompensatoryDeliveryMethod deliveryMethod
+    ) {
+        if (deliveryMethod == CompensatoryDeliveryMethod.PHYSICAL_DEVICE
+                && request.passengerPublicId() != null && !request.passengerPublicId().isBlank()) {
+            throw badRequest("A physical delivery cannot target a passenger wallet");
+        }
+        if (deliveryMethod == CompensatoryDeliveryMethod.DIGITAL_WALLET
+                && request.deviceCode() != null && !request.deviceCode().isBlank()) {
+            throw badRequest("A digital delivery cannot target a ticket machine");
+        }
     }
 
     private TicketIssuanceParameters configure(
