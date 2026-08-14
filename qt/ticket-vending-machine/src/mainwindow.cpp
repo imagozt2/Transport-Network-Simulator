@@ -62,6 +62,23 @@ constexpr auto windowStyle = R"(
         font-size: 13px;
         font-weight: 700;
     }
+    QPushButton#languageFlag {
+        min-width: 52px;
+        min-height: 42px;
+        padding: 2px 6px;
+        border: 2px solid transparent;
+        border-radius: 12px;
+        background-color: transparent;
+        font-size: 26px;
+    }
+    QPushButton#languageFlag:hover, QPushButton#languageFlag:focus {
+        border-color: #93c5fd;
+        background-color: #eff6ff;
+    }
+    QPushButton#languageFlag:checked {
+        border-color: #2294f2;
+        background-color: #eaf5fe;
+    }
     QFrame#mainPanel {
         background-color: #ffffff;
         border: 1px solid #dbe3ec;
@@ -499,14 +516,30 @@ QWidget *MainWindow::createHeader()
     identityLayout->addWidget(m_applicationName);
     identityLayout->addWidget(m_applicationContext);
 
-    m_connectionState = new QLabel(header);
-    m_connectionState->setObjectName(QStringLiteral("connectionState"));
-    m_connectionState->setAlignment(Qt::AlignCenter);
+    m_spanishLanguageButton = new QPushButton(QStringLiteral("🇪🇸"), header);
+    m_spanishLanguageButton->setObjectName(QStringLiteral("languageFlag"));
+    m_spanishLanguageButton->setCheckable(true);
+    m_spanishLanguageButton->setAutoExclusive(true);
+    m_spanishLanguageButton->setCursor(Qt::PointingHandCursor);
+
+    m_englishLanguageButton = new QPushButton(QStringLiteral("🇬🇧"), header);
+    m_englishLanguageButton->setObjectName(QStringLiteral("languageFlag"));
+    m_englishLanguageButton->setCheckable(true);
+    m_englishLanguageButton->setAutoExclusive(true);
+    m_englishLanguageButton->setCursor(Qt::PointingHandCursor);
+
+    connect(m_spanishLanguageButton, &QPushButton::clicked, this, [this] {
+        setLanguage(UiLanguage::Spanish);
+    });
+    connect(m_englishLanguageButton, &QPushButton::clicked, this, [this] {
+        setLanguage(UiLanguage::English);
+    });
 
     layout->addWidget(m_brandMark);
     layout->addWidget(identity);
     layout->addStretch();
-    layout->addWidget(m_connectionState);
+    layout->addWidget(m_spanishLanguageButton);
+    layout->addWidget(m_englishLanguageButton);
 
     return header;
 }
@@ -567,8 +600,13 @@ QWidget *MainWindow::createFooter()
     m_footerContext = new QLabel(footer);
     m_footerContext->setObjectName(QStringLiteral("footerContext"));
 
+    m_connectionState = new QLabel(footer);
+    m_connectionState->setObjectName(QStringLiteral("connectionState"));
+    m_connectionState->setAlignment(Qt::AlignCenter);
+
     layout->addWidget(m_footerContext);
     layout->addStretch();
+    layout->addWidget(m_connectionState);
 
     return footer;
 }
@@ -637,9 +675,9 @@ QWidget *MainWindow::createCatalogPanel()
 
 void MainWindow::setLanguage(UiLanguage language)
 {
-    if (m_language == language) {
-        return;
-    }
+    m_spanishLanguageButton->setChecked(language == UiLanguage::Spanish);
+    m_englishLanguageButton->setChecked(language == UiLanguage::English);
+    if (m_language == language) return;
     m_language = language;
     QSettings settings;
     settings.setValue(
@@ -1106,6 +1144,16 @@ void MainWindow::retranslateUi()
     m_applicationContext->setText(
         spanish ? QStringLiteral("Red de Metro de Macegocia")
                 : QStringLiteral("Macegocia Metro Network"));
+    m_spanishLanguageButton->setToolTip(
+        spanish ? QStringLiteral("Idioma actual: español")
+                : QStringLiteral("Cambiar el idioma a español"));
+    m_spanishLanguageButton->setAccessibleName(QStringLiteral("Español"));
+    m_spanishLanguageButton->setChecked(spanish);
+    m_englishLanguageButton->setToolTip(
+        spanish ? QStringLiteral("Cambiar el idioma a inglés")
+                : QStringLiteral("Current language: English"));
+    m_englishLanguageButton->setAccessibleName(QStringLiteral("English"));
+    m_englishLanguageButton->setChecked(!spanish);
     m_connectionState->setText(
         spanish ? QStringLiteral("Preparando conexión")
                 : QStringLiteral("Preparing connection"));

@@ -76,6 +76,8 @@ private:
     QLabel *m_footerContext = nullptr;
     QPushButton *m_purchaseButton = nullptr;
     QPushButton *m_rechargeButton = nullptr;
+    QPushButton *m_spanishLanguageButton = nullptr;
+    QPushButton *m_englishLanguageButton = nullptr;
     QStackedWidget *m_contentStack = nullptr;
     QWidget *m_homePanel = nullptr;
     QWidget *m_catalogPanel = nullptr;
