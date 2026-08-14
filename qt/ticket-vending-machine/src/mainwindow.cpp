@@ -1202,6 +1202,16 @@ void MainWindow::showIssuedTicketWindow(
                 : QStringLiteral("Linking code: %1").arg(linkingCode), &dialog);
     link->setObjectName(QStringLiteral("productName"));
     link->setAlignment(Qt::AlignCenter);
+    constexpr int automaticReturnSeconds = 30;
+    auto *automaticReturn = new QLabel(&dialog);
+    automaticReturn->setObjectName(QStringLiteral("screenHint"));
+    automaticReturn->setAlignment(Qt::AlignCenter);
+    const auto updateAutomaticReturn = [automaticReturn, spanish](int seconds) {
+        automaticReturn->setText(
+            spanish ? QStringLiteral("Regreso automático al inicio en %1 s").arg(seconds)
+                    : QStringLiteral("Returning automatically to the start in %1 s").arg(seconds));
+    };
+    updateAutomaticReturn(automaticReturnSeconds);
     auto *finish = new QPushButton(spanish ? QStringLiteral("Finalizar")
                                           : QStringLiteral("Finish"), &dialog);
     finish->setObjectName(QStringLiteral("confirmAction"));
@@ -1220,8 +1230,23 @@ void MainWindow::showIssuedTicketWindow(
     layout->addWidget(qrLabel, 0, Qt::AlignCenter);
     layout->addWidget(code);
     layout->addWidget(link);
+    layout->addWidget(automaticReturn);
     layout->addStretch();
     layout->addWidget(finish, 0, Qt::AlignRight);
+
+    int remainingSeconds = automaticReturnSeconds;
+    QTimer automaticReturnTimer(&dialog);
+    automaticReturnTimer.setInterval(1000);
+    connect(&automaticReturnTimer, &QTimer::timeout, &dialog,
+            [&remainingSeconds, updateAutomaticReturn, finish] {
+        --remainingSeconds;
+        if (remainingSeconds <= 0) {
+            finish->click();
+            return;
+        }
+        updateAutomaticReturn(remainingSeconds);
+    });
+    automaticReturnTimer.start();
     m_connectionState->setText(spanish ? QStringLiteral("Billete emitido")
                                       : QStringLiteral("Ticket issued"));
     dialog.exec();
