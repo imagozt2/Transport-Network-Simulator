@@ -14,6 +14,8 @@
 
 namespace {
 constexpr qsizetype maximumQrLength = 4096;
+constexpr int rejectedStateDurationMs = 3000;
+constexpr int acceptedStateDurationMs = 5000;
 constexpr auto windowStyle = R"(
     QMainWindow { background-color: #f4f7fa; }
     QLabel { color: #0f172a; font-family: "Segoe UI"; }
@@ -149,7 +151,7 @@ MainWindow::MainWindow(QWidget *parent)
         if (reason == QStringLiteral("MQTT_CREDENTIALS_MISSING")) {
             m_connected = false;
         }
-        restartCameraAfterResult();
+        restartCameraAfterResult(rejectedStateDurationMs);
     });
     if (m_configuration.valid) {
         m_cameraScanner->start();
@@ -454,14 +456,14 @@ void MainWindow::submitQrCode(const QString &detectedQrValue)
         setValidationState(QStringLiteral("rejected"), tr("Código QR no válido"),
                            tr("No se ha podido leer un billete RMM válido"), false);
         playValidationSound(false);
-        restartCameraAfterResult();
+        restartCameraAfterResult(rejectedStateDurationMs);
         return;
     }
     if (!m_configuration.valid || !m_connected) {
         setValidationState(QStringLiteral("rejected"), tr("Validación no disponible"),
                            tr("No hay conexión con el centro de control"), false);
         playValidationSound(false);
-        restartCameraAfterResult();
+        restartCameraAfterResult(rejectedStateDurationMs);
         return;
     }
 
@@ -478,7 +480,8 @@ void MainWindow::showValidationResult(const ValidationResult &result)
         result.isAccepted() ? QStringLiteral("accepted") : QStringLiteral("rejected"),
         result.title(), result.detail(), result.isAccepted());
     playValidationSound(result.isAccepted());
-    restartCameraAfterResult();
+    restartCameraAfterResult(result.isAccepted()
+        ? acceptedStateDurationMs : rejectedStateDurationMs);
 }
 
 void MainWindow::playValidationSound(bool accepted)
@@ -494,9 +497,9 @@ void MainWindow::playValidationSound(bool accepted)
     }
 }
 
-void MainWindow::restartCameraAfterResult()
+void MainWindow::restartCameraAfterResult(int delayMilliseconds)
 {
-    QTimer::singleShot(3000, this, [this] {
+    QTimer::singleShot(delayMilliseconds, this, [this] {
         if (!m_configuration.valid || (m_validationClient != nullptr
                 && m_validationClient->hasPendingValidation())) {
             return;
