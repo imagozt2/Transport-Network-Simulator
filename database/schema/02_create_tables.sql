@@ -1001,7 +1001,9 @@ CREATE TABLE compensatory_ticket_issuances (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     code VARCHAR(80) NOT NULL,
     product_id BIGINT NOT NULL,
-    target_device_id BIGINT NOT NULL,
+    delivery_method VARCHAR(30) NOT NULL DEFAULT 'PHYSICAL_DEVICE',
+    target_device_id BIGINT NULL,
+    recipient_passenger_account_id BIGINT NULL,
     requested_by_operator_id BIGINT NOT NULL,
     issued_ticket_id BIGINT NULL,
     issuance_status VARCHAR(30) NOT NULL DEFAULT 'REQUESTED',
@@ -1025,6 +1027,8 @@ CREATE TABLE compensatory_ticket_issuances (
         ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT fk_compensatory_issuances_device FOREIGN KEY (target_device_id) REFERENCES devices (id)
         ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_compensatory_issuances_passenger FOREIGN KEY (recipient_passenger_account_id)
+        REFERENCES passenger_accounts (id) ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT fk_compensatory_issuances_operator FOREIGN KEY (requested_by_operator_id)
         REFERENCES operator_accounts (id) ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT fk_compensatory_issuances_ticket FOREIGN KEY (issued_ticket_id) REFERENCES tickets (id)
@@ -1035,6 +1039,9 @@ CREATE TABLE compensatory_ticket_issuances (
         ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT chk_compensatory_issuances_status CHECK (
         issuance_status IN ('REQUESTED', 'PROCESSING', 'COMPLETED', 'FAILED', 'CANCELLED')
+    ),
+    CONSTRAINT chk_compensatory_issuances_delivery CHECK (
+        delivery_method IN ('PHYSICAL_DEVICE', 'DIGITAL_WALLET')
     ),
     CONSTRAINT chk_compensatory_issuances_reason CHECK (CHAR_LENGTH(TRIM(reason)) > 0),
     CONSTRAINT chk_compensatory_issuances_station_count CHECK (
@@ -1052,8 +1059,12 @@ CREATE TABLE compensatory_ticket_issuances (
 
 CREATE INDEX idx_compensatory_issuances_status_requested
     ON compensatory_ticket_issuances (issuance_status, requested_at);
+CREATE INDEX idx_compensatory_issuances_delivery_status
+    ON compensatory_ticket_issuances (delivery_method, issuance_status, requested_at);
 CREATE INDEX idx_compensatory_issuances_product ON compensatory_ticket_issuances (product_id);
 CREATE INDEX idx_compensatory_issuances_device ON compensatory_ticket_issuances (target_device_id);
+CREATE INDEX idx_compensatory_issuances_passenger
+    ON compensatory_ticket_issuances (recipient_passenger_account_id);
 CREATE INDEX idx_compensatory_issuances_operator ON compensatory_ticket_issuances (requested_by_operator_id);
 
 CREATE TABLE ticket_journeys (
