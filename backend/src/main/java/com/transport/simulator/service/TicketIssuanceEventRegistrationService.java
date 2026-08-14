@@ -106,7 +106,13 @@ public class TicketIssuanceEventRegistrationService {
         payload.put("eventStage", eventStage);
         payload.put("ticketType", issuance.getProduct().getProductType());
         payload.put("productCode", issuance.getProduct().getCode());
-        payload.put("deviceCode", issuance.getTargetDevice().getCode());
+        payload.put("deliveryMethod", issuance.getDeliveryMethod());
+        if (issuance.getTargetDevice() != null) {
+            payload.put("deviceCode", issuance.getTargetDevice().getCode());
+        }
+        if (issuance.getRecipientPassenger() != null) {
+            payload.put("passengerPublicId", issuance.getRecipientPassenger().getPublicId());
+        }
         payload.put("operatorUsername", issuance.getRequestedBy().getUsername());
         if (ticket != null) {
             payload.put("ticketCode", ticket.getCode());

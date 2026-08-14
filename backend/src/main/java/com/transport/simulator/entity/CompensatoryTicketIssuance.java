@@ -1,6 +1,7 @@
 package com.transport.simulator.entity;
 
 import com.transport.simulator.enums.CompensatoryIssuanceStatus;
+import com.transport.simulator.enums.CompensatoryDeliveryMethod;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -32,9 +33,17 @@ public class CompensatoryTicketIssuance extends AuditableEntity {
     @JoinColumn(name = "product_id", nullable = false)
     private TicketProduct product;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "target_device_id", nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "delivery_method", nullable = false, length = 30)
+    private CompensatoryDeliveryMethod deliveryMethod;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "target_device_id")
     private Device targetDevice;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recipient_passenger_account_id")
+    private PassengerAccount recipientPassenger;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "requested_by_operator_id", nullable = false)
@@ -95,7 +104,22 @@ public class CompensatoryTicketIssuance extends AuditableEntity {
     ) {
         this.code = Objects.requireNonNull(code);
         this.product = Objects.requireNonNull(product);
+        this.deliveryMethod = CompensatoryDeliveryMethod.PHYSICAL_DEVICE;
         this.targetDevice = Objects.requireNonNull(targetDevice);
+        this.requestedBy = Objects.requireNonNull(requestedBy);
+        this.reason = Objects.requireNonNull(reason);
+        this.requestedAt = Objects.requireNonNull(requestedAt);
+        this.status = CompensatoryIssuanceStatus.REQUESTED;
+    }
+
+    public CompensatoryTicketIssuance(
+            String code, TicketProduct product, PassengerAccount recipientPassenger,
+            OperatorAccount requestedBy, String reason, LocalDateTime requestedAt
+    ) {
+        this.code = Objects.requireNonNull(code);
+        this.product = Objects.requireNonNull(product);
+        this.deliveryMethod = CompensatoryDeliveryMethod.DIGITAL_WALLET;
+        this.recipientPassenger = Objects.requireNonNull(recipientPassenger);
         this.requestedBy = Objects.requireNonNull(requestedBy);
         this.reason = Objects.requireNonNull(reason);
         this.requestedAt = Objects.requireNonNull(requestedAt);
@@ -137,7 +161,9 @@ public class CompensatoryTicketIssuance extends AuditableEntity {
     public Long getId() { return id; }
     public String getCode() { return code; }
     public TicketProduct getProduct() { return product; }
+    public CompensatoryDeliveryMethod getDeliveryMethod() { return deliveryMethod; }
     public Device getTargetDevice() { return targetDevice; }
+    public PassengerAccount getRecipientPassenger() { return recipientPassenger; }
     public OperatorAccount getRequestedBy() { return requestedBy; }
     public Ticket getIssuedTicket() { return issuedTicket; }
     public CompensatoryIssuanceStatus getStatus() { return status; }

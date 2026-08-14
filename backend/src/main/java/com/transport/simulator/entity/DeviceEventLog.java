@@ -97,7 +97,7 @@ public class DeviceEventLog {
         this.severity = severity;
         this.message = message;
         this.device = device;
-        this.station = device.getStation();
+        this.station = device == null ? null : device.getStation();
         this.occurredAt = occurredAt;
         this.externalReference = externalReference;
         this.payloadJson = payloadJson;

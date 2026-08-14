@@ -120,6 +120,7 @@ class ControlCenterFeaturesIntegrationTests {
         TicketProductRepository productRepository = mock(TicketProductRepository.class);
         DeviceRepository deviceRepository = mock(DeviceRepository.class);
         OperatorAccountRepository operatorRepository = mock(OperatorAccountRepository.class);
+        PassengerAccountRepository passengerRepository = mock(PassengerAccountRepository.class);
         TicketQrCredentialRepository qrCredentialRepository = mock(TicketQrCredentialRepository.class);
         CompensatoryTicketIssuanceRepository issuanceRepository =
                 mock(CompensatoryTicketIssuanceRepository.class);
@@ -149,7 +150,7 @@ class ControlCenterFeaturesIntegrationTests {
                 new TicketIssuanceEventRegistrationService(logRepository, new ObjectMapper());
         CompensatoryTicketIssuanceService issuanceService = new CompensatoryTicketIssuanceService(
                 productRepository, deviceRepository, stationRepository, operatorRepository,
-                qrCredentialRepository, issuanceRepository, eventService, journeyService,
+                passengerRepository, qrCredentialRepository, issuanceRepository, eventService, journeyService,
                 ticketIssuanceService, qrImageService, commandService, CLOCK
         );
 
