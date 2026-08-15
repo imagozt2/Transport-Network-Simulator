@@ -94,6 +94,7 @@ android {
 
 dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2026.06.00")
+    val okhttpBom = platform("com.squareup.okhttp3:okhttp-bom:5.3.0")
 
     implementation(composeBom)
     implementation("androidx.activity:activity-compose:1.13.0")
@@ -102,7 +103,7 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.navigation:navigation-compose:2.9.8")
-    implementation(platform("com.squareup.okhttp3:okhttp-bom:5.3.0"))
+    implementation(okhttpBom)
     implementation("com.squareup.okhttp3:okhttp")
     implementation("com.squareup.retrofit2:retrofit:3.0.0")
     implementation("com.squareup.retrofit2:converter-gson:3.0.0")
@@ -116,6 +117,7 @@ dependencies {
     testImplementation("com.squareup.okhttp3:mockwebserver")
 
     androidTestImplementation(composeBom)
+    androidTestImplementation(okhttpBom)
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
     androidTestImplementation("com.squareup.okhttp3:mockwebserver")
