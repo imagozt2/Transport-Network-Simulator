@@ -35,11 +35,11 @@ target_link_libraries(rmm-ticket-machine-protocol-tests
 )
 
 add_test(
-    NAME rmm-ticket-machine-purchase-issuance-events
+    NAME rmm-ticket-machine-purchase-recharge-events
     COMMAND rmm-ticket-machine-protocol-tests
 )
 
-set_tests_properties(rmm-ticket-machine-purchase-issuance-events PROPERTIES
+set_tests_properties(rmm-ticket-machine-purchase-recharge-events PROPERTIES
     ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>"
 )
 
