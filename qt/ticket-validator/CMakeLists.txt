@@ -2,16 +2,22 @@ qt_add_executable(rmm-ticket-validator WIN32
     src/main.cpp
     src/mainwindow.cpp
     src/mainwindow.h
-    src/qrreaderdialog.cpp
-    src/qrreaderdialog.h
     src/validatorconfiguration.cpp
     src/validatorconfiguration.h
     src/validationresult.cpp
     src/validationresult.h
+    src/validatorfeedback.cpp
+    src/validatorfeedback.h
     src/validatormqttclient.cpp
     src/validatormqttclient.h
     src/validatorprotocol.cpp
     src/validatorprotocol.h
+    ../ticket-vending-machine/src/qrcodescannerwidget.cpp
+    ../ticket-vending-machine/src/qrcodescannerwidget.h
+)
+
+target_include_directories(rmm-ticket-validator
+    PRIVATE ../ticket-vending-machine/src
 )
 
 target_link_libraries(rmm-ticket-validator
@@ -20,6 +26,9 @@ target_link_libraries(rmm-ticket-validator
         Qt6::Gui
         Qt6::Widgets
         Qt6::Mqtt
+        Qt6::Multimedia
+        Qt6::MultimediaWidgets
+        ZXing::ZXing
         rmm-local-services
 )
 

@@ -18,6 +18,7 @@ public:
     void start();
     void stop();
     void setSpanish(bool spanish);
+    void setKioskMode(bool kioskMode);
 
 signals:
     void cancelled();
@@ -31,6 +32,7 @@ private:
 
     QCamera *m_camera = nullptr;
     QVideoWidget *m_videoWidget = nullptr;
+    QWidget *m_viewport = nullptr;
     QLabel *m_title = nullptr;
     QLabel *m_instructions = nullptr;
     QLabel *m_status = nullptr;

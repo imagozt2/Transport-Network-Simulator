@@ -1,12 +1,15 @@
 #pragma once
 
 #include "validatorconfiguration.h"
+#include "validatorfeedback.h"
 #include "validationresult.h"
 
 #include <QMainWindow>
 
 class QLabel;
-class QPushButton;
+class QFrame;
+class QrCodeScannerWidget;
+class QTimer;
 class ValidatorMqttClient;
 
 class MainWindow final : public QMainWindow
@@ -24,16 +27,23 @@ private:
     [[nodiscard]] QWidget *createDevicePanel();
     [[nodiscard]] QWidget *createFooter();
     void configureWindow();
-    void readQrCode();
-    void setValidationState(const QString &state, const QString &title,
-                            const QString &detail, bool gateOpen);
+    void submitQrCode(const QString &qrValue);
+    void scheduleReaderReset(int delayMilliseconds);
+    void resetReader();
+    void playValidationSound(int beepCount);
+    void setValidationState(ValidatorFeedbackState state, const QString &title,
+                            const QString &detail);
 
     QLabel *m_connectionState = nullptr;
+    QFrame *m_resultPanel = nullptr;
+    QLabel *m_validationIcon = nullptr;
     QLabel *m_validationState = nullptr;
     QLabel *m_validationDetail = nullptr;
     QLabel *m_gateState = nullptr;
-    QPushButton *m_scanButton = nullptr;
+    QrCodeScannerWidget *m_cameraScanner = nullptr;
+    QTimer *m_readerResetTimer = nullptr;
     ValidatorMqttClient *m_validationClient = nullptr;
     ValidatorConfiguration m_configuration;
     QString m_lastQrValue;
+    bool m_connected = false;
 };

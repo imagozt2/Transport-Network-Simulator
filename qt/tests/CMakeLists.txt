@@ -70,6 +70,31 @@ set_tests_properties(rmm-validator-entries-exits-rejections-duplicates PROPERTIE
     ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>"
 )
 
+qt_add_executable(rmm-validator-feedback-tests
+    validatorfeedbacktest.cpp
+    ../ticket-validator/src/validatorfeedback.cpp
+    ../ticket-validator/src/validatorfeedback.h
+)
+
+target_include_directories(rmm-validator-feedback-tests
+    PRIVATE ../ticket-validator/src
+)
+
+target_link_libraries(rmm-validator-feedback-tests
+    PRIVATE
+        Qt6::Core
+        Qt6::Test
+)
+
+add_test(
+    NAME rmm-validator-camera-states-sounds-timers
+    COMMAND rmm-validator-feedback-tests
+)
+
+set_tests_properties(rmm-validator-camera-states-sounds-timers PROPERTIES
+    ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>"
+)
+
 qt_add_executable(rmm-qt-mqtt-identity-tests
     mqttidentityconfigurationtest.cpp
     ../ticket-vending-machine/src/ticketmachineconfiguration.cpp

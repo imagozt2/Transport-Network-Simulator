@@ -54,5 +54,6 @@ Los ejecutables `RMMTicketVendingMachine.exe` y `RMMTicketValidator.exe` se gene
 
 La máquina de venta integra el catálogo, la red y la consulta de billetes recargables mediante HTTP;
 las compras, recargas, emisiones, eventos y órdenes compensatorias se completan mediante MQTT. La
-validadora publica entradas y salidas, interpreta las decisiones del backend y se recupera de
-desconexiones temporales.
+validadora funciona como kiosco de una sola pantalla: lee el QR mediante cámara, publica entradas y
+salidas, representa estados visuales y acústicos, mantiene cinco segundos el acceso aceptado y
+restablece automáticamente la lectura después de cada resultado o reconexión.
