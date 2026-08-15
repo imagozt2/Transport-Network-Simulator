@@ -1,6 +1,7 @@
 #pragma once
 
 #include "validatorconfiguration.h"
+#include "validatorfeedback.h"
 #include "validationresult.h"
 
 #include <QMainWindow>
@@ -29,9 +30,9 @@ private:
     void submitQrCode(const QString &qrValue);
     void scheduleReaderReset(int delayMilliseconds);
     void resetReader();
-    void playValidationSound(bool accepted);
-    void setValidationState(const QString &state, const QString &title,
-                            const QString &detail, bool gateOpen);
+    void playValidationSound(int beepCount);
+    void setValidationState(ValidatorFeedbackState state, const QString &title,
+                            const QString &detail);
 
     QLabel *m_connectionState = nullptr;
     QFrame *m_resultPanel = nullptr;

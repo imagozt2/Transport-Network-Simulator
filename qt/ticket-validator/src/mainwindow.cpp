@@ -14,8 +14,6 @@
 
 namespace {
 constexpr qsizetype maximumQrLength = 4096;
-constexpr int rejectedStateDurationMs = 3000;
-constexpr int acceptedStateDurationMs = 5000;
 constexpr auto windowStyle = R"(
     QMainWindow { background-color: #f4f7fa; }
     QLabel { color: #0f172a; font-family: "Segoe UI"; }
@@ -147,8 +145,9 @@ MainWindow::MainWindow(QWidget *parent)
             m_readerResetTimer->stop();
             m_cameraScanner->stop();
             if (!m_validationClient->hasPendingValidation()) {
-                setValidationState(QStringLiteral("rejected"), tr("Lector no disponible"),
-                                   tr("Reconectando con el centro de control"), false);
+                setValidationState(ValidatorFeedbackState::Rejected,
+                                   tr("Lector no disponible"),
+                                   tr("Reconectando con el centro de control"));
             }
         }
     });
@@ -159,17 +158,18 @@ MainWindow::MainWindow(QWidget *parent)
         const QString detail = reason == QStringLiteral("MQTT_CREDENTIALS_MISSING")
             ? tr("Falta configurar la contraseña MQTT de la validadora")
             : tr("No se ha podido obtener una respuesta del centro de control");
-        setValidationState(QStringLiteral("rejected"),
-                           tr("Validación no disponible"), detail, false);
-        playValidationSound(false);
+        const auto feedback = validatorFeedbackPolicy(ValidatorFeedbackState::Rejected);
+        setValidationState(ValidatorFeedbackState::Rejected,
+                           tr("Validación no disponible"), detail);
+        playValidationSound(feedback.beepCount);
         if (reason == QStringLiteral("MQTT_CREDENTIALS_MISSING")) {
             m_connected = false;
         }
-        scheduleReaderReset(rejectedStateDurationMs);
+        scheduleReaderReset(feedback.resetDelayMilliseconds);
     });
     if (!m_configuration.valid) {
-        setValidationState(QStringLiteral("rejected"), tr("Configuración no válida"),
-                           m_configuration.error, false);
+        setValidationState(ValidatorFeedbackState::Rejected,
+                           tr("Configuración no válida"), m_configuration.error);
     }
 }
 
@@ -468,45 +468,44 @@ void MainWindow::submitQrCode(const QString &detectedQrValue)
         return;
     }
     if (qrValue.isEmpty() || qrValue.size() > maximumQrLength) {
-        setValidationState(QStringLiteral("rejected"), tr("Código QR no válido"),
-                           tr("No se ha podido leer un billete RMM válido"), false);
-        playValidationSound(false);
-        scheduleReaderReset(rejectedStateDurationMs);
+        const auto feedback = validatorFeedbackPolicy(ValidatorFeedbackState::Rejected);
+        setValidationState(ValidatorFeedbackState::Rejected, tr("Código QR no válido"),
+                           tr("No se ha podido leer un billete RMM válido"));
+        playValidationSound(feedback.beepCount);
+        scheduleReaderReset(feedback.resetDelayMilliseconds);
         return;
     }
     if (!m_configuration.valid || !m_connected) {
-        setValidationState(QStringLiteral("rejected"), tr("Validación no disponible"),
-                           tr("No hay conexión con el centro de control"), false);
-        playValidationSound(false);
-        scheduleReaderReset(rejectedStateDurationMs);
+        const auto feedback = validatorFeedbackPolicy(ValidatorFeedbackState::Rejected);
+        setValidationState(ValidatorFeedbackState::Rejected,
+                           tr("Validación no disponible"),
+                           tr("No hay conexión con el centro de control"));
+        playValidationSound(feedback.beepCount);
+        scheduleReaderReset(feedback.resetDelayMilliseconds);
         return;
     }
 
     m_lastQrValue = qrValue;
     m_cameraScanner->stop();
-    setValidationState(QStringLiteral("processing"), tr("Verificando billete"),
-                       tr("Consultando el centro de control"), false);
+    setValidationState(ValidatorFeedbackState::Processing, tr("Verificando billete"),
+                       tr("Consultando el centro de control"));
     m_validationClient->submit(m_lastQrValue);
 }
 
 void MainWindow::showValidationResult(const ValidationResult &result)
 {
-    setValidationState(
-        result.isAccepted() ? QStringLiteral("accepted") : QStringLiteral("rejected"),
-        result.title(), result.detail(), result.isAccepted());
-    playValidationSound(result.isAccepted());
-    scheduleReaderReset(result.isAccepted()
-        ? acceptedStateDurationMs : rejectedStateDurationMs);
+    const auto state = result.isAccepted()
+        ? ValidatorFeedbackState::Accepted : ValidatorFeedbackState::Rejected;
+    const auto feedback = validatorFeedbackPolicy(state);
+    setValidationState(state, result.title(), result.detail());
+    playValidationSound(feedback.beepCount);
+    scheduleReaderReset(feedback.resetDelayMilliseconds);
 }
 
-void MainWindow::playValidationSound(bool accepted)
+void MainWindow::playValidationSound(int beepCount)
 {
-    QApplication::beep();
-    if (!accepted) {
-        QTimer::singleShot(180, this, [] {
-            QApplication::beep();
-        });
-        QTimer::singleShot(360, this, [] {
+    for (int index = 0; index < beepCount; ++index) {
+        QTimer::singleShot(index * 180, this, [] {
             QApplication::beep();
         });
     }
@@ -525,36 +524,34 @@ void MainWindow::resetReader()
     }
     m_readerResetTimer->stop();
     m_lastQrValue.clear();
-    setValidationState(QStringLiteral("waiting"), tr("Esperando un billete"),
-                       tr("Presenta el código QR en el lector"), false);
+    setValidationState(ValidatorFeedbackState::Waiting, tr("Esperando un billete"),
+                       tr("Presenta el código QR en el lector"));
     m_cameraScanner->start();
 }
 
-void MainWindow::setValidationState(const QString &state, const QString &title,
-                                    const QString &detail, bool gateOpen)
+void MainWindow::setValidationState(ValidatorFeedbackState state, const QString &title,
+                                    const QString &detail)
 {
-    const QString icon = state == QStringLiteral("accepted") ? QStringLiteral("✓")
-        : state == QStringLiteral("rejected") ? QStringLiteral("×")
-        : QStringLiteral("…");
-    const QString iconDescription = state == QStringLiteral("accepted")
+    const auto feedback = validatorFeedbackPolicy(state);
+    const QString iconDescription = state == ValidatorFeedbackState::Accepted
         ? tr("Validación aceptada")
-        : state == QStringLiteral("rejected") ? tr("Validación rechazada")
-        : state == QStringLiteral("processing") ? tr("Validación en curso")
+        : state == ValidatorFeedbackState::Rejected ? tr("Validación rechazada")
+        : state == ValidatorFeedbackState::Processing ? tr("Validación en curso")
         : tr("Esperando lectura");
 
-    m_resultPanel->setProperty("state", state);
-    m_validationIcon->setProperty("state", state);
-    m_validationIcon->setText(icon);
+    m_resultPanel->setProperty("state", feedback.code);
+    m_validationIcon->setProperty("state", feedback.code);
+    m_validationIcon->setText(feedback.icon);
     m_validationIcon->setAccessibleName(iconDescription);
     m_resultPanel->setAccessibleDescription(QStringLiteral("%1. %2").arg(title, detail));
-    m_validationState->setProperty("state", state);
+    m_validationState->setProperty("state", feedback.code);
     m_validationState->setText(title);
     m_validationDetail->setText(detail);
-    m_gateState->setProperty("state", gateOpen ? QStringLiteral("open")
-        : state == QStringLiteral("rejected") ? QStringLiteral("closed-rejected")
-                                               : QStringLiteral("closed"));
-    m_gateState->setText(gateOpen ? tr("Paso autorizado")
-                                  : state == QStringLiteral("processing")
+    m_gateState->setProperty("state", feedback.gateOpen ? QStringLiteral("open")
+        : state == ValidatorFeedbackState::Rejected ? QStringLiteral("closed-rejected")
+                                                    : QStringLiteral("closed"));
+    m_gateState->setText(feedback.gateOpen ? tr("Paso autorizado")
+                                  : state == ValidatorFeedbackState::Processing
                                       ? tr("Comprobando acceso")
                                       : tr("Torniquete cerrado"));
     m_resultPanel->style()->unpolish(m_resultPanel);
