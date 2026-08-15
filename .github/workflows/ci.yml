@@ -79,6 +79,12 @@ jobs:
       - name: Build frontend
         run: npm run build -- --configuration production
 
+      - name: Install Chromium for web access tests
+        run: npx playwright install --with-deps chromium
+
+      - name: Test real access to the web application
+        run: npm run test:e2e
+
   android:
     name: RMM App build and tests
     runs-on: ubuntu-latest
