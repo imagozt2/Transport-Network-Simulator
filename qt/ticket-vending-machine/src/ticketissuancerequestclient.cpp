@@ -53,6 +53,7 @@ TicketIssuanceRequestClient::TicketIssuanceRequestClient(QObject *parent)
     m_publishRetryTimer->setSingleShot(true);
     m_publishRetryTimer->setInterval(1500);
     m_presenceTimer->setInterval(30000);
+    restorePendingOperations();
 
     connect(m_client, &QMqttClient::connected, this, [this] {
         m_reconnectAttempt = 0;
@@ -81,6 +82,7 @@ TicketIssuanceRequestClient::TicketIssuanceRequestClient(QObject *parent)
             m_timeout->stop();
             m_awaitedRechargeReference.clear();
             m_pendingIsRecharge = false;
+            clearPersistedPendingOperation();
             publishOperationEvent(
                 QStringLiteral("TICKET_RECHARGE_COMPLETED"), recharge.rechargeReference,
                 recharge.ticketCode, QStringLiteral("COMPLETED"),
@@ -133,6 +135,7 @@ TicketIssuanceRequestClient::TicketIssuanceRequestClient(QObject *parent)
         m_timeout->stop();
         const QString purchaseReference = m_awaitedReference;
         m_awaitedReference.clear();
+        clearPersistedPendingOperation();
         publishOperationEvent(
             QStringLiteral("QR_TICKET_GENERATED"), purchaseReference, command.ticketCode,
             QStringLiteral("QR_PRESENTED"));
@@ -228,6 +231,7 @@ void TicketIssuanceRequestClient::publishOrQueue(
         return;
     }
     m_queuedMessages.enqueue({topic, payload});
+    persistQueuedMessages();
     scheduleReconnect();
 }
 
@@ -240,7 +244,74 @@ void TicketIssuanceRequestClient::flushQueuedMessages()
             return;
         }
         m_queuedMessages.dequeue();
+        persistQueuedMessages();
     }
+}
+
+void TicketIssuanceRequestClient::restorePendingOperations()
+{
+    QSettings settings;
+    const QString base = QStringLiteral("mqtt/%1").arg(m_deviceCode);
+    settings.beginGroup(base);
+    m_pendingReference = settings.value(QStringLiteral("pending/reference")).toString();
+    m_pendingPayload = settings.value(QStringLiteral("pending/payload")).toByteArray();
+    m_pendingIsRecharge = settings.value(QStringLiteral("pending/recharge"), false).toBool();
+    if (m_pendingReference.isEmpty() || m_pendingPayload.isEmpty()) {
+        m_pendingReference.clear();
+        m_pendingPayload.clear();
+        m_pendingIsRecharge = false;
+    } else if (m_pendingIsRecharge) {
+        m_awaitedRechargeReference = m_pendingReference;
+    } else {
+        m_awaitedReference = m_pendingReference;
+    }
+
+    const int queuedCount = settings.beginReadArray(QStringLiteral("queuedMessages"));
+    for (int index = 0; index < queuedCount; ++index) {
+        settings.setArrayIndex(index);
+        const QString topic = settings.value(QStringLiteral("topic")).toString();
+        const QByteArray payload = settings.value(QStringLiteral("payload")).toByteArray();
+        if (!topic.isEmpty() && !payload.isEmpty()) {
+            m_queuedMessages.enqueue({topic, payload});
+        }
+    }
+    settings.endArray();
+    settings.endGroup();
+}
+
+void TicketIssuanceRequestClient::persistPendingOperation() const
+{
+    QSettings settings;
+    settings.beginGroup(QStringLiteral("mqtt/%1/pending").arg(m_deviceCode));
+    settings.setValue(QStringLiteral("reference"), m_pendingReference);
+    settings.setValue(QStringLiteral("payload"), m_pendingPayload);
+    settings.setValue(QStringLiteral("recharge"), m_pendingIsRecharge);
+    settings.endGroup();
+    settings.sync();
+}
+
+void TicketIssuanceRequestClient::clearPersistedPendingOperation() const
+{
+    QSettings settings;
+    settings.remove(QStringLiteral("mqtt/%1/pending").arg(m_deviceCode));
+    settings.sync();
+}
+
+void TicketIssuanceRequestClient::persistQueuedMessages() const
+{
+    QSettings settings;
+    const QString base = QStringLiteral("mqtt/%1").arg(m_deviceCode);
+    settings.beginGroup(base);
+    settings.remove(QStringLiteral("queuedMessages"));
+    settings.beginWriteArray(QStringLiteral("queuedMessages"));
+    for (int index = 0; index < m_queuedMessages.size(); ++index) {
+        settings.setArrayIndex(index);
+        settings.setValue(QStringLiteral("topic"), m_queuedMessages.at(index).topic);
+        settings.setValue(QStringLiteral("payload"), m_queuedMessages.at(index).payload);
+    }
+    settings.endArray();
+    settings.endGroup();
+    settings.sync();
 }
 
 void TicketIssuanceRequestClient::completeCompensatoryIssuance(
@@ -309,6 +380,7 @@ void TicketIssuanceRequestClient::submit(const TicketIssuanceRequest &request)
     m_pendingPayload = rmm::ticketmachine::buildPurchaseRequest(
         request, m_deviceCode, m_pendingReference, messageId,
         QDateTime::currentDateTimeUtc());
+    persistPendingOperation();
     m_timeout->start();
     if (m_client->state() == QMqttClient::Connected) {
         publishPending();
@@ -339,6 +411,7 @@ void TicketIssuanceRequestClient::submitRecharge(const TicketRechargeRequest &re
     m_pendingPayload = rmm::ticketmachine::buildRechargeRequest(
         request, m_deviceCode, m_pendingReference,
         QUuid::createUuid().toString(QUuid::WithoutBraces), QDateTime::currentDateTimeUtc());
+    persistPendingOperation();
     m_timeout->start();
     if (m_client->state() == QMqttClient::Connected) publishPending();
     else {
@@ -391,6 +464,7 @@ void TicketIssuanceRequestClient::fail(const QString &reason)
     m_awaitedReference.clear();
     m_awaitedRechargeReference.clear();
     m_pendingIsRecharge = false;
+    clearPersistedPendingOperation();
     m_packetId = -1;
     m_publishAttempt = 0;
     emit failed(reason);
