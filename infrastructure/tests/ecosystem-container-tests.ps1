@@ -2,6 +2,7 @@
 param()
 
 $ErrorActionPreference = "Stop"
+$OutputEncoding = [Text.UTF8Encoding]::new($false)
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $composeFile = Join-Path $repositoryRoot "compose.yaml"
 $executionId = ([Guid]::NewGuid().ToString("N")).Substring(0, 10)
@@ -59,6 +60,51 @@ function Wait-ForBackendMqttConnection {
     throw "El backend no confirmó su conexión autenticada con Mosquitto"
 }
 
+function Test-OperatorApiFlow {
+    param([Parameter(Mandatory)][int]$Port)
+
+    $baseUri = "http://127.0.0.1:$Port/api"
+    $session = [Microsoft.PowerShell.Commands.WebRequestSession]::new()
+    $csrf = Invoke-RestMethod -Uri "$baseUri/auth/csrf" -WebSession $session `
+            -TimeoutSec 5
+    if ([string]::IsNullOrWhiteSpace($csrf.headerName) `
+            -or [string]::IsNullOrWhiteSpace($csrf.token)) {
+        throw "El backend no ha entregado un token CSRF válido"
+    }
+    $headers = @{}
+    $headers[$csrf.headerName] = $csrf.token
+    $loginBody = @{
+        identifier = $env:OPERATOR_USERNAME
+        password = $env:OPERATOR_PASSWORD
+    } | ConvertTo-Json
+    $operator = Invoke-RestMethod -Uri "$baseUri/auth/login" -Method Post `
+            -WebSession $session -Headers $headers -ContentType "application/json" `
+            -Body $loginBody -TimeoutSec 5
+    if ($operator.username -ne $env:OPERATOR_USERNAME) {
+        throw "La sesión autenticada no corresponde al operador de prueba"
+    }
+
+    $currentOperator = Invoke-RestMethod -Uri "$baseUri/auth/me" `
+            -WebSession $session -TimeoutSec 5
+    $dashboard = Invoke-RestMethod -Uri "$baseUri/dashboard/summary" `
+            -WebSession $session -TimeoutSec 10
+    $networkMap = Invoke-RestMethod -Uri "$baseUri/network-map" `
+            -WebSession $session -TimeoutSec 10
+    $titles = Invoke-RestMethod -Uri "$baseUri/transport-titles" `
+            -WebSession $session -TimeoutSec 10
+
+    if ($currentOperator.username -ne $env:OPERATOR_USERNAME) {
+        throw "La sesión del operador no se ha conservado"
+    }
+    if ($null -eq $dashboard.network -or $null -eq $dashboard.fleet `
+            -or @($networkMap.lines).Count -eq 0) {
+        throw "Las consultas operativas no han devuelto información"
+    }
+    if (@($titles.titles).Count -lt 4) {
+        throw "El catálogo no contiene todos los títulos de transporte"
+    }
+}
+
 $mysqlPort = Get-FreeTcpPort
 $mqttPort = Get-FreeTcpPort
 $backendPort = Get-FreeTcpPort
@@ -76,6 +122,11 @@ $env:BACKEND_CONTAINER_NAME = "$projectName-backend"
 $env:RMM_NETWORK_NAME = "$projectName-network"
 $env:MOSQUITTO_RUNTIME_DIRECTORY = $runtimeDirectory.Replace("\", "/")
 $env:DEVICE_EVENT_SIMULATION_ENABLED = "false"
+$env:OPERATOR_USERNAME = "container-admin"
+$env:OPERATOR_EMAIL = "container-admin@rmm.local"
+$env:OPERATOR_PASSWORD = "ContainerTestPassword-2026"
+$env:OPERATOR_FIRST_NAME = "Container"
+$env:OPERATOR_LAST_NAME = "Administrator"
 
 try {
     New-Item -ItemType Directory -Path $runtimeDirectory -Force | Out-Null
@@ -129,7 +180,10 @@ try {
     Write-Host "Comprobando la conexión del backend con Mosquitto..."
     Wait-ForBackendMqttConnection
 
-    Write-Host "Ecosistema validado: backend, MySQL y Mosquitto están conectados y saludables."
+    Write-Host "Comprobando autenticación y consultas funcionales del ecosistema..."
+    Test-OperatorApiFlow -Port $backendPort
+
+    Write-Host "Ecosistema validado: infraestructura, autenticación y consultas operativas funcionan."
 } finally {
     try { Invoke-Compose -Arguments @("down", "--volumes", "--remove-orphans") }
     catch { Write-Warning "No se pudieron retirar todos los contenedores de prueba: $_" }
