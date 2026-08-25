@@ -255,8 +255,10 @@ cd android
 ./gradlew.bat testDebugUnitTest assembleDebug
 ```
 
-GitHub Actions utiliza las tareas equivalentes, publica el APK de depuración y conserva el informe de
-tests como artefactos. Las pruebas no necesitan un backend, una base de datos ni un emulador.
+GitHub Actions ejecuta las pruebas unitarias sin servicios externos y, adicionalmente, las pruebas
+instrumentadas en un emulador. Publica el APK de depuración y conserva el informe de tests como
+artefactos; los escenarios integrados con backend y base de datos se validan en el job del ecosistema
+contenedorizado.
 
 ## Reglas para ampliar la aplicación
 
@@ -264,7 +266,7 @@ tests como artefactos. Las pruebas no necesitan un backend, una base de datos ni
 - Mantener DTO de transporte separados de los modelos utilizados por la interfaz.
 - Ejecutar las reglas autoritativas en el backend y repetir en Android solo validaciones de experiencia.
 - Modelar todos los fallos mediante resultados tipados; no mostrar trazas ni excepciones técnicas.
-- Centralizar la futura autorización Bearer y la renovación, evitando implementarlas pantalla a pantalla.
+- Mantener centralizadas la autorización Bearer y la renovación, evitando implementarlas pantalla a pantalla.
 - Guardar solo los datos imprescindibles y utilizar el almacén seguro para cualquier credencial.
 - Conservar rutas estables y pasar únicamente identificadores públicos entre destinos.
 - Añadir tests deterministas para cada decisión de navegación, sesión y transformación de respuestas.

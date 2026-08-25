@@ -3,7 +3,7 @@
 ## Objetivo
 
 El Centro de Control Operativo es una aplicación privada. Sus cuentas representan al personal que
-administra la plataforma y son independientes de los futuros usuarios viajeros de RMM App.
+administra la plataforma y son independientes de los usuarios viajeros de RMM App.
 
 La administración de esas cuentas de pasajeros se describe por separado en
 [`usuarios-rmm-app.md`](usuarios-rmm-app.md).

@@ -1,12 +1,12 @@
 # Transport Network Simulator
 
-Simulador del centro de control de la red de metro de **Macegocia**, una ciudad ficticia. El proyecto
-permite consultar el estado operativo de la infraestructura y explorar visualmente sus líneas y
-estaciones desde una aplicación web.
+Ecosistema de simulación de la red de metro de **Macegocia**, una ciudad ficticia. Reúne un centro
+de control web, una aplicación Android para pasajeros, dos máquinas Qt, una API central, MySQL y
+mensajería MQTT autenticada.
 
-El repositorio reconstruye de forma progresiva un prototipo anterior, aplicando una arquitectura más
-controlada, pruebas automatizadas, ramas de trabajo, pull requests y un pipeline de integración
-continua.
+El repositorio reconstruye y amplía un prototipo anterior mediante una arquitectura controlada,
+contratos versionados, pruebas automatizadas, ramas de trabajo, pull requests y un pipeline de
+integración continua.
 
 ## Estado actual
 
@@ -35,8 +35,8 @@ La aplicación incluye actualmente:
 - autenticación de operadores mediante sesiones protegidas, rutas privadas y bloqueo temporal ante
   intentos fallidos;
 - pantallas personales de cuenta y configuración accesibles desde la cabecera;
-- una sección administrativa para consultar, filtrar y gestionar las cuentas de pasajeros de la
-  futura RMM App;
+- una sección administrativa para consultar, filtrar y gestionar las cuentas de pasajeros de
+  RMM App;
 - un ciclo administrativo para crear, bloquear, reactivar y eliminar cuentas de pasajeros;
 - una sección de incidencias con filtros, detalle, comentarios, cambios de estado y trazabilidad del
   operador responsable;
@@ -63,6 +63,10 @@ de producción.
 La [guía final de ejecución y validación](docs/guia-ecosistema-rmm.md) reúne la preparación, el
 arranque de todos los componentes, las comprobaciones funcionales y automatizadas, la parada segura
 y el diagnóstico del ecosistema.
+
+El [estado final y las limitaciones](docs/estado-final-y-limitaciones.md) delimitan qué funciones
+están implementadas, qué partes son simuladas y qué integraciones quedan fuera del alcance del
+proyecto.
 
 ## Tecnologías
 
@@ -314,6 +318,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 
 ## Documentación
 
+- [Estado final y limitaciones del proyecto](docs/estado-final-y-limitaciones.md)
 - [Guía final de ejecución y validación del ecosistema RMM](docs/guia-ecosistema-rmm.md)
 - [Arquitectura, componentes y responsabilidades del ecosistema RMM](docs/arquitectura-ecosistema.md)
 - [Infraestructura local del ecosistema RMM](docs/infraestructura-local.md)
