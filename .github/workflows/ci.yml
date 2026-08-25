@@ -53,7 +53,7 @@ jobs:
         run: chmod +x mvnw
 
       - name: Build backend
-        run: ./mvnw --batch-mode --no-transfer-progress clean package -DskipTests
+        run: ./mvnw --batch-mode --no-transfer-progress clean package
 
   frontend:
     name: Frontend build
@@ -75,6 +75,9 @@ jobs:
 
       - name: Install frontend dependencies
         run: npm ci
+
+      - name: Test frontend
+        run: npm test -- --watch=false
 
       - name: Build frontend
         run: npm run build -- --configuration production
