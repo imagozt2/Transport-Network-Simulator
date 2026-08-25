@@ -111,7 +111,7 @@ mediante Qt Maintenance Tool.
    - `rmm-ticket-validator` para la máquina validadora.
 
 Cada aplicación puede ejecutarse de manera independiente. También pueden mantenerse ambas abiertas
-para comprobar el futuro entorno de máquinas simuladas.
+para comprobar el entorno integrado de máquinas simuladas.
 
 Antes de ejecutar la máquina de venta, configura su identidad y contraseña MQTT siguiendo su
 [documentación específica](maquina-venta.md). Esa guía también describe el flujo de compra, las

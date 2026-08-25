@@ -35,8 +35,8 @@ La aplicación incluye actualmente:
 - autenticación de operadores mediante sesiones protegidas, rutas privadas y bloqueo temporal ante
   intentos fallidos;
 - pantallas personales de cuenta y configuración accesibles desde la cabecera;
-- una sección administrativa para consultar, filtrar y gestionar las cuentas de pasajeros de la
-  futura RMM App;
+- una sección administrativa para consultar, filtrar y gestionar las cuentas de pasajeros de
+  RMM App;
 - un ciclo administrativo para crear, bloquear, reactivar y eliminar cuentas de pasajeros;
 - una sección de incidencias con filtros, detalle, comentarios, cambios de estado y trazabilidad del
   operador responsable;

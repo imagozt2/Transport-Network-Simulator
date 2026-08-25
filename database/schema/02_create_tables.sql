@@ -732,8 +732,6 @@ CREATE TABLE tickets (
     balance_amount DECIMAL(10, 2) NOT NULL DEFAULT 0,
     currency CHAR(3) NOT NULL DEFAULT 'EUR',
     passenger_user_id BIGINT NULL,
-    imported_to_android BOOLEAN NOT NULL DEFAULT FALSE,
-    android_imported_at DATETIME NULL,
     active BOOLEAN NOT NULL DEFAULT TRUE,
     issued_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     last_recharged_at DATETIME NULL,

@@ -48,7 +48,7 @@ El primer operador se aprovisionará desde el backend mediante variables de ento
 El procedimiento y el modelo de seguridad se describen en
 [`docs/acceso-operadores.md`](../docs/acceso-operadores.md).
 
-`passenger_accounts` mantiene las cuentas de los futuros usuarios viajeros de RMM App. Estas
+`passenger_accounts` mantiene las cuentas de los usuarios viajeros de RMM App. Estas
 cuentas están separadas de los operadores e incluyen un UUID público, identidad, correo, hash de
 contraseña, verificación, estado administrativo y datos de seguridad. La tabla
 `passenger_account_status_changes` permitirá auditar qué operador cambia el estado de una cuenta.
@@ -78,10 +78,9 @@ consultar el historial de forma paginada.
 
 `ticket_qr_credentials` mantiene las credenciales QR versionadas asociadas a cada soporte. Solo
 persiste su identificador y huella, nunca el contenido íntegro del QR. Sus estados permiten revocar,
-caducar o sustituir una credencial sin eliminar el billete ni su historial. Los campos `qr_token`,
-`imported_to_android` y `android_imported_at` de `tickets` se conservan temporalmente para mantener
-la compatibilidad con la emisión compensatoria existente; el backend los retirará cuando adopte el
-nuevo modelo de soportes.
+caducar o sustituir una credencial sin eliminar el billete ni su historial. `qr_token` conserva el
+identificador interno empleado por el flujo de emisión; la vinculación con Android se representa
+mediante la titularidad del billete y sus soportes, sin columnas de compatibilidad adicionales.
 
 `incidents` constituye la base de la herramienta de ticketing del centro de control. Cada incidencia
 incluye categoría, prioridad, estado, operador creador y responsable, fechas del ciclo de vida y
