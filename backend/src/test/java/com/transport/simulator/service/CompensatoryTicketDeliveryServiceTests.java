@@ -18,6 +18,8 @@ import com.transport.simulator.entity.TicketProduct;
 import com.transport.simulator.entity.TicketQrCredential;
 import com.transport.simulator.enums.CompensatoryDeliveryMethod;
 import com.transport.simulator.enums.CompensatoryIssuanceStatus;
+import com.transport.simulator.enums.DeviceMqttCommandType;
+import com.transport.simulator.enums.DeviceMqttPresence;
 import com.transport.simulator.enums.DeviceStatus;
 import com.transport.simulator.enums.DeviceType;
 import com.transport.simulator.enums.OperatorRole;
@@ -38,9 +40,11 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 
 class CompensatoryTicketDeliveryServiceTests {
@@ -118,6 +122,64 @@ class CompensatoryTicketDeliveryServiceTests {
         verify(eventService).registerRequested(any(), any());
         verify(eventService).registerCompleted(any(), any());
         verify(commandService, never()).send(any(), any(), any(), any());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void shouldSendAPhysicalIssuanceWithItsQrToAConnectedMqttMachine() {
+        Device device = mock(Device.class);
+        Station station = mock(Station.class);
+        Ticket ticket = mock(Ticket.class);
+        TicketQrCredential credential = mock(TicketQrCredential.class);
+        when(device.getCode()).thenReturn("RMM-TM-ST001-01");
+        when(device.getName()).thenReturn("Máquina de venta Aeropuerto 1");
+        when(device.getType()).thenReturn(DeviceType.TICKET_MACHINE);
+        when(device.getStatus()).thenReturn(DeviceStatus.ONLINE);
+        when(device.isMqttManaged()).thenReturn(true);
+        when(device.getMqttPresence()).thenReturn(DeviceMqttPresence.ONLINE);
+        when(device.getStation()).thenReturn(station);
+        when(station.getCode()).thenReturn("ST001");
+        when(station.getName()).thenReturn("Aeropuerto");
+        when(deviceRepository.findByCodeAndActiveTrue("RMM-TM-ST001-01"))
+                .thenReturn(Optional.of(device));
+        when(ticket.getId()).thenReturn(82L);
+        when(ticket.getCode()).thenReturn("RMM-PHYSICAL-082");
+        when(ticketIssuanceService.issuePhysical(any(), any(), any(), any(), any()))
+                .thenReturn(new IssuedTicket(ticket, null));
+        when(credential.getQrValue()).thenReturn("signed-physical-qr");
+        when(credentialRepository.findFirstByTicketIdAndStatusOrderByIssuedAtDesc(
+                82L, TicketQrCredentialStatus.ACTIVE)).thenReturn(Optional.of(credential));
+        when(qrImageService.pngBase64("signed-physical-qr"))
+                .thenReturn("physical-qr-png");
+
+        var response = service.issue(1L, request(
+                CompensatoryDeliveryMethod.PHYSICAL_DEVICE,
+                "RMM-TM-ST001-01", null), authentication());
+
+        assertThat(response.status()).isEqualTo(CompensatoryIssuanceStatus.PROCESSING);
+        assertThat(response.deliveryMethod()).isEqualTo(CompensatoryDeliveryMethod.PHYSICAL_DEVICE);
+        assertThat(response.ticketCode()).isEqualTo("RMM-PHYSICAL-082");
+        assertThat(response.qrPngBase64()).isEqualTo("physical-qr-png");
+        assertThat(response.simulated()).isFalse();
+
+        ArgumentCaptor<Map<String, Object>> payloadCaptor = ArgumentCaptor.forClass(Map.class);
+        verify(commandService).send(
+                org.mockito.ArgumentMatchers.eq("RMM-TM-ST001-01"),
+                org.mockito.ArgumentMatchers.eq(DeviceMqttCommandType.TICKET_ISSUE),
+                payloadCaptor.capture(), any());
+        assertThat(payloadCaptor.getValue())
+                .containsEntry("issuanceKind", "COMPENSATORY")
+                .containsKey("issuanceCode");
+        assertThat(payloadCaptor.getValue().get("ticket")).isInstanceOfSatisfying(
+                Map.class,
+                issuedTicket -> assertThat(issuedTicket)
+                        .containsEntry("ticketCode", "RMM-PHYSICAL-082")
+                        .containsEntry("productType", "MULTI_TRIP")
+                        .containsEntry("qrValue", "signed-physical-qr")
+                        .containsEntry("qrPngBase64", "physical-qr-png")
+                        .containsKey("linkingCode"));
+        verify(eventService).registerRequested(any(), any());
+        verify(eventService, never()).registerCompleted(any(), any());
     }
 
     @Test

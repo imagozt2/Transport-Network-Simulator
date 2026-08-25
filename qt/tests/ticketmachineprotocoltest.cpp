@@ -60,6 +60,7 @@ private slots:
     void completesARegularPurchaseContract();
     void completesACompensatoryIssuanceContract();
     void completesARechargeContract();
+    void purchasesAndRechargesTheSameTicket();
 };
 
 void TicketMachineProtocolTest::buildsPurchaseConfigurations_data()
@@ -337,6 +338,102 @@ void TicketMachineProtocolTest::completesARechargeContract()
              QStringLiteral("MULTI_TRIP"));
     QCOMPARE(details.value(QStringLiteral("resultCode")).toString(),
              QStringLiteral("COMPLETED"));
+}
+
+void TicketMachineProtocolTest::purchasesAndRechargesTheSameTicket()
+{
+    const QString deviceCode = QStringLiteral("RMM-TM-ST001-01");
+    const QString purchaseReference = QStringLiteral("purchase-functional-001");
+    const QString rechargeReference = QStringLiteral("recharge-functional-001");
+
+    const auto purchaseRequest = object(rmm::ticketmachine::buildPurchaseRequest(
+        TicketIssuanceRequest{
+            QStringLiteral("SMART_BALANCE"), {}, {}, 0, 10.0, 10.0,
+        },
+        deviceCode, purchaseReference, QStringLiteral("purchase-message-001"), Now));
+    const auto purchasePayload = purchaseRequest.value(QStringLiteral("payload")).toObject();
+    QCOMPARE(purchaseRequest.value(QStringLiteral("type")).toString(),
+             QStringLiteral("ticket.purchase-requested"));
+    QCOMPARE(purchasePayload.value(QStringLiteral("purchaseReference")).toString(),
+             purchaseReference);
+    QCOMPARE(purchasePayload.value(QStringLiteral("configuration")).toObject()
+                 .value(QStringLiteral("rechargeAmount")).toDouble(), 10.0);
+
+    const auto issued = rmm::ticketmachine::parseIssueCommand(
+        issueCommand(purchaseReference, QStringLiteral("PURCHASE"), Now.addSecs(60)),
+        purchaseReference, Now);
+    QCOMPARE(issued.result, IssueCommandResult::Regular);
+    QCOMPARE(issued.ticketCode, QStringLiteral("RMM-TICKET-001"));
+    QCOMPARE(issued.qrValue, QStringLiteral("signed-qr"));
+
+    const auto purchaseEvent = object(rmm::ticketmachine::buildOperationEvent(
+        deviceCode, QStringLiteral("TICKET_PURCHASE_COMPLETED"), purchaseReference,
+        issued.ticketCode, QStringLiteral("TICKET_PRESENTED"),
+        QStringLiteral("purchase-event-001"), Now.addSecs(5),
+        {{QStringLiteral("productType"), QStringLiteral("SMART_BALANCE")},
+         {QStringLiteral("amount"), 10.0}}));
+    QCOMPARE(purchaseEvent.value(QStringLiteral("correlationId")).toString(),
+             purchaseReference);
+    QCOMPARE(purchaseEvent.value(QStringLiteral("payload")).toObject()
+                 .value(QStringLiteral("eventCode")).toString(),
+             QStringLiteral("TICKET_PURCHASE_COMPLETED"));
+
+    const auto rechargeRequest = object(rmm::ticketmachine::buildRechargeRequest(
+        TicketRechargeRequest{
+            issued.qrValue, {}, {}, 0, 0, 15.0, 15.0, QStringLiteral("SMART_BALANCE"),
+        },
+        deviceCode, rechargeReference, QStringLiteral("recharge-message-001"),
+        Now.addSecs(10)));
+    const auto rechargePayload = rechargeRequest.value(QStringLiteral("payload")).toObject();
+    QCOMPARE(rechargeRequest.value(QStringLiteral("type")).toString(),
+             QStringLiteral("ticket.recharge-requested"));
+    QCOMPARE(rechargePayload.value(QStringLiteral("qrValue")).toString(), issued.qrValue);
+    QCOMPARE(rechargePayload.value(QStringLiteral("configuration")).toObject()
+                 .value(QStringLiteral("balanceAmount")).toDouble(), 15.0);
+    QCOMPARE(rechargePayload.value(QStringLiteral("paidAmount")).toDouble(), 15.0);
+
+    const QJsonObject responsePayload{
+        {QStringLiteral("rechargeReference"), rechargeReference},
+        {QStringLiteral("rechargeCode"), QStringLiteral("RMM-RCH-FUNCTIONAL-001")},
+        {QStringLiteral("status"), QStringLiteral("COMPLETED")},
+        {QStringLiteral("ticketCode"), issued.ticketCode},
+        {QStringLiteral("productType"), QStringLiteral("SMART_BALANCE")},
+        {QStringLiteral("ticketStatus"), QStringLiteral("ACTIVE")},
+        {QStringLiteral("totalAmount"), 15.0},
+        {QStringLiteral("balanceAmount"), 25.0},
+        {QStringLiteral("currency"), QStringLiteral("EUR")},
+    };
+    const QByteArray response = QJsonDocument(QJsonObject{
+        {QStringLiteral("schemaVersion"), 1},
+        {QStringLiteral("type"), QStringLiteral("ticket.recharge-completed")},
+        {QStringLiteral("payload"), responsePayload},
+    }).toJson(QJsonDocument::Compact);
+
+    const auto recharge = rmm::ticketmachine::parseRechargeResponse(
+        response, rechargeReference);
+    QVERIFY(recharge.valid);
+    QCOMPARE(recharge.ticketCode, issued.ticketCode);
+    QCOMPARE(recharge.productType, QStringLiteral("SMART_BALANCE"));
+    QCOMPARE(recharge.balanceAmount, 25.0);
+    QCOMPARE(recharge.totalAmount, 15.0);
+
+    const auto rechargeEvent = object(rmm::ticketmachine::buildOperationEvent(
+        deviceCode, QStringLiteral("TICKET_RECHARGE_COMPLETED"), rechargeReference,
+        recharge.ticketCode, QStringLiteral("COMPLETED"),
+        QStringLiteral("recharge-event-001"), Now.addSecs(15),
+        {{QStringLiteral("productType"), recharge.productType},
+         {QStringLiteral("amount"), recharge.totalAmount},
+         {QStringLiteral("balanceAfter"), recharge.balanceAmount}}));
+    const auto rechargeEventPayload = rechargeEvent.value(QStringLiteral("payload")).toObject();
+    QCOMPARE(rechargeEvent.value(QStringLiteral("correlationId")).toString(),
+             rechargeReference);
+    QCOMPARE(rechargeEventPayload.value(QStringLiteral("eventCode")).toString(),
+             QStringLiteral("TICKET_RECHARGE_COMPLETED"));
+    QCOMPARE(rechargeEventPayload.value(QStringLiteral("details")).toObject()
+                 .value(QStringLiteral("balanceAfter")).toDouble(), 25.0);
+
+    QVERIFY(!rmm::ticketmachine::parseRechargeResponse(
+        response, QStringLiteral("another-recharge-reference")).valid);
 }
 
 QTEST_APPLESS_MAIN(TicketMachineProtocolTest)

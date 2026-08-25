@@ -60,8 +60,9 @@ billetes, la vinculación de soportes físicos, la validación de entrada y sali
 historial de desplazamientos. Los pagos y los dispositivos son simulados y no representan sistemas
 de producción.
 
-La [guía integral del ecosistema RMM](docs/guia-ecosistema-rmm.md) resume sus componentes, flujos,
-seguridad, ejecución y documentación.
+La [guía final de ejecución y validación](docs/guia-ecosistema-rmm.md) reúne la preparación, el
+arranque de todos los componentes, las comprobaciones funcionales y automatizadas, la parada segura
+y el diagnóstico del ecosistema.
 
 ## Tecnologías
 
@@ -313,7 +314,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 
 ## Documentación
 
-- [Guía integral del ecosistema RMM](docs/guia-ecosistema-rmm.md)
+- [Guía final de ejecución y validación del ecosistema RMM](docs/guia-ecosistema-rmm.md)
 - [Arquitectura, componentes y responsabilidades del ecosistema RMM](docs/arquitectura-ecosistema.md)
 - [Infraestructura local del ecosistema RMM](docs/infraestructura-local.md)
 - [Ejecución de RMM App y las aplicaciones Qt](docs/ejecucion-aplicaciones-cliente.md)

@@ -26,14 +26,13 @@ class AuthenticationFormInteractionTest {
     fun loginAllowsWritingEmailAndPasswordWhileIdle() {
         showAuthenticationScreen()
 
-        compose.onNodeWithText(context.getString(R.string.auth_email))
-            .assertIsEnabled()
-            .performTextInput("pasajero@rmm.local")
-            .assertTextContains("pasajero@rmm.local")
-        compose.onNodeWithText(context.getString(R.string.auth_password))
-            .assertIsEnabled()
-            .performTextInput("ClaveSegura123")
-            .assertTextContains("ClaveSegura123")
+        val email = compose.onNodeWithText(context.getString(R.string.auth_email)).assertIsEnabled()
+        email.performTextInput("pasajero@rmm.local")
+        email.assertTextContains("pasajero@rmm.local")
+
+        val password = compose.onNodeWithText(context.getString(R.string.auth_password)).assertIsEnabled()
+        password.performTextInput("ClaveSegura123")
+        password.assertTextContains("ClaveSegura123")
     }
 
     @Test
@@ -57,9 +56,8 @@ class AuthenticationFormInteractionTest {
     }
 
     private fun input(label: Int, value: String) {
-        compose.onNodeWithText(context.getString(label))
-            .assertIsEnabled()
-            .performTextInput(value)
-            .assertTextContains(value)
+        val field = compose.onNodeWithText(context.getString(label)).assertIsEnabled()
+        field.performTextInput(value)
+        field.assertTextContains(value)
     }
 }
