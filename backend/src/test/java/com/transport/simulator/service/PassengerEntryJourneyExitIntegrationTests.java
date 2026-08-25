@@ -149,6 +149,33 @@ class PassengerEntryJourneyExitIntegrationTests {
                 .containsExactly("ENTRY", "EXIT");
         assertThat(logs).extracting(log -> log.payload().get("stationCode"))
                 .containsExactly("ST001", "ST010");
+
+        assertCoherentOperationalTrace(storedOperations, logs, ticket, closed);
+    }
+
+    private void assertCoherentOperationalTrace(List<TicketOperation> operations,
+            List<DeviceEventMessage> logs, Ticket ticket, TicketJourney journey) {
+        assertThat(operations).hasSameSizeAs(logs).hasSize(2);
+        assertThat(logs).extracting(DeviceEventMessage::eventId)
+                .doesNotHaveDuplicates();
+        assertThat(logs).extracting(DeviceEventMessage::deviceCode)
+                .containsExactly("RMM-EN-ST001-01", "RMM-EX-ST010-01");
+
+        for (int index = 0; index < operations.size(); index++) {
+            TicketOperation operation = operations.get(index);
+            DeviceEventMessage log = logs.get(index);
+            String expectedDirection = index == 0 ? "ENTRY" : "EXIT";
+
+            assertThat(operation.getTicket()).isSameAs(ticket);
+            assertThat(operation.getJourney()).isSameAs(journey);
+            assertThat(log.payload())
+                    .containsEntry("ticketCode", operation.getTicket().getCode())
+                    .containsEntry("journeyCode", operation.getJourney().getCode())
+                    .containsEntry("stationCode", operation.getStation().getCode())
+                    .containsEntry("direction", expectedDirection);
+            assertThat(operation.getOccurredAt())
+                    .isEqualTo(java.time.LocalDateTime.ofInstant(log.occurredAt(), ZoneOffset.UTC));
+        }
     }
 
     private List<DeviceEventMessage> receiveValidatorLogs(Ticket ticket, TicketJourney journey) {
