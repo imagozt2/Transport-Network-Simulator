@@ -11,6 +11,9 @@ Esta guía es el punto de entrada para preparar, arrancar, comprobar y detener e
 Los contratos y reglas de negocio detallados se mantienen en los documentos especializados
 enlazados al final.
 
+El alcance funcional consolidado y las fronteras entre simulación, entorno local y producción se
+recogen en [Estado final y limitaciones del proyecto](estado-final-y-limitaciones.md).
+
 ## Componentes y direcciones locales
 
 | Componente | Tecnología | Dirección o puerto | Responsabilidad principal |
