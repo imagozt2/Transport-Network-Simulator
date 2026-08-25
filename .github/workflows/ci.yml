@@ -53,7 +53,7 @@ jobs:
         run: chmod +x mvnw
 
       - name: Build backend
-        run: ./mvnw --batch-mode --no-transfer-progress clean package -DskipTests
+        run: ./mvnw --batch-mode --no-transfer-progress clean package
 
   frontend:
     name: Frontend build
@@ -76,13 +76,16 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Test frontend
+        run: npm test -- --watch=false
+
       - name: Build frontend
         run: npm run build -- --configuration production
 
       - name: Install Chromium for web access tests
         run: npx playwright install --with-deps chromium
 
-      - name: Test real access to the web application
+      - name: Test web access with isolated API responses
         run: npm run test:e2e
 
   android:
@@ -248,6 +251,21 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Chromium for integrated web access test
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
       - name: Build and validate backend, MySQL and MQTT containers
         shell: pwsh
-        run: ./infrastructure/tests/ecosystem-container-tests.ps1
+        run: ./infrastructure/tests/ecosystem-container-tests.ps1 -RunWebAccessTest
