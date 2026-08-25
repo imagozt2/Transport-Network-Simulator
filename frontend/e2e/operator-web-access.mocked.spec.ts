@@ -12,7 +12,7 @@ const operator = {
   createdAt: '2026-01-01T10:00:00Z'
 };
 
-test('permite acceder realmente al centro de control desde el formulario web', async ({ page }) => {
+test('completa el acceso y la navegación con una API simulada', async ({ page }) => {
   let submittedCredentials: unknown;
 
   await page.route('http://localhost:8080/api/**', async (route) => {

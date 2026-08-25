@@ -1,5 +1,7 @@
 [CmdletBinding()]
-param()
+param(
+    [switch]$RunWebAccessTest
+)
 
 $ErrorActionPreference = "Stop"
 $OutputEncoding = [Text.UTF8Encoding]::new($false)
@@ -105,9 +107,36 @@ function Test-OperatorApiFlow {
     }
 }
 
+function Test-OperatorWebAccess {
+    $frontendDirectory = Join-Path $repositoryRoot "frontend"
+    $npmCommand = Get-Command npm -All -ErrorAction SilentlyContinue |
+        Where-Object { $_.CommandType -eq "Application" } |
+        Select-Object -First 1
+    if ($null -eq $npmCommand) {
+        throw "No se encontró npm para ejecutar la prueba de acceso web"
+    }
+
+    $env:RMM_E2E_REAL_BACKEND = "true"
+    $env:RMM_E2E_OPERATOR_USERNAME = $env:OPERATOR_USERNAME
+    $env:RMM_E2E_OPERATOR_PASSWORD = $env:OPERATOR_PASSWORD
+
+    Push-Location $frontendDirectory
+    try {
+        & $($npmCommand.Source) run test:e2e -- operator-web-access.integration.spec.ts
+        if ($LASTEXITCODE -ne 0) {
+            throw "La aplicación web no pudo autenticarse contra el backend real"
+        }
+    } finally {
+        Pop-Location
+        Remove-Item Env:RMM_E2E_REAL_BACKEND -ErrorAction SilentlyContinue
+        Remove-Item Env:RMM_E2E_OPERATOR_USERNAME -ErrorAction SilentlyContinue
+        Remove-Item Env:RMM_E2E_OPERATOR_PASSWORD -ErrorAction SilentlyContinue
+    }
+}
+
 $mysqlPort = Get-FreeTcpPort
 $mqttPort = Get-FreeTcpPort
-$backendPort = Get-FreeTcpPort
+$backendPort = if ($RunWebAccessTest) { 8080 } else { Get-FreeTcpPort }
 $env:MYSQL_ROOT_PASSWORD = "root-container-test-password"
 $env:DB_USERNAME = "rmm_container_test"
 $env:DB_PASSWORD = "database-container-test-password"
@@ -182,6 +211,11 @@ try {
 
     Write-Host "Comprobando autenticación y consultas funcionales del ecosistema..."
     Test-OperatorApiFlow -Port $backendPort
+
+    if ($RunWebAccessTest) {
+        Write-Host "Comprobando el acceso de Angular al backend y MySQL reales..."
+        Test-OperatorWebAccess
+    }
 
     Write-Host "Ecosistema validado: infraestructura, autenticación y consultas operativas funcionan."
 } finally {
