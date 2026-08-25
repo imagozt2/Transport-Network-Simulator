@@ -34,6 +34,9 @@ private:
     void schedulePublishRetry();
     void failPending(const QString &reason);
     void clearPending();
+    void restorePendingValidation();
+    void persistPendingValidation() const;
+    void clearPersistedValidation() const;
     void publishPresence();
 
     ValidatorConfiguration m_configuration;

@@ -9,6 +9,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QProcessEnvironment>
+#include <QSettings>
 #include <QSslConfiguration>
 #include <QTimer>
 #include <QUuid>
@@ -52,6 +53,7 @@ ValidatorMqttClient::ValidatorMqttClient(
     m_publishRetryTimer->setSingleShot(true);
     m_publishRetryTimer->setInterval(1500);
     m_presenceTimer->setInterval(30000);
+    restorePendingValidation();
 
     connect(m_client, &QMqttClient::connected, this, [this] {
         m_reconnectAttempt = 0;
@@ -144,6 +146,7 @@ void ValidatorMqttClient::submit(const QString &qrValue)
         m_configuration.stationCode, qrValue,
         QUuid::createUuid().toString(QUuid::WithoutBraces),
         QDateTime::currentDateTimeUtc());
+    persistPendingValidation();
     if (m_client->state() == QMqttClient::Connected) {
         publishPending();
     } else {
@@ -155,6 +158,39 @@ void ValidatorMqttClient::submit(const QString &qrValue)
 bool ValidatorMqttClient::hasPendingValidation() const
 {
     return !m_pendingReference.isEmpty();
+}
+
+void ValidatorMqttClient::restorePendingValidation()
+{
+    QSettings settings;
+    settings.beginGroup(QStringLiteral("mqtt/%1/pendingValidation")
+                            .arg(m_configuration.deviceCode));
+    m_pendingReference = settings.value(QStringLiteral("reference")).toString();
+    m_pendingPayload = settings.value(QStringLiteral("payload")).toByteArray();
+    settings.endGroup();
+    if (m_pendingReference.isEmpty() || m_pendingPayload.isEmpty()) {
+        m_pendingReference.clear();
+        m_pendingPayload.clear();
+    }
+}
+
+void ValidatorMqttClient::persistPendingValidation() const
+{
+    QSettings settings;
+    settings.beginGroup(QStringLiteral("mqtt/%1/pendingValidation")
+                            .arg(m_configuration.deviceCode));
+    settings.setValue(QStringLiteral("reference"), m_pendingReference);
+    settings.setValue(QStringLiteral("payload"), m_pendingPayload);
+    settings.endGroup();
+    settings.sync();
+}
+
+void ValidatorMqttClient::clearPersistedValidation() const
+{
+    QSettings settings;
+    settings.remove(QStringLiteral("mqtt/%1/pendingValidation")
+                        .arg(m_configuration.deviceCode));
+    settings.sync();
 }
 
 void ValidatorMqttClient::connectToBroker()
@@ -240,6 +276,7 @@ void ValidatorMqttClient::clearPending()
     m_publishRetryTimer->stop();
     m_pendingPayload.clear();
     m_pendingReference.clear();
+    clearPersistedValidation();
     m_packetId = -1;
     m_publishAttempt = 0;
 }

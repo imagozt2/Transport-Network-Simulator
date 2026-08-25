@@ -123,3 +123,44 @@ add_test(
 set_tests_properties(rmm-qt-mqtt-identity-authentication PROPERTIES
     ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>"
 )
+
+qt_add_executable(rmm-client-operation-continuity-tests
+    pendingoperationcontinuitytest.cpp
+    ../ticket-vending-machine/src/ticketissuancerequestclient.cpp
+    ../ticket-vending-machine/src/ticketissuancerequestclient.h
+    ../ticket-vending-machine/src/ticketmachineconfiguration.cpp
+    ../ticket-vending-machine/src/ticketmachineconfiguration.h
+    ../ticket-vending-machine/src/ticketmachineprotocol.cpp
+    ../ticket-vending-machine/src/ticketmachineprotocol.h
+    ../ticket-validator/src/validatormqttclient.cpp
+    ../ticket-validator/src/validatormqttclient.h
+    ../ticket-validator/src/validatorconfiguration.cpp
+    ../ticket-validator/src/validatorconfiguration.h
+    ../ticket-validator/src/validationresult.cpp
+    ../ticket-validator/src/validationresult.h
+    ../ticket-validator/src/validatorprotocol.cpp
+    ../ticket-validator/src/validatorprotocol.h
+)
+
+target_include_directories(rmm-client-operation-continuity-tests
+    PRIVATE
+        ../ticket-vending-machine/src
+        ../ticket-validator/src
+)
+
+target_link_libraries(rmm-client-operation-continuity-tests
+    PRIVATE
+        Qt6::Core
+        Qt6::Mqtt
+        Qt6::Test
+        rmm-local-services
+)
+
+add_test(
+    NAME rmm-client-pending-operations-survive-restarts
+    COMMAND rmm-client-operation-continuity-tests
+)
+
+set_tests_properties(rmm-client-pending-operations-survive-restarts PROPERTIES
+    ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>"
+)

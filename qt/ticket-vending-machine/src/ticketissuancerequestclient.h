@@ -61,6 +61,10 @@ private:
     void flushQueuedMessages();
     void publishOrQueue(const QString &topic, const QByteArray &payload);
     void publishPending();
+    void restorePendingOperations();
+    void persistPendingOperation() const;
+    void clearPersistedPendingOperation() const;
+    void persistQueuedMessages() const;
     void publishPresence();
     void publishCommandAcknowledgement(
         const QString &commandId,

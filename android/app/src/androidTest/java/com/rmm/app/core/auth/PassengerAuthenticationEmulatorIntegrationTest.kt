@@ -89,6 +89,36 @@ class PassengerAuthenticationEmulatorIntegrationTest {
         assertEquals("Bearer access-token-emulator", logoutRequest.getHeader("Authorization"))
     }
 
+    @Test
+    fun renewsAndPersistsTheRotatedSession() = runBlocking {
+        server.enqueue(jsonResponse(201, sessionResponse()))
+        server.enqueue(jsonResponse(200, sessionResponse(
+            accessToken = "access-token-renewed",
+            refreshToken = "refresh-token-renewed",
+        )))
+        val repository = PassengerAuthenticationRepository(context, apiFactory())
+        val authentication = repository.login("maria.munoz@rmm.local", "ClaveSegura123")
+        assertTrue(authentication is AuthenticationResult.Authenticated)
+        server.takeRequest()
+
+        val renewal = repository.renewSession(
+            (authentication as AuthenticationResult.Authenticated).session,
+        )
+
+        assertTrue(renewal is SessionRenewalResult.Renewed)
+        val renewed = (renewal as SessionRenewalResult.Renewed).session
+        assertEquals("access-token-renewed", renewed.accessToken)
+        assertEquals("refresh-token-renewed", renewed.refreshToken)
+        assertEquals(renewed, PassengerSessionStorage.get(context).load())
+        val request = server.takeRequest()
+        assertEquals("POST", request.method)
+        assertEquals("/api/rmm-app/v1/auth/session-refreshes", request.path)
+        JsonParser.parseString(request.body.readUtf8()).asJsonObject.let { body ->
+            assertEquals("refresh-token-emulator", body["refreshToken"].asString)
+            assertEquals(renewed.installationId, body["installationId"].asString)
+        }
+    }
+
     private fun apiFactory() = RMMApiClientFactory(
         RMMApiConfiguration(
             environment = RMMEnvironment.LOCAL,
@@ -116,12 +146,15 @@ class PassengerAuthenticationEmulatorIntegrationTest {
         }
     """.trimIndent()
 
-    private fun sessionResponse() = """
+    private fun sessionResponse(
+        accessToken: String = "access-token-emulator",
+        refreshToken: String = "refresh-token-emulator",
+    ) = """
         {
-          "accessToken": "access-token-emulator",
-          "accessTokenExpiresAt": "2026-08-13T12:30:00Z",
-          "refreshToken": "refresh-token-emulator",
-          "refreshTokenExpiresAt": "2026-09-12T12:00:00Z",
+          "accessToken": "$accessToken",
+          "accessTokenExpiresAt": "2027-08-13T12:30:00Z",
+          "refreshToken": "$refreshToken",
+          "refreshTokenExpiresAt": "2027-09-12T12:00:00Z",
           "user": {
             "publicId": "passenger-emulator-1",
             "email": "maria.munoz@rmm.local",

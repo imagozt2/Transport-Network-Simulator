@@ -17,6 +17,11 @@ interface PassengerAuthenticationApi {
         @Body request: PassengerLoginRequest,
     ): Response<PassengerSessionResponse>
 
+    @POST("auth/session-refreshes")
+    suspend fun refresh(
+        @Body request: PassengerSessionRefreshRequest,
+    ): Response<PassengerSessionResponse>
+
     @DELETE("auth/sessions/current")
     suspend fun logout(
         @Header("Authorization") authorization: String,
@@ -42,6 +47,11 @@ data class PassengerDeviceRequest(
     val installationId: String,
     val name: String,
     val platform: String = "ANDROID",
+)
+
+data class PassengerSessionRefreshRequest(
+    val refreshToken: String,
+    val installationId: String,
 )
 
 data class PassengerRegistrationResponse(
