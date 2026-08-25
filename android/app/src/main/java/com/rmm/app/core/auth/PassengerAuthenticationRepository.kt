@@ -79,6 +79,55 @@ class PassengerAuthenticationRepository(
         }
     }
 
+    suspend fun renewSession(session: PassengerSession): SessionRenewalResult {
+        if (!session.canBeRefreshed()) {
+            clearInvalidSession()
+            return SessionRenewalResult.Invalidated
+        }
+
+        return when (val result = calls.execute {
+            api.refresh(
+                PassengerSessionRefreshRequest(
+                    refreshToken = session.refreshToken,
+                    installationId = session.installationId,
+                ),
+            )
+        }) {
+            is ApiResult.Success -> persistRenewedSession(result.value, session.installationId)
+            is ApiResult.Failure -> {
+                val status = (result.reason as? ApiFailure.Http)?.statusCode
+                if (status == 401 || status == 403) {
+                    clearInvalidSession()
+                    SessionRenewalResult.Invalidated
+                } else {
+                    SessionRenewalResult.RetryableFailure(result.reason)
+                }
+            }
+        }
+    }
+
+    fun discardSession() {
+        clearInvalidSession()
+    }
+
+    private fun persistRenewedSession(
+        response: PassengerSessionResponse,
+        installationId: String,
+    ): SessionRenewalResult = try {
+        val renewedSession = response.toDomain(installationId)
+        sessionStore.save(renewedSession)
+        SessionRenewalResult.Renewed(renewedSession)
+    } catch (_: Exception) {
+        // El backend rota ambos tokens. Si el nuevo par no puede persistirse,
+        // conservar el anterior dejaría una sesión aparentemente válida pero irrecuperable.
+        clearInvalidSession()
+        SessionRenewalResult.Invalidated
+    }
+
+    private fun clearInvalidSession() {
+        runCatching(sessionStore::clear)
+    }
+
     private fun PassengerSessionResponse.toDomain(installationId: String) = PassengerSession(
         accessToken = accessToken,
         accessTokenExpiresAt = Instant.parse(accessTokenExpiresAt),
@@ -106,4 +155,10 @@ enum class LogoutResult {
     Completed,
     CompletedLocally,
     LocalStorageFailure,
+}
+
+sealed interface SessionRenewalResult {
+    data class Renewed(val session: PassengerSession) : SessionRenewalResult
+    data class RetryableFailure(val reason: ApiFailure) : SessionRenewalResult
+    data object Invalidated : SessionRenewalResult
 }
