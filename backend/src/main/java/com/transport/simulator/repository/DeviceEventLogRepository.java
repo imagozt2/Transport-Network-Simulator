@@ -48,6 +48,9 @@ public interface DeviceEventLogRepository extends JpaRepository<DeviceEventLog, 
                     FROM DeviceEventLog eventLog
                     LEFT JOIN FETCH eventLog.device device
                     LEFT JOIN FETCH eventLog.station station
+                    LEFT JOIN FETCH eventLog.ticket ticket
+                    LEFT JOIN FETCH eventLog.compensatoryIssuance issuance
+                    LEFT JOIN FETCH issuance.product product
                     WHERE (:origin IS NULL OR eventLog.origin = :origin)
                       AND (:severity IS NULL OR eventLog.severity = :severity)
                       AND (:eventType IS NULL OR eventLog.eventType = :eventType)

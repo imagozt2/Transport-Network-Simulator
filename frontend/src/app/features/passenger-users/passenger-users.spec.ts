@@ -121,7 +121,7 @@ describe('PassengerUsers', () => {
     expect(component.creationConfirmation).toContain('Ana García');
   });
 
-  it('should create a passenger through the rendered form controls', () => {
+  it('should create a passenger through the rendered form controls', async () => {
     const compiled = fixture.nativeElement as HTMLElement;
     compiled.querySelector<HTMLButtonElement>('.create-user-button')!.click();
     fixture.detectChanges();
@@ -132,9 +132,13 @@ describe('PassengerUsers', () => {
     setInput(compiled, '#create-passenger-password', 'SecurePassword123');
     setInput(compiled, '#create-passenger-password-confirmation', 'SecurePassword123');
     fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.createFirstName).toBe('Lucía');
+    expect(fixture.componentInstance.createPasswordConfirmation).toBe('SecurePassword123');
 
-    compiled.querySelector<HTMLFormElement>('.create-user-dialog form')!
-      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    compiled.querySelector<HTMLButtonElement>('.create-user-dialog button[type="submit"]')!.click();
+    await fixture.whenStable();
 
     expect(accountsService.createAccount).toHaveBeenCalledWith({
       firstName: 'Lucía', lastName: 'Martín', email: 'lucia@example.com',

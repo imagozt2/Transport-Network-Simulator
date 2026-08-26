@@ -1,5 +1,6 @@
 import { Component, HostListener, inject, OnInit } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, ParamMap } from '@angular/router';
 
 import {
@@ -22,6 +23,7 @@ type OptionalCategory = IncidentCategory | 'ALL';
 
 @Component({
   selector: 'app-incidents',
+  imports: [FormsModule],
   templateUrl: './incidents.html',
   styleUrls: ['./incidents.css', './incidents-detail.css']
 })

@@ -1,5 +1,6 @@
 import { Component, HostListener, inject, OnInit } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
+import { FormsModule } from '@angular/forms';
 
 import {
   PassengerAccount,
@@ -17,6 +18,7 @@ type VerificationFilter = 'ALL' | 'VERIFIED' | 'PENDING';
 
 @Component({
   selector: 'app-passenger-users',
+  imports: [FormsModule],
   templateUrl: './passenger-users.html',
   styleUrls: [
     './passenger-users.css',

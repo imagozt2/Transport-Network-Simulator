@@ -94,7 +94,9 @@ public class TicketIssuanceEventRegistrationService {
                 payload(issuance, ticket, eventStage)
         );
         log.linkCompensatoryIssuance(issuance, ticket, issuance.getRequestedBy());
-        return logRepository.save(log);
+        DeviceEventLog registered = logRepository.save(log);
+        logRepository.flush();
+        return registered;
     }
 
     private String payload(

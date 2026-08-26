@@ -122,7 +122,7 @@
 
   @if (issuanceTitle) {
     <div class="dialog-backdrop" (mousedown)="$event.target === $event.currentTarget && closeIssuanceDialog()">
-      <section class="issuance-dialog" role="dialog" aria-modal="true" aria-labelledby="issuance-dialog-title">
+      <section class="issuance-dialog" role="dialog" aria-modal="true" aria-labelledby="issuance-dialog-title" (mousedown)="$event.stopPropagation()">
         <header class="dialog-header">
           <div>
             <span class="dialog-eyebrow">Emisión compensatoria</span>
@@ -154,25 +154,25 @@
             @if (selectedDeliveryMethod === 'PHYSICAL_DEVICE') {
               <label class="dialog-field full-width">
                 <span>Máquina de emisión</span>
-                <select required [value]="selectedDeviceCode" (change)="selectDevice($any($event.target).value)">
+                <select name="deviceCode" required autofocus [(ngModel)]="selectedDeviceCode" (change)="selectDevice($any($event.target).value)">
                   <option value="">Selecciona una máquina online</option>
                   @for (machine of ticketMachines; track machine.id) {
-                    <option [value]="machine.code">{{ machine.name }} · {{ machine.station.name }} · {{ machineDeliveryLabel(machine) }}</option>
+                    <option [value]="machine.code">{{ machine.station.name }} · {{ machine.code }}</option>
                   }
                 </select>
                 @if (ticketMachines.length === 0) { <small>No hay máquinas de venta disponibles.</small> }
                 <small>Las máquinas MQTT emitirán el billete real; las no monitorizadas simularán la operación.</small>
                 @if (selectedMachine(); as machine) {
                   <span class="delivery-selection">
-                    <strong>{{ machine.name }}</strong>
-                    <small>{{ machine.station.name }} · {{ machineDeliveryLabel(machine) }}</small>
+                    <strong>{{ machine.station.name }}</strong>
+                    <small>{{ machine.code }}</small>
                   </span>
                 }
               </label>
             } @else {
               <label class="dialog-field full-width">
                 <span>Pasajero destinatario</span>
-                <select required [value]="selectedPassengerPublicId" (change)="selectPassenger($any($event.target).value)">
+                <select name="passengerPublicId" required autofocus [(ngModel)]="selectedPassengerPublicId" (change)="selectPassenger($any($event.target).value)">
                   <option value="">Selecciona una cuenta activa</option>
                   @for (passenger of passengers; track passenger.publicId) {
                     <option [value]="passenger.publicId">{{ passenger.firstName }} {{ passenger.lastName }} · {{ passenger.email }}</option>
@@ -193,7 +193,7 @@
               @case ('SINGLE_TRIP') {
                 <label class="dialog-field">
                   <span>Estación de origen</span>
-                  <select [value]="originStationCode" (change)="originStationCode = $any($event.target).value">
+                  <select name="originStationCode" [(ngModel)]="originStationCode" (change)="originStationCode = $any($event.target).value">
                     <option value="">Selecciona el origen</option>
                     @for (station of stations; track station.code) {
                       <option [value]="station.code" [disabled]="station.code === destinationStationCode">{{ station.name }} · {{ station.code }}</option>
@@ -202,7 +202,7 @@
                 </label>
                 <label class="dialog-field">
                   <span>Estación de destino</span>
-                  <select [value]="destinationStationCode" (change)="destinationStationCode = $any($event.target).value">
+                  <select name="destinationStationCode" [(ngModel)]="destinationStationCode" (change)="destinationStationCode = $any($event.target).value">
                     <option value="">Selecciona el destino</option>
                     @for (station of stations; track station.code) {
                       <option [value]="station.code" [disabled]="station.code === originStationCode">{{ station.name }} · {{ station.code }}</option>
@@ -213,14 +213,14 @@
               @case ('MULTI_TRIP') {
                 <label class="dialog-field full-width">
                   <span>Número de viajes</span>
-                  <input type="number" [min]="issuanceTitle.minTrips ?? 1" [max]="issuanceTitle.maxTrips ?? null" [value]="selectedTrips ?? ''" (input)="setOptionalNumber('trips', $any($event.target).value)" />
+                  <input name="selectedTrips" type="number" [min]="issuanceTitle.minTrips ?? 1" [max]="issuanceTitle.maxTrips ?? null" [(ngModel)]="selectedTrips" (input)="setOptionalNumber('trips', $any($event.target).value)" />
                   <small>Entre {{ issuanceTitle.minTrips }} y {{ issuanceTitle.maxTrips }} viajes.</small>
                 </label>
               }
               @case ('TIME_PASS') {
                 <label class="dialog-field full-width">
                   <span>Días de validez</span>
-                  <input type="number" [min]="issuanceTitle.minDays ?? 1" [max]="issuanceTitle.maxDays ?? null" [value]="selectedDays ?? ''" (input)="setOptionalNumber('days', $any($event.target).value)" />
+                  <input name="selectedDays" type="number" [min]="issuanceTitle.minDays ?? 1" [max]="issuanceTitle.maxDays ?? null" [(ngModel)]="selectedDays" (input)="setOptionalNumber('days', $any($event.target).value)" />
                   <small>Entre {{ issuanceTitle.minDays }} y {{ issuanceTitle.maxDays }} días.</small>
                 </label>
               }
@@ -228,7 +228,7 @@
                 <label class="dialog-field full-width">
                   <span>Saldo inicial</span>
                   <div class="money-input">
-                    <input type="number" step="0.01" [min]="issuanceTitle.minRechargeAmount ?? 0.01" [max]="issuanceTitle.maxRechargeAmount ?? null" [value]="balanceAmount ?? ''" (input)="setOptionalNumber('balance', $any($event.target).value)" />
+                    <input name="balanceAmount" type="number" step="0.01" [min]="issuanceTitle.minRechargeAmount ?? 0.01" [max]="issuanceTitle.maxRechargeAmount ?? null" [(ngModel)]="balanceAmount" (input)="setOptionalNumber('balance', $any($event.target).value)" />
                     <span>EUR</span>
                   </div>
                   <small>Saldo entre {{ money(issuanceTitle.minRechargeAmount) }} y {{ money(issuanceTitle.maxRechargeAmount) }}.</small>
@@ -238,7 +238,7 @@
 
             <label class="dialog-field full-width">
               <span>Motivo de la emisión</span>
-              <textarea maxlength="500" rows="3" placeholder="Describe brevemente la incidencia que justifica la compensación" [value]="issuanceReason" (input)="issuanceReason = $any($event.target).value"></textarea>
+              <textarea name="issuanceReason" maxlength="500" rows="3" placeholder="Describe brevemente la incidencia que justifica la compensación" [(ngModel)]="issuanceReason" (input)="issuanceReason = $any($event.target).value"></textarea>
               <small>{{ issuanceReason.length }}/500 caracteres</small>
             </label>
             @if (issuanceError) { <div class="dialog-error full-width" role="alert">{{ issuanceError }}</div> }
@@ -259,16 +259,6 @@
           </form>
           } @else {
             <section class="issuance-progress" aria-live="polite">
-              <ol class="progress-steps" aria-label="Progreso de la emisión">
-                <li class="done"><span>1</span><strong>Solicitud registrada</strong></li>
-                <li [class.done]="issuanceProgress !== 'SUBMITTING'" [class.active]="issuanceProgress === 'SUBMITTING'">
-                  <span>2</span><strong>{{ issuanceProgress === 'SUBMITTING' ? 'Preparando entrega' : 'Entrega procesada' }}</strong>
-                </li>
-                <li [class.done]="issuanceProgress === 'COMPLETED'" [class.active]="issuanceProgress === 'PROCESSING'">
-                  <span>3</span><strong>{{ issuanceProgress === 'PROCESSING' ? 'Esperando confirmación' : 'Resultado' }}</strong>
-                </li>
-              </ol>
-
               @if (issuanceProgress === 'SUBMITTING') {
                 <div class="progress-state" role="status">
                   <span class="progress-spinner" aria-hidden="true"></span>
@@ -306,9 +296,7 @@
                   }
                   <dl class="issuance-result-details">
                     <div><dt>Referencia</dt><dd>{{ result.code }}</dd></div>
-                    <div><dt>Canal</dt><dd>{{ result.deliveryMethod === 'DIGITAL_WALLET' ? 'Cartera digital' : 'Máquina de venta' }}</dd></div>
                     <div><dt>Destino</dt><dd>{{ result.passengerEmail || result.deviceName }}</dd></div>
-                    <div><dt>Billete</dt><dd>{{ result.ticketCode || (result.simulated ? 'No generado (simulación)' : 'Pendiente') }}</dd></div>
                   </dl>
                 </div>
               }
@@ -317,9 +305,8 @@
                 @if (issuanceProgress === 'COMPLETED') {
                   <button type="button" class="secondary-button" (click)="returnToIssuanceForm()">Realizar otra emisión</button>
                 }
-                <button type="button" class="secondary-button" (click)="closeIssuanceDialog()">
-                  {{ issuanceProgress === 'PROCESSING' ? 'Cerrar y consultar logs' : 'Cerrar' }}
-                </button>
+                <button type="button" class="secondary-button" (click)="closeIssuanceDialog()">Cerrar</button>
+                <button type="button" class="primary-button" (click)="consultIssuanceLogs()">Consultar logs</button>
               </footer>
             </section>
           }

@@ -1,4 +1,6 @@
 import { Component, HostListener, inject, OnInit } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { catchError, forkJoin, of } from 'rxjs';
 
 import {
@@ -17,6 +19,7 @@ import { NetworkMapService } from '../../core/services/network-map.service';
 import { PassengerAccount } from '../../core/models/passenger-account.model';
 import { PassengerAccountsService } from '../../core/services/passenger-accounts.service';
 import { TemporalFormatService } from '../../core/services/temporal-format.service';
+import { APPLICATION_ROUTES } from '../../core/navigation/application-routes';
 
 type TypeFilter = TransportTitleType | 'ALL';
 type StatusFilter = 'ALL' | 'ACTIVE' | 'INACTIVE';
@@ -24,6 +27,7 @@ type IssuanceProgress = 'FORM' | 'SUBMITTING' | 'PROCESSING' | 'COMPLETED' | 'FA
 
 @Component({
   selector: 'app-transport-titles',
+  imports: [FormsModule],
   templateUrl: './transport-titles.html',
   styleUrls: ['./transport-titles.css', './transport-title-issuance-dialog.css']
 })
@@ -33,6 +37,7 @@ export class TransportTitles implements OnInit {
   private readonly networkMapService = inject(NetworkMapService);
   private readonly passengerAccountsService = inject(PassengerAccountsService);
   private readonly temporalFormat = inject(TemporalFormatService);
+  private readonly router = inject(Router);
 
   catalog: TransportTitlesResponse | null = null;
   loading = true;
@@ -298,9 +303,15 @@ export class TransportTitles implements OnInit {
       passenger.publicId === this.selectedPassengerPublicId && passenger.status === 'ACTIVE') ?? null;
   }
 
-  machineDeliveryLabel(machine: DeviceOperation): string {
-    return machine.connectivity.state === 'CONNECTED'
-      ? 'Conectada por MQTT' : 'Emisión simulada';
+  consultIssuanceLogs(): void {
+    const deviceCode = this.issuanceResult?.deviceCode;
+    this.closeIssuanceDialog();
+    void this.router.navigate([APPLICATION_ROUTES.logs], {
+      queryParams: {
+        origin: 'ADMINISTRATION',
+        ...(deviceCode ? { deviceCode } : {})
+      }
+    });
   }
 
   returnToIssuanceForm(): void {
@@ -353,7 +364,10 @@ export class TransportTitles implements OnInit {
         this.ticketMachines = (devices?.devices ?? [])
           .filter((device) => device.type === 'TICKET_MACHINE' && device.status === 'ONLINE'
             && device.connectivity.state !== 'DISCONNECTED')
-          .sort((first, second) => first.name.localeCompare(second.name, 'es'));
+          .sort((first, second) =>
+            first.station.name.localeCompare(second.station.name, 'es')
+            || first.name.localeCompare(second.name, 'es')
+            || first.code.localeCompare(second.code, 'es'));
         this.passengers = (passengers?.users ?? [])
           .filter((passenger) => passenger.status === 'ACTIVE')
           .sort((first, second) => `${first.firstName} ${first.lastName}`

@@ -76,7 +76,7 @@ describe('Incidents', () => {
     expect(component.selectedIncident?.code).toBe('INC-TEST');
   });
 
-  it('should create an incident through the rendered dialog controls', () => {
+  it('should create an incident through the rendered dialog controls', async () => {
     const compiled = fixture.nativeElement as HTMLElement;
     compiled.querySelector<HTMLButtonElement>('.create-incident-button')!.click();
     fixture.detectChanges();
@@ -86,8 +86,12 @@ describe('Incidents', () => {
     setSelect(compiled, '#create-incident-category', 'DEVICE');
     setSelect(compiled, '#create-incident-priority', 'HIGH');
     fixture.detectChanges();
-    compiled.querySelector<HTMLFormElement>('.create-incident-dialog form')!
-      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.createTitle).toBe('Avería en validadora');
+    expect(fixture.componentInstance.createPriority).toBe('HIGH');
+    compiled.querySelector<HTMLButtonElement>('.create-incident-dialog button[type="submit"]')!.click();
+    await fixture.whenStable();
 
     expect(incidentsService.createIncident).toHaveBeenCalledWith(expect.objectContaining({
       title: 'Avería en validadora',

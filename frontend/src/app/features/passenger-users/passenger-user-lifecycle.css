@@ -10,7 +10,7 @@
 .delete-confirmation-panel button { border: 0; border-radius: 9px; padding: 8px 11px; color: #334155; background: #e2e8f0; cursor: pointer; font-size: 10px; font-weight: 850; }
 .delete-confirmation-panel .delete-confirm-button { color: #fff; background: #991b1b; }
 .create-user-backdrop { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; padding: 22px; background: rgba(15, 23, 42, .55); backdrop-filter: blur(3px); }
-.create-user-dialog { width: min(620px, 100%); max-height: calc(100vh - 44px); overflow-y: auto; border-radius: 20px; background: #fff; box-shadow: 0 28px 70px rgba(15, 23, 42, .28); }
+.create-user-dialog { position: relative; isolation: isolate; pointer-events: auto; width: min(620px, 100%); max-height: calc(100vh - 44px); overflow-y: auto; border-radius: 20px; background: #fff; box-shadow: 0 28px 70px rgba(15, 23, 42, .28); }
 .create-user-dialog > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; border-bottom: 1px solid #e2e8f0; padding: 21px 23px 17px; }
 .create-user-dialog header span { color: #0284c7; font-size: 9px; font-weight: 950; letter-spacing: .12em; text-transform: uppercase; }
 .create-user-dialog h2 { margin: 4px 0 0; color: #111827; font-size: 21px; }

@@ -330,7 +330,7 @@
 
   @if (createDialogOpen) {
     <div class="create-incident-backdrop" (mousedown)="$event.target === $event.currentTarget && closeCreateDialog()">
-      <section class="create-incident-dialog" role="dialog" aria-modal="true" aria-labelledby="create-incident-title">
+      <section class="create-incident-dialog" role="dialog" aria-modal="true" aria-labelledby="create-incident-title" (mousedown)="$event.stopPropagation()">
         <header>
           <div><span>Nuevo ticket</span><h2 id="create-incident-title">Crear incidencia</h2></div>
           <button type="button" aria-label="Cerrar diálogo" (click)="closeCreateDialog()">×</button>
@@ -349,22 +349,22 @@
               </div>
             </aside>
           }
-          <label class="wide-field"><span>Título</span><input id="create-incident-name" name="title" required maxlength="150" [value]="createTitle" (input)="createTitle = $any($event.target).value" [attr.aria-invalid]="createValidationVisible && !createTitle.trim()" />@if (createValidationVisible && !createTitle.trim()) { <small class="field-error">Introduce un título.</small> }</label>
-          <label class="wide-field"><span>Descripción</span><textarea id="create-incident-description" name="description" required rows="5" [value]="createDescription" (input)="createDescription = $any($event.target).value" [attr.aria-invalid]="createValidationVisible && !createDescription.trim()"></textarea>@if (createValidationVisible && !createDescription.trim()) { <small class="field-error">Describe la incidencia.</small> }</label>
+          <label class="wide-field"><span>Título</span><input id="create-incident-name" name="title" required maxlength="150" autofocus [(ngModel)]="createTitle" (input)="createTitle = $any($event.target).value" [attr.aria-invalid]="createValidationVisible && !createTitle.trim()" />@if (createValidationVisible && !createTitle.trim()) { <small class="field-error">Introduce un título.</small> }</label>
+          <label class="wide-field"><span>Descripción</span><textarea id="create-incident-description" name="description" required rows="5" [(ngModel)]="createDescription" (input)="createDescription = $any($event.target).value" [attr.aria-invalid]="createValidationVisible && !createDescription.trim()"></textarea>@if (createValidationVisible && !createDescription.trim()) { <small class="field-error">Describe la incidencia.</small> }</label>
           <label>
             <span>Categoría</span>
-            <select id="create-incident-category" name="category" [value]="createCategory" (change)="createCategory = $any($event.target).value">
+            <select id="create-incident-category" name="category" [(ngModel)]="createCategory" (change)="createCategory = $any($event.target).value">
               @for (category of categories; track category) { <option [value]="category">{{ categoryLabel(category) }}</option> }
             </select>
           </label>
           <label>
             <span>Prioridad</span>
-            <select id="create-incident-priority" name="priority" [value]="createPriority" (change)="createPriority = $any($event.target).value">
+            <select id="create-incident-priority" name="priority" [(ngModel)]="createPriority" (change)="createPriority = $any($event.target).value">
               @for (priority of priorities; track priority) { <option [value]="priority">{{ priorityLabel(priority) }}</option> }
             </select>
           </label>
           <label class="assignment-check wide-field">
-            <input type="checkbox" [checked]="createAssignToMe" (change)="createAssignToMe = $any($event.target).checked" />
+            <input name="assignToMe" type="checkbox" [(ngModel)]="createAssignToMe" (change)="createAssignToMe = $any($event.target).checked" />
             <span>Asignarme la incidencia al crearla</span>
           </label>
           @if (createError) { <p class="form-error wide-field" role="alert">{{ createError }}</p> }

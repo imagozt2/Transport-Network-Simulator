@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
 
 import {
@@ -203,6 +204,75 @@ describe('TransportTitles', () => {
     expect(component.issuanceQrSource(issuance)).toContain('data:image/png;base64');
   });
 
+  it('should identify ticket machines without exposing the internal simulation channel', async () => {
+    await configureWith(() => of(response));
+    const fixture = TestBed.createComponent(TransportTitles);
+    fixture.componentInstance.issuanceTitle = response.titles[0];
+    fixture.componentInstance.ticketMachines = [{
+      id: 1, code: 'TM-ST001-01', name: 'Máquina Aeropuerto',
+      type: 'TICKET_MACHINE', status: 'ONLINE', lastConnectionAt: null,
+      connectivity: {
+        state: 'NOT_MONITORED', mqttPresence: 'OFFLINE', operationalState: 'AVAILABLE',
+        lastCommunicationAt: null, lastPresenceAt: null, lastStatusAt: null,
+        serviceMode: null, softwareVersion: null, uptimeSeconds: null
+      },
+      station: { id: 1, code: 'ST001', name: 'Aeropuerto' }
+    }];
+    fixture.detectChanges();
+
+    const machineSelect = fixture.nativeElement.querySelector(
+      'select[name="deviceCode"]'
+    ) as HTMLSelectElement;
+    expect(machineSelect.options[1].textContent).toContain('Aeropuerto · TM-ST001-01');
+    expect(machineSelect.options[1].textContent).not.toContain('Máquina Aeropuerto');
+    expect(machineSelect.options[1].textContent).not.toContain('Emisión simulada');
+  });
+
+  it('should navigate to the administrative logs for the issued ticket machine', async () => {
+    await configureWith(() => of(response));
+    const fixture = TestBed.createComponent(TransportTitles);
+    const router = TestBed.inject(Router);
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    fixture.componentInstance.issuanceTitle = response.titles[0];
+    fixture.componentInstance.issuanceResult = issuanceResponse();
+
+    fixture.componentInstance.consultIssuanceLogs();
+
+    expect(navigate).toHaveBeenCalledWith(['/logs'], {
+      queryParams: { origin: 'ADMINISTRATION', deviceCode: 'TM-ST001-01' }
+    });
+  });
+
+  it('should group ticket machines by station and order them within each station', async () => {
+    await configureWith(
+      () => of(response),
+      vi.fn(),
+      () => of({
+        evaluatedAt: '2026-08-05T10:00:00',
+        summary: {
+          totalDevices: 4, filteredDevices: 4,
+          byType: { TICKET_MACHINE: 4, ENTRY_VALIDATOR: 0, EXIT_VALIDATOR: 0 },
+          byStatus: { ONLINE: 4, OFFLINE: 0, MAINTENANCE: 0, ERROR: 0 },
+          byConnectivity: { CONNECTED: 0, DISCONNECTED: 0, NOT_MONITORED: 4 }
+        },
+        devices: [
+          ticketMachine(3, 'TM-ST020-02', 'Máquina 2', 'ST020', 'La Galería'),
+          ticketMachine(2, 'TM-ST001-02', 'Máquina 2', 'ST001', 'Aeropuerto'),
+          ticketMachine(4, 'TM-ST020-01', 'Máquina 1', 'ST020', 'La Galería'),
+          ticketMachine(1, 'TM-ST001-01', 'Máquina 1', 'ST001', 'Aeropuerto')
+        ]
+      }),
+      () => of({ lines: [] })
+    );
+    const fixture = TestBed.createComponent(TransportTitles);
+
+    fixture.componentInstance.loadIssuanceOptions();
+
+    expect(fixture.componentInstance.ticketMachines.map((machine) => machine.code)).toEqual([
+      'TM-ST001-01', 'TM-ST001-02', 'TM-ST020-01', 'TM-ST020-02'
+    ]);
+  });
+
   it('should keep a physical MQTT delivery pending until the machine confirms it', async () => {
     const issuance = issuanceResponse({ status: 'PROCESSING', completedAt: null });
     await configureWith(() => of(response), vi.fn().mockReturnValue(of(issuance)));
@@ -278,6 +348,12 @@ describe('TransportTitles', () => {
     expect(ticket.textContent).not.toContain('viajes restantes');
     expect(ticket.querySelector<HTMLImageElement>('.issued-ticket-qr img')?.src)
       .toContain('data:image/png;base64,cXItcG5n');
+    expect(fixture.nativeElement.querySelector('.progress-steps')).toBeNull();
+    const resultLabels = Array.from(
+      (fixture.nativeElement as HTMLElement)
+        .querySelectorAll<HTMLElement>('.issuance-result-details dt')
+    ).map((element) => element.textContent?.trim());
+    expect(resultLabels).toEqual(['Referencia', 'Destino']);
   });
 
   it('should retain tablet and mobile layouts for cards and the issuance dialog', async () => {
@@ -313,7 +389,8 @@ async function configureWith(
       { provide: TransportTitlesService, useValue: { getTitles, issueCompensatoryTicket } },
       { provide: DeviceOperationsService, useValue: { getOperations } },
       { provide: NetworkMapService, useValue: { getNetworkMap } },
-      { provide: PassengerAccountsService, useValue: { getAccounts } }
+      { provide: PassengerAccountsService, useValue: { getAccounts } },
+      provideRouter([])
     ]
   }).compileComponents();
 }
@@ -337,5 +414,23 @@ function issuanceResponse(
     operatorUsername: 'admin', chargedAmount: 0,
     requestedAt: '2026-08-05T10:00:00', completedAt: '2026-08-05T10:00:00',
     ...overrides
+  };
+}
+
+function ticketMachine(
+  id: number,
+  code: string,
+  name: string,
+  stationCode: string,
+  stationName: string
+): DeviceOperationsResponse['devices'][number] {
+  return {
+    id, code, name, type: 'TICKET_MACHINE', status: 'ONLINE', lastConnectionAt: null,
+    connectivity: {
+      state: 'NOT_MONITORED', mqttPresence: 'OFFLINE', operationalState: 'AVAILABLE',
+      lastCommunicationAt: null, lastPresenceAt: null, lastStatusAt: null,
+      serviceMode: null, softwareVersion: null, uptimeSeconds: null
+    },
+    station: { id, code: stationCode, name: stationName }
   };
 }
