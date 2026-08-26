@@ -1,4 +1,6 @@
 import { Component, HostListener, inject, OnInit } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { FormsModule } from '@angular/forms';
 
 import {
   PassengerAccount,
@@ -16,6 +18,7 @@ type VerificationFilter = 'ALL' | 'VERIFIED' | 'PENDING';
 
 @Component({
   selector: 'app-passenger-users',
+  imports: [FormsModule],
   templateUrl: './passenger-users.html',
   styleUrls: [
     './passenger-users.css',
@@ -59,6 +62,8 @@ export class PassengerUsers implements OnInit {
   createPasswordConfirmation = '';
   createSubmitting = false;
   createError = '';
+  createValidationVisible = false;
+  showCreatePassword = false;
   creationConfirmation = '';
   deleteConfirmationOpen = false;
   deleteSubmitting = false;
@@ -243,6 +248,8 @@ export class PassengerUsers implements OnInit {
     this.createPassword = '';
     this.createPasswordConfirmation = '';
     this.createError = '';
+    this.createValidationVisible = false;
+    this.showCreatePassword = false;
     this.creationConfirmation = '';
   }
 
@@ -279,8 +286,26 @@ export class PassengerUsers implements OnInit {
       && this.createPassword === this.createPasswordConfirmation;
   }
 
+  createEmailIsValid(): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.createEmail.trim());
+  }
+
+  createPasswordsMatch(): boolean {
+    return this.createPasswordConfirmation !== ''
+      && this.createPassword === this.createPasswordConfirmation;
+  }
+
+  toggleCreatePasswordVisibility(): void {
+    this.showCreatePassword = !this.showCreatePassword;
+  }
+
   createAccount(): void {
-    if (!this.canCreateAccount()) return;
+    this.createValidationVisible = true;
+    this.createError = '';
+    if (!this.canCreateAccount()) {
+      this.createError = 'Revisa los campos indicados antes de crear la cuenta.';
+      return;
+    }
     this.createSubmitting = true;
     this.createError = '';
     this.passengerAccountsService.createAccount({
@@ -295,11 +320,9 @@ export class PassengerUsers implements OnInit {
         this.creationConfirmation = `Se ha creado la cuenta de ${account.firstName} ${account.lastName}.`;
         this.loadUsers(0);
       },
-      error: (error) => {
+      error: (error: HttpErrorResponse) => {
         this.createSubmitting = false;
-        this.createError = error.status === 409
-          ? 'Ya existe una cuenta asociada a ese correo electrónico.'
-          : 'No se ha podido crear la cuenta de pasajero.';
+        this.createError = this.accountMutationError(error, 'crear');
       }
     });
   }
@@ -332,9 +355,9 @@ export class PassengerUsers implements OnInit {
         this.creationConfirmation = `Se ha eliminado la cuenta de ${account.firstName} ${account.lastName}.`;
         this.loadUsers(targetPage);
       },
-      error: () => {
+      error: (error: HttpErrorResponse) => {
         this.deleteSubmitting = false;
-        this.deleteError = 'No se ha podido eliminar la cuenta de pasajero.';
+        this.deleteError = this.accountMutationError(error, 'eliminar');
       }
     });
   }
@@ -367,5 +390,20 @@ export class PassengerUsers implements OnInit {
       return false;
     }
     return undefined;
+  }
+
+  private accountMutationError(error: HttpErrorResponse, action: 'crear' | 'eliminar'): string {
+    if (error.status === 409) {
+      return action === 'crear'
+        ? 'Ya existe una cuenta asociada a ese correo electrónico.'
+        : 'La cuenta conserva billetes, trayectos u otras operaciones y no puede eliminarse.';
+    }
+    if (error.status === 403) {
+      return 'Tu cuenta de operador no tiene permisos para realizar esta acción.';
+    }
+    if (error.status === 0) {
+      return 'No se ha podido contactar con el backend. Comprueba que el servicio está iniciado.';
+    }
+    return `No se ha podido ${action} la cuenta de pasajero.`;
   }
 }

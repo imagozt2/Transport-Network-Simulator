@@ -1,4 +1,6 @@
 import { Component, HostListener, inject, OnInit } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, ParamMap } from '@angular/router';
 
 import {
@@ -21,6 +23,7 @@ type OptionalCategory = IncidentCategory | 'ALL';
 
 @Component({
   selector: 'app-incidents',
+  imports: [FormsModule],
   templateUrl: './incidents.html',
   styleUrls: ['./incidents.css', './incidents-detail.css']
 })
@@ -58,6 +61,7 @@ export class Incidents implements OnInit {
   createAssignToMe = true;
   createSubmitting = false;
   createError = '';
+  createValidationVisible = false;
   createAffectedDeviceId: number | null = null;
   createAffectedDeviceCode: string | null = null;
   createContextTicketCode: string | null = null;
@@ -68,6 +72,7 @@ export class Incidents implements OnInit {
   editPriority: IncidentPriority = 'MEDIUM';
   editSubmitting = false;
   editError = '';
+  editValidationVisible = false;
   workflowSubmitting = false;
   workflowError = '';
   statusNote = '';
@@ -173,6 +178,7 @@ export class Incidents implements OnInit {
     this.createPriority = 'MEDIUM';
     this.createAssignToMe = true;
     this.createError = '';
+    this.createValidationVisible = false;
     this.createAffectedDeviceId = null;
     this.createAffectedDeviceCode = null;
     this.createContextTicketCode = null;
@@ -190,7 +196,12 @@ export class Incidents implements OnInit {
   }
 
   createIncident(): void {
-    if (!this.canCreate()) return;
+    this.createValidationVisible = true;
+    this.createError = '';
+    if (!this.canCreate()) {
+      this.createError = 'Introduce un título y una descripción antes de crear la incidencia.';
+      return;
+    }
     this.createSubmitting = true;
     this.createError = '';
     this.incidentsService.createIncident({
@@ -211,9 +222,9 @@ export class Incidents implements OnInit {
         this.loadIncidents(0);
         this.openDetail(incident);
       },
-      error: () => {
+      error: (error: HttpErrorResponse) => {
         this.createSubmitting = false;
-        this.createError = 'No se ha podido registrar la incidencia.';
+        this.createError = this.mutationError(error, 'registrar la incidencia');
       }
     });
   }
@@ -250,6 +261,7 @@ export class Incidents implements OnInit {
     this.editCategory = this.selectedIncident.category;
     this.editPriority = this.selectedIncident.priority;
     this.editError = '';
+    this.editValidationVisible = false;
     this.editing = true;
   }
 
@@ -257,12 +269,18 @@ export class Incidents implements OnInit {
     if (!this.editSubmitting) {
       this.editing = false;
       this.editError = '';
+      this.editValidationVisible = false;
     }
   }
 
   saveEdit(assignment: 'KEEP' | 'ME' | 'NONE' = 'KEEP'): void {
     const incident = this.selectedIncident;
-    if (!incident || this.editTitle.trim() === '' || this.editDescription.trim() === '') return;
+    this.editValidationVisible = true;
+    this.editError = '';
+    if (!incident || this.editTitle.trim() === '' || this.editDescription.trim() === '') {
+      this.editError = 'El título y la descripción son obligatorios.';
+      return;
+    }
     const assignedOperatorId = assignment === 'ME'
       ? this.operator()?.id ?? null
       : assignment === 'NONE' ? null : incident.assignedTo?.id ?? null;
@@ -286,9 +304,9 @@ export class Incidents implements OnInit {
         this.refreshSelectedIncident();
         this.loadIncidents(this.currentPage);
       },
-      error: () => {
+      error: (error: HttpErrorResponse) => {
         this.editSubmitting = false;
-        this.editError = 'No se han podido guardar los cambios.';
+        this.editError = this.mutationError(error, 'guardar los cambios');
       }
     });
   }
@@ -352,9 +370,9 @@ export class Incidents implements OnInit {
         this.refreshSelectedIncident();
         this.loadIncidents(this.currentPage);
       },
-      error: () => {
+      error: (error: HttpErrorResponse) => {
         this.workflowSubmitting = false;
-        this.workflowError = 'No se ha podido actualizar el estado.';
+        this.workflowError = this.mutationError(error, 'actualizar el estado');
       }
     });
   }
@@ -369,9 +387,9 @@ export class Incidents implements OnInit {
         this.commentSubmitting = false;
         this.refreshSelectedIncident();
       },
-      error: () => {
+      error: (error: HttpErrorResponse) => {
         this.commentSubmitting = false;
-        this.commentError = 'No se ha podido añadir el comentario.';
+        this.commentError = this.mutationError(error, 'añadir el comentario');
       }
     });
   }
@@ -476,5 +494,18 @@ export class Incidents implements OnInit {
     if (!value || !/^\d+$/.test(value)) return null;
     const parsed = Number(value);
     return parsed > 0 && Number.isSafeInteger(parsed) ? parsed : null;
+  }
+
+  private mutationError(error: HttpErrorResponse, action: string): string {
+    if (error.status === 403) {
+      return 'Tu cuenta de operador no tiene permisos para realizar esta acción.';
+    }
+    if (error.status === 409) {
+      return 'La incidencia ha cambiado desde la última consulta. Recarga el detalle e inténtalo de nuevo.';
+    }
+    if (error.status === 0) {
+      return 'No se ha podido contactar con el backend. Comprueba que el servicio está iniciado.';
+    }
+    return `No se ha podido ${action}.`;
   }
 }

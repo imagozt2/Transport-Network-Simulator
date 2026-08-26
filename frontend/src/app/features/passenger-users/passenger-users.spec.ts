@@ -121,6 +121,51 @@ describe('PassengerUsers', () => {
     expect(component.creationConfirmation).toContain('Ana García');
   });
 
+  it('should create a passenger through the rendered form controls', async () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    compiled.querySelector<HTMLButtonElement>('.create-user-button')!.click();
+    fixture.detectChanges();
+    const submitButton = compiled.querySelector<HTMLButtonElement>(
+      '.create-user-dialog button[type="submit"]'
+    )!;
+    expect(fixture.componentInstance.canCreateAccount()).toBe(false);
+
+    setInput(compiled, '#create-passenger-first-name', 'Lucía');
+    setInput(compiled, '#create-passenger-last-name', 'Martín');
+    setInput(compiled, '#create-passenger-email', 'lucia@example.com');
+    setInput(compiled, '#create-passenger-password', 'SecurePassword123');
+    setInput(compiled, '#create-passenger-password-confirmation', 'SecurePassword123');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.createFirstName).toBe('Lucía');
+    expect(fixture.componentInstance.createPasswordConfirmation).toBe('SecurePassword123');
+    expect(fixture.componentInstance.canCreateAccount()).toBe(true);
+
+    submitButton.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(accountsService.createAccount).toHaveBeenCalledWith({
+      firstName: 'Lucía', lastName: 'Martín', email: 'lucia@example.com',
+      password: 'SecurePassword123'
+    });
+    expect(compiled.querySelector('.lifecycle-confirmation')?.textContent)
+      .toContain('Se ha creado la cuenta de Ana García');
+  });
+
+  it('should explain invalid fields instead of leaving the creation action inert', () => {
+    const component = fixture.componentInstance;
+    component.openCreateDialog();
+    fixture.detectChanges(false);
+    component.createAccount();
+    fixture.detectChanges(false);
+
+    expect(component.createValidationVisible).toBe(true);
+    expect(component.createError).toContain('Revisa los campos');
+    expect(accountsService.createAccount).not.toHaveBeenCalled();
+  });
+
   it('should require confirmation and refresh after deleting a passenger', () => {
     const component = fixture.componentInstance;
     component.openDetail(passenger);
@@ -202,4 +247,10 @@ function loadedComponentStyles(): string {
   return Array.from(document.head.querySelectorAll('style'))
     .map((style) => style.textContent ?? '')
     .join('\n');
+}
+
+function setInput(container: HTMLElement, selector: string, value: string): void {
+  const input = container.querySelector<HTMLInputElement>(selector)!;
+  input.value = value;
+  input.dispatchEvent(new Event('input', { bubbles: true }));
 }

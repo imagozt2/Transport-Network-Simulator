@@ -93,6 +93,44 @@ class OperationalLogsQueryServiceTests {
     }
 
     @Test
+    void shouldReturnAnAdministrativeIssuanceWithoutDeviceOrStation() {
+        DeviceEventLog digitalIssuance = org.mockito.Mockito.mock(DeviceEventLog.class);
+        when(digitalIssuance.getOrigin()).thenReturn(LogOrigin.ADMINISTRATION);
+        when(digitalIssuance.getEventType())
+                .thenReturn(DeviceEventType.COMPENSATORY_TICKET_ISSUED);
+        when(eventLogRepository.findFiltered(
+                eq(LogOrigin.ADMINISTRATION),
+                eq(LogSeverity.INFO),
+                eq(DeviceEventType.COMPENSATORY_TICKET_ISSUED),
+                eq(null),
+                eq(null),
+                eq(null),
+                eq(null),
+                eq(null),
+                any(Pageable.class)
+        )).thenReturn(new PageImpl<>(List.of(digitalIssuance)));
+
+        var response = queryService.getLogs(
+                0,
+                25,
+                LogOrigin.ADMINISTRATION,
+                LogSeverity.INFO,
+                DeviceEventType.COMPENSATORY_TICKET_ISSUED,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+
+        assertThat(response.logs()).singleElement().satisfies(log -> {
+            assertThat(log.eventType()).isEqualTo(DeviceEventType.COMPENSATORY_TICKET_ISSUED);
+            assertThat(log.deviceId()).isNull();
+            assertThat(log.stationId()).isNull();
+        });
+    }
+
+    @Test
     void shouldRejectAnInvertedDateRangeBeforeQueryingTheRepository() {
         LocalDateTime occurredFrom = LocalDateTime.of(2026, 7, 29, 12, 0);
         LocalDateTime occurredTo = LocalDateTime.of(2026, 7, 29, 10, 0);

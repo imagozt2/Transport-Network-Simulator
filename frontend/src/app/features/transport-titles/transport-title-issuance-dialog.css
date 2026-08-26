@@ -5,7 +5,7 @@
 .issuance-confirmation { display: flex; align-items: center; justify-content: space-between; gap: 14px; border: 1px solid #86efac; border-radius: 15px; padding: 12px 15px; color: #166534; background: #f0fdf4; font-size: 13px; font-weight: 800; }
 .issuance-confirmation button { border: 0; color: inherit; background: transparent; font-size: 20px; cursor: pointer; }
 .dialog-backdrop { position: fixed; z-index: 1000; inset: 0; display: grid; place-items: center; padding: 24px; background: rgba(15, 23, 42, .58); backdrop-filter: blur(3px); }
-.issuance-dialog { width: min(680px, 100%); max-height: calc(100vh - 48px); overflow: auto; border: 1px solid #cbd5e1; border-radius: 22px; background: #fff; box-shadow: 0 28px 70px rgba(15, 23, 42, .28); }
+.issuance-dialog { position: relative; isolation: isolate; pointer-events: auto; width: min(680px, 100%); max-height: calc(100vh - 48px); overflow: auto; border: 1px solid #cbd5e1; border-radius: 22px; background: #fff; box-shadow: 0 28px 70px rgba(15, 23, 42, .28); }
 .dialog-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 22px 24px 18px; border-bottom: 1px solid #e2e8f0; }
 .dialog-eyebrow { color: #0284c7; font-size: 10px; font-weight: 950; letter-spacing: .12em; text-transform: uppercase; }
 .dialog-header h2 { margin: 5px 0 0; color: #111827; font-size: 23px; }
@@ -37,18 +37,11 @@
 .issuance-warning strong { font-size: 12px; }
 .issuance-warning span { font-size: 10px; line-height: 1.4; }
 .dialog-error { border-radius: 12px; padding: 11px 13px; color: #991b1b; background: #fef2f2; font-size: 12px; font-weight: 750; }
+.dialog-warning { display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid #fcd34d; border-radius: 12px; padding: 11px 13px; color: #92400e; background: #fffbeb; font-size: 11px; font-weight: 750; }
+.dialog-warning button { flex: 0 0 auto; border: 0; border-radius: 9px; padding: 7px 10px; color: #fff; background: #92400e; font: inherit; font-size: 10px; font-weight: 900; cursor: pointer; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 3px; }
 .secondary-button { color: #334155; background: #e2e8f0; }
 .issuance-progress { padding: 22px 24px 24px; }
-.progress-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0 0 24px; padding: 0; list-style: none; }
-.progress-steps li { position: relative; display: flex; align-items: center; gap: 8px; min-width: 0; color: #94a3b8; font-size: 10px; }
-.progress-steps li:not(:last-child)::after { position: absolute; z-index: 0; top: 15px; left: 30px; right: -8px; height: 2px; content: ''; background: #e2e8f0; }
-.progress-steps span { position: relative; z-index: 1; display: grid; width: 30px; height: 30px; flex: 0 0 auto; place-items: center; border: 2px solid #cbd5e1; border-radius: 50%; color: #64748b; background: #fff; font-weight: 950; }
-.progress-steps strong { position: relative; z-index: 1; max-width: 104px; line-height: 1.25; }
-.progress-steps li.done, .progress-steps li.active { color: #0f172a; }
-.progress-steps li.done span { border-color: #0f172a; color: #fff; background: #0f172a; }
-.progress-steps li.done:not(:last-child)::after { background: #0f172a; }
-.progress-steps li.active span { border-color: #0284c7; color: #0369a1; background: #e0f2fe; }
 .progress-state, .result-state { display: flex; flex-direction: column; align-items: center; min-height: 230px; justify-content: center; border: 1px solid #bbf7d0; border-radius: 17px; padding: 25px; color: #166534; background: #f0fdf4; text-align: center; }
 .progress-state, .result-state.pending { border-color: #bae6fd; color: #075985; background: #f0f9ff; }
 .progress-state h3, .result-state h3 { margin: 13px 0 5px; color: #0f172a; font-size: 18px; }
@@ -73,8 +66,6 @@
   .delivery-method { grid-template-columns: 1fr; }
   .delivery-method legend { grid-column: auto; }
   .issuance-progress { padding: 18px 16px; }
-  .progress-steps { grid-template-columns: 1fr; }
-  .progress-steps li:not(:last-child)::after { top: 30px; right: auto; bottom: -8px; left: 14px; width: 2px; height: auto; }
   .issuance-result-details { grid-template-columns: 1fr; }
   .dialog-actions { flex-direction: column-reverse; }
   .dialog-actions button { width: 100%; }

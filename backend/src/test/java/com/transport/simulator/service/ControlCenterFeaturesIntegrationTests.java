@@ -174,6 +174,7 @@ class ControlCenterFeaturesIntegrationTests {
         ArgumentCaptor<DeviceEventLog> logs = ArgumentCaptor.forClass(DeviceEventLog.class);
         verify(issuanceRepository).save(issuance.capture());
         verify(logRepository).save(logs.capture());
+        verify(logRepository).flush();
         assertThat(plannedJourney.stationCount()).isEqualTo(3);
         assertThat(ReflectionTestUtils.getField(issuance.getValue(), "stationCount")).isEqualTo(3);
         assertThat(response.status()).isEqualTo(CompensatoryIssuanceStatus.PROCESSING);
