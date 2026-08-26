@@ -1,5 +1,5 @@
 import { Component, HostListener, inject, OnInit } from '@angular/core';
-import { forkJoin } from 'rxjs';
+import { catchError, forkJoin, of } from 'rxjs';
 
 import {
   CompensatoryDeliveryMethod,
@@ -47,6 +47,7 @@ export class TransportTitles implements OnInit {
   loadingIssuanceOptions = false;
   issuingTicket = false;
   issuanceError = '';
+  issuanceOptionsWarning = '';
   issuanceConfirmation = '';
   issuanceProgress: IssuanceProgress = 'FORM';
   issuanceResult: CompensatoryTicketIssuanceResponse | null = null;
@@ -337,30 +338,39 @@ export class TransportTitles implements OnInit {
     return this.temporalFormat.formatDateTime(value);
   }
 
-  private loadIssuanceOptions(): void {
+  loadIssuanceOptions(): void {
     this.loadingIssuanceOptions = true;
     this.issuanceError = '';
+    this.issuanceOptionsWarning = '';
     forkJoin({
-      devices: this.deviceOperationsService.getOperations(),
-      network: this.networkMapService.getNetworkMap(),
+      devices: this.deviceOperationsService.getOperations().pipe(catchError(() => of(null))),
+      network: this.networkMapService.getNetworkMap().pipe(catchError(() => of(null))),
       passengers: this.passengerAccountsService.getAccounts(0, 100, {
         status: 'ACTIVE', sortBy: 'name', direction: 'ASC'
-      })
+      }).pipe(catchError(() => of(null)))
     }).subscribe({
       next: ({ devices, network, passengers }) => {
-        this.ticketMachines = devices.devices
+        this.ticketMachines = (devices?.devices ?? [])
           .filter((device) => device.type === 'TICKET_MACHINE' && device.status === 'ONLINE'
             && device.connectivity.state !== 'DISCONNECTED')
           .sort((first, second) => first.name.localeCompare(second.name, 'es'));
-        this.passengers = passengers.users
+        this.passengers = (passengers?.users ?? [])
           .filter((passenger) => passenger.status === 'ACTIVE')
           .sort((first, second) => `${first.firstName} ${first.lastName}`
             .localeCompare(`${second.firstName} ${second.lastName}`, 'es'));
         const byCode = new Map<string, NetworkMapStation>();
-        network.lines.flatMap((line) => line.stations)
+        (network?.lines ?? []).flatMap((line) => line.stations)
           .forEach((station) => byCode.set(station.code, station));
         this.stations = [...byCode.values()]
           .sort((first, second) => first.name.localeCompare(second.name, 'es'));
+        const unavailable = [
+          devices === null ? 'máquinas' : null,
+          network === null ? 'estaciones' : null,
+          passengers === null ? 'pasajeros' : null
+        ].filter((value): value is string => value !== null);
+        if (unavailable.length > 0) {
+          this.issuanceOptionsWarning = `No se han podido cargar: ${unavailable.join(', ')}. Puedes usar las opciones disponibles o reintentar.`;
+        }
         this.loadingIssuanceOptions = false;
       },
       error: () => {
@@ -372,6 +382,7 @@ export class TransportTitles implements OnInit {
 
   private resetIssuanceForm(title: TransportTitle): void {
     this.issuanceError = '';
+    this.issuanceOptionsWarning = '';
     this.issuanceProgress = 'FORM';
     this.issuanceResult = null;
     this.issuanceConfirmation = '';

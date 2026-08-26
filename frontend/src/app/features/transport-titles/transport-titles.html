@@ -242,6 +242,12 @@
               <small>{{ issuanceReason.length }}/500 caracteres</small>
             </label>
             @if (issuanceError) { <div class="dialog-error full-width" role="alert">{{ issuanceError }}</div> }
+            @if (issuanceOptionsWarning) {
+              <div class="dialog-warning full-width" role="status">
+                <span>{{ issuanceOptionsWarning }}</span>
+                <button type="button" (click)="loadIssuanceOptions()">Reintentar carga</button>
+              </div>
+            }
             <div class="issuance-warning full-width">
               <strong>Importe de la operación: 0,00 €</strong>
               <span>La emisión y sus eventos quedarán registrados en los logs operativos.</span>

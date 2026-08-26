@@ -37,6 +37,8 @@
 .issuance-warning strong { font-size: 12px; }
 .issuance-warning span { font-size: 10px; line-height: 1.4; }
 .dialog-error { border-radius: 12px; padding: 11px 13px; color: #991b1b; background: #fef2f2; font-size: 12px; font-weight: 750; }
+.dialog-warning { display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid #fcd34d; border-radius: 12px; padding: 11px 13px; color: #92400e; background: #fffbeb; font-size: 11px; font-weight: 750; }
+.dialog-warning button { flex: 0 0 auto; border: 0; border-radius: 9px; padding: 7px 10px; color: #fff; background: #92400e; font: inherit; font-size: 10px; font-weight: 900; cursor: pointer; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 3px; }
 .secondary-button { color: #334155; background: #e2e8f0; }
 .issuance-progress { padding: 22px 24px 24px; }
