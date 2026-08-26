@@ -294,34 +294,40 @@
         <form (submit)="$event.preventDefault(); createAccount()">
           <label>
             <span>Nombre</span>
-            <input type="text" maxlength="100" autocomplete="given-name" [value]="createFirstName" (input)="createFirstName = $any($event.target).value" />
+            <input id="create-passenger-first-name" name="firstName" type="text" required maxlength="100" autocomplete="given-name" [value]="createFirstName" (input)="createFirstName = $any($event.target).value" [attr.aria-invalid]="createValidationVisible && !createFirstName.trim()" />
+            @if (createValidationVisible && !createFirstName.trim()) { <small class="field-error">Introduce el nombre.</small> }
           </label>
           <label>
             <span>Apellidos</span>
-            <input type="text" maxlength="150" autocomplete="family-name" [value]="createLastName" (input)="createLastName = $any($event.target).value" />
+            <input id="create-passenger-last-name" name="lastName" type="text" required maxlength="150" autocomplete="family-name" [value]="createLastName" (input)="createLastName = $any($event.target).value" [attr.aria-invalid]="createValidationVisible && !createLastName.trim()" />
+            @if (createValidationVisible && !createLastName.trim()) { <small class="field-error">Introduce los apellidos.</small> }
           </label>
           <label class="wide-field">
             <span>Correo electrónico</span>
-            <input type="email" maxlength="254" autocomplete="email" placeholder="usuario@ejemplo.com" [value]="createEmail" (input)="createEmail = $any($event.target).value" />
+            <input id="create-passenger-email" name="email" type="email" required maxlength="254" autocomplete="email" placeholder="usuario@ejemplo.com" [value]="createEmail" (input)="createEmail = $any($event.target).value" [attr.aria-invalid]="createValidationVisible && !createEmailIsValid()" />
+            @if (createValidationVisible && !createEmailIsValid()) { <small class="field-error">Introduce un correo electrónico válido.</small> }
           </label>
           <label>
             <span>Contraseña provisional</span>
-            <input type="password" maxlength="72" autocomplete="new-password" [value]="createPassword" (input)="createPassword = $any($event.target).value" />
+            <span class="password-input">
+              <input id="create-passenger-password" name="password" [type]="showCreatePassword ? 'text' : 'password'" required minlength="12" maxlength="72" autocomplete="new-password" [value]="createPassword" (input)="createPassword = $any($event.target).value" [attr.aria-invalid]="createValidationVisible && !passwordMeetsRequirements()" />
+              <button type="button" (click)="toggleCreatePasswordVisibility()">{{ showCreatePassword ? 'Ocultar' : 'Mostrar' }}</button>
+            </span>
           </label>
           <label>
             <span>Confirmar contraseña</span>
-            <input type="password" maxlength="72" autocomplete="new-password" [value]="createPasswordConfirmation" (input)="createPasswordConfirmation = $any($event.target).value" />
+            <input id="create-passenger-password-confirmation" name="passwordConfirmation" [type]="showCreatePassword ? 'text' : 'password'" required minlength="12" maxlength="72" autocomplete="new-password" [value]="createPasswordConfirmation" (input)="createPasswordConfirmation = $any($event.target).value" [attr.aria-invalid]="createValidationVisible && !createPasswordsMatch()" />
           </label>
           <p class="password-requirements wide-field" [class.valid]="passwordMeetsRequirements()">
             Entre 12 y 72 caracteres, con mayúsculas, minúsculas y números.
           </p>
-          @if (createPasswordConfirmation && createPassword !== createPasswordConfirmation) {
+          @if ((createValidationVisible || createPasswordConfirmation) && !createPasswordsMatch()) {
             <p class="create-error wide-field" role="alert">Las contraseñas no coinciden.</p>
           }
           @if (createError) { <p class="create-error wide-field" role="alert">{{ createError }}</p> }
           <footer class="wide-field">
             <button type="button" class="secondary-button" [disabled]="createSubmitting" (click)="closeCreateDialog()">Cancelar</button>
-            <button type="submit" class="primary-button" [disabled]="!canCreateAccount()">
+            <button type="submit" class="primary-button" [disabled]="createSubmitting">
               {{ createSubmitting ? 'Creando…' : 'Crear cuenta' }}
             </button>
           </footer>

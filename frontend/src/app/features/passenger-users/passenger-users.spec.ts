@@ -121,6 +121,39 @@ describe('PassengerUsers', () => {
     expect(component.creationConfirmation).toContain('Ana García');
   });
 
+  it('should create a passenger through the rendered form controls', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    compiled.querySelector<HTMLButtonElement>('.create-user-button')!.click();
+    fixture.detectChanges();
+
+    setInput(compiled, '#create-passenger-first-name', 'Lucía');
+    setInput(compiled, '#create-passenger-last-name', 'Martín');
+    setInput(compiled, '#create-passenger-email', 'lucia@example.com');
+    setInput(compiled, '#create-passenger-password', 'SecurePassword123');
+    setInput(compiled, '#create-passenger-password-confirmation', 'SecurePassword123');
+    fixture.detectChanges();
+
+    compiled.querySelector<HTMLFormElement>('.create-user-dialog form')!
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+    expect(accountsService.createAccount).toHaveBeenCalledWith({
+      firstName: 'Lucía', lastName: 'Martín', email: 'lucia@example.com',
+      password: 'SecurePassword123'
+    });
+  });
+
+  it('should explain invalid fields instead of leaving the creation action inert', () => {
+    const component = fixture.componentInstance;
+    component.openCreateDialog();
+    fixture.detectChanges(false);
+    component.createAccount();
+    fixture.detectChanges(false);
+
+    expect(component.createValidationVisible).toBe(true);
+    expect(component.createError).toContain('Revisa los campos');
+    expect(accountsService.createAccount).not.toHaveBeenCalled();
+  });
+
   it('should require confirmation and refresh after deleting a passenger', () => {
     const component = fixture.componentInstance;
     component.openDetail(passenger);
@@ -202,4 +235,10 @@ function loadedComponentStyles(): string {
   return Array.from(document.head.querySelectorAll('style'))
     .map((style) => style.textContent ?? '')
     .join('\n');
+}
+
+function setInput(container: HTMLElement, selector: string, value: string): void {
+  const input = container.querySelector<HTMLInputElement>(selector)!;
+  input.value = value;
+  input.dispatchEvent(new Event('input', { bubbles: true }));
 }
