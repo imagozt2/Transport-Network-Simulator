@@ -26,6 +26,8 @@ qt_add_resources(rmm-ticket-vending-machine "rmm-ticket-machine-assets"
     PREFIX "/rmm"
     FILES
         resources/chevron-down.svg
+        resources/flag-spain.svg
+        resources/flag-united-kingdom.svg
 )
 
 target_link_libraries(rmm-ticket-vending-machine

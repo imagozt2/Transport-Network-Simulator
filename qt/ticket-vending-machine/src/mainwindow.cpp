@@ -10,6 +10,7 @@
 #include <QDoubleSpinBox>
 #include <QGridLayout>
 #include <QHBoxLayout>
+#include <QIcon>
 #include <QLocale>
 #include <QLabel>
 #include <QLineEdit>
@@ -70,11 +71,12 @@ constexpr auto windowStyle = R"(
     QPushButton#languageFlag {
         min-width: 52px;
         min-height: 42px;
-        padding: 2px 6px;
+        max-width: 52px;
+        max-height: 42px;
+        padding: 3px 5px;
         border: 2px solid transparent;
         border-radius: 12px;
         background-color: transparent;
-        font-size: 26px;
     }
     QPushButton#languageFlag:hover, QPushButton#languageFlag:focus {
         border-color: #93c5fd;
@@ -666,14 +668,19 @@ QWidget *MainWindow::createHeader()
     identityLayout->addWidget(m_applicationName);
     identityLayout->addWidget(m_applicationContext);
 
-    m_spanishLanguageButton = new QPushButton(QStringLiteral("🇪🇸"), header);
+    m_spanishLanguageButton = new QPushButton(header);
     m_spanishLanguageButton->setObjectName(QStringLiteral("languageFlag"));
+    m_spanishLanguageButton->setIcon(QIcon(QStringLiteral(":/rmm/resources/flag-spain.svg")));
+    m_spanishLanguageButton->setIconSize(QSize(38, 26));
     m_spanishLanguageButton->setCheckable(true);
     m_spanishLanguageButton->setAutoExclusive(true);
     m_spanishLanguageButton->setCursor(Qt::PointingHandCursor);
 
-    m_englishLanguageButton = new QPushButton(QStringLiteral("🇬🇧"), header);
+    m_englishLanguageButton = new QPushButton(header);
     m_englishLanguageButton->setObjectName(QStringLiteral("languageFlag"));
+    m_englishLanguageButton->setIcon(
+        QIcon(QStringLiteral(":/rmm/resources/flag-united-kingdom.svg")));
+    m_englishLanguageButton->setIconSize(QSize(38, 26));
     m_englishLanguageButton->setCheckable(true);
     m_englishLanguageButton->setAutoExclusive(true);
     m_englishLanguageButton->setCursor(Qt::PointingHandCursor);
