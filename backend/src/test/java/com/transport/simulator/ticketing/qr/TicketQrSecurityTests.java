@@ -15,6 +15,7 @@ import com.transport.simulator.enums.TicketQrValidationType;
 import com.transport.simulator.enums.TicketSupportType;
 import com.transport.simulator.repository.TicketQrCredentialRepository;
 import com.transport.simulator.repository.TicketQrUseClaimRepository;
+import java.nio.file.Path;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.time.Clock;
@@ -27,6 +28,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import tools.jackson.databind.ObjectMapper;
 
 class TicketQrSecurityTests {
@@ -41,6 +43,9 @@ class TicketQrSecurityTests {
     private TicketQrVerifier verifier;
     private Clock clock;
 
+    @TempDir
+    Path temporaryDirectory;
+
     @BeforeEach
     void setUp() throws Exception {
         KeyPair keyPair = KeyPairGenerator.getInstance("Ed25519").generateKeyPair();
@@ -50,7 +55,8 @@ class TicketQrSecurityTests {
                 Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded()),
                 "",
                 60,
-                4096
+                4096,
+                ""
         );
         ObjectMapper objectMapper = new ObjectMapper();
         TicketQrPayloadCodec payloadCodec = new TicketQrPayloadCodec(objectMapper);
@@ -98,6 +104,23 @@ class TicketQrSecurityTests {
         String manipulated = TicketQrContract.WRAPPER_PREFIX + String.join(".", segments);
 
         assertVerificationFailure(manipulated, TicketQrVerificationFailure.INVALID_SIGNATURE);
+    }
+
+    @Test
+    void shouldCreateAndReuseTheLocalSigningKeyAcrossBackendRestarts() {
+        TicketQrSigningProperties localProperties = new TicketQrSigningProperties(
+                "", "", "", "", 60, 4096, temporaryDirectory.toString());
+
+        TicketQrKeyRing firstBackend = new TicketQrKeyRing(localProperties);
+        byte[] firstPrivateKey = firstBackend.activePrivateKey().getEncoded();
+        byte[] firstPublicKey = firstBackend.trustedPublicKey(firstBackend.activeKeyId()).getEncoded();
+
+        TicketQrKeyRing restartedBackend = new TicketQrKeyRing(localProperties);
+
+        assertThat(restartedBackend.activeKeyId()).isEqualTo("rmm-local-ticket-qr-1");
+        assertThat(restartedBackend.activePrivateKey().getEncoded()).isEqualTo(firstPrivateKey);
+        assertThat(restartedBackend.trustedPublicKey(restartedBackend.activeKeyId()).getEncoded())
+                .isEqualTo(firstPublicKey);
     }
 
     @Test
