@@ -76,6 +76,38 @@ describe('Incidents', () => {
     expect(component.selectedIncident?.code).toBe('INC-TEST');
   });
 
+  it('should create an incident through the rendered dialog controls', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    compiled.querySelector<HTMLButtonElement>('.create-incident-button')!.click();
+    fixture.detectChanges();
+
+    setInput(compiled, '#create-incident-name', 'Avería en validadora');
+    setInput(compiled, '#create-incident-description', 'El lector no reconoce códigos QR');
+    setSelect(compiled, '#create-incident-category', 'DEVICE');
+    setSelect(compiled, '#create-incident-priority', 'HIGH');
+    fixture.detectChanges();
+    compiled.querySelector<HTMLFormElement>('.create-incident-dialog form')!
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+    expect(incidentsService.createIncident).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Avería en validadora',
+      description: 'El lector no reconoce códigos QR',
+      category: 'DEVICE',
+      priority: 'HIGH',
+      assignedOperatorId: 7
+    }));
+  });
+
+  it('should explain why an incomplete incident cannot be created', () => {
+    const component = fixture.componentInstance;
+    component.openCreateDialog();
+    component.createIncident();
+
+    expect(component.createValidationVisible).toBe(true);
+    expect(component.createError).toContain('título y una descripción');
+    expect(incidentsService.createIncident).not.toHaveBeenCalled();
+  });
+
   it('should load details, add comments and advance the workflow', () => {
     const component = fixture.componentInstance;
     component.openDetail(incident);
@@ -215,4 +247,16 @@ function loadedComponentStyles(): string {
   return Array.from(document.head.querySelectorAll('style'))
     .map((style) => style.textContent ?? '')
     .join('\n');
+}
+
+function setInput(container: HTMLElement, selector: string, value: string): void {
+  const control = container.querySelector<HTMLInputElement | HTMLTextAreaElement>(selector)!;
+  control.value = value;
+  control.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function setSelect(container: HTMLElement, selector: string, value: string): void {
+  const control = container.querySelector<HTMLSelectElement>(selector)!;
+  control.value = value;
+  control.dispatchEvent(new Event('change', { bubbles: true }));
 }

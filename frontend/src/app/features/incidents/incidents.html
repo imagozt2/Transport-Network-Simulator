@@ -210,8 +210,8 @@
           @if (editing) {
             <section class="detail-section edit-section">
               <h3>Editar incidencia</h3>
-              <label><span>Título</span><input maxlength="150" [value]="editTitle" (input)="editTitle = $any($event.target).value" /></label>
-              <label><span>Descripción</span><textarea rows="4" [value]="editDescription" (input)="editDescription = $any($event.target).value"></textarea></label>
+              <label><span>Título</span><input required maxlength="150" [value]="editTitle" (input)="editTitle = $any($event.target).value" [attr.aria-invalid]="editValidationVisible && !editTitle.trim()" /></label>
+              <label><span>Descripción</span><textarea required rows="4" [value]="editDescription" (input)="editDescription = $any($event.target).value" [attr.aria-invalid]="editValidationVisible && !editDescription.trim()"></textarea></label>
               <div class="edit-grid">
                 <label>
                   <span>Categoría</span>
@@ -229,7 +229,7 @@
               @if (editError) { <p class="form-error" role="alert">{{ editError }}</p> }
               <div class="dialog-actions">
                 <button type="button" [disabled]="editSubmitting" (click)="cancelEdit()">Cancelar</button>
-                <button class="primary-button" type="button" [disabled]="editSubmitting || !editTitle.trim() || !editDescription.trim()" (click)="saveEdit()">
+                <button class="primary-button" type="button" [disabled]="editSubmitting" (click)="saveEdit()">
                   {{ editSubmitting ? 'Guardando…' : 'Guardar cambios' }}
                 </button>
               </div>
@@ -349,17 +349,17 @@
               </div>
             </aside>
           }
-          <label class="wide-field"><span>Título</span><input maxlength="150" [value]="createTitle" (input)="createTitle = $any($event.target).value" /></label>
-          <label class="wide-field"><span>Descripción</span><textarea rows="5" [value]="createDescription" (input)="createDescription = $any($event.target).value"></textarea></label>
+          <label class="wide-field"><span>Título</span><input id="create-incident-name" name="title" required maxlength="150" [value]="createTitle" (input)="createTitle = $any($event.target).value" [attr.aria-invalid]="createValidationVisible && !createTitle.trim()" />@if (createValidationVisible && !createTitle.trim()) { <small class="field-error">Introduce un título.</small> }</label>
+          <label class="wide-field"><span>Descripción</span><textarea id="create-incident-description" name="description" required rows="5" [value]="createDescription" (input)="createDescription = $any($event.target).value" [attr.aria-invalid]="createValidationVisible && !createDescription.trim()"></textarea>@if (createValidationVisible && !createDescription.trim()) { <small class="field-error">Describe la incidencia.</small> }</label>
           <label>
             <span>Categoría</span>
-            <select [value]="createCategory" (change)="createCategory = $any($event.target).value">
+            <select id="create-incident-category" name="category" [value]="createCategory" (change)="createCategory = $any($event.target).value">
               @for (category of categories; track category) { <option [value]="category">{{ categoryLabel(category) }}</option> }
             </select>
           </label>
           <label>
             <span>Prioridad</span>
-            <select [value]="createPriority" (change)="createPriority = $any($event.target).value">
+            <select id="create-incident-priority" name="priority" [value]="createPriority" (change)="createPriority = $any($event.target).value">
               @for (priority of priorities; track priority) { <option [value]="priority">{{ priorityLabel(priority) }}</option> }
             </select>
           </label>
@@ -370,7 +370,7 @@
           @if (createError) { <p class="form-error wide-field" role="alert">{{ createError }}</p> }
           <footer class="wide-field dialog-actions">
             <button type="button" [disabled]="createSubmitting" (click)="closeCreateDialog()">Cancelar</button>
-            <button class="primary-button" type="submit" [disabled]="!canCreate()">{{ createSubmitting ? 'Creando…' : 'Crear incidencia' }}</button>
+            <button class="primary-button" type="submit" [disabled]="createSubmitting">{{ createSubmitting ? 'Creando…' : 'Crear incidencia' }}</button>
           </footer>
         </form>
       </section>
