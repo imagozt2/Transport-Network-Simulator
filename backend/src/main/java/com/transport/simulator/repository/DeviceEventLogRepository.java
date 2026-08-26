@@ -46,8 +46,8 @@ public interface DeviceEventLogRepository extends JpaRepository<DeviceEventLog, 
             value = """
                     SELECT eventLog
                     FROM DeviceEventLog eventLog
-                    JOIN FETCH eventLog.device device
-                    JOIN FETCH eventLog.station station
+                    LEFT JOIN FETCH eventLog.device device
+                    LEFT JOIN FETCH eventLog.station station
                     WHERE (:origin IS NULL OR eventLog.origin = :origin)
                       AND (:severity IS NULL OR eventLog.severity = :severity)
                       AND (:eventType IS NULL OR eventLog.eventType = :eventType)
@@ -60,8 +60,8 @@ public interface DeviceEventLogRepository extends JpaRepository<DeviceEventLog, 
             countQuery = """
                     SELECT COUNT(eventLog)
                     FROM DeviceEventLog eventLog
-                    JOIN eventLog.device device
-                    JOIN eventLog.station station
+                    LEFT JOIN eventLog.device device
+                    LEFT JOIN eventLog.station station
                     WHERE (:origin IS NULL OR eventLog.origin = :origin)
                       AND (:severity IS NULL OR eventLog.severity = :severity)
                       AND (:eventType IS NULL OR eventLog.eventType = :eventType)
