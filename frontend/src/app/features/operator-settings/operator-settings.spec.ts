@@ -1,4 +1,4 @@
-import { signal } from '@angular/core';
+import { Component, signal, ViewEncapsulation } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
@@ -7,6 +7,20 @@ import { OperatorDisplayPreferences } from '../../core/models/operator-display-p
 import { OperatorDisplayPreferencesService } from '../../core/services/operator-display-preferences.service';
 
 import { OperatorSettingsPage } from './operator-settings';
+
+@Component({
+  selector: 'app-dark-theme-surfaces-host',
+  template: `
+    <article class="line-card"></article>
+    <article class="train-card"></article>
+    <article class="issuance-dialog"></article>
+    <article class="create-user-dialog"></article>
+    <article class="create-incident-dialog"></article>
+  `,
+  styleUrl: '../../../styles.css',
+  encapsulation: ViewEncapsulation.None
+})
+class DarkThemeSurfacesHost {}
 
 describe('OperatorSettingsPage', () => {
   const preferencesState = signal<OperatorDisplayPreferences>({
@@ -42,7 +56,7 @@ describe('OperatorSettingsPage', () => {
 
   async function createPage() {
     await TestBed.configureTestingModule({
-      imports: [OperatorSettingsPage],
+      imports: [OperatorSettingsPage, DarkThemeSurfacesHost],
       providers: [
         provideRouter([]),
         { provide: OperatorDisplayPreferencesService, useValue: preferencesService }
@@ -121,6 +135,21 @@ describe('OperatorSettingsPage', () => {
     expect(preferencesState().theme).toBe('DARK');
     expect(document.documentElement.classList.contains('theme-dark')).toBe(true);
     expect(document.documentElement.style.colorScheme).toBe('dark');
+  });
+
+  it('should apply dark surfaces to operational cards and administrative dialogs', async () => {
+    const fixture = await createPage();
+    const surfacesFixture = TestBed.createComponent(DarkThemeSurfacesHost);
+    surfacesFixture.detectChanges();
+    fixture.componentInstance.selectTheme('DARK');
+    fixture.componentInstance.savePreferences();
+    const surfaces = surfacesFixture.nativeElement.querySelectorAll('article') as NodeListOf<HTMLElement>;
+
+    surfaces.forEach((surface) => {
+      const styles = getComputedStyle(surface);
+      expect(styles.backgroundColor).toBe('rgb(17, 24, 39)');
+      expect(styles.color).toBe('rgb(229, 231, 235)');
+    });
   });
 
   it('should restore account preferences and persist a new time zone with its theme', async () => {

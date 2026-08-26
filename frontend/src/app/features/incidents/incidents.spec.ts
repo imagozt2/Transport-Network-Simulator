@@ -80,6 +80,10 @@ describe('Incidents', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     compiled.querySelector<HTMLButtonElement>('.create-incident-button')!.click();
     fixture.detectChanges();
+    const submitButton = compiled.querySelector<HTMLButtonElement>(
+      '.create-incident-dialog button[type="submit"]'
+    )!;
+    expect(fixture.componentInstance.canCreate()).toBe(false);
 
     setInput(compiled, '#create-incident-name', 'Avería en validadora');
     setInput(compiled, '#create-incident-description', 'El lector no reconoce códigos QR');
@@ -90,8 +94,10 @@ describe('Incidents', () => {
     fixture.detectChanges();
     expect(fixture.componentInstance.createTitle).toBe('Avería en validadora');
     expect(fixture.componentInstance.createPriority).toBe('HIGH');
-    compiled.querySelector<HTMLButtonElement>('.create-incident-dialog button[type="submit"]')!.click();
+    expect(fixture.componentInstance.canCreate()).toBe(true);
+    submitButton.click();
     await fixture.whenStable();
+    fixture.detectChanges();
 
     expect(incidentsService.createIncident).toHaveBeenCalledWith(expect.objectContaining({
       title: 'Avería en validadora',
@@ -100,6 +106,8 @@ describe('Incidents', () => {
       priority: 'HIGH',
       assignedOperatorId: 7
     }));
+    expect(fixture.componentInstance.createDialogOpen).toBe(false);
+    expect(fixture.componentInstance.selectedIncident?.code).toBe('INC-TEST');
   });
 
   it('should explain why an incomplete incident cannot be created', () => {

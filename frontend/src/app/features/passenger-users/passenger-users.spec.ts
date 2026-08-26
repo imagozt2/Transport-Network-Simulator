@@ -125,6 +125,10 @@ describe('PassengerUsers', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     compiled.querySelector<HTMLButtonElement>('.create-user-button')!.click();
     fixture.detectChanges();
+    const submitButton = compiled.querySelector<HTMLButtonElement>(
+      '.create-user-dialog button[type="submit"]'
+    )!;
+    expect(fixture.componentInstance.canCreateAccount()).toBe(false);
 
     setInput(compiled, '#create-passenger-first-name', 'Lucía');
     setInput(compiled, '#create-passenger-last-name', 'Martín');
@@ -136,14 +140,18 @@ describe('PassengerUsers', () => {
     fixture.detectChanges();
     expect(fixture.componentInstance.createFirstName).toBe('Lucía');
     expect(fixture.componentInstance.createPasswordConfirmation).toBe('SecurePassword123');
+    expect(fixture.componentInstance.canCreateAccount()).toBe(true);
 
-    compiled.querySelector<HTMLButtonElement>('.create-user-dialog button[type="submit"]')!.click();
+    submitButton.click();
     await fixture.whenStable();
+    fixture.detectChanges();
 
     expect(accountsService.createAccount).toHaveBeenCalledWith({
       firstName: 'Lucía', lastName: 'Martín', email: 'lucia@example.com',
       password: 'SecurePassword123'
     });
+    expect(compiled.querySelector('.lifecycle-confirmation')?.textContent)
+      .toContain('Se ha creado la cuenta de Ana García');
   });
 
   it('should explain invalid fields instead of leaving the creation action inert', () => {
