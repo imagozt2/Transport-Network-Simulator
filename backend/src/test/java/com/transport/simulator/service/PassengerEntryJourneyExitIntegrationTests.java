@@ -1,6 +1,7 @@
 package com.transport.simulator.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -114,6 +115,15 @@ class PassengerEntryJourneyExitIntegrationTests {
         assertThat(opened.getExitStation()).isNull();
         assertThat(ticket.getRemainingTrips()).isEqualTo(9);
         assertThat(opened.getOpenedAt()).isEqualTo("2026-08-11T08:00:00");
+
+        assertThatThrownBy(() -> service.enter("RMM-TKT-JOURNEY-001", "ST001"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("open journey");
+        assertThat(storedJourney.get()).isSameAs(opened);
+        assertThat(storedJourney.get().getStatus()).isEqualTo(TicketJourneyStatus.OPEN);
+        assertThat(ticket.getRemainingTrips()).isEqualTo(9);
+        assertThat(storedOperations).extracting(TicketOperation::getType)
+                .containsExactly(TicketOperationType.ENTRY_ACCEPTED);
 
         clock.advanceSeconds(720);
         TicketJourney closed = service.exit("RMM-TKT-JOURNEY-001", "ST010");
