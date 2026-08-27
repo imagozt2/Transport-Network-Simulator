@@ -3,6 +3,7 @@
 #include "qrcodescannerwidget.h"
 
 #include <algorithm>
+#include <QApplication>
 #include <QFrame>
 #include <QComboBox>
 #include <QCompleter>
@@ -305,7 +306,7 @@ constexpr auto windowStyle = R"(
         width: 16px;
         height: 10px;
     }
-    QSpinBox#quantityValue {
+    QSpinBox#quantityValue, QDoubleSpinBox#balanceValue {
         min-width: 150px;
         font-size: 26px;
         font-weight: 900;
@@ -1441,13 +1442,43 @@ void MainWindow::showProductConfiguration(const TicketProduct &product)
                                         : QStringLiteral("Recharge amount"), panel);
         label->setObjectName(QStringLiteral("fieldLabel"));
         amount = new QDoubleSpinBox(panel);
+        amount->setObjectName(QStringLiteral("balanceValue"));
         amount->setDecimals(2);
         amount->setSingleStep(1.0);
         amount->setRange(product.minRechargeAmount.value_or(1.0),
                          product.maxRechargeAmount.value_or(100.0));
         amount->setSuffix(QStringLiteral(" €"));
+        amount->setButtonSymbols(QAbstractSpinBox::NoButtons);
+        amount->setAlignment(Qt::AlignCenter);
+        amount->setReadOnly(true);
+        auto *decrease = new QPushButton(QStringLiteral("−"), panel);
+        auto *increase = new QPushButton(QStringLiteral("+"), panel);
+        decrease->setObjectName(QStringLiteral("stepAction"));
+        increase->setObjectName(QStringLiteral("stepAction"));
+        decrease->setCursor(Qt::PointingHandCursor);
+        increase->setCursor(Qt::PointingHandCursor);
+        decrease->setAccessibleName(
+            spanish ? QStringLiteral("Reducir el saldo") : QStringLiteral("Decrease balance"));
+        increase->setAccessibleName(
+            spanish ? QStringLiteral("Aumentar el saldo") : QStringLiteral("Increase balance"));
+        auto *amountLayout = new QHBoxLayout();
+        amountLayout->addStretch();
+        amountLayout->addWidget(decrease);
+        amountLayout->addWidget(amount);
+        amountLayout->addWidget(increase);
+        amountLayout->addStretch();
+        connect(decrease, &QPushButton::clicked, amount,
+                [amount] { amount->setValue(amount->value() - amount->singleStep()); });
+        connect(increase, &QPushButton::clicked, amount,
+                [amount] { amount->setValue(amount->value() + amount->singleStep()); });
+        connect(amount, &QDoubleSpinBox::valueChanged, panel,
+                [amount, decrease, increase](double value) {
+            decrease->setEnabled(value > amount->minimum());
+            increase->setEnabled(value < amount->maximum());
+        });
+        decrease->setEnabled(false);
         layout->addWidget(label);
-        layout->addWidget(amount);
+        layout->addLayout(amountLayout);
     }
 
     if (m_pendingPayment && m_pendingPayment->product.code == product.code) {
@@ -1482,7 +1513,12 @@ void MainWindow::showProductConfiguration(const TicketProduct &product)
 
     connect(back, &QPushButton::clicked, panel, [this] {
         m_pendingPayment.reset();
+        if (QWidget *focusedWidget = QApplication::focusWidget()) {
+            focusedWidget->clearFocus();
+        }
         leavePurchaseFlow(m_catalogPanel);
+        m_catalogPanel->setFocusPolicy(Qt::StrongFocus);
+        m_catalogPanel->setFocus(Qt::OtherFocusReason);
     });
     connect(confirm, &QPushButton::clicked, panel,
             [this, product, origin, destination, quantity, amount, validation, spanish] {

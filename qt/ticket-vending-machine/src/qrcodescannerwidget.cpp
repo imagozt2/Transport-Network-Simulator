@@ -3,6 +3,7 @@
 #include <QApplication>
 #include <QCamera>
 #include <QCameraDevice>
+#include <QCameraFormat>
 #include <QDateTime>
 #include <QFrame>
 #include <QHBoxLayout>
@@ -19,6 +20,8 @@
 #include <QVideoWidget>
 #include <QVBoxLayout>
 
+#include <limits>
+
 #include <BarcodeFormat.h>
 #include <ImageView.h>
 #include <ReadBarcode.h>
@@ -26,6 +29,34 @@
 
 namespace {
 constexpr qint64 decodeIntervalMs = 180;
+constexpr int preferredCameraWidth = 640;
+constexpr int preferredCameraHeight = 480;
+
+QCameraFormat lowResourceCameraFormat(const QCameraDevice &device)
+{
+    QCameraFormat selected;
+    qint64 bestScore = std::numeric_limits<qint64>::max();
+    for (const QCameraFormat &format : device.videoFormats()) {
+        const QSize resolution = format.resolution();
+        if (resolution.isEmpty()) {
+            continue;
+        }
+        const qint64 resolutionDistance =
+            qAbs(resolution.width() - preferredCameraWidth)
+            + qAbs(resolution.height() - preferredCameraHeight);
+        const qint64 oversizedPenalty =
+            resolution.width() > preferredCameraWidth || resolution.height() > preferredCameraHeight
+                ? 1000000 : 0;
+        const qint64 frameRatePenalty = static_cast<qint64>(
+            qMax(0.0f, format.maxFrameRate() - 30.0f) * 1000.0f);
+        const qint64 score = oversizedPenalty + resolutionDistance + frameRatePenalty;
+        if (score < bestScore) {
+            selected = format;
+            bestScore = score;
+        }
+    }
+    return selected;
+}
 
 class ScannerOverlay final : public QWidget
 {
@@ -183,6 +214,10 @@ void QrCodeScannerWidget::startCamera()
     }
 
     m_camera = new QCamera(device, this);
+    const QCameraFormat format = lowResourceCameraFormat(device);
+    if (!format.isNull()) {
+        m_camera->setCameraFormat(format);
+    }
     auto *captureSession = new QMediaCaptureSession(m_camera);
     captureSession->setCamera(m_camera);
     captureSession->setVideoOutput(m_videoWidget);
