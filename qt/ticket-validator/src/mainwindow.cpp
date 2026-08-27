@@ -3,6 +3,9 @@
 #include "validatormqttclient.h"
 
 #include <QApplication>
+#include <QAudioFormat>
+#include <QAudioSink>
+#include <QBuffer>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -12,10 +15,13 @@
 #include <QVBoxLayout>
 #include <QWidget>
 
+#include <algorithm>
+#include <cmath>
+
 namespace {
 constexpr qsizetype maximumQrLength = 4096;
 constexpr auto windowStyle = R"(
-    QMainWindow { background-color: #f4f7fa; }
+    QMainWindow { background-color: #eaf2f8; }
     QLabel { color: #0f172a; font-family: "Segoe UI"; }
     QLabel#brandMark {
         min-width: 52px; min-height: 52px; max-width: 52px; max-height: 52px;
@@ -41,9 +47,9 @@ constexpr auto windowStyle = R"(
     }
     QLabel#locationName { color: #0f172a; font-size: 14px; font-weight: 800; }
     QLabel#locationCaption { color: #64748b; font-size: 11px; font-weight: 700; }
-    QFrame#turnstilePanel, QFrame#scannerPanel, QFrame#devicePanel {
-        border: 1px solid #dbe3ec; border-radius: 18px; background-color: white;
-    }
+    QFrame#turnstilePanel { border: 0; background-color: #eaf2f8; }
+    QFrame#scannerPanel { border: 0; border-radius: 0; background-color: #05080d; }
+    QFrame#devicePanel { border: 0; border-radius: 0; background-color: white; }
     QFrame#scannerWell {
         border: 2px solid #bfdbfe; border-radius: 22px; background-color: #eff8ff;
     }
@@ -77,13 +83,16 @@ constexpr auto windowStyle = R"(
     QLabel#validationIcon[state="accepted"] { background-color: #16a34a; }
     QLabel#validationIcon[state="rejected"] { background-color: #dc2626; }
     QLabel#validationState {
-        color: #075985; font-size: 20px; font-weight: 900;
+        color: #075985; font-size: 24px; font-weight: 900;
     }
     QLabel#validationState[state="processing"] { color: #92400e; }
     QLabel#validationState[state="accepted"] { color: #166534; }
     QLabel#validationState[state="rejected"] { color: #991b1b; }
     QLabel#validationDetail {
         color: #475569; font-size: 14px; font-weight: 600;
+    }
+    QLabel#resetCountdown {
+        color: #475569; font-size: 15px; font-weight: 700;
     }
     QLabel#gateState[state="open"] {
         background-color: #dcfce7; color: #166534;
@@ -103,7 +112,7 @@ constexpr auto windowStyle = R"(
     QLabel#deviceIdentity {
         color: #0f172a; font-family: Consolas; font-size: 17px; font-weight: 900;
     }
-    QLabel#stationName { color: #0f172a; font-size: 21px; font-weight: 900; }
+    QLabel#stationName { color: #0f172a; font-size: 28px; font-weight: 900; }
     QLabel#stationCode {
         padding: 5px 9px; border-radius: 9px; background-color: #e0f2fe;
         color: #075985; font-size: 12px; font-weight: 900;
@@ -119,17 +128,22 @@ MainWindow::MainWindow(QWidget *parent)
 
     auto *centralWidget = new QWidget(this);
     auto *layout = new QVBoxLayout(centralWidget);
-    layout->setContentsMargins(30, 24, 30, 20);
-    layout->setSpacing(18);
-    layout->addWidget(createHeader());
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
     layout->addWidget(createTurnstilePanel(), 1);
-    layout->addWidget(createFooter());
 
     setCentralWidget(centralWidget);
 
     m_readerResetTimer = new QTimer(this);
     m_readerResetTimer->setSingleShot(true);
     connect(m_readerResetTimer, &QTimer::timeout, this, &MainWindow::resetReader);
+
+    m_countdownTimer = new QTimer(this);
+    m_countdownTimer->setInterval(1000);
+    connect(m_countdownTimer, &QTimer::timeout, this, [this] {
+        --m_resetSecondsRemaining;
+        updateResetCountdown();
+    });
 
     m_validationClient = new ValidatorMqttClient(m_configuration, this);
     connect(m_validationClient, &ValidatorMqttClient::connectionStateChanged,
@@ -177,8 +191,7 @@ void MainWindow::configureWindow()
 {
     setWindowTitle(m_configuration.isEntry()
         ? tr("Validadora de entrada · RMM") : tr("Validadora de salida · RMM"));
-    setMinimumSize(760, 620);
-    resize(980, 720);
+    setFixedSize(1280, 640);
     setStyleSheet(QString::fromUtf8(windowStyle));
 }
 
@@ -251,10 +264,10 @@ QWidget *MainWindow::createTurnstilePanel()
     auto *panel = new QFrame(this);
     panel->setObjectName(QStringLiteral("turnstilePanel"));
     auto *layout = new QHBoxLayout(panel);
-    layout->setContentsMargins(20, 20, 20, 20);
-    layout->setSpacing(18);
-    layout->addWidget(createScannerPanel(), 3);
-    layout->addWidget(createDevicePanel(), 2);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+    layout->addWidget(createScannerPanel(), 1);
+    layout->addWidget(createDevicePanel(), 1);
     return panel;
 }
 
@@ -263,34 +276,39 @@ QWidget *MainWindow::createScannerPanel()
     auto *panel = new QFrame(this);
     panel->setObjectName(QStringLiteral("scannerPanel"));
     auto *layout = new QVBoxLayout(panel);
-    layout->setContentsMargins(34, 30, 34, 30);
-    layout->setSpacing(14);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
 
     auto *eyebrow = new QLabel(
         m_configuration.isEntry() ? tr("ACCESO A LA RED") : tr("SALIDA DE LA RED"), panel);
     eyebrow->setObjectName(QStringLiteral("eyebrow"));
+    eyebrow->hide();
     auto *title = new QLabel(tr("Presenta tu billete"), panel);
     title->setObjectName(QStringLiteral("screenTitle"));
+    title->hide();
     auto *description = new QLabel(
         tr("Acerca el código QR al lector para comprobar el acceso."), panel);
     description->setObjectName(QStringLiteral("screenDescription"));
     description->setWordWrap(true);
+    description->hide();
 
     auto *scannerWell = new QFrame(panel);
-    scannerWell->setObjectName(QStringLiteral("scannerWell"));
+    scannerWell->setObjectName(QStringLiteral("cameraSurface"));
     scannerWell->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     auto *scannerLayout = new QVBoxLayout(scannerWell);
-    scannerLayout->setContentsMargins(24, 24, 24, 24);
+    scannerLayout->setContentsMargins(0, 0, 0, 0);
     scannerLayout->setAlignment(Qt::AlignCenter);
     auto *readerTitle = new QLabel(tr("LECTOR QR"), scannerWell);
     readerTitle->setObjectName(QStringLiteral("eyebrow"));
     readerTitle->setAlignment(Qt::AlignCenter);
+    readerTitle->hide();
     auto *readerHint = new QLabel(
         tr("Sitúa el código completo dentro del objetivo y mantenlo estable."),
         scannerWell);
     readerHint->setObjectName(QStringLiteral("screenDescription"));
     readerHint->setAlignment(Qt::AlignCenter);
     readerHint->setWordWrap(true);
+    readerHint->hide();
     m_cameraScanner = new QrCodeScannerWidget(scannerWell);
     m_cameraScanner->setSpanish(true);
     m_cameraScanner->setKioskMode(true);
@@ -335,7 +353,7 @@ QWidget *MainWindow::createScannerPanel()
     layout->addWidget(title);
     layout->addWidget(description);
     layout->addWidget(scannerWell, 1);
-    layout->addWidget(m_resultPanel);
+    m_resultPanel->hide();
     return panel;
 }
 
@@ -344,33 +362,42 @@ QWidget *MainWindow::createDevicePanel()
     auto *panel = new QFrame(this);
     panel->setObjectName(QStringLiteral("devicePanel"));
     auto *layout = new QVBoxLayout(panel);
-    layout->setContentsMargins(28, 28, 28, 28);
-    layout->setSpacing(18);
+    layout->setContentsMargins(38, 30, 38, 30);
+    layout->setSpacing(20);
 
-    auto addDetail = [panel, layout](const QString &label, const QString &value,
-                                    const QString &hint = QString()) {
-        auto *container = new QWidget(panel);
-        auto *detailLayout = new QVBoxLayout(container);
-        detailLayout->setContentsMargins(0, 0, 0, 0);
-        detailLayout->setSpacing(4);
-        auto *caption = new QLabel(label, container);
-        caption->setObjectName(QStringLiteral("detailLabel"));
-        auto *content = new QLabel(value, container);
-        content->setObjectName(QStringLiteral("detailValue"));
-        detailLayout->addWidget(caption);
-        detailLayout->addWidget(content);
-        if (!hint.isEmpty()) {
-            auto *help = new QLabel(hint, container);
-            help->setObjectName(QStringLiteral("detailHint"));
-            help->setWordWrap(true);
-            detailLayout->addWidget(help);
-        }
-        layout->addWidget(container);
-    };
+    auto *brand = new QWidget(panel);
+    auto *brandLayout = new QHBoxLayout(brand);
+    brandLayout->setContentsMargins(0, 0, 0, 0);
+    brandLayout->setSpacing(14);
+    auto *brandMark = new QLabel(QStringLiteral("M"), brand);
+    brandMark->setObjectName(QStringLiteral("brandMark"));
+    brandMark->setAlignment(Qt::AlignCenter);
+    auto *brandCopy = new QWidget(brand);
+    auto *brandCopyLayout = new QVBoxLayout(brandCopy);
+    brandCopyLayout->setContentsMargins(0, 0, 0, 0);
+    brandCopyLayout->setSpacing(1);
+    auto *applicationName = new QLabel(
+        m_configuration.isEntry() ? tr("RMM · Entrada") : tr("RMM · Salida"), brandCopy);
+    applicationName->setObjectName(QStringLiteral("applicationName"));
+    auto *applicationContext = new QLabel(tr("Red de Metro de Macegocia"), brandCopy);
+    applicationContext->setObjectName(QStringLiteral("applicationContext"));
+    brandCopyLayout->addWidget(applicationName);
+    brandCopyLayout->addWidget(applicationContext);
+    m_connectionState = new QLabel(
+        m_configuration.valid ? tr("Preparada") : tr("Configuración inválida"), brand);
+    m_connectionState->setObjectName(QStringLiteral("connectionState"));
+    m_connectionState->setProperty("configurationValid", m_configuration.valid);
+    m_connectionState->setAlignment(Qt::AlignCenter);
+    m_connectionState->setAccessibleName(tr("Estado de conexión"));
+    brandLayout->addWidget(brandMark);
+    brandLayout->addWidget(brandCopy);
+    brandLayout->addStretch();
+    brandLayout->addWidget(m_connectionState);
+    layout->addWidget(brand);
 
     auto *eyebrow = new QLabel(tr("IDENTIDAD Y UBICACIÓN"), panel);
     eyebrow->setObjectName(QStringLiteral("eyebrow"));
-    layout->addWidget(eyebrow);
+    eyebrow->hide();
 
     auto *direction = new QFrame(panel);
     direction->setObjectName(QStringLiteral("directionBadge"));
@@ -408,7 +435,7 @@ QWidget *MainWindow::createDevicePanel()
     identityLayout->addWidget(identityLabel);
     identityLayout->addWidget(identityValue);
     identityLayout->addWidget(identityType);
-    layout->addWidget(identityCard);
+    identityCard->hide();
 
     auto *stationCard = new QFrame(panel);
     stationCard->setObjectName(QStringLiteral("stationCard"));
@@ -432,11 +459,14 @@ QWidget *MainWindow::createDevicePanel()
     stationLayout->addWidget(stationCode, 0, Qt::AlignLeft);
     layout->addWidget(stationCard);
 
-    addDetail(tr("FUNCIÓN OPERATIVA"),
-              m_configuration.isEntry() ? tr("Acceso a la red") : tr("Salida de la red"),
-              tr("La identidad y la estación proceden del inventario de RMM"));
-
-    layout->addStretch();
+    m_resultPanel->show();
+    layout->addWidget(m_resultPanel, 1);
+    m_resetCountdown = new QLabel(panel);
+    m_resetCountdown->setObjectName(QStringLiteral("resetCountdown"));
+    m_resetCountdown->setAlignment(Qt::AlignCenter);
+    m_resetCountdown->setAccessibleName(tr("Tiempo restante para la siguiente validación"));
+    m_resetCountdown->hide();
+    layout->addWidget(m_resetCountdown);
     m_gateState = new QLabel(tr("Torniquete cerrado"), panel);
     m_gateState->setObjectName(QStringLiteral("gateState"));
     m_gateState->setAlignment(Qt::AlignCenter);
@@ -464,7 +494,7 @@ QWidget *MainWindow::createFooter()
 void MainWindow::submitQrCode(const QString &detectedQrValue)
 {
     const QString qrValue = detectedQrValue.trimmed();
-    if (m_validationClient->hasPendingValidation()) {
+    if (m_readerResetTimer->isActive() || m_validationClient->hasPendingValidation()) {
         return;
     }
     if (qrValue.isEmpty() || qrValue.size() > maximumQrLength) {
@@ -504,16 +534,86 @@ void MainWindow::showValidationResult(const ValidationResult &result)
 
 void MainWindow::playValidationSound(int beepCount)
 {
-    for (int index = 0; index < beepCount; ++index) {
-        QTimer::singleShot(index * 180, this, [] {
-            QApplication::beep();
-        });
+    if (beepCount <= 0 || m_feedbackSoundPlayed) {
+        return;
     }
+    m_feedbackSoundPlayed = true;
+
+    if (beepCount == 1) {
+        playToneSequence(1050, 500, 1, 0);
+    } else {
+        playToneSequence(1050, 150, 3, 100);
+    }
+}
+
+void MainWindow::playToneSequence(int frequencyHz, int toneDurationMilliseconds,
+                                  int toneCount, int silenceMilliseconds)
+{
+    constexpr int sampleRate = 44100;
+    constexpr double amplitude = 0.32;
+    constexpr double pi = 3.14159265358979323846;
+
+    QAudioFormat format;
+    format.setSampleRate(sampleRate);
+    format.setChannelCount(1);
+    format.setSampleFormat(QAudioFormat::Int16);
+
+    const int toneSampleCount = sampleRate * toneDurationMilliseconds / 1000;
+    const int silenceSampleCount = sampleRate * silenceMilliseconds / 1000;
+    const int sampleCount = toneSampleCount * toneCount
+        + silenceSampleCount * qMax(0, toneCount - 1);
+    QByteArray samples(sampleCount * static_cast<int>(sizeof(qint16)), Qt::Uninitialized);
+    auto *sampleData = reinterpret_cast<qint16 *>(samples.data());
+    std::fill_n(sampleData, sampleCount, static_cast<qint16>(0));
+
+    for (int toneIndex = 0; toneIndex < toneCount; ++toneIndex) {
+        const int toneStart = toneIndex * (toneSampleCount + silenceSampleCount);
+        const int fadeSampleCount = qMax(1, toneSampleCount / 12);
+        for (int index = 0; index < toneSampleCount; ++index) {
+            const double fadeIn = qMin(1.0,
+                static_cast<double>(index) / fadeSampleCount);
+            const double fadeOut = qMin(1.0,
+                static_cast<double>(toneSampleCount - index - 1) / fadeSampleCount);
+            const double envelope = qMin(fadeIn, fadeOut);
+            sampleData[toneStart + index] = static_cast<qint16>(
+                32767.0 * amplitude * envelope
+                * std::sin(2.0 * pi * frequencyHz * index / sampleRate));
+        }
+    }
+
+    auto *buffer = new QBuffer(this);
+    buffer->setData(samples);
+    buffer->open(QIODevice::ReadOnly);
+    auto *audio = new QAudioSink(format, this);
+    audio->setVolume(0.7);
+    connect(audio, &QAudioSink::stateChanged, this,
+            [audio, buffer](QAudio::State state) {
+        if (state == QAudio::IdleState || state == QAudio::StoppedState) {
+            audio->deleteLater();
+            buffer->deleteLater();
+        }
+    });
+    audio->start(buffer);
 }
 
 void MainWindow::scheduleReaderReset(int delayMilliseconds)
 {
+    m_resetSecondsRemaining = (delayMilliseconds + 999) / 1000;
+    updateResetCountdown();
+    m_countdownTimer->start();
     m_readerResetTimer->start(delayMilliseconds);
+}
+
+void MainWindow::updateResetCountdown()
+{
+    if (m_resetSecondsRemaining <= 0) {
+        m_countdownTimer->stop();
+        m_resetCountdown->hide();
+        return;
+    }
+    m_resetCountdown->setText(
+        tr("Disponible para una nueva validación en %1 s").arg(m_resetSecondsRemaining));
+    m_resetCountdown->show();
 }
 
 void MainWindow::resetReader()
@@ -523,6 +623,9 @@ void MainWindow::resetReader()
         return;
     }
     m_readerResetTimer->stop();
+    m_countdownTimer->stop();
+    m_resetCountdown->hide();
+    m_feedbackSoundPlayed = false;
     m_lastQrValue.clear();
     setValidationState(ValidatorFeedbackState::Waiting, tr("Esperando un billete"),
                        tr("Presenta el código QR en el lector"));

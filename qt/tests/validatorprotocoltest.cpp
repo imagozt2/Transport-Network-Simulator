@@ -13,6 +13,7 @@ private slots:
     void buildsEntryValidationRequest();
     void parsesAcceptedValidationResources();
     void explainsRejectedValidation();
+    void explainsARepeatedEntryWithoutOpeningAnotherJourney();
     void ignoresAResponseForAnotherValidation();
     void completesEntryAndExitValidationSequence();
 };
@@ -81,6 +82,30 @@ void ValidatorProtocolTest::explainsRejectedValidation()
     QVERIFY(result.has_value());
     QVERIFY(!result->isAccepted());
     QCOMPARE(result->detail(), QStringLiteral("No existe una validación de entrada"));
+}
+
+void ValidatorProtocolTest::explainsARepeatedEntryWithoutOpeningAnotherJourney()
+{
+    const QJsonObject payload{
+        {QStringLiteral("validationReference"), QStringLiteral("validation-repeated-entry")},
+        {QStringLiteral("decision"), QStringLiteral("REJECTED")},
+        {QStringLiteral("reasonCode"), QStringLiteral("ENTRY_ALREADY_OPEN")},
+    };
+    const QJsonObject envelope{
+        {QStringLiteral("type"), QStringLiteral("ticket.validation-decided")},
+        {QStringLiteral("deviceCode"), QStringLiteral("RMM-EN-ST038-01")},
+        {QStringLiteral("payload"), payload},
+    };
+
+    const auto result = rmm::validator::parseValidationResponse(
+        QJsonDocument(envelope).toJson(QJsonDocument::Compact),
+        QStringLiteral("RMM-EN-ST038-01"),
+        QStringLiteral("validation-repeated-entry"));
+
+    QVERIFY(result.has_value());
+    QVERIFY(!result->isAccepted());
+    QCOMPARE(result->reasonCode, QStringLiteral("ENTRY_ALREADY_OPEN"));
+    QCOMPARE(result->detail(), QStringLiteral("El billete ya tiene un trayecto abierto"));
 }
 
 void ValidatorProtocolTest::ignoresAResponseForAnotherValidation()

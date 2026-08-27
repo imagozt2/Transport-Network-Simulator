@@ -14,24 +14,21 @@ public class TicketEntryValidationService {
     private final MultiTripTicketService multiTripService;
     private final TimePassTicketService timePassService;
     private final SmartBalanceTicketService smartBalanceService;
-    private final TicketJourneyAnomalyService anomalyService;
 
     public TicketEntryValidationService(SingleTripTicketService singleTripService,
             MultiTripTicketService multiTripService,
-            TimePassTicketService timePassService, SmartBalanceTicketService smartBalanceService,
-            TicketJourneyAnomalyService anomalyService) {
+            TimePassTicketService timePassService,
+            SmartBalanceTicketService smartBalanceService) {
         this.singleTripService = singleTripService;
         this.multiTripService = multiTripService;
         this.timePassService = timePassService;
         this.smartBalanceService = smartBalanceService;
-        this.anomalyService = anomalyService;
     }
 
     @Transactional
     public TicketJourney enter(Ticket ticket, String stationCode) {
         Objects.requireNonNull(ticket, "ticket is required");
         requireUsableForEntry(ticket);
-        anomalyService.forceCloseJourneyWithoutExit(ticket);
 
         return switch (ticket.getProductType()) {
             case SINGLE_TRIP -> singleTripService.enter(ticket.getCode(), stationCode);

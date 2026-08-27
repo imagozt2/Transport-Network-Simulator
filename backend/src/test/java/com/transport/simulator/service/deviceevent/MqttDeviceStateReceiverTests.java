@@ -1,10 +1,14 @@
 package com.transport.simulator.service.deviceevent;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.transport.simulator.enums.DeviceMqttPresence;
+import com.transport.simulator.enums.DeviceEventSource;
 import com.transport.simulator.enums.DeviceOperationalState;
 import com.transport.simulator.enums.DeviceType;
+import com.transport.simulator.enums.LogOrigin;
 import com.transport.simulator.mqtt.AuthenticatedMqttMachine;
 import com.transport.simulator.mqtt.AuthenticatedMqttMessage;
 import com.transport.simulator.mqtt.AuthenticatedMqttMessageRouter;
@@ -31,13 +35,15 @@ class MqttDeviceStateReceiverTests {
 
     @Mock private AuthenticatedMqttMessageRouter router;
     @Mock private MqttDeviceStateService stateService;
+    @Mock private DeviceEventRegistrationService eventRegistrationService;
 
     private Consumer<AuthenticatedMqttMessage> receiver;
 
     @BeforeEach
     void setUp() {
         ArgumentCaptor<Consumer<AuthenticatedMqttMessage>> captor = consumerCaptor();
-        new MqttDeviceStateReceiver(router, stateService, new ObjectMapper(),
+        new MqttDeviceStateReceiver(router, stateService, eventRegistrationService,
+                new ObjectMapper(),
                 Clock.fixed(RECEIVED_AT, ZoneOffset.UTC));
         verify(router).register(captor.capture());
         receiver = captor.getValue();
@@ -79,10 +85,18 @@ class MqttDeviceStateReceiverTests {
                 }
                 """;
 
+        LocalDateTime receivedAt = LocalDateTime.ofInstant(RECEIVED_AT, ZoneOffset.UTC);
+        when(stateService.updatePresence(MACHINE, DeviceMqttPresence.ONLINE, receivedAt))
+                .thenReturn(true);
+
         receive("rmm/v1/devices/RMM-TM-ST046-01/presence", payload);
 
         verify(stateService).updatePresence(MACHINE, DeviceMqttPresence.ONLINE,
-                LocalDateTime.ofInstant(RECEIVED_AT, ZoneOffset.UTC));
+                receivedAt);
+        ArgumentCaptor<DeviceEvent> eventCaptor = ArgumentCaptor.forClass(DeviceEvent.class);
+        verify(eventRegistrationService).register(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().origin()).isEqualTo(LogOrigin.MQTT);
+        assertThat(eventCaptor.getValue().source()).isEqualTo(DeviceEventSource.REAL);
     }
 
     private void receive(String topic, String payload) {
