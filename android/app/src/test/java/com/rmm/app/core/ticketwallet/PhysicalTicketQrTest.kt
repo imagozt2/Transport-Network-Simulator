@@ -12,6 +12,10 @@ class PhysicalTicketQrTest {
             "RMM:TICKET:1:header.payload.signature",
             parsePhysicalTicketQr("  RMM:TICKET:1:header.payload.signature  "),
         )
+        assertEquals(
+            "RMM:TICKET:2:AbCdEfGhIjKlMnOpQrStUvWxYz012345",
+            parsePhysicalTicketQr("RMM:TICKET:2:AbCdEfGhIjKlMnOpQrStUvWxYz012345"),
+        )
     }
 
     @Test

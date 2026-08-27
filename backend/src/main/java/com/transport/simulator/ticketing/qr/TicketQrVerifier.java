@@ -44,7 +44,42 @@ public class TicketQrVerifier {
 
     @Transactional(readOnly = true)
     public VerifiedTicketQr verify(String qrValue) {
-        String compactJws = extractCompactJws(qrValue);
+        String normalized = normalize(qrValue);
+        if (normalized.startsWith(TicketQrContract.WRAPPER_PREFIX)) {
+            return verifyOpaqueToken(normalized);
+        }
+        if (normalized.startsWith(TicketQrContract.LEGACY_WRAPPER_PREFIX)) {
+            return verifyLegacyJws(normalized);
+        }
+        throw failure(TicketQrVerificationFailure.UNSUPPORTED_VERSION);
+    }
+
+    private VerifiedTicketQr verifyOpaqueToken(String qrValue) {
+        String token = qrValue.substring(TicketQrContract.WRAPPER_PREFIX.length());
+        if (token.length() != TicketQrContract.OPAQUE_TOKEN_LENGTH
+                || !token.matches("^[A-Za-z0-9_-]+$")) {
+            throw failure(TicketQrVerificationFailure.MALFORMED_QR);
+        }
+        try {
+            if (BASE64_URL.decode(token).length != TicketQrContract.OPAQUE_TOKEN_BYTES) {
+                throw failure(TicketQrVerificationFailure.MALFORMED_QR);
+            }
+        } catch (TicketQrVerificationException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new TicketQrVerificationException(TicketQrVerificationFailure.MALFORMED_QR, exception);
+        }
+
+        String fingerprint = sha256Hex(qrValue);
+        TicketQrCredential credential = credentialRepository
+                .findForVerificationByTokenFingerprint(fingerprint)
+                .orElseThrow(() -> failure(TicketQrVerificationFailure.CREDENTIAL_NOT_FOUND));
+        verifyPersistedOpaqueCredential(credential, fingerprint);
+        return new VerifiedTicketQr(null, credential, null, fingerprint);
+    }
+
+    private VerifiedTicketQr verifyLegacyJws(String qrValue) {
+        String compactJws = qrValue.substring(TicketQrContract.LEGACY_WRAPPER_PREFIX.length());
         String[] segments = compactJws.split("\\.", -1);
         if (segments.length != 3 || segments[0].isEmpty() || segments[1].isEmpty() || segments[2].isEmpty()) {
             throw failure(TicketQrVerificationFailure.MALFORMED_QR);
@@ -64,7 +99,7 @@ public class TicketQrVerifier {
         return new VerifiedTicketQr(payload, credential, header.keyId(), fingerprint);
     }
 
-    private String extractCompactJws(String qrValue) {
+    private String normalize(String qrValue) {
         int maximumLength = properties.maximumQrLength() > 0 ? properties.maximumQrLength() : 4096;
         if (qrValue == null || qrValue.isBlank() || qrValue.length() > maximumLength) {
             throw failure(TicketQrVerificationFailure.MALFORMED_QR);
@@ -72,10 +107,7 @@ public class TicketQrVerifier {
         if (!qrValue.startsWith("RMM:TICKET:")) {
             throw failure(TicketQrVerificationFailure.MALFORMED_QR);
         }
-        if (!qrValue.startsWith(TicketQrContract.WRAPPER_PREFIX)) {
-            throw failure(TicketQrVerificationFailure.UNSUPPORTED_VERSION);
-        }
-        return qrValue.substring(TicketQrContract.WRAPPER_PREFIX.length());
+        return qrValue;
     }
 
     private TicketQrProtectedHeader decodeHeader(String encodedHeader) {
@@ -136,6 +168,38 @@ public class TicketQrVerifier {
             String keyId,
             String fingerprint
     ) {
+        verifyCredentialStatus(credential);
+        Long persistedExpiry = credential.getExpiresAt() == null
+                ? null
+                : credential.getExpiresAt().toEpochSecond(ZoneOffset.UTC);
+        if (credential.getStatus() != TicketQrCredentialStatus.ACTIVE
+                || credential.getWrapperVersion() != TicketQrContract.LEGACY_WRAPPER_VERSION
+                || !java.util.Objects.equals(credential.getSigningKeyId(), keyId)
+                || !secureEquals(credential.getTokenFingerprint(), fingerprint)
+                || !credential.getTicket().getCode().equals(payload.ticketCode())
+                || !credential.getSupport().getTicket().getId().equals(credential.getTicket().getId())
+                || credential.getSupport().getType() != payload.medium()
+                || credential.getIssuedAt().toEpochSecond(ZoneOffset.UTC) != payload.issuedAtEpochSecond()
+                || !java.util.Objects.equals(persistedExpiry, payload.expiresAtEpochSecond())) {
+            throw failure(TicketQrVerificationFailure.CREDENTIAL_INCONSISTENT);
+        }
+    }
+
+    private void verifyPersistedOpaqueCredential(
+            TicketQrCredential credential,
+            String fingerprint
+    ) {
+        verifyCredentialStatus(credential);
+        if (credential.getStatus() != TicketQrCredentialStatus.ACTIVE
+                || credential.getWrapperVersion() != TicketQrContract.WRAPPER_VERSION
+                || !TicketQrContract.OPAQUE_CREDENTIAL_SCHEME.equals(credential.getSigningKeyId())
+                || !secureEquals(credential.getTokenFingerprint(), fingerprint)
+                || !credential.getSupport().getTicket().getId().equals(credential.getTicket().getId())) {
+            throw failure(TicketQrVerificationFailure.CREDENTIAL_INCONSISTENT);
+        }
+    }
+
+    private void verifyCredentialStatus(TicketQrCredential credential) {
         if (credential.getStatus() == TicketQrCredentialStatus.REVOKED) {
             throw failure(TicketQrVerificationFailure.CREDENTIAL_REVOKED);
         }
@@ -149,23 +213,13 @@ public class TicketQrVerifier {
                 && credential.getExpiresAt().toInstant(ZoneOffset.UTC).isBefore(clock.instant())) {
             throw failure(TicketQrVerificationFailure.EXPIRED);
         }
-        Long persistedExpiry = credential.getExpiresAt() == null
-                ? null
-                : credential.getExpiresAt().toEpochSecond(ZoneOffset.UTC);
-        if (credential.getStatus() != TicketQrCredentialStatus.ACTIVE
-                || credential.getWrapperVersion() != TicketQrContract.WRAPPER_VERSION
-                || !credential.getSigningKeyId().equals(keyId)
-                || !MessageDigest.isEqual(
-                        credential.getTokenFingerprint().getBytes(StandardCharsets.US_ASCII),
-                        fingerprint.getBytes(StandardCharsets.US_ASCII)
-                )
-                || !credential.getTicket().getCode().equals(payload.ticketCode())
-                || !credential.getSupport().getTicket().getId().equals(credential.getTicket().getId())
-                || credential.getSupport().getType() != payload.medium()
-                || credential.getIssuedAt().toEpochSecond(ZoneOffset.UTC) != payload.issuedAtEpochSecond()
-                || !java.util.Objects.equals(persistedExpiry, payload.expiresAtEpochSecond())) {
-            throw failure(TicketQrVerificationFailure.CREDENTIAL_INCONSISTENT);
-        }
+    }
+
+    private boolean secureEquals(String first, String second) {
+        return first != null && second != null && MessageDigest.isEqual(
+                first.getBytes(StandardCharsets.US_ASCII),
+                second.getBytes(StandardCharsets.US_ASCII)
+        );
     }
 
     private String sha256Hex(String value) {

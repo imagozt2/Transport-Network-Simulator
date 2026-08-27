@@ -65,6 +65,7 @@ class TicketRechargeLookupServiceTests {
         assertThat(result.ticketCode()).isEqualTo("RMM-TKT-001");
         assertThat(result.productType()).isEqualTo("MULTI_TRIP");
         assertThat(result.ticketStatus()).isEqualTo("ACTIVE");
+        assertThat(result.rechargeable()).isTrue();
         assertThat(result.supportType()).isEqualTo(TicketSupportType.PHYSICAL);
         assertThat(result.remainingTrips()).isEqualTo(4);
         assertThat(result.minTrips()).isEqualTo(2);
@@ -75,14 +76,17 @@ class TicketRechargeLookupServiceTests {
     }
 
     @Test
-    void shouldRejectAValidQrWhoseTicketCannotBeRecharged() {
+    void shouldIdentifyAValidSingleTicketWithoutTreatingItAsAnError() {
         prepareRechargeableTicket(TicketProductType.SINGLE_TRIP, TicketStatus.ACTIVE);
+        when(ticket.getCode()).thenReturn("RMM-TKT-SINGLE-001");
+        when(ticket.getCurrency()).thenReturn("EUR");
+        when(product.getCode()).thenReturn("SINGLE_TRIP");
+        when(product.getName()).thenReturn("Billete sencillo");
 
-        assertThatThrownBy(() -> service.findRechargeableTicket(QR_VALUE))
-                .isInstanceOfSatisfying(ResponseStatusException.class, exception -> {
-                    assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
-                    assertThat(exception.getReason()).isEqualTo("TICKET_NOT_RECHARGEABLE");
-                });
+        TicketRechargeLookupResponse result = service.findRechargeableTicket(QR_VALUE);
+
+        assertThat(result.productType()).isEqualTo("SINGLE_TRIP");
+        assertThat(result.rechargeable()).isFalse();
     }
 
     @Test
@@ -103,15 +107,15 @@ class TicketRechargeLookupServiceTests {
                 null, credential, "key-1", "fingerprint"
         ));
         when(credential.getTicket()).thenReturn(ticket);
-        when(credential.getSupport()).thenReturn(support);
-        when(support.getStatus()).thenReturn(TicketSupportStatus.ACTIVE);
+        lenient().when(credential.getSupport()).thenReturn(support);
+        lenient().when(support.getStatus()).thenReturn(TicketSupportStatus.ACTIVE);
         lenient().when(support.getType()).thenReturn(TicketSupportType.PHYSICAL);
-        when(ticket.isActive()).thenReturn(true);
-        when(ticket.getProduct()).thenReturn(product);
+        lenient().when(ticket.isActive()).thenReturn(true);
+        lenient().when(ticket.getProduct()).thenReturn(product);
         when(ticket.getProductType()).thenReturn(type);
-        when(ticket.getStatus()).thenReturn(status);
-        when(product.isActive()).thenReturn(true);
-        when(product.isRechargeable()).thenReturn(true);
+        lenient().when(ticket.getStatus()).thenReturn(status);
+        lenient().when(product.isActive()).thenReturn(true);
+        lenient().when(product.isRechargeable()).thenReturn(true);
         lenient().when(product.getProductType()).thenReturn(type);
     }
 }

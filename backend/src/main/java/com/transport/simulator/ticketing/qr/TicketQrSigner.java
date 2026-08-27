@@ -40,7 +40,7 @@ public class TicketQrSigner {
         String signingInput = encodedHeader + "." + encodedPayload;
         String encodedSignature = BASE64_URL.encodeToString(sign(signingInput));
         String compactJws = signingInput + "." + encodedSignature;
-        String qrValue = TicketQrContract.WRAPPER_PREFIX + compactJws;
+        String qrValue = TicketQrContract.LEGACY_WRAPPER_PREFIX + compactJws;
 
         return new SignedTicketQr(qrValue, compactJws, keyId, sha256Hex(qrValue));
     }

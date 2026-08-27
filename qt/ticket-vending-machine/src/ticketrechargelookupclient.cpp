@@ -79,6 +79,7 @@ void TicketRechargeLookupClient::lookup(const QString &qrValue)
             .productName = object.value(QStringLiteral("productName")).toString(),
             .productType = object.value(QStringLiteral("productType")).toString(),
             .ticketStatus = object.value(QStringLiteral("ticketStatus")).toString(),
+            .rechargeable = object.value(QStringLiteral("rechargeable")).toBool(),
             .supportType = object.value(QStringLiteral("supportType")).toString(),
             .currency = object.value(QStringLiteral("currency")).toString(QStringLiteral("EUR")),
             .remainingTrips = optionalInt(object, QStringLiteral("remainingTrips")),
