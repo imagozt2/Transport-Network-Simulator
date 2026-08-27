@@ -43,7 +43,6 @@ class TicketValidationDirectionServicesTests {
     @Mock MultiTripTicketService multiTripService;
     @Mock TimePassTicketService timePassService;
     @Mock SmartBalanceTicketService smartBalanceService;
-    @Mock TicketJourneyAnomalyService anomalyService;
 
     @Test
     void entryConsumesTheMultiTripThroughItsDomainService() {
@@ -58,16 +57,14 @@ class TicketValidationDirectionServicesTests {
     }
 
     @Test
-    void entryForceClosesAJourneyWithoutExitBeforeStartingTheNextOne() {
+    void entryDoesNotForceCloseAnOpenJourneyToAllowAnotherPersonToEnter() {
         Ticket ticket = ticket(TicketProductType.MULTI_TRIP, TicketStatus.ACTIVE, true);
-        TicketJourney abandonedJourney = mock(TicketJourney.class);
-        TicketJourney newJourney = mock(TicketJourney.class);
-        when(anomalyService.forceCloseJourneyWithoutExit(ticket))
-                .thenReturn(Optional.of(abandonedJourney));
-        when(multiTripService.enter("RMM-TKT-001", "ST038")).thenReturn(newJourney);
+        when(multiTripService.enter("RMM-TKT-001", "ST038"))
+                .thenThrow(new IllegalStateException("The ticket already has an open journey"));
 
-        assertThat(entryService().enter(ticket, "ST038")).isSameAs(newJourney);
-        verify(anomalyService).forceCloseJourneyWithoutExit(ticket);
+        assertThatThrownBy(() -> entryService().enter(ticket, "ST038"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("already has an open journey");
         verify(multiTripService).enter("RMM-TKT-001", "ST038");
     }
 
@@ -125,7 +122,7 @@ class TicketValidationDirectionServicesTests {
 
     private TicketEntryValidationService entryService() {
         return new TicketEntryValidationService(singleTripService, multiTripService,
-                timePassService, smartBalanceService, anomalyService);
+                timePassService, smartBalanceService);
     }
 
     private TicketExitValidationService exitService() {
