@@ -32,9 +32,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -161,6 +164,7 @@ private fun LoginForm(
     onSubmit: (String, String) -> Unit,
 ) {
     val focusManager = LocalFocusManager.current
+    val passwordFocus = remember { FocusRequester() }
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var validation by rememberSaveable { mutableStateOf<String?>(null) }
@@ -175,7 +179,12 @@ private fun LoginForm(
         }
     }
 
-    EmailField(email, { email = it }, enabled = !loading)
+    EmailField(
+        value = email,
+        onValueChange = { email = it },
+        enabled = !loading,
+        onNext = { passwordFocus.requestFocus() },
+    )
     Spacer(Modifier.height(12.dp))
     PasswordField(
         password,
@@ -183,6 +192,7 @@ private fun LoginForm(
         enabled = !loading,
         imeAction = ImeAction.Done,
         onImeAction = submit,
+        focusRequester = passwordFocus,
     )
     Feedback(
         message = validation ?: feedback,
@@ -199,6 +209,10 @@ private fun RegistrationForm(
     onSubmit: (String, String, String, String) -> Unit,
 ) {
     val focusManager = LocalFocusManager.current
+    val lastNameFocus = remember { FocusRequester() }
+    val emailFocus = remember { FocusRequester() }
+    val passwordFocus = remember { FocusRequester() }
+    val confirmationFocus = remember { FocusRequester() }
     var firstName by rememberSaveable { mutableStateOf("") }
     var lastName by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
@@ -228,11 +242,11 @@ private fun RegistrationForm(
             imeAction = ImeAction.Next,
         ),
         keyboardActions = KeyboardActions(
-            onNext = { focusManager.moveFocus(FocusDirection.Next) },
+            onNext = { lastNameFocus.requestFocus() },
         ),
         singleLine = true,
         enabled = !loading,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = authenticationFieldModifier(),
     )
     Spacer(Modifier.height(12.dp))
     OutlinedTextField(
@@ -244,16 +258,28 @@ private fun RegistrationForm(
             imeAction = ImeAction.Next,
         ),
         keyboardActions = KeyboardActions(
-            onNext = { focusManager.moveFocus(FocusDirection.Next) },
+            onNext = { emailFocus.requestFocus() },
         ),
         singleLine = true,
         enabled = !loading,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = authenticationFieldModifier(lastNameFocus),
     )
     Spacer(Modifier.height(12.dp))
-    EmailField(email, { email = it }, enabled = !loading)
+    EmailField(
+        value = email,
+        onValueChange = { email = it },
+        enabled = !loading,
+        focusRequester = emailFocus,
+        onNext = { passwordFocus.requestFocus() },
+    )
     Spacer(Modifier.height(12.dp))
-    PasswordField(password, { password = it }, enabled = !loading)
+    PasswordField(
+        value = password,
+        onValueChange = { password = it },
+        enabled = !loading,
+        focusRequester = passwordFocus,
+        onNext = { confirmationFocus.requestFocus() },
+    )
     Spacer(Modifier.height(12.dp))
     PasswordField(
         value = confirmation,
@@ -261,7 +287,8 @@ private fun RegistrationForm(
         enabled = !loading,
         label = R.string.auth_password_confirmation,
         imeAction = ImeAction.Done,
-        onImeAction = { focusManager.clearFocus() },
+        onImeAction = submit,
+        focusRequester = confirmationFocus,
     )
     Row(verticalAlignment = Alignment.CenterVertically) {
         Checkbox(
@@ -279,8 +306,13 @@ private fun RegistrationForm(
 }
 
 @Composable
-private fun EmailField(value: String, onValueChange: (String) -> Unit, enabled: Boolean) {
-    val focusManager = LocalFocusManager.current
+private fun EmailField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    enabled: Boolean,
+    focusRequester: FocusRequester? = null,
+    onNext: () -> Unit,
+) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
@@ -290,11 +322,11 @@ private fun EmailField(value: String, onValueChange: (String) -> Unit, enabled: 
             imeAction = ImeAction.Next,
         ),
         keyboardActions = KeyboardActions(
-            onNext = { focusManager.moveFocus(FocusDirection.Next) },
+            onNext = { onNext() },
         ),
         singleLine = true,
         enabled = enabled,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = authenticationFieldModifier(focusRequester),
     )
 }
 
@@ -306,6 +338,8 @@ private fun PasswordField(
     label: Int = R.string.auth_password,
     imeAction: ImeAction = ImeAction.Next,
     onImeAction: (() -> Unit)? = null,
+    focusRequester: FocusRequester? = null,
+    onNext: (() -> Unit)? = null,
 ) {
     val focusManager = LocalFocusManager.current
     OutlinedTextField(
@@ -320,12 +354,27 @@ private fun PasswordField(
         keyboardActions = if (imeAction == ImeAction.Done) {
             KeyboardActions(onDone = { onImeAction?.invoke() ?: focusManager.clearFocus() })
         } else {
-            KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) })
+            KeyboardActions(onNext = { onNext?.invoke() })
         },
         singleLine = true,
         enabled = enabled,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = authenticationFieldModifier(focusRequester),
     )
+}
+
+@Composable
+private fun authenticationFieldModifier(focusRequester: FocusRequester? = null): Modifier {
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val requesterModifier = if (focusRequester == null) {
+        Modifier
+    } else {
+        Modifier.focusRequester(focusRequester)
+    }
+    return requesterModifier
+        .fillMaxWidth()
+        .onFocusChanged { state ->
+            if (state.isFocused) keyboardController?.show()
+        }
 }
 
 @Composable
