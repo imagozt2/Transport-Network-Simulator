@@ -2,6 +2,7 @@ package com.transport.simulator.service;
 
 import com.transport.simulator.dto.response.ticketrecharge.TicketRechargeLookupResponse;
 import com.transport.simulator.entity.Ticket;
+import com.transport.simulator.enums.TicketProductType;
 import com.transport.simulator.enums.TicketStatus;
 import com.transport.simulator.enums.TicketSupportStatus;
 import com.transport.simulator.ticketing.qr.TicketQrVerificationException;
@@ -23,12 +24,16 @@ public class TicketRechargeLookupService {
 
     @Transactional(readOnly = true)
     public TicketRechargeLookupResponse findRechargeableTicket(String qrValue) {
-        VerifiedTicketQr verified = requireRechargeableTicket(qrValue);
+        VerifiedTicketQr verified = verifyTicket(qrValue);
         Ticket ticket = verified.credential().getTicket();
+        ensureTicketCanBeConsulted(verified, ticket);
 
         return TicketRechargeLookupResponse.from(
                 ticket,
-                verified.credential().getSupport().getType()
+                verified.credential().getSupport().getType(),
+                ticket.getProductType() != TicketProductType.SINGLE_TRIP
+                        && ticket.getProduct().isRechargeable()
+                        && canRecharge(ticket)
         );
     }
 
@@ -36,14 +41,21 @@ public class TicketRechargeLookupService {
         VerifiedTicketQr verified = verifyTicket(qrValue);
         Ticket ticket = verified.credential().getTicket();
 
-        if (verified.credential().getSupport().getStatus() != TicketSupportStatus.ACTIVE
-                || !ticket.isActive()
-                || !ticket.getProduct().isActive()
+        ensureTicketCanBeConsulted(verified, ticket);
+        if (ticket.getProductType() == TicketProductType.SINGLE_TRIP
                 || !ticket.getProduct().isRechargeable()
                 || !canRecharge(ticket)) {
             throw unprocessable("TICKET_NOT_RECHARGEABLE");
         }
         return verified;
+    }
+
+    private void ensureTicketCanBeConsulted(VerifiedTicketQr verified, Ticket ticket) {
+        if (verified.credential().getSupport().getStatus() != TicketSupportStatus.ACTIVE
+                || !ticket.isActive()
+                || !ticket.getProduct().isActive()) {
+            throw unprocessable("TICKET_NOT_RECHARGEABLE");
+        }
     }
 
     VerifiedTicketQr verifyTicket(String qrValue) {
@@ -57,7 +69,7 @@ public class TicketRechargeLookupService {
     private boolean canRecharge(Ticket ticket) {
         TicketStatus status = ticket.getStatus();
         return switch (ticket.getProductType()) {
-            case SINGLE_TRIP -> status == TicketStatus.EXHAUSTED;
+            case SINGLE_TRIP -> false;
             case MULTI_TRIP -> (status == TicketStatus.ACTIVE || status == TicketStatus.EXHAUSTED)
                     && hasAvailableTripOption(ticket);
             case SMART_BALANCE -> status == TicketStatus.ACTIVE

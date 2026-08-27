@@ -76,8 +76,9 @@ referencia opcional a `passenger_accounts` fija la titularidad histórica necesa
 crear una segunda tabla que duplique los viajes. El índice por pasajero y fecha de cierre permite
 consultar el historial de forma paginada.
 
-`ticket_qr_credentials` mantiene las credenciales QR versionadas asociadas a cada soporte. Solo
-persiste su identificador y huella, nunca el contenido íntegro del QR. Sus estados permiten revocar,
+`ticket_qr_credentials` mantiene las credenciales QR versionadas asociadas a cada soporte. Conserva
+el valor necesario para volver a presentar el QR en la cartera y su huella SHA-256 para localizar y
+comparar credenciales sin utilizar el token como clave de consulta. Sus estados permiten revocar,
 caducar o sustituir una credencial sin eliminar el billete ni su historial. `qr_token` conserva el
 identificador interno empleado por el flujo de emisión; la vinculación con Android se representa
 mediante la titularidad del billete y sus soportes, sin columnas de compatibilidad adicionales.

@@ -12,18 +12,14 @@ import com.transport.simulator.enums.PassengerAccountStatus;
 import com.transport.simulator.repository.TicketRepository;
 import com.transport.simulator.repository.TicketSupportRepository;
 import com.transport.simulator.repository.TicketQrCredentialRepository;
-import com.transport.simulator.ticketing.qr.SignedTicketQr;
+import com.transport.simulator.ticketing.qr.CompactTicketQr;
 import com.transport.simulator.ticketing.qr.TicketQrContract;
-import com.transport.simulator.ticketing.qr.TicketQrPayload;
-import com.transport.simulator.ticketing.qr.TicketQrPayloadFactory;
-import com.transport.simulator.ticketing.qr.TicketQrSigner;
+import com.transport.simulator.ticketing.qr.TicketQrTokenIssuer;
 import com.transport.simulator.service.model.IssuedTicket;
 import com.transport.simulator.service.model.TicketIssuanceParameters;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
@@ -40,8 +36,7 @@ public class TicketIssuanceService {
     private final TicketSupportRepository supportRepository;
     private final TicketOperationRegistrationService operationRegistrationService;
     private final TicketQrCredentialRepository qrCredentialRepository;
-    private final TicketQrPayloadFactory qrPayloadFactory;
-    private final TicketQrSigner qrSigner;
+    private final TicketQrTokenIssuer qrTokenIssuer;
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
 
@@ -50,8 +45,7 @@ public class TicketIssuanceService {
             TicketSupportRepository supportRepository,
             TicketOperationRegistrationService operationRegistrationService,
             TicketQrCredentialRepository qrCredentialRepository,
-            TicketQrPayloadFactory qrPayloadFactory,
-            TicketQrSigner qrSigner,
+            TicketQrTokenIssuer qrTokenIssuer,
             PasswordEncoder passwordEncoder,
             Clock clock
     ) {
@@ -59,8 +53,7 @@ public class TicketIssuanceService {
         this.supportRepository = supportRepository;
         this.operationRegistrationService = operationRegistrationService;
         this.qrCredentialRepository = qrCredentialRepository;
-        this.qrPayloadFactory = qrPayloadFactory;
-        this.qrSigner = qrSigner;
+        this.qrTokenIssuer = qrTokenIssuer;
         this.passwordEncoder = passwordEncoder;
         this.clock = clock;
     }
@@ -182,20 +175,18 @@ public class TicketIssuanceService {
         Ticket persistedTicket = ticketRepository.save(ticket);
         TicketSupport persistedSupport = supportRepository.save(support);
         UUID credentialId = UUID.fromString(persistedTicket.getQrToken());
-        TicketQrPayload payload = qrPayloadFactory.createWithoutExpiry(persistedSupport, credentialId);
-        SignedTicketQr signedQr = qrSigner.sign(payload);
+        CompactTicketQr compactQr = qrTokenIssuer.issue();
+        LocalDateTime issuedAt = LocalDateTime.now(clock);
         qrCredentialRepository.save(TicketQrCredential.active(
                 credentialId,
                 persistedTicket,
                 persistedSupport,
                 TicketQrContract.WRAPPER_VERSION,
-                signedQr.keyId(),
-                signedQr.fingerprint(),
-                signedQr.value(),
-                LocalDateTime.ofInstant(Instant.ofEpochSecond(payload.issuedAtEpochSecond()), ZoneOffset.UTC),
-                payload.expiresAtEpochSecond() == null
-                        ? null
-                        : LocalDateTime.ofInstant(Instant.ofEpochSecond(payload.expiresAtEpochSecond()), ZoneOffset.UTC)
+                TicketQrContract.OPAQUE_CREDENTIAL_SCHEME,
+                compactQr.fingerprint(),
+                compactQr.value(),
+                issuedAt,
+                null
         ));
         operationRegistrationService.recordIssuance(persistedTicket, persistedSupport);
         return new IssuedTicket(persistedTicket, persistedSupport);

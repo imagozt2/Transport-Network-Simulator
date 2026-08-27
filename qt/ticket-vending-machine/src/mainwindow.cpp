@@ -3,6 +3,9 @@
 #include "qrcodescannerwidget.h"
 
 #include <algorithm>
+#include <memory>
+#include <QAbstractSpinBox>
+#include <QApplication>
 #include <QFrame>
 #include <QComboBox>
 #include <QCompleter>
@@ -10,6 +13,7 @@
 #include <QDoubleSpinBox>
 #include <QGridLayout>
 #include <QHBoxLayout>
+#include <QIcon>
 #include <QLocale>
 #include <QLabel>
 #include <QLineEdit>
@@ -70,11 +74,12 @@ constexpr auto windowStyle = R"(
     QPushButton#languageFlag {
         min-width: 52px;
         min-height: 42px;
-        padding: 2px 6px;
+        max-width: 52px;
+        max-height: 42px;
+        padding: 3px 5px;
         border: 2px solid transparent;
         border-radius: 12px;
         background-color: transparent;
-        font-size: 26px;
     }
     QPushButton#languageFlag:hover, QPushButton#languageFlag:focus {
         border-color: #93c5fd;
@@ -282,10 +287,78 @@ constexpr auto windowStyle = R"(
     QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {
         border-color: #2294f2;
     }
-    QSpinBox#quantityValue {
+    QComboBox {
+        padding-right: 54px;
+    }
+    QComboBox::drop-down {
+        subcontrol-origin: padding;
+        subcontrol-position: top right;
+        width: 46px;
+        border: 0;
+        border-left: 1px solid #dbe3ec;
+        border-top-right-radius: 12px;
+        border-bottom-right-radius: 12px;
+        background-color: #eef4fa;
+    }
+    QComboBox::drop-down:hover {
+        background-color: #dceefe;
+    }
+    QComboBox::down-arrow {
+        image: url(:/rmm/resources/chevron-down.svg);
+        width: 16px;
+        height: 10px;
+    }
+    QComboBox QAbstractItemView {
+        padding: 8px;
+        border: 1px solid #cbd5e1;
+        border-radius: 12px;
+        background-color: #ffffff;
+        selection-background-color: #dceefe;
+        selection-color: #0f172a;
+        outline: 0;
+    }
+    QSpinBox#quantityValue, QDoubleSpinBox#balanceValue {
         min-width: 150px;
         font-size: 26px;
         font-weight: 900;
+    }
+    QFrame#rechargeTicketCard, QFrame#rechargeOptionCard, QFrame#rechargeResultCard {
+        background-color: #f8fafc;
+        border: 1px solid #dbe3ec;
+        border-radius: 18px;
+    }
+    QFrame#rechargeOptionCard {
+        background-color: #ffffff;
+        border-width: 2px;
+    }
+    QLabel#rechargeResultValue {
+        color: #0875c1;
+        font-size: 26px;
+        font-weight: 900;
+    }
+    QLabel#rechargeValidation {
+        padding: 10px 12px;
+        border-radius: 10px;
+        background-color: #fee2e2;
+        color: #991b1b;
+        font-size: 14px;
+        font-weight: 800;
+    }
+    QLabel#rechargeUnavailableMark {
+        min-width: 72px;
+        min-height: 72px;
+        max-width: 72px;
+        max-height: 72px;
+        border-radius: 36px;
+        background-color: #dceefe;
+        color: #075985;
+        font-size: 40px;
+        font-weight: 900;
+    }
+    QLabel#rechargeCountdown {
+        color: #64748b;
+        font-size: 15px;
+        font-weight: 700;
     }
 )";
 }
@@ -342,6 +415,10 @@ MainWindow::MainWindow(QWidget *parent)
             QStringLiteral("RECHARGE_LOOKUP"),
             {{QStringLiteral("productType"), ticket.productType},
              {QStringLiteral("supportType"), ticket.supportType}});
+        if (!ticket.rechargeable) {
+            showNonRechargeableTicket();
+            return;
+        }
         showRechargeOptions(ticket);
         if (ticket.requiresOriginDestination && m_stations.isEmpty()) {
             m_stationLoadFailed = false;
@@ -645,14 +722,19 @@ QWidget *MainWindow::createHeader()
     identityLayout->addWidget(m_applicationName);
     identityLayout->addWidget(m_applicationContext);
 
-    m_spanishLanguageButton = new QPushButton(QStringLiteral("🇪🇸"), header);
+    m_spanishLanguageButton = new QPushButton(header);
     m_spanishLanguageButton->setObjectName(QStringLiteral("languageFlag"));
+    m_spanishLanguageButton->setIcon(QIcon(QStringLiteral(":/rmm/resources/flag-spain.svg")));
+    m_spanishLanguageButton->setIconSize(QSize(38, 26));
     m_spanishLanguageButton->setCheckable(true);
     m_spanishLanguageButton->setAutoExclusive(true);
     m_spanishLanguageButton->setCursor(Qt::PointingHandCursor);
 
-    m_englishLanguageButton = new QPushButton(QStringLiteral("🇬🇧"), header);
+    m_englishLanguageButton = new QPushButton(header);
     m_englishLanguageButton->setObjectName(QStringLiteral("languageFlag"));
+    m_englishLanguageButton->setIcon(
+        QIcon(QStringLiteral(":/rmm/resources/flag-united-kingdom.svg")));
+    m_englishLanguageButton->setIconSize(QSize(38, 26));
     m_englishLanguageButton->setCheckable(true);
     m_englishLanguageButton->setAutoExclusive(true);
     m_englishLanguageButton->setCursor(Qt::PointingHandCursor);
@@ -874,6 +956,64 @@ void MainWindow::showRechargeLookupProgress()
     showPurchaseFlowPanel(panel);
 }
 
+void MainWindow::showNonRechargeableTicket()
+{
+    m_pendingRecharge.reset();
+    m_pendingRechargeQuote.reset();
+    const bool spanish = m_language == UiLanguage::Spanish;
+    auto *panel = new QFrame(m_contentStack);
+    panel->setObjectName(QStringLiteral("purchaseFlowPanel"));
+    auto *layout = new QVBoxLayout(panel);
+    layout->setContentsMargins(36, 30, 36, 30);
+    layout->setSpacing(14);
+
+    auto *mark = new QLabel(QStringLiteral("i"), panel);
+    mark->setObjectName(QStringLiteral("rechargeUnavailableMark"));
+    mark->setAlignment(Qt::AlignCenter);
+    auto *title = new QLabel(
+        spanish ? QStringLiteral("Este billete no admite recargas")
+                : QStringLiteral("This ticket cannot be recharged"), panel);
+    title->setObjectName(QStringLiteral("dialogTitle"));
+    title->setAlignment(Qt::AlignCenter);
+    auto *message = new QLabel(
+        spanish ? QStringLiteral("Puedes seguir utilizándolo según sus condiciones, pero no es posible añadirle viajes, días ni saldo.")
+                : QStringLiteral("You can continue using it under its current conditions, but trips, days or balance cannot be added."), panel);
+    message->setObjectName(QStringLiteral("screenHint"));
+    message->setAlignment(Qt::AlignCenter);
+    message->setWordWrap(true);
+    auto *countdown = new QLabel(panel);
+    countdown->setObjectName(QStringLiteral("rechargeCountdown"));
+    countdown->setAlignment(Qt::AlignCenter);
+
+    layout->addStretch();
+    layout->addWidget(mark, 0, Qt::AlignCenter);
+    layout->addWidget(title);
+    layout->addWidget(message);
+    layout->addWidget(countdown);
+    layout->addStretch();
+
+    auto secondsRemaining = std::make_shared<int>(5);
+    const auto updateCountdown = [countdown, secondsRemaining, spanish] {
+        countdown->setText(
+            spanish ? QStringLiteral("Volviendo al inicio en %1 segundos…").arg(*secondsRemaining)
+                    : QStringLiteral("Returning to the home screen in %1 seconds…").arg(*secondsRemaining));
+    };
+    updateCountdown();
+    auto *timer = new QTimer(panel);
+    timer->setInterval(1000);
+    connect(timer, &QTimer::timeout, panel, [this, timer, secondsRemaining, updateCountdown] {
+        --(*secondsRemaining);
+        if (*secondsRemaining <= 0) {
+            timer->stop();
+            showHome();
+            return;
+        }
+        updateCountdown();
+    });
+    timer->start();
+    showPurchaseFlowPanel(panel);
+}
+
 void MainWindow::showRechargeOptions(const RechargeableTicket &ticket)
 {
     const bool spanish = m_language == UiLanguage::Spanish;
@@ -886,14 +1026,30 @@ void MainWindow::showRechargeOptions(const RechargeableTicket &ticket)
     auto *title = new QLabel(spanish ? QStringLiteral("Opciones de recarga")
                                     : QStringLiteral("Recharge options"), panel);
     title->setObjectName(QStringLiteral("dialogTitle"));
-    auto *ticketIdentity = new QLabel(
-        QStringLiteral("%1 · %2").arg(ticket.productName, ticket.ticketCode), panel);
+    auto *ticketCard = new QFrame(panel);
+    ticketCard->setObjectName(QStringLiteral("rechargeTicketCard"));
+    auto *ticketCardLayout = new QVBoxLayout(ticketCard);
+    ticketCardLayout->setContentsMargins(20, 16, 20, 16);
+    ticketCardLayout->setSpacing(5);
+    auto *ticketIdentity = new QLabel(ticket.productName, ticketCard);
     ticketIdentity->setObjectName(QStringLiteral("productName"));
-    auto *hint = new QLabel(panel);
+    auto *ticketCode = new QLabel(ticket.ticketCode, ticketCard);
+    ticketCode->setObjectName(QStringLiteral("screenHint"));
+    auto *hint = new QLabel(ticketCard);
     hint->setObjectName(QStringLiteral("screenHint"));
     hint->setWordWrap(true);
+    ticketCardLayout->addWidget(ticketIdentity);
+    ticketCardLayout->addWidget(ticketCode);
+    ticketCardLayout->addWidget(hint);
+
+    auto *optionCard = new QFrame(panel);
+    optionCard->setObjectName(QStringLiteral("rechargeOptionCard"));
+    auto *optionLayout = new QVBoxLayout(optionCard);
+    optionLayout->setContentsMargins(20, 18, 20, 18);
+    optionLayout->setSpacing(10);
     layout->addWidget(title);
-    layout->addWidget(ticketIdentity);
+    layout->addWidget(ticketCard);
+    layout->addWidget(optionCard);
 
     QComboBox *origin = nullptr;
     QComboBox *destination = nullptr;
@@ -903,11 +1059,10 @@ void MainWindow::showRechargeOptions(const RechargeableTicket &ticket)
     if (ticket.productType == QStringLiteral("SINGLE_TRIP")) {
         hint->setText(spanish ? QStringLiteral("Configura un nuevo trayecto para este billete sencillo.")
                               : QStringLiteral("Configure a new journey for this single ticket."));
-        layout->addWidget(hint);
         const auto addStationSelector = [&](const QString &labelText) {
-            auto *label = new QLabel(labelText, panel);
+            auto *label = new QLabel(labelText, optionCard);
             label->setObjectName(QStringLiteral("fieldLabel"));
-            auto *selector = new QComboBox(panel);
+            auto *selector = new QComboBox(optionCard);
             selector->setEditable(true);
             selector->setInsertPolicy(QComboBox::NoInsert);
             selector->setAccessibleName(labelText);
@@ -925,8 +1080,8 @@ void MainWindow::showRechargeOptions(const RechargeableTicket &ticket)
                 selector->completer()->setCaseSensitivity(Qt::CaseInsensitive);
                 selector->completer()->setFilterMode(Qt::MatchContains);
             }
-            layout->addWidget(label);
-            layout->addWidget(selector);
+            optionLayout->addWidget(label);
+            optionLayout->addWidget(selector);
             return selector;
         };
         origin = addStationSelector(spanish ? QStringLiteral("Estación de origen")
@@ -946,31 +1101,29 @@ void MainWindow::showRechargeOptions(const RechargeableTicket &ticket)
                   .arg(ticket.remainingTrips.value_or(0))
             : QStringLiteral("Choose how many trips to add. Current balance: %1 trips.")
                   .arg(ticket.remainingTrips.value_or(0)));
-        layout->addWidget(hint);
         auto *label = new QLabel(spanish ? QStringLiteral("Viajes que se añadirán")
-                                        : QStringLiteral("Trips to add"), panel);
+                                        : QStringLiteral("Trips to add"), optionCard);
         label->setObjectName(QStringLiteral("fieldLabel"));
-        quantity = new QComboBox(panel);
+        quantity = new QComboBox(optionCard);
         for (const int option : ticket.tripOptions) {
             quantity->addItem(spanish ? QStringLiteral("%1 viajes").arg(option)
                                       : QStringLiteral("%1 trips").arg(option), option);
         }
-        layout->addWidget(label);
-        layout->addWidget(quantity);
+        optionLayout->addWidget(label);
+        optionLayout->addWidget(quantity);
     } else if (ticket.productType == QStringLiteral("TIME_PASS")) {
         hint->setText(spanish ? QStringLiteral("Elige la nueva duración del abono.")
                               : QStringLiteral("Choose the new pass duration."));
-        layout->addWidget(hint);
         auto *label = new QLabel(spanish ? QStringLiteral("Días de validez")
-                                        : QStringLiteral("Validity days"), panel);
+                                        : QStringLiteral("Validity days"), optionCard);
         label->setObjectName(QStringLiteral("fieldLabel"));
-        quantity = new QComboBox(panel);
+        quantity = new QComboBox(optionCard);
         for (const int option : ticket.dayOptions) {
             quantity->addItem(spanish ? QStringLiteral("%1 días").arg(option)
                                       : QStringLiteral("%1 days").arg(option), option);
         }
-        layout->addWidget(label);
-        layout->addWidget(quantity);
+        optionLayout->addWidget(label);
+        optionLayout->addWidget(quantity);
     } else if (ticket.productType == QStringLiteral("SMART_BALANCE")) {
         const QLocale locale = spanish ? QLocale(QLocale::Spanish, QLocale::Spain)
                                        : QLocale(QLocale::English, QLocale::UnitedKingdom);
@@ -979,24 +1132,50 @@ void MainWindow::showRechargeOptions(const RechargeableTicket &ticket)
                   .arg(locale.toCurrencyString(ticket.balanceAmount.value_or(0.0), ticket.currency))
             : QStringLiteral("Choose the amount to add. Current balance: %1.")
                   .arg(locale.toCurrencyString(ticket.balanceAmount.value_or(0.0), ticket.currency)));
-        layout->addWidget(hint);
         auto *label = new QLabel(spanish ? QStringLiteral("Importe de la recarga")
-                                        : QStringLiteral("Recharge amount"), panel);
+                                        : QStringLiteral("Recharge amount"), optionCard);
         label->setObjectName(QStringLiteral("fieldLabel"));
-        amount = new QDoubleSpinBox(panel);
+        auto *amountRow = new QHBoxLayout;
+        amountRow->setSpacing(12);
+        auto *decrease = new QPushButton(QStringLiteral("−"), optionCard);
+        decrease->setObjectName(QStringLiteral("stepAction"));
+        amount = new QDoubleSpinBox(optionCard);
+        amount->setObjectName(QStringLiteral("balanceValue"));
+        amount->setButtonSymbols(QAbstractSpinBox::NoButtons);
+        amount->setAlignment(Qt::AlignCenter);
         amount->setDecimals(2);
         amount->setSingleStep(1.0);
         amount->setRange(ticket.minRechargeAmount.value_or(1.0),
                          ticket.maxRechargeAmount.value_or(100.0));
         amount->setSuffix(QStringLiteral(" €"));
-        layout->addWidget(label);
-        layout->addWidget(amount);
+        auto *increase = new QPushButton(QStringLiteral("+"), optionCard);
+        increase->setObjectName(QStringLiteral("stepAction"));
+        connect(decrease, &QPushButton::clicked, amount, [amount] {
+            amount->setValue(amount->value() - amount->singleStep());
+        });
+        connect(increase, &QPushButton::clicked, amount, [amount] {
+            amount->setValue(amount->value() + amount->singleStep());
+        });
+        connect(amount, &QDoubleSpinBox::valueChanged, optionCard,
+                [amount, decrease, increase](double value) {
+            decrease->setEnabled(value > amount->minimum());
+            increase->setEnabled(value < amount->maximum());
+        });
+        decrease->setEnabled(amount->value() > amount->minimum());
+        increase->setEnabled(amount->value() < amount->maximum());
+        amountRow->addStretch();
+        amountRow->addWidget(decrease);
+        amountRow->addWidget(amount);
+        amountRow->addWidget(increase);
+        amountRow->addStretch();
+        optionLayout->addWidget(label);
+        optionLayout->addLayout(amountRow);
     }
 
-    auto *validation = new QLabel(panel);
-    validation->setObjectName(QStringLiteral("screenHint"));
+    auto *validation = new QLabel(optionCard);
+    validation->setObjectName(QStringLiteral("rechargeValidation"));
     validation->hide();
-    layout->addWidget(validation);
+    optionLayout->addWidget(validation);
     layout->addStretch();
     auto *actions = new QHBoxLayout;
     auto *back = new QPushButton(spanish ? QStringLiteral("Escanear otro billete")
@@ -1090,25 +1269,24 @@ void MainWindow::showRechargeConfirmation(const TicketRechargeQuote &quote)
     auto *amount = new QLabel(locale.toCurrencyString(quote.totalAmount, quote.currency), panel);
     amount->setObjectName(QStringLiteral("paymentAmount"));
     amount->setAlignment(Qt::AlignCenter);
-    auto *paymentHint = new QLabel(
-        spanish ? QStringLiteral("Pago simulado. La referencia impide aplicar dos veces la misma recarga.")
-                : QStringLiteral("Simulated payment. The reference prevents applying the same recharge twice."), panel);
-    paymentHint->setObjectName(QStringLiteral("screenHint"));
-    paymentHint->setWordWrap(true);
-    paymentHint->setAlignment(Qt::AlignCenter);
+    auto *summaryCard = new QFrame(panel);
+    summaryCard->setObjectName(QStringLiteral("rechargeTicketCard"));
+    auto *summaryCardLayout = new QVBoxLayout(summaryCard);
+    summaryCardLayout->setContentsMargins(20, 18, 20, 18);
+    summaryCardLayout->setSpacing(8);
+    summaryCardLayout->addWidget(ticketLabel);
+    summaryCardLayout->addWidget(summary);
     layout->addWidget(title);
-    layout->addWidget(ticketLabel);
-    layout->addWidget(summary);
+    layout->addWidget(summaryCard);
     layout->addStretch();
     layout->addWidget(amount);
-    layout->addWidget(paymentHint);
     layout->addStretch();
     auto *actions = new QHBoxLayout;
     auto *back = new QPushButton(spanish ? QStringLiteral("Modificar")
                                         : QStringLiteral("Change"), panel);
     back->setObjectName(QStringLiteral("backAction"));
-    auto *pay = new QPushButton(spanish ? QStringLiteral("Simular pago y recargar")
-                                       : QStringLiteral("Simulate payment and recharge"), panel);
+    auto *pay = new QPushButton(spanish ? QStringLiteral("Pagar y recargar")
+                                       : QStringLiteral("Pay and recharge"), panel);
     pay->setObjectName(QStringLiteral("confirmAction"));
     actions->addStretch();
     actions->addWidget(back);
@@ -1154,6 +1332,7 @@ void MainWindow::showRechargeResult(const TicketRechargeResult &result)
     ticket->setObjectName(QStringLiteral("productName"));
     ticket->setAlignment(Qt::AlignCenter);
     auto *details = new QLabel(panel);
+    details->setObjectName(QStringLiteral("rechargeResultValue"));
     details->setAlignment(Qt::AlignCenter);
     if (result.productType == QStringLiteral("MULTI_TRIP")) {
         details->setText((spanish ? QStringLiteral("Saldo disponible: %1 viajes")
@@ -1180,11 +1359,17 @@ void MainWindow::showRechargeResult(const TicketRechargeResult &result)
     auto *finish = new QPushButton(spanish ? QStringLiteral("Finalizar")
                                           : QStringLiteral("Finish"), panel);
     finish->setObjectName(QStringLiteral("confirmAction"));
+    auto *resultCard = new QFrame(panel);
+    resultCard->setObjectName(QStringLiteral("rechargeResultCard"));
+    auto *resultCardLayout = new QVBoxLayout(resultCard);
+    resultCardLayout->setContentsMargins(24, 22, 24, 22);
+    resultCardLayout->setSpacing(10);
+    resultCardLayout->addWidget(ticket);
+    resultCardLayout->addWidget(details);
+    resultCardLayout->addWidget(reference);
     layout->addStretch();
     layout->addWidget(title, 0, Qt::AlignCenter);
-    layout->addWidget(ticket);
-    layout->addWidget(details);
-    layout->addWidget(reference);
+    layout->addWidget(resultCard);
     layout->addStretch();
     layout->addWidget(finish, 0, Qt::AlignCenter);
     connect(finish, &QPushButton::clicked, this, &MainWindow::showHome);
@@ -1245,11 +1430,8 @@ void MainWindow::renderCatalog()
         headerLayout->setContentsMargins(0, 0, 0, 0);
         auto *name = new QLabel(productName(product), header);
         name->setObjectName(QStringLiteral("productName"));
-        auto *code = new QLabel(product.code, header);
-        code->setObjectName(QStringLiteral("productCode"));
         headerLayout->addWidget(name);
         headerLayout->addStretch();
-        headerLayout->addWidget(code);
         auto *tariff = new QLabel(productTariff(product), card);
         tariff->setObjectName(QStringLiteral("productTariff"));
         auto *rules = new QLabel(productRules(product), card);
@@ -1423,13 +1605,43 @@ void MainWindow::showProductConfiguration(const TicketProduct &product)
                                         : QStringLiteral("Recharge amount"), panel);
         label->setObjectName(QStringLiteral("fieldLabel"));
         amount = new QDoubleSpinBox(panel);
+        amount->setObjectName(QStringLiteral("balanceValue"));
         amount->setDecimals(2);
         amount->setSingleStep(1.0);
         amount->setRange(product.minRechargeAmount.value_or(1.0),
                          product.maxRechargeAmount.value_or(100.0));
         amount->setSuffix(QStringLiteral(" €"));
+        amount->setButtonSymbols(QAbstractSpinBox::NoButtons);
+        amount->setAlignment(Qt::AlignCenter);
+        amount->setReadOnly(true);
+        auto *decrease = new QPushButton(QStringLiteral("−"), panel);
+        auto *increase = new QPushButton(QStringLiteral("+"), panel);
+        decrease->setObjectName(QStringLiteral("stepAction"));
+        increase->setObjectName(QStringLiteral("stepAction"));
+        decrease->setCursor(Qt::PointingHandCursor);
+        increase->setCursor(Qt::PointingHandCursor);
+        decrease->setAccessibleName(
+            spanish ? QStringLiteral("Reducir el saldo") : QStringLiteral("Decrease balance"));
+        increase->setAccessibleName(
+            spanish ? QStringLiteral("Aumentar el saldo") : QStringLiteral("Increase balance"));
+        auto *amountLayout = new QHBoxLayout();
+        amountLayout->addStretch();
+        amountLayout->addWidget(decrease);
+        amountLayout->addWidget(amount);
+        amountLayout->addWidget(increase);
+        amountLayout->addStretch();
+        connect(decrease, &QPushButton::clicked, amount,
+                [amount] { amount->setValue(amount->value() - amount->singleStep()); });
+        connect(increase, &QPushButton::clicked, amount,
+                [amount] { amount->setValue(amount->value() + amount->singleStep()); });
+        connect(amount, &QDoubleSpinBox::valueChanged, panel,
+                [amount, decrease, increase](double value) {
+            decrease->setEnabled(value > amount->minimum());
+            increase->setEnabled(value < amount->maximum());
+        });
+        decrease->setEnabled(false);
         layout->addWidget(label);
-        layout->addWidget(amount);
+        layout->addLayout(amountLayout);
     }
 
     if (m_pendingPayment && m_pendingPayment->product.code == product.code) {
@@ -1464,7 +1676,12 @@ void MainWindow::showProductConfiguration(const TicketProduct &product)
 
     connect(back, &QPushButton::clicked, panel, [this] {
         m_pendingPayment.reset();
+        if (QWidget *focusedWidget = QApplication::focusWidget()) {
+            focusedWidget->clearFocus();
+        }
         leavePurchaseFlow(m_catalogPanel);
+        m_catalogPanel->setFocusPolicy(Qt::StrongFocus);
+        m_catalogPanel->setFocus(Qt::OtherFocusReason);
     });
     connect(confirm, &QPushButton::clicked, panel,
             [this, product, origin, destination, quantity, amount, validation, spanish] {
@@ -1575,11 +1792,6 @@ void MainWindow::showPaymentScreen(const TicketProduct &product, double rawAmoun
     detailLabel->setObjectName(QStringLiteral("screenHint"));
     auto *amountLabel = new QLabel(locale.toCurrencyString(amount, product.currency), panel);
     amountLabel->setObjectName(QStringLiteral("paymentAmount"));
-    auto *method = new QLabel(
-        spanish ? QStringLiteral("Pago simulado con tarjeta · No se realizará ningún cargo real")
-                : QStringLiteral("Simulated card payment · No real charge will be made"), panel);
-    method->setObjectName(QStringLiteral("screenHint"));
-    method->setWordWrap(true);
     auto *state = new QLabel(panel);
     state->setObjectName(QStringLiteral("paymentApproved"));
     state->hide();
@@ -1589,7 +1801,6 @@ void MainWindow::showPaymentScreen(const TicketProduct &product, double rawAmoun
     layout->addWidget(detailLabel);
     layout->addSpacing(8);
     layout->addWidget(amountLabel);
-    layout->addWidget(method);
     layout->addWidget(state);
     layout->addStretch();
     auto *actions = new QHBoxLayout();
@@ -1658,89 +1869,109 @@ void MainWindow::showIssuedTicketWindow(
         return;
     }
 
-    QDialog dialog(this);
-    dialog.setObjectName(QStringLiteral("configurationDialog"));
-    dialog.setModal(true);
-    dialog.setWindowFlag(Qt::WindowCloseButtonHint, false);
-    dialog.setMinimumSize(600, 680);
-    dialog.setWindowTitle(spanish ? QStringLiteral("Billete emitido")
-                                  : QStringLiteral("Ticket issued"));
-    auto *layout = new QVBoxLayout(&dialog);
+    auto *dialog = new QDialog(this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->setObjectName(QStringLiteral("configurationDialog"));
+    dialog->setModal(false);
+    dialog->setMinimumSize(600, 650);
+    dialog->setWindowTitle(spanish ? QStringLiteral("Billete emitido")
+                                   : QStringLiteral("Ticket issued"));
+    auto *layout = new QVBoxLayout(dialog);
     layout->setContentsMargins(36, 28, 36, 28);
     layout->setSpacing(12);
 
     auto *title = new QLabel(spanish ? QStringLiteral("Tu billete está listo")
-                                    : QStringLiteral("Your ticket is ready"), &dialog);
+                                    : QStringLiteral("Your ticket is ready"), dialog);
     title->setObjectName(QStringLiteral("dialogTitle"));
     auto *hint = new QLabel(
-        spanish ? QStringLiteral("Escanea el QR o conserva el soporte físico que simula esta máquina.")
-                : QStringLiteral("Scan the QR or keep the physical support simulated by this machine."),
-        &dialog);
+        spanish ? QStringLiteral("Escanea el QR o conserva el billete entregado por la máquina.")
+                : QStringLiteral("Scan the QR or keep the ticket dispensed by the machine."),
+        dialog);
     hint->setObjectName(QStringLiteral("screenHint"));
     hint->setWordWrap(true);
-    auto *qrLabel = new QLabel(&dialog);
+    auto *qrLabel = new QLabel(dialog);
     qrLabel->setAlignment(Qt::AlignCenter);
-    qrLabel->setPixmap(qr.scaled(340, 340, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    qrLabel->setPixmap(qr);
     qrLabel->setAccessibleName(spanish ? QStringLiteral("Código QR del billete")
                                       : QStringLiteral("Ticket QR code"));
-    auto *code = new QLabel(ticketCode, &dialog);
+    auto *code = new QLabel(ticketCode, dialog);
     code->setObjectName(QStringLiteral("productCode"));
     code->setAlignment(Qt::AlignCenter);
     code->setTextInteractionFlags(Qt::TextSelectableByMouse);
     auto *link = new QLabel(
         spanish ? QStringLiteral("Código de vinculación: %1").arg(linkingCode)
-                : QStringLiteral("Linking code: %1").arg(linkingCode), &dialog);
+                : QStringLiteral("Linking code: %1").arg(linkingCode), dialog);
     link->setObjectName(QStringLiteral("productName"));
     link->setAlignment(Qt::AlignCenter);
-    constexpr int automaticReturnSeconds = 30;
-    auto *automaticReturn = new QLabel(&dialog);
-    automaticReturn->setObjectName(QStringLiteral("screenHint"));
-    automaticReturn->setAlignment(Qt::AlignCenter);
-    const auto updateAutomaticReturn = [automaticReturn, spanish](int seconds) {
-        automaticReturn->setText(
-            spanish ? QStringLiteral("Regreso automático al inicio en %1 s").arg(seconds)
-                    : QStringLiteral("Returning automatically to the start in %1 s").arg(seconds));
-    };
-    updateAutomaticReturn(automaticReturnSeconds);
     auto *finish = new QPushButton(spanish ? QStringLiteral("Finalizar")
-                                          : QStringLiteral("Finish"), &dialog);
+                                          : QStringLiteral("Finish"), dialog);
     finish->setObjectName(QStringLiteral("confirmAction"));
     finish->setCursor(Qt::PointingHandCursor);
     finish->setProperty("qrValue", qrValue);
-    connect(finish, &QPushButton::clicked, &dialog,
-            [this, &dialog, purchaseReference, ticketCode] {
-        m_issuanceClient->publishOperationEvent(
-            QStringLiteral("TICKET_PURCHASE_COMPLETED"), purchaseReference,
-            ticketCode, QStringLiteral("TICKET_PRESENTED"));
-        dialog.accept();
-    });
+    connect(finish, &QPushButton::clicked, dialog, &QDialog::accept);
 
     layout->addWidget(title);
     layout->addWidget(hint);
     layout->addWidget(qrLabel, 0, Qt::AlignCenter);
     layout->addWidget(code);
     layout->addWidget(link);
-    layout->addWidget(automaticReturn);
     layout->addStretch();
     layout->addWidget(finish, 0, Qt::AlignRight);
+    dialog->show();
+    dialog->raise();
+    dialog->activateWindow();
+    m_issuanceClient->publishOperationEvent(
+        QStringLiteral("TICKET_PURCHASE_COMPLETED"), purchaseReference,
+        ticketCode, QStringLiteral("TICKET_PRESENTED"));
 
-    int remainingSeconds = automaticReturnSeconds;
-    QTimer automaticReturnTimer(&dialog);
-    automaticReturnTimer.setInterval(1000);
-    connect(&automaticReturnTimer, &QTimer::timeout, &dialog,
-            [&remainingSeconds, updateAutomaticReturn, finish] {
-        --remainingSeconds;
+    auto *completionPanel = new QFrame(m_contentStack);
+    completionPanel->setObjectName(QStringLiteral("purchaseFlowPanel"));
+    auto *completionLayout = new QVBoxLayout(completionPanel);
+    completionLayout->setContentsMargins(48, 44, 48, 44);
+    completionLayout->setSpacing(18);
+    completionLayout->addStretch();
+    auto *completionTitle = new QLabel(
+        spanish ? QStringLiteral("Gracias por tu compra")
+                : QStringLiteral("Thank you for your purchase"), completionPanel);
+    completionTitle->setObjectName(QStringLiteral("dialogTitle"));
+    completionTitle->setAlignment(Qt::AlignCenter);
+    auto *completionHint = new QLabel(completionPanel);
+    completionHint->setObjectName(QStringLiteral("screenHint"));
+    completionHint->setAlignment(Qt::AlignCenter);
+    completionLayout->addWidget(completionTitle);
+    completionLayout->addWidget(completionHint);
+    completionLayout->addStretch();
+    showPurchaseFlowPanel(completionPanel);
+
+    constexpr int returnSeconds = 5;
+    const auto updateReturnText = [completionHint, spanish](int seconds) {
+        completionHint->setText(
+            spanish
+                ? (seconds == 1
+                    ? QStringLiteral("Volveremos al inicio en 1 segundo.")
+                    : QStringLiteral("Volveremos al inicio en %1 segundos.").arg(seconds))
+                : (seconds == 1
+                    ? QStringLiteral("Returning to the start in 1 second.")
+                    : QStringLiteral("Returning to the start in %1 seconds.").arg(seconds)));
+    };
+    updateReturnText(returnSeconds);
+    auto *returnTimer = new QTimer(completionPanel);
+    returnTimer->setInterval(1000);
+    returnTimer->setProperty("remainingSeconds", returnSeconds);
+    connect(returnTimer, &QTimer::timeout, completionPanel,
+            [this, returnTimer, updateReturnText] {
+        const int remainingSeconds = returnTimer->property("remainingSeconds").toInt() - 1;
+        returnTimer->setProperty("remainingSeconds", remainingSeconds);
         if (remainingSeconds <= 0) {
-            finish->click();
+            returnTimer->stop();
+            showHome();
             return;
         }
-        updateAutomaticReturn(remainingSeconds);
+        updateReturnText(remainingSeconds);
     });
-    automaticReturnTimer.start();
+    returnTimer->start();
     m_connectionState->setText(spanish ? QStringLiteral("Billete emitido")
-                                      : QStringLiteral("Ticket issued"));
-    dialog.exec();
-    showHome();
+                                       : QStringLiteral("Ticket issued"));
 }
 
 QString MainWindow::productName(const TicketProduct &product) const
@@ -1873,8 +2104,8 @@ void MainWindow::retranslateUi()
     m_rechargeButton->setAccessibleName(
         spanish ? QStringLiteral("Recargar un billete") : QStringLiteral("Recharge a ticket"));
     m_footerContext->setText(
-        spanish ? QStringLiteral("Máquina disponible para operaciones simuladas")
-                : QStringLiteral("Machine available for simulated operations"));
+        spanish ? QStringLiteral("Máquina disponible")
+                : QStringLiteral("Machine available"));
     m_catalogTitle->setText(
         spanish ? QStringLiteral("Títulos y tarifas") : QStringLiteral("Tickets and fares"));
     m_catalogHint->setText(

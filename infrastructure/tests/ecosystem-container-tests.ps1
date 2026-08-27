@@ -62,6 +62,32 @@ function Wait-ForBackendMqttConnection {
     throw "El backend no confirmó su conexión autenticada con Mosquitto"
 }
 
+function Start-MqttCapture {
+    param(
+        [Parameter(Mandatory)][string]$Topic,
+        [Parameter(Mandatory)][string]$ContainerPath
+    )
+    & docker exec --detach $env:MOSQUITTO_CONTAINER_NAME sh -c `
+        "mosquitto_sub -h 127.0.0.1 -p 1883 -u '$machineUsername' -P '$machinePassword' -t '$Topic' -q 1 -C 1 -W 20 > '$ContainerPath' 2>'$ContainerPath.err'"
+    if ($LASTEXITCODE -ne 0) { throw "No se pudo iniciar el suscriptor MQTT de prueba" }
+    Start-Sleep -Milliseconds 750
+}
+
+function Wait-MqttCapture {
+    param([Parameter(Mandatory)][string]$ContainerPath)
+    for ($attempt = 1; $attempt -le 80; $attempt++) {
+        $message = & docker exec $env:MOSQUITTO_CONTAINER_NAME sh -c `
+            "if [ -s '$ContainerPath' ]; then cat '$ContainerPath'; fi"
+        if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace(($message -join "`n"))) {
+            return ($message -join "`n").Trim()
+        }
+        Start-Sleep -Milliseconds 250
+    }
+    $errorMessage = & docker exec $env:MOSQUITTO_CONTAINER_NAME sh -c `
+        "if [ -s '$ContainerPath.err' ]; then cat '$ContainerPath.err'; fi"
+    throw "No se recibio el mensaje MQTT esperado: $(($errorMessage -join "`n").Trim())"
+}
+
 function Test-OperatorApiFlow {
     param([Parameter(Mandatory)][int]$Port)
 
@@ -104,6 +130,195 @@ function Test-OperatorApiFlow {
     }
     if (@($titles.titles).Count -lt 4) {
         throw "El catálogo no contiene todos los títulos de transporte"
+    }
+}
+
+function Test-TicketMachinePurchaseFlow {
+    # The backend connection is asynchronous: allow Mosquitto to acknowledge all
+    # topic subscriptions before publishing the one-shot purchase request.
+    Start-Sleep -Seconds 2
+
+    $presenceFileName = "ticket-machine-presence.json"
+    $presenceFile = Join-Path $runtimeDirectory $presenceFileName
+    $presence = @{
+        schemaVersion = 1
+        state = "ONLINE"
+        reason = "FUNCTIONAL_TEST"
+        changedAt = [DateTimeOffset]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+    } | ConvertTo-Json -Compress
+    [IO.File]::WriteAllText($presenceFile, $presence, [Text.UTF8Encoding]::new($false))
+    & docker exec $env:MOSQUITTO_CONTAINER_NAME mosquitto_pub `
+        -h 127.0.0.1 -p 1883 -u $machineUsername -P $machinePassword `
+        -t "rmm/v1/devices/$machineUsername/presence" `
+        -q 1 -r -f "/mosquitto/security/$presenceFileName"
+    if ($LASTEXITCODE -ne 0) {
+        throw "La maquina de venta no pudo anunciar su presencia MQTT"
+    }
+
+    $statusFileName = "ticket-machine-status.json"
+    $statusFile = Join-Path $runtimeDirectory $statusFileName
+    $statusTime = [DateTimeOffset]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+    $status = @{
+        schemaVersion = 1
+        messageId = [Guid]::NewGuid().ToString()
+        correlationId = $null
+        type = "device.status-reported"
+        deviceCode = $machineUsername
+        occurredAt = $statusTime
+        sentAt = $statusTime
+        payload = @{
+            operationalState = "AVAILABLE"
+            serviceMode = "FUNCTIONAL_TEST"
+            softwareVersion = "ci"
+            uptimeSeconds = 1
+        }
+    } | ConvertTo-Json -Depth 5 -Compress
+    [IO.File]::WriteAllText($statusFile, $status, [Text.UTF8Encoding]::new($false))
+    & docker exec $env:MOSQUITTO_CONTAINER_NAME mosquitto_pub `
+        -h 127.0.0.1 -p 1883 -u $machineUsername -P $machinePassword `
+        -t "rmm/v1/devices/$machineUsername/status" `
+        -q 1 -r -f "/mosquitto/security/$statusFileName"
+    if ($LASTEXITCODE -ne 0) {
+        throw "La maquina de venta no pudo publicar su estado operativo"
+    }
+    Start-Sleep -Seconds 2
+
+    $purchaseReference = [Guid]::NewGuid().ToString()
+    $messageId = [Guid]::NewGuid().ToString()
+    $occurredAt = [DateTimeOffset]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+    $requestFileName = "ticket-machine-purchase-$purchaseReference.json"
+    $requestFile = Join-Path $runtimeDirectory $requestFileName
+    $commandContainerPath = "/tmp/ticket-machine-command-$purchaseReference.json"
+    $request = @{
+        schemaVersion = 1
+        messageId = $messageId
+        correlationId = $null
+        type = "ticket.purchase-requested"
+        deviceCode = $machineUsername
+        occurredAt = $occurredAt
+        sentAt = $occurredAt
+        payload = @{
+            purchaseReference = $purchaseReference
+            productCode = "MULTI_TRIP"
+            paymentMethod = "SIMULATED"
+            paidAmount = 2.00
+            currency = "EUR"
+            configuration = @{ quantity = 2 }
+        }
+    } | ConvertTo-Json -Depth 6 -Compress
+    [IO.File]::WriteAllText($requestFile, $request, [Text.UTF8Encoding]::new($false))
+
+    Start-MqttCapture -Topic "rmm/v1/devices/$machineUsername/commands" `
+        -ContainerPath $commandContainerPath
+    & docker exec $env:MOSQUITTO_CONTAINER_NAME mosquitto_pub `
+        -h 127.0.0.1 -p 1883 -u $machineUsername -P $machinePassword `
+        -t "rmm/v1/devices/$machineUsername/requests/purchases" `
+        -q 1 -f "/mosquitto/security/$requestFileName"
+    if ($LASTEXITCODE -ne 0) {
+        throw "La máquina de venta no pudo publicar la solicitud de compra"
+    }
+
+    $command = Wait-MqttCapture -ContainerPath $commandContainerPath | ConvertFrom-Json
+    if ($command.type -ne "ticket.issue-command" `
+            -or $command.correlationId -ne $purchaseReference `
+            -or $command.payload.issuanceKind -ne "PURCHASE" `
+            -or [string]::IsNullOrWhiteSpace($command.payload.ticket.ticketCode) `
+            -or -not $command.payload.ticket.qrValue.StartsWith("RMM:TICKET:2:") `
+            -or [string]::IsNullOrWhiteSpace($command.payload.ticket.qrPngBase64)) {
+        throw "La orden de emisión no contiene un billete y un QR válidos"
+    }
+
+    $escapedReference = $purchaseReference.Replace("'", "''")
+    $persistenceResult = & docker exec $env:MYSQL_CONTAINER_NAME `
+        mysql -N -u root "-p$($env:MYSQL_ROOT_PASSWORD)" transport_simulator_db `
+        -e "SELECT COUNT(*), COUNT(p.ticket_id), COUNT(q.id) FROM purchases p LEFT JOIN ticket_qr_credentials q ON q.ticket_id = p.ticket_id WHERE p.external_reference = '$escapedReference' AND p.purchase_status = 'COMPLETED';"
+    if ($LASTEXITCODE -ne 0) {
+        throw "No se pudo comprobar la persistencia de la compra"
+    }
+    $counts = (($persistenceResult -join "`n").Trim() -split "\s+")
+    if ($counts.Count -ne 3 -or $counts[0] -ne "1" -or $counts[1] -ne "1" -or $counts[2] -ne "1") {
+        throw "La compra no ha persistido de forma coherente su billete y credencial QR"
+    }
+
+    return $command
+}
+
+function Test-TicketMachineRechargeFlow {
+    param(
+        [Parameter(Mandatory = $true)] $IssuedTicketCommand,
+        [Parameter(Mandatory = $true)] [int] $BackendPort
+    )
+
+    $ticket = $IssuedTicketCommand.payload.ticket
+    $lookupBody = @{ qrValue = $ticket.qrValue } | ConvertTo-Json -Compress
+    $lookup = Invoke-RestMethod `
+        -Uri "http://127.0.0.1:$BackendPort/api/public/v1/ticket-recharges/lookup" `
+        -Method Post -ContentType "application/json; charset=utf-8" `
+        -Body $lookupBody -TimeoutSec 10
+    if (-not $lookup.rechargeable `
+            -or $lookup.ticketCode -ne $ticket.ticketCode `
+            -or $lookup.productType -ne "MULTI_TRIP" `
+            -or [int]$lookup.remainingTrips -ne 2) {
+        throw "El billete emitido no se puede consultar correctamente antes de recargarlo"
+    }
+
+    $rechargeReference = [Guid]::NewGuid().ToString()
+    $messageId = [Guid]::NewGuid().ToString()
+    $occurredAt = [DateTimeOffset]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+    $requestFileName = "ticket-machine-recharge-$rechargeReference.json"
+    $requestFile = Join-Path $runtimeDirectory $requestFileName
+    $responseContainerPath = "/tmp/ticket-machine-recharge-response-$rechargeReference.json"
+    $request = @{
+        schemaVersion = 1
+        messageId = $messageId
+        correlationId = $null
+        type = "ticket.recharge-requested"
+        deviceCode = $machineUsername
+        occurredAt = $occurredAt
+        sentAt = $occurredAt
+        payload = @{
+            rechargeReference = $rechargeReference
+            qrValue = $ticket.qrValue
+            paymentMethod = "SIMULATED"
+            paidAmount = 3.00
+            currency = "EUR"
+            configuration = @{ trips = 3 }
+        }
+    } | ConvertTo-Json -Depth 6 -Compress
+    [IO.File]::WriteAllText($requestFile, $request, [Text.UTF8Encoding]::new($false))
+
+    Start-MqttCapture -Topic "rmm/v1/devices/$machineUsername/responses" `
+        -ContainerPath $responseContainerPath
+    & docker exec $env:MOSQUITTO_CONTAINER_NAME mosquitto_pub `
+        -h 127.0.0.1 -p 1883 -u $machineUsername -P $machinePassword `
+        -t "rmm/v1/devices/$machineUsername/requests/recharges" `
+        -q 1 -f "/mosquitto/security/$requestFileName"
+    if ($LASTEXITCODE -ne 0) {
+        throw "La maquina de venta no pudo publicar la solicitud de recarga"
+    }
+
+    $response = Wait-MqttCapture -ContainerPath $responseContainerPath | ConvertFrom-Json
+    if ($response.type -ne "ticket.recharge-completed" `
+            -or $response.correlationId -ne $messageId `
+            -or $response.payload.rechargeReference -ne $rechargeReference `
+            -or $response.payload.ticketCode -ne $ticket.ticketCode `
+            -or $response.payload.productType -ne "MULTI_TRIP" `
+            -or [int]$response.payload.remainingTrips -ne 5 `
+            -or $response.payload.qrValue -ne $ticket.qrValue) {
+        throw "La respuesta de recarga no refleja el nuevo estado del billete"
+    }
+
+    $escapedReference = $rechargeReference.Replace("'", "''")
+    $escapedTicketCode = $ticket.ticketCode.Replace("'", "''")
+    $persistenceResult = & docker exec $env:MYSQL_CONTAINER_NAME `
+        mysql -N -u root "-p$($env:MYSQL_ROOT_PASSWORD)" transport_simulator_db `
+        -e "SELECT COUNT(*), t.remaining_trips, COUNT(o.id) FROM purchases p JOIN tickets t ON t.id = p.ticket_id LEFT JOIN ticket_operations o ON o.purchase_id = p.id AND o.operation_type = 'RECHARGED' WHERE p.external_reference = '$escapedReference' AND p.purchase_type = 'RECHARGE' AND p.purchase_status = 'COMPLETED' AND t.code = '$escapedTicketCode' GROUP BY t.remaining_trips;"
+    if ($LASTEXITCODE -ne 0) {
+        throw "No se pudo comprobar la persistencia de la recarga"
+    }
+    $counts = (($persistenceResult -join "`n").Trim() -split "\s+")
+    if ($counts.Count -ne 3 -or $counts[0] -ne "1" -or $counts[1] -ne "5" -or $counts[2] -ne "1") {
+        throw "La recarga no ha persistido el saldo de viajes y su historial de operacion"
     }
 }
 
@@ -208,6 +423,13 @@ try {
 
     Write-Host "Comprobando la conexión del backend con Mosquitto..."
     Wait-ForBackendMqttConnection
+
+    Write-Host "Comprobando una compra completa de la maquina de venta contra el backend real..."
+    $issuedTicketCommand = Test-TicketMachinePurchaseFlow
+
+    Write-Host "Comprobando la consulta y recarga del billete contra el backend real..."
+    Test-TicketMachineRechargeFlow `
+        -IssuedTicketCommand $issuedTicketCommand -BackendPort $backendPort
 
     Write-Host "Comprobando autenticación y consultas funcionales del ecosistema..."
     Test-OperatorApiFlow -Port $backendPort

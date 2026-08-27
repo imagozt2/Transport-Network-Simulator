@@ -14,6 +14,7 @@ public record TicketRechargeLookupResponse(
         String productName,
         String productType,
         String ticketStatus,
+        boolean rechargeable,
         TicketSupportType supportType,
         Integer remainingTrips,
         LocalDateTime validUntil,
@@ -33,11 +34,15 @@ public record TicketRechargeLookupResponse(
         List<Integer> tripOptions,
         List<Integer> dayOptions
 ) {
-    public static TicketRechargeLookupResponse from(Ticket ticket, TicketSupportType supportType) {
+    public static TicketRechargeLookupResponse from(
+            Ticket ticket,
+            TicketSupportType supportType,
+            boolean rechargeable
+    ) {
         TicketProduct product = ticket.getProduct();
         return new TicketRechargeLookupResponse(
                 ticket.getCode(), product.getCode(), product.getName(),
-                product.getProductType().name(), ticket.getStatus().name(), supportType,
+                product.getProductType().name(), ticket.getStatus().name(), rechargeable, supportType,
                 ticket.getRemainingTrips(), ticket.getValidUntil(), ticket.getBalanceAmount(),
                 ticket.getCurrency(), product.isRequiresOriginDestination(), product.getMinTrips(),
                 product.getMaxTrips(), product.getMinDays(), product.getMaxDays(),

@@ -3,6 +3,7 @@
 #include <QWidget>
 
 class QCamera;
+class QEvent;
 class QLabel;
 class QPushButton;
 class QVideoFrame;
@@ -25,7 +26,10 @@ signals:
     void qrDetected(const QString &qrValue);
 
 private:
+    bool eventFilter(QObject *watched, QEvent *event) override;
     void startCamera();
+    void releaseCamera();
+    void synchronizeCameraWithWindow();
     void processFrame(const QVideoFrame &frame);
     void showUnavailableMessage(const QString &message);
     void retranslateUi();
@@ -37,7 +41,9 @@ private:
     QLabel *m_instructions = nullptr;
     QLabel *m_status = nullptr;
     QPushButton *m_cancelButton = nullptr;
+    QWidget *m_observedWindow = nullptr;
     bool m_spanish = true;
     bool m_decoding = false;
+    bool m_cameraRequested = false;
     qint64 m_lastDecodeAt = 0;
 };

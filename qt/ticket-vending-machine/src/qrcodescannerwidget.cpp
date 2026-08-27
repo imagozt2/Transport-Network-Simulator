@@ -3,7 +3,9 @@
 #include <QApplication>
 #include <QCamera>
 #include <QCameraDevice>
+#include <QCameraFormat>
 #include <QDateTime>
+#include <QEvent>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QImage>
@@ -14,10 +16,13 @@
 #include <QPainterPath>
 #include <QPermissions>
 #include <QPushButton>
+#include <QTimer>
 #include <QVideoFrame>
 #include <QVideoSink>
 #include <QVideoWidget>
 #include <QVBoxLayout>
+
+#include <limits>
 
 #include <BarcodeFormat.h>
 #include <ImageView.h>
@@ -26,6 +31,34 @@
 
 namespace {
 constexpr qint64 decodeIntervalMs = 180;
+constexpr int preferredCameraWidth = 1280;
+constexpr int preferredCameraHeight = 720;
+
+QCameraFormat lowResourceCameraFormat(const QCameraDevice &device)
+{
+    QCameraFormat selected;
+    qint64 bestScore = std::numeric_limits<qint64>::max();
+    for (const QCameraFormat &format : device.videoFormats()) {
+        const QSize resolution = format.resolution();
+        if (resolution.isEmpty()) {
+            continue;
+        }
+        const qint64 resolutionDistance =
+            qAbs(resolution.width() - preferredCameraWidth)
+            + qAbs(resolution.height() - preferredCameraHeight);
+        const qint64 oversizedPenalty =
+            resolution.width() > preferredCameraWidth || resolution.height() > preferredCameraHeight
+                ? 1000000 : 0;
+        const qint64 frameRatePenalty = static_cast<qint64>(
+            qMax(0.0f, format.maxFrameRate() - 30.0f) * 1000.0f);
+        const qint64 score = oversizedPenalty + resolutionDistance + frameRatePenalty;
+        if (score < bestScore) {
+            selected = format;
+            bestScore = score;
+        }
+    }
+    return selected;
+}
 
 class ScannerOverlay final : public QWidget
 {
@@ -144,17 +177,29 @@ QrCodeScannerWidget::QrCodeScannerWidget(QWidget *parent)
 
 void QrCodeScannerWidget::start()
 {
+    m_cameraRequested = true;
     m_decoding = false;
     m_lastDecodeAt = 0;
     m_status->setText(m_spanish ? QStringLiteral("Buscando un código QR…")
                                : QStringLiteral("Looking for a QR code…"));
+
+    QWidget *topLevelWindow = window();
+    if (m_observedWindow != topLevelWindow) {
+        if (m_observedWindow) {
+            m_observedWindow->removeEventFilter(this);
+        }
+        m_observedWindow = topLevelWindow;
+        if (m_observedWindow) {
+            m_observedWindow->installEventFilter(this);
+        }
+    }
 
     QCameraPermission permission;
     const auto status = qApp->checkPermission(permission);
     if (status == Qt::PermissionStatus::Undetermined) {
         qApp->requestPermission(permission, this, [this](const QPermission &result) {
             if (result.status() == Qt::PermissionStatus::Granted) {
-                startCamera();
+                synchronizeCameraWithWindow();
             } else {
                 showUnavailableMessage(m_spanish
                     ? QStringLiteral("Se necesita permiso para utilizar la cámara.")
@@ -169,12 +214,12 @@ void QrCodeScannerWidget::start()
             : QStringLiteral("Camera access is disabled in system settings."));
         return;
     }
-    startCamera();
+    synchronizeCameraWithWindow();
 }
 
 void QrCodeScannerWidget::startCamera()
 {
-    stop();
+    releaseCamera();
     const QCameraDevice device = QMediaDevices::defaultVideoInput();
     if (device.isNull()) {
         showUnavailableMessage(m_spanish ? QStringLiteral("No se ha detectado ninguna cámara.")
@@ -183,6 +228,10 @@ void QrCodeScannerWidget::startCamera()
     }
 
     m_camera = new QCamera(device, this);
+    const QCameraFormat format = lowResourceCameraFormat(device);
+    if (!format.isNull()) {
+        m_camera->setCameraFormat(format);
+    }
     auto *captureSession = new QMediaCaptureSession(m_camera);
     captureSession->setCamera(m_camera);
     captureSession->setVideoOutput(m_videoWidget);
@@ -197,12 +246,45 @@ void QrCodeScannerWidget::startCamera()
 
 void QrCodeScannerWidget::stop()
 {
+    m_cameraRequested = false;
+    releaseCamera();
+}
+
+void QrCodeScannerWidget::releaseCamera()
+{
     if (!m_camera) {
         return;
     }
     m_camera->stop();
     delete m_camera;
     m_camera = nullptr;
+}
+
+void QrCodeScannerWidget::synchronizeCameraWithWindow()
+{
+    const QWidget *topLevelWindow = window();
+    const bool canUseCamera = m_cameraRequested && isVisible()
+        && topLevelWindow && !topLevelWindow->isMinimized();
+    if (!canUseCamera) {
+        releaseCamera();
+        return;
+    }
+    if (!m_camera) {
+        startCamera();
+    }
+}
+
+bool QrCodeScannerWidget::eventFilter(QObject *watched, QEvent *event)
+{
+    if (watched == m_observedWindow
+            && (event->type() == QEvent::WindowStateChange
+                || event->type() == QEvent::Show
+                || event->type() == QEvent::Hide)) {
+        QTimer::singleShot(0, this, [this] {
+            synchronizeCameraWithWindow();
+        });
+    }
+    return QWidget::eventFilter(watched, event);
 }
 
 void QrCodeScannerWidget::setSpanish(bool spanish)
@@ -238,6 +320,8 @@ void QrCodeScannerWidget::processFrame(const QVideoFrame &frame)
         ZXing::ReaderOptions options;
         options.setFormats(ZXing::BarcodeFormat::QRCode);
         options.setTryHarder(true);
+        options.setTryRotate(true);
+        options.setTryInvert(true);
         const auto result = ZXing::ReadBarcode(view, options);
         if (result.isValid()) {
             const QString value = QString::fromStdString(result.text());
@@ -258,7 +342,7 @@ void QrCodeScannerWidget::processFrame(const QVideoFrame &frame)
 
 void QrCodeScannerWidget::showUnavailableMessage(const QString &message)
 {
-    stop();
+    releaseCamera();
     m_status->setText(message);
 }
 

@@ -22,6 +22,14 @@ qt_add_executable(rmm-ticket-vending-machine WIN32
     src/ticketrechargequoteclient.h
 )
 
+qt_add_resources(rmm-ticket-vending-machine "rmm-ticket-machine-assets"
+    PREFIX "/rmm"
+    FILES
+        resources/chevron-down.svg
+        resources/flag-spain.svg
+        resources/flag-united-kingdom.svg
+)
+
 target_link_libraries(rmm-ticket-vending-machine
     PRIVATE
         Qt6::Core

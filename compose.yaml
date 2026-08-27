@@ -100,9 +100,11 @@ services:
       RMM_MQTT_CA_CERTIFICATE: /app/mqtt-certificates/ca.crt
       RMM_MQTT_CLIENT_CERTIFICATE: /app/mqtt-certificates/clients/rmm-backend.crt
       RMM_MQTT_CLIENT_PRIVATE_KEY: /app/mqtt-certificates/clients/rmm-backend.key
+      TICKET_QR_LOCAL_KEY_DIRECTORY: /app/ticket-qr-keys
       RMM_APP_AUTO_VERIFY_REGISTRATION: ${RMM_APP_AUTO_VERIFY_REGISTRATION:-true}
     volumes:
       - ./infrastructure/mosquitto/runtime/certificates:/app/mqtt-certificates:ro
+      - ticket-qr-keys:/app/ticket-qr-keys
     ports:
       - "127.0.0.1:${BACKEND_HOST_PORT:-8080}:8080"
     depends_on:
@@ -124,6 +126,7 @@ services:
 volumes:
   mysql-data:
   mosquitto-data:
+  ticket-qr-keys:
 
 networks:
   rmm-internal:

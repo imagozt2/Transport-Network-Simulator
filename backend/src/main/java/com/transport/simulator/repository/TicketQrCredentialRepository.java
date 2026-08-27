@@ -29,6 +29,18 @@ public interface TicketQrCredentialRepository extends JpaRepository<TicketQrCred
             @Param("credentialId") UUID credentialId
     );
 
+    @Query("""
+            select credential
+            from TicketQrCredential credential
+            join fetch credential.ticket
+            join fetch credential.support support
+            join fetch support.ticket
+            where credential.tokenFingerprint = :fingerprint
+            """)
+    Optional<TicketQrCredential> findForVerificationByTokenFingerprint(
+            @Param("fingerprint") String fingerprint
+    );
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select credential from TicketQrCredential credential where credential.id = :id")
     Optional<TicketQrCredential> lockById(@Param("id") Long id);

@@ -16,6 +16,7 @@ struct RechargeableTicket
     QString productName;
     QString productType;
     QString ticketStatus;
+    bool rechargeable = false;
     QString supportType;
     QString currency;
     std::optional<int> remainingTrips;

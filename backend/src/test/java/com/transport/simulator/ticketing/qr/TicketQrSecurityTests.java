@@ -15,6 +15,7 @@ import com.transport.simulator.enums.TicketQrValidationType;
 import com.transport.simulator.enums.TicketSupportType;
 import com.transport.simulator.repository.TicketQrCredentialRepository;
 import com.transport.simulator.repository.TicketQrUseClaimRepository;
+import java.nio.file.Path;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.time.Clock;
@@ -27,6 +28,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import tools.jackson.databind.ObjectMapper;
 
 class TicketQrSecurityTests {
@@ -41,6 +43,9 @@ class TicketQrSecurityTests {
     private TicketQrVerifier verifier;
     private Clock clock;
 
+    @TempDir
+    Path temporaryDirectory;
+
     @BeforeEach
     void setUp() throws Exception {
         KeyPair keyPair = KeyPairGenerator.getInstance("Ed25519").generateKeyPair();
@@ -50,7 +55,8 @@ class TicketQrSecurityTests {
                 Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded()),
                 "",
                 60,
-                4096
+                4096,
+                ""
         );
         ObjectMapper objectMapper = new ObjectMapper();
         TicketQrPayloadCodec payloadCodec = new TicketQrPayloadCodec(objectMapper);
@@ -90,14 +96,68 @@ class TicketQrSecurityTests {
     }
 
     @Test
+    void shouldIssueAndVerifyACompactVersionTwoQr() {
+        CompactTicketQr compactQr = new TicketQrTokenIssuer().issue();
+        TicketQrCredential credential = compactCredential(
+                compactQr,
+                TicketQrCredentialStatus.ACTIVE
+        );
+        when(credentialRepository.findForVerificationByTokenFingerprint(compactQr.fingerprint()))
+                .thenReturn(Optional.of(credential));
+
+        VerifiedTicketQr verified = verifier.verify(compactQr.value());
+
+        assertThat(compactQr.value()).startsWith(TicketQrContract.WRAPPER_PREFIX);
+        assertThat(compactQr.value()).hasSize(
+                TicketQrContract.WRAPPER_PREFIX.length() + TicketQrContract.OPAQUE_TOKEN_LENGTH
+        );
+        assertThat(verified.payload()).isNull();
+        assertThat(verified.keyId()).isNull();
+        assertThat(verified.credential()).isSameAs(credential);
+        assertThat(verified.fingerprint()).isEqualTo(compactQr.fingerprint());
+    }
+
+    @Test
+    void shouldRejectAnUnknownOrRevokedCompactQr() {
+        CompactTicketQr unknown = new TicketQrTokenIssuer().issue();
+        assertVerificationFailure(unknown.value(), TicketQrVerificationFailure.CREDENTIAL_NOT_FOUND);
+
+        CompactTicketQr revoked = new TicketQrTokenIssuer().issue();
+        TicketQrCredential revokedCredential = compactCredential(
+                revoked,
+                TicketQrCredentialStatus.REVOKED
+        );
+        when(credentialRepository.findForVerificationByTokenFingerprint(revoked.fingerprint()))
+                .thenReturn(Optional.of(revokedCredential));
+        assertVerificationFailure(revoked.value(), TicketQrVerificationFailure.CREDENTIAL_REVOKED);
+    }
+
+    @Test
     void shouldRejectPayloadManipulationBeforeConsultingItsState() {
         SignedTicketQr signedQr = signer.sign(payload(NOW.minusSeconds(30), NOW.plusSeconds(300)));
         String[] segments = signedQr.compactJws().split("\\.");
         char replacement = segments[1].charAt(0) == 'A' ? 'B' : 'A';
         segments[1] = replacement + segments[1].substring(1);
-        String manipulated = TicketQrContract.WRAPPER_PREFIX + String.join(".", segments);
+        String manipulated = TicketQrContract.LEGACY_WRAPPER_PREFIX + String.join(".", segments);
 
         assertVerificationFailure(manipulated, TicketQrVerificationFailure.INVALID_SIGNATURE);
+    }
+
+    @Test
+    void shouldCreateAndReuseTheLocalSigningKeyAcrossBackendRestarts() {
+        TicketQrSigningProperties localProperties = new TicketQrSigningProperties(
+                "", "", "", "", 60, 4096, temporaryDirectory.toString());
+
+        TicketQrKeyRing firstBackend = new TicketQrKeyRing(localProperties);
+        byte[] firstPrivateKey = firstBackend.activePrivateKey().getEncoded();
+        byte[] firstPublicKey = firstBackend.trustedPublicKey(firstBackend.activeKeyId()).getEncoded();
+
+        TicketQrKeyRing restartedBackend = new TicketQrKeyRing(localProperties);
+
+        assertThat(restartedBackend.activeKeyId()).isEqualTo("rmm-local-ticket-qr-1");
+        assertThat(restartedBackend.activePrivateKey().getEncoded()).isEqualTo(firstPrivateKey);
+        assertThat(restartedBackend.trustedPublicKey(restartedBackend.activeKeyId()).getEncoded())
+                .isEqualTo(firstPublicKey);
     }
 
     @Test
@@ -197,7 +257,7 @@ class TicketQrSecurityTests {
         when(credential.getTicket()).thenReturn(ticket);
         when(credential.getSupport()).thenReturn(support);
         when(credential.getStatus()).thenReturn(status);
-        when(credential.getWrapperVersion()).thenReturn(TicketQrContract.WRAPPER_VERSION);
+        when(credential.getWrapperVersion()).thenReturn(TicketQrContract.LEGACY_WRAPPER_VERSION);
         when(credential.getSigningKeyId()).thenReturn(KEY_ID);
         when(credential.getTokenFingerprint()).thenReturn(signedQr.fingerprint());
         when(credential.getIssuedAt()).thenReturn(LocalDateTime.ofInstant(
@@ -208,6 +268,28 @@ class TicketQrSecurityTests {
                 Instant.ofEpochSecond(payload.expiresAtEpochSecond()),
                 ZoneOffset.UTC
         ));
+        return credential;
+    }
+
+    private TicketQrCredential compactCredential(
+            CompactTicketQr compactQr,
+            TicketQrCredentialStatus status
+    ) {
+        Ticket ticket = mock(Ticket.class);
+        TicketSupport support = mock(TicketSupport.class);
+        TicketQrCredential credential = mock(TicketQrCredential.class);
+        when(ticket.getId()).thenReturn(7L);
+        when(support.getTicket()).thenReturn(ticket);
+        when(credential.getId()).thenReturn(42L);
+        when(credential.getCredentialId()).thenReturn(CREDENTIAL_ID);
+        when(credential.getTicket()).thenReturn(ticket);
+        when(credential.getSupport()).thenReturn(support);
+        when(credential.getStatus()).thenReturn(status);
+        when(credential.getWrapperVersion()).thenReturn(TicketQrContract.WRAPPER_VERSION);
+        when(credential.getSigningKeyId()).thenReturn(TicketQrContract.OPAQUE_CREDENTIAL_SCHEME);
+        when(credential.getTokenFingerprint()).thenReturn(compactQr.fingerprint());
+        when(credential.getIssuedAt()).thenReturn(LocalDateTime.ofInstant(NOW, ZoneOffset.UTC));
+        when(credential.getExpiresAt()).thenReturn(null);
         return credential;
     }
 

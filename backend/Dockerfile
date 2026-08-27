@@ -13,7 +13,9 @@ FROM eclipse-temurin:21-jre-alpine-3.23 AS runtime
 
 WORKDIR /app
 
-RUN addgroup -S rmm && adduser -S rmm -G rmm
+RUN addgroup -S rmm && adduser -S rmm -G rmm \
+    && mkdir -p /app/ticket-qr-keys \
+    && chown rmm:rmm /app/ticket-qr-keys
 
 COPY --from=build --chown=rmm:rmm /workspace/target/*.jar application.jar
 

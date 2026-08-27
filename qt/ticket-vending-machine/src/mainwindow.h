@@ -65,6 +65,7 @@ private:
     void showHome();
     void showRechargeScanner();
     void showRechargeLookupProgress();
+    void showNonRechargeableTicket();
     void showRechargeOptions(const RechargeableTicket &ticket);
     void showRechargeConfirmation(const TicketRechargeQuote &quote);
     void showRechargeResult(const TicketRechargeResult &result);

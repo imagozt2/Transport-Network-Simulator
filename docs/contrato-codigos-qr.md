@@ -2,9 +2,9 @@
 
 ## Objetivo
 
-Este documento define el formato, la firma, la verificación y la renovación de los códigos QR que
+Este documento define el formato, la verificación y la renovación de los códigos QR que
 representan billetes físicos y digitales de RMM. El contrato debe producir el mismo resultado en
-Spring Boot, RMM App y las máquinas Qt sin compartir secretos entre aplicaciones.
+Spring Boot, RMM App y las máquinas Qt.
 
 El QR acredita una referencia emitida por RMM, pero no sustituye la consulta del estado actual del
 billete. Saldo, viajes restantes, bloqueos, trayectos abiertos y reglas tarifarias continúan bajo la
@@ -12,38 +12,43 @@ autoridad del backend.
 
 ## Decisiones principales
 
-- El contenido se firma mediante **JWS compacto**.
-- El algoritmo de firma inicial es **Ed25519**, identificado como `EdDSA` en JWS.
-- La clave privada solo existe en el backend o en su gestor de secretos.
-- Android y Qt reciben únicamente claves públicas.
-- Cada clave se identifica con un `kid` estable para permitir rotaciones.
-- El contenido firmado es mínimo y no incluye información personal ni saldos.
+- Las nuevas emisiones utilizan un **token opaco v2** aleatorio de 192 bits.
+- El backend persiste la huella SHA-256 y resuelve el estado autoritativo de la credencial.
+- Los JWS v1 firmados con Ed25519 continúan admitiéndose para no invalidar billetes existentes.
+- El QR no incluye información personal, saldos ni otros datos funcionales variables.
 - La validación online del backend es la decisión definitiva.
 - Una captura o copia del QR no permite duplicar el consumo de un derecho.
 
 ## Representación externa
 
-El texto codificado en el QR utiliza esta estructura:
+Las nuevas emisiones utilizan esta estructura:
 
 ```text
-RMM:TICKET:1:<JWS_COMPACTO>
+RMM:TICKET:2:<TOKEN_BASE64URL>
 ```
 
 | Segmento | Descripción |
 | --- | --- |
 | `RMM` | Identifica el ecosistema emisor. |
 | `TICKET` | Distingue un billete de otros QR futuros. |
-| `1` | Versión del envoltorio exterior. |
-| `<JWS_COMPACTO>` | Cabecera, payload y firma codificados con Base64url. |
+| `2` | Versión compacta del envoltorio exterior. |
+| `<TOKEN_BASE64URL>` | 24 bytes aleatorios representados mediante 32 caracteres Base64url. |
 
-La versión exterior permite rechazar formatos desconocidos antes de interpretar el JWS. También
-queda incluida dentro del contenido firmado para impedir que alterar el prefijo cambie la semántica
-del token.
+La versión exterior permite rechazar formatos desconocidos antes de consultar la credencial. El
+token no contiene campos interpretables: su posesión permite presentar el billete, mientras que su
+huella identifica la credencial persistida y todos sus derechos se consultan en el backend.
 
 El valor completo debe tratarse como sensible. No se escribirá íntegramente en logs, mensajes de
 error, analítica ni URLs.
 
-## JWS compacto
+## Compatibilidad con JWS v1
+
+Los QR emitidos antes de la versión compacta mantienen la estructura
+`RMM:TICKET:1:<JWS_COMPACTO>` y continúan verificándose mediante Ed25519. Los apartados siguientes
+describen exclusivamente ese formato heredado y permiten completar una transición sin invalidar
+soportes ya entregados.
+
+### JWS compacto
 
 Un JWS compacto contiene tres partes separadas por puntos:
 
@@ -122,18 +127,17 @@ El payload no incorpora:
 Estos datos cambian o son privados. Incluirlos produciría decisiones obsoletas, filtraría información
 y aumentaría el tamaño del símbolo.
 
-## Creación de una credencial QR
+## Creación de una credencial QR v2
 
 Solo el backend puede emitir una credencial:
 
 1. Confirma que la compra, recarga o emisión compensatoria puede completarse.
 2. Crea o actualiza el billete dentro de una transacción.
-3. Genera un `jti` criptográficamente aleatorio y no reutilizable.
-4. Selecciona la clave de firma activa y asigna su `kid`.
-5. Construye la cabecera y el payload definidos por la versión.
-6. Firma el JWS con Ed25519.
-7. Persiste la huella de la credencial, su estado y la relación con el billete.
-8. Devuelve el valor exterior `RMM:TICKET:1:...` al cliente autorizado.
+3. Genera 24 bytes mediante `SecureRandom`, sin reutilizarlos entre credenciales.
+4. Los representa como 32 caracteres Base64url sin relleno.
+5. Calcula la huella SHA-256 del valor exterior completo.
+6. Persiste la huella, el valor presentable, su estado y la relación con el billete.
+7. Devuelve `RMM:TICKET:2:...` al cliente autorizado.
 
 La respuesta de una petición idempotente ya completada devuelve la misma emisión o su estado
 persistido; nunca crea otro billete por repetir el mensaje.
@@ -150,7 +154,15 @@ La verificación se divide en capas y se detiene ante el primer error:
 - cabecera y payload son JSON UTF-8 válidos;
 - no hay campos duplicados ni tipos incompatibles.
 
-### 2. Firma y claims
+### 2. Resolución de la credencial
+
+Para v2:
+
+- el token contiene exactamente 24 bytes aleatorios;
+- su huella SHA-256 corresponde a una credencial persistida;
+- la credencial está asociada de forma coherente al billete y al soporte.
+
+Para el formato v1 heredado se mantienen la firma y los claims:
 
 - `alg`, `typ`, `iss`, `aud` y `ver` coinciden con valores permitidos;
 - `kid` identifica una clave pública confiable;
@@ -223,10 +235,15 @@ Cada credencial mantiene uno de estos estados:
 | `SUPERSEDED` | Fue reemplazada por otra credencial del mismo billete. |
 | `EXPIRED` | Alcanzó su `exp` técnico, cuando exista. |
 
-La revocación del QR no elimina el billete ni su historial. Una sustitución crea otro `jti`, firma un
-nuevo JWS y conserva la trazabilidad entre credenciales.
+La revocación del QR no elimina el billete ni su historial. Una sustitución crea un nuevo token
+opaco v2 y conserva la trazabilidad entre credenciales. Los billetes heredados mantienen su `jti`
+y su JWS v1 mientras sigan vigentes.
 
-## Gestión y rotación de claves
+## Gestión y rotación de claves heredadas
+
+Los QR v2 no contienen datos firmados ni necesitan claves de firma: su seguridad procede de un token
+aleatorio de 192 bits y de la consulta online al backend. Las claves descritas en esta sección se
+mantienen exclusivamente para verificar QR v1 ya emitidos.
 
 ### Clave privada
 
@@ -262,11 +279,12 @@ construcción del contenido, la firma, la verificación y la protección frente 
 
 | Componente | Responsabilidad |
 | --- | --- |
-| `TicketQrPayloadFactory` | Construye los claims mínimos a partir del soporte y la credencial. |
-| `TicketQrPayloadCodec` | Serializa y deserializa el payload JSON UTF-8. |
-| `TicketQrSigner` | Genera la cabecera protegida, firma con Ed25519 y construye el valor exterior. |
-| `TicketQrKeyRing` | Selecciona la clave activa y conserva las claves públicas retiradas. |
-| `TicketQrVerifier` | Comprueba formato, firma, claims temporales y estado persistido. |
+| `TicketQrTokenIssuer` | Genera el token opaco aleatorio y su huella SHA-256 para los QR v2. |
+| `TicketQrPayloadFactory` | Construye los claims de los QR v1 heredados. |
+| `TicketQrPayloadCodec` | Serializa y deserializa el payload JSON UTF-8 de v1. |
+| `TicketQrSigner` | Firma con Ed25519 los valores v1 heredados. |
+| `TicketQrKeyRing` | Conserva las claves públicas necesarias para verificar v1. |
+| `TicketQrVerifier` | Resuelve los tokens v2 contra la base de datos y verifica completamente los v1. |
 | `TicketQrUseGuard` | Registra referencias idempotentes y detecta reutilizaciones incompatibles. |
 
 La firma y la verificación utilizan directamente los proveedores criptográficos de Java 21. No se
@@ -293,23 +311,22 @@ Las claves retiradas se expresan como entradas separadas por punto y coma:
 rmm-ticket-2025-01=BASE64_X509;rmm-ticket-2025-02=BASE64_X509
 ```
 
-La clave privada se carga únicamente cuando se solicita una firma. Por ello, una instancia dedicada
-solo a consultas puede arrancar sin material privado, pero cualquier intento de emisión fallará de
-forma controlada hasta que se aprovisione el secreto.
+La emisión normal de QR v2 no carga material privado. Estas variables solo son necesarias mientras
+el entorno deba crear o verificar credenciales v1 heredadas.
 
 ### Datos persistidos
 
 `ticket_qr_credentials` conserva la autoridad sobre cada credencial:
 
 - `credential_id` corresponde al claim `jti`;
-- `signing_key_id` corresponde al `kid` protegido;
+- `signing_key_id` corresponde al `kid` protegido en v1 y contiene el marcador `opaque-v2` en v2;
 - `token_fingerprint` contiene SHA-256 del valor exterior completo;
 - `credential_status` controla activación, revocación, sustitución y caducidad;
-- `issued_at` y `expires_at` deben coincidir con `iat` y `exp`;
+- `issued_at` y `expires_at` son autoritativos en v2 y deben coincidir con `iat` y `exp` en v1;
 - `ticket_id` y `support_id` vinculan el QR con su billete y soporte reales.
 
-No se persiste la clave privada. La huella permite detectar sustituciones del token sin utilizar su
-contenido completo como identificador interno.
+No se persiste la clave privada. El valor QR se conserva para poder volver a mostrarlo al propietario
+del billete, pero las búsquedas y comparaciones utilizan exclusivamente su huella.
 
 `ticket_qr_use_claims` protege el procesamiento de validaciones. Cada petición aporta una
 `validation_reference` única y se registra junto con una huella canónica de credencial, operación,
@@ -317,16 +334,15 @@ máquina y estación. El valor QR completo tampoco se almacena en esta tabla.
 
 ### Secuencia de verificación
 
-`TicketQrVerifier` aplica las comprobaciones en este orden:
+`TicketQrVerifier` identifica primero la versión. Para v2 aplica las comprobaciones en este orden:
 
 1. limita la longitud y reconoce el prefijo y la versión exterior;
-2. exige exactamente tres segmentos JWS no vacíos;
-3. valida `alg`, `kid` y `typ`;
-4. obtiene una clave pública confiable mediante `kid`;
-5. verifica la firma antes de interpretar el payload;
-6. valida emisor, audiencia, versión, formatos, `iat` y `exp`;
-7. busca `jti` y contrasta huella, billete, soporte, clave y fechas;
-8. rechaza credenciales revocadas, sustituidas o caducadas.
+2. exige un token Base64url canónico de 32 caracteres y 24 bytes;
+3. calcula su huella y localiza la credencial;
+4. contrasta versión, esquema, billete, soporte y huella;
+5. rechaza credenciales revocadas, sustituidas o caducadas.
+
+Para v1 conserva adicionalmente la validación completa de cabecera, firma Ed25519, claims y fechas.
 
 Los fallos se clasifican mediante `TicketQrVerificationFailure`:
 
@@ -341,7 +357,7 @@ Los fallos se clasifican mediante `TicketQrVerificationFailure`:
 Estos códigos son internos y estables. Las APIs futuras podrán traducirlos a decisiones aptas para
 las máquinas sin revelar si un código concreto pertenece a un usuario o billete existente.
 
-### Rotación operativa
+### Rotación operativa de v1
 
 El `kid` funciona como versión de la clave. Para una rotación ordinaria:
 
@@ -372,9 +388,12 @@ referencia nueva.
 
 ### Cobertura automatizada
 
-`TicketQrSecurityTests` genera un par Ed25519 efímero durante cada ejecución y cubre:
+`TicketQrSecurityTests` cubre el formato opaco v2 y genera además un par Ed25519 efímero para la
+compatibilidad v1. La cobertura incluye:
 
-- firma y verificación completas;
+- emisión y verificación de tokens compactos v2;
+- rechazo de tokens v2 desconocidos o revocados;
+- firma y verificación completas de v1;
 - alteración del payload;
 - caducidad técnica;
 - revocación persistida;
@@ -385,9 +404,10 @@ Las claves generadas para las pruebas solo existen en memoria y nunca se escribe
 
 ## Funcionamiento sin conexión
 
-La versión inicial requiere una decisión online del backend. La verificación local de la firma puede
-rechazar rápidamente un QR manipulado, pero no autoriza por sí sola el acceso porque la máquina
-desconoce bloqueos, consumos o trayectos recientes.
+La versión actual requiere una decisión online del backend. Un QR v2 no revela datos autorizables y
+solo puede resolverse allí. En v1, la verificación local de la firma puede rechazar rápidamente una
+manipulación, pero tampoco autoriza por sí sola el acceso porque la máquina desconoce bloqueos,
+consumos o trayectos recientes.
 
 Una futura política de aceptación offline deberá definir por separado:
 
@@ -406,13 +426,13 @@ en los [flujos online y sin conexión](flujos-conectividad.md).
 
 | Amenaza | Medida principal |
 | --- | --- |
-| Alteración del payload | Firma Ed25519 verificada antes de interpretar datos. |
-| Fabricación de billetes | Clave privada exclusiva del backend. |
+| Alteración o fabricación de QR v2 | Token aleatorio de 192 bits resuelto contra una credencial persistida. |
+| Alteración o fabricación de QR v1 | Firma Ed25519 verificada antes de interpretar datos. |
 | Copia o captura del QR | Estado central, trayecto único e idempotencia. |
 | Apropiación de un billete físico | Código de vinculación separado y de un solo uso. |
 | Enumeración de billetes | Códigos públicos aleatorios y respuestas no reveladoras. |
 | Reutilización de una validación | Referencia externa única y resultado persistido. |
-| Clave antigua o comprometida | `kid`, rotación, revocación y sustitución. |
+| Clave v1 antigua o comprometida | `kid`, rotación, revocación y sustitución. |
 | Filtración en observabilidad | Registro de huellas, nunca del token completo. |
 
 ## Registro seguro
@@ -424,7 +444,8 @@ Los logs pueden conservar:
 - `kid`, versión y resultado de la verificación;
 - máquina, estación, instante y código de error.
 
-No deben conservar el JWS completo, la clave privada, el código de vinculación ni datos personales.
+No deben conservar el token QR completo —sea opaco v2 o JWS v1—, la clave privada, el código de
+vinculación ni datos personales.
 
 ## Límites y evolución
 
