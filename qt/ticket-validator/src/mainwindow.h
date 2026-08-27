@@ -31,6 +31,9 @@ private:
     void scheduleReaderReset(int delayMilliseconds);
     void resetReader();
     void playValidationSound(int beepCount);
+    void playToneSequence(int frequencyHz, int toneDurationMilliseconds,
+                          int toneCount, int silenceMilliseconds);
+    void updateResetCountdown();
     void setValidationState(ValidatorFeedbackState state, const QString &title,
                             const QString &detail);
 
@@ -39,11 +42,15 @@ private:
     QLabel *m_validationIcon = nullptr;
     QLabel *m_validationState = nullptr;
     QLabel *m_validationDetail = nullptr;
+    QLabel *m_resetCountdown = nullptr;
     QLabel *m_gateState = nullptr;
     QrCodeScannerWidget *m_cameraScanner = nullptr;
     QTimer *m_readerResetTimer = nullptr;
+    QTimer *m_countdownTimer = nullptr;
     ValidatorMqttClient *m_validationClient = nullptr;
     ValidatorConfiguration m_configuration;
     QString m_lastQrValue;
     bool m_connected = false;
+    bool m_feedbackSoundPlayed = false;
+    int m_resetSecondsRemaining = 0;
 };

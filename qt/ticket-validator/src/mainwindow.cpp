@@ -3,6 +3,9 @@
 #include "validatormqttclient.h"
 
 #include <QApplication>
+#include <QAudioFormat>
+#include <QAudioSink>
+#include <QBuffer>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -11,6 +14,9 @@
 #include <QTimer>
 #include <QVBoxLayout>
 #include <QWidget>
+
+#include <algorithm>
+#include <cmath>
 
 namespace {
 constexpr qsizetype maximumQrLength = 4096;
@@ -85,6 +91,9 @@ constexpr auto windowStyle = R"(
     QLabel#validationDetail {
         color: #475569; font-size: 14px; font-weight: 600;
     }
+    QLabel#resetCountdown {
+        color: #475569; font-size: 15px; font-weight: 700;
+    }
     QLabel#gateState[state="open"] {
         background-color: #dcfce7; color: #166534;
     }
@@ -128,6 +137,13 @@ MainWindow::MainWindow(QWidget *parent)
     m_readerResetTimer = new QTimer(this);
     m_readerResetTimer->setSingleShot(true);
     connect(m_readerResetTimer, &QTimer::timeout, this, &MainWindow::resetReader);
+
+    m_countdownTimer = new QTimer(this);
+    m_countdownTimer->setInterval(1000);
+    connect(m_countdownTimer, &QTimer::timeout, this, [this] {
+        --m_resetSecondsRemaining;
+        updateResetCountdown();
+    });
 
     m_validationClient = new ValidatorMqttClient(m_configuration, this);
     connect(m_validationClient, &ValidatorMqttClient::connectionStateChanged,
@@ -445,6 +461,12 @@ QWidget *MainWindow::createDevicePanel()
 
     m_resultPanel->show();
     layout->addWidget(m_resultPanel, 1);
+    m_resetCountdown = new QLabel(panel);
+    m_resetCountdown->setObjectName(QStringLiteral("resetCountdown"));
+    m_resetCountdown->setAlignment(Qt::AlignCenter);
+    m_resetCountdown->setAccessibleName(tr("Tiempo restante para la siguiente validación"));
+    m_resetCountdown->hide();
+    layout->addWidget(m_resetCountdown);
     m_gateState = new QLabel(tr("Torniquete cerrado"), panel);
     m_gateState->setObjectName(QStringLiteral("gateState"));
     m_gateState->setAlignment(Qt::AlignCenter);
@@ -472,7 +494,7 @@ QWidget *MainWindow::createFooter()
 void MainWindow::submitQrCode(const QString &detectedQrValue)
 {
     const QString qrValue = detectedQrValue.trimmed();
-    if (m_validationClient->hasPendingValidation()) {
+    if (m_readerResetTimer->isActive() || m_validationClient->hasPendingValidation()) {
         return;
     }
     if (qrValue.isEmpty() || qrValue.size() > maximumQrLength) {
@@ -512,16 +534,86 @@ void MainWindow::showValidationResult(const ValidationResult &result)
 
 void MainWindow::playValidationSound(int beepCount)
 {
-    for (int index = 0; index < beepCount; ++index) {
-        QTimer::singleShot(index * 180, this, [] {
-            QApplication::beep();
-        });
+    if (beepCount <= 0 || m_feedbackSoundPlayed) {
+        return;
     }
+    m_feedbackSoundPlayed = true;
+
+    if (beepCount == 1) {
+        playToneSequence(1050, 500, 1, 0);
+    } else {
+        playToneSequence(1050, 150, 3, 100);
+    }
+}
+
+void MainWindow::playToneSequence(int frequencyHz, int toneDurationMilliseconds,
+                                  int toneCount, int silenceMilliseconds)
+{
+    constexpr int sampleRate = 44100;
+    constexpr double amplitude = 0.32;
+    constexpr double pi = 3.14159265358979323846;
+
+    QAudioFormat format;
+    format.setSampleRate(sampleRate);
+    format.setChannelCount(1);
+    format.setSampleFormat(QAudioFormat::Int16);
+
+    const int toneSampleCount = sampleRate * toneDurationMilliseconds / 1000;
+    const int silenceSampleCount = sampleRate * silenceMilliseconds / 1000;
+    const int sampleCount = toneSampleCount * toneCount
+        + silenceSampleCount * qMax(0, toneCount - 1);
+    QByteArray samples(sampleCount * static_cast<int>(sizeof(qint16)), Qt::Uninitialized);
+    auto *sampleData = reinterpret_cast<qint16 *>(samples.data());
+    std::fill_n(sampleData, sampleCount, static_cast<qint16>(0));
+
+    for (int toneIndex = 0; toneIndex < toneCount; ++toneIndex) {
+        const int toneStart = toneIndex * (toneSampleCount + silenceSampleCount);
+        const int fadeSampleCount = qMax(1, toneSampleCount / 12);
+        for (int index = 0; index < toneSampleCount; ++index) {
+            const double fadeIn = qMin(1.0,
+                static_cast<double>(index) / fadeSampleCount);
+            const double fadeOut = qMin(1.0,
+                static_cast<double>(toneSampleCount - index - 1) / fadeSampleCount);
+            const double envelope = qMin(fadeIn, fadeOut);
+            sampleData[toneStart + index] = static_cast<qint16>(
+                32767.0 * amplitude * envelope
+                * std::sin(2.0 * pi * frequencyHz * index / sampleRate));
+        }
+    }
+
+    auto *buffer = new QBuffer(this);
+    buffer->setData(samples);
+    buffer->open(QIODevice::ReadOnly);
+    auto *audio = new QAudioSink(format, this);
+    audio->setVolume(0.7);
+    connect(audio, &QAudioSink::stateChanged, this,
+            [audio, buffer](QAudio::State state) {
+        if (state == QAudio::IdleState || state == QAudio::StoppedState) {
+            audio->deleteLater();
+            buffer->deleteLater();
+        }
+    });
+    audio->start(buffer);
 }
 
 void MainWindow::scheduleReaderReset(int delayMilliseconds)
 {
+    m_resetSecondsRemaining = (delayMilliseconds + 999) / 1000;
+    updateResetCountdown();
+    m_countdownTimer->start();
     m_readerResetTimer->start(delayMilliseconds);
+}
+
+void MainWindow::updateResetCountdown()
+{
+    if (m_resetSecondsRemaining <= 0) {
+        m_countdownTimer->stop();
+        m_resetCountdown->hide();
+        return;
+    }
+    m_resetCountdown->setText(
+        tr("Disponible para una nueva validación en %1 s").arg(m_resetSecondsRemaining));
+    m_resetCountdown->show();
 }
 
 void MainWindow::resetReader()
@@ -531,6 +623,9 @@ void MainWindow::resetReader()
         return;
     }
     m_readerResetTimer->stop();
+    m_countdownTimer->stop();
+    m_resetCountdown->hide();
+    m_feedbackSoundPlayed = false;
     m_lastQrValue.clear();
     setValidationState(ValidatorFeedbackState::Waiting, tr("Esperando un billete"),
                        tr("Presenta el código QR en el lector"));
