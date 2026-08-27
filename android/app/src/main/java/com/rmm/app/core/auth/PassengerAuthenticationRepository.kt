@@ -37,6 +37,34 @@ class PassengerAuthenticationRepository(
         )
     }
 
+    suspend fun registerAndAuthenticate(
+        email: String,
+        password: String,
+        firstName: String,
+        lastName: String,
+    ): PassengerRegistrationResult {
+        return when (val registration = register(email, password, firstName, lastName)) {
+            is ApiResult.Failure -> PassengerRegistrationResult.Failure(registration.reason)
+            is ApiResult.Success -> {
+                if (registration.value.verificationRequired) {
+                    PassengerRegistrationResult.VerificationRequired(registration.value.user.email)
+                } else {
+                    when (val authentication = login(email, password)) {
+                        is AuthenticationResult.Authenticated -> {
+                            PassengerRegistrationResult.Authenticated(authentication.session)
+                        }
+                        is AuthenticationResult.Failure -> {
+                            PassengerRegistrationResult.Failure(authentication.reason)
+                        }
+                        AuthenticationResult.StorageFailure -> {
+                            PassengerRegistrationResult.StorageFailure
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     suspend fun login(email: String, password: String): AuthenticationResult {
         return when (val result = calls.execute {
             api.login(
@@ -149,6 +177,13 @@ sealed interface AuthenticationResult {
     data class Authenticated(val session: PassengerSession) : AuthenticationResult
     data class Failure(val reason: ApiFailure) : AuthenticationResult
     data object StorageFailure : AuthenticationResult
+}
+
+sealed interface PassengerRegistrationResult {
+    data class Authenticated(val session: PassengerSession) : PassengerRegistrationResult
+    data class VerificationRequired(val email: String) : PassengerRegistrationResult
+    data class Failure(val reason: ApiFailure) : PassengerRegistrationResult
+    data object StorageFailure : PassengerRegistrationResult
 }
 
 enum class LogoutResult {

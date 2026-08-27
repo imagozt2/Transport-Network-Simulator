@@ -46,8 +46,8 @@ import androidx.compose.ui.unit.dp
 import com.rmm.app.R
 import com.rmm.app.core.auth.AuthenticationResult
 import com.rmm.app.core.auth.PassengerAuthenticationRepository
+import com.rmm.app.core.auth.PassengerRegistrationResult
 import com.rmm.app.core.network.ApiFailure
-import com.rmm.app.core.network.ApiResult
 import com.rmm.app.core.session.PassengerSession
 import com.rmm.app.ui.component.RMMBrandMark
 import kotlinx.coroutines.launch
@@ -131,20 +131,26 @@ fun AuthenticationScreen(
                             feedback = null
                             feedbackIsError = true
                             scope.launch {
-                                when (val result = repository.register(email, password, firstName, lastName)) {
-                                    is ApiResult.Success -> {
+                                when (val result = repository.registerAndAuthenticate(
+                                    email, password, firstName, lastName,
+                                )) {
+                                    is PassengerRegistrationResult.Authenticated -> {
+                                        onAuthenticated(result.session)
+                                    }
+                                    is PassengerRegistrationResult.VerificationRequired -> {
                                         mode = AuthenticationMode.LOGIN
                                         feedback = context.getString(
-                                            if (result.value.verificationRequired) {
-                                                R.string.auth_registration_verification_required
-                                            } else {
-                                                R.string.auth_registration_active
-                                            },
-                                            result.value.user.email,
+                                            R.string.auth_registration_verification_required,
+                                            result.email,
                                         )
                                         feedbackIsError = false
                                     }
-                                    is ApiResult.Failure -> feedback = context.authError(result.reason)
+                                    is PassengerRegistrationResult.Failure -> {
+                                        feedback = context.authError(result.reason)
+                                    }
+                                    PassengerRegistrationResult.StorageFailure -> {
+                                        feedback = context.getString(R.string.auth_session_storage_error)
+                                    }
                                 }
                                 loading = false
                             }

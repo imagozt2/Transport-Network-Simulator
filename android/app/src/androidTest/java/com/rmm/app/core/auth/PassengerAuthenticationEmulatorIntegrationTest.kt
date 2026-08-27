@@ -5,7 +5,6 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.google.gson.JsonParser
 import com.rmm.app.core.environment.RMMApiConfiguration
 import com.rmm.app.core.environment.RMMEnvironment
-import com.rmm.app.core.network.ApiResult
 import com.rmm.app.core.network.RMMApiClientFactory
 import com.rmm.app.core.session.PassengerSessionStorage
 import kotlinx.coroutines.runBlocking
@@ -47,14 +46,13 @@ class PassengerAuthenticationEmulatorIntegrationTest {
         server.enqueue(MockResponse().setResponseCode(204))
         val repository = PassengerAuthenticationRepository(context, apiFactory())
 
-        val registration = repository.register(
+        val registration = repository.registerAndAuthenticate(
             email = "maria.munoz@rmm.local",
             password = "ClaveSegura123",
             firstName = "María",
             lastName = "Muñoz",
         )
-        assertTrue(registration is ApiResult.Success)
-        assertEquals(false, (registration as ApiResult.Success).value.verificationRequired)
+        assertTrue(registration is PassengerRegistrationResult.Authenticated)
 
         val registrationRequest = server.takeRequest()
         assertEquals("POST", registrationRequest.method)
@@ -65,9 +63,7 @@ class PassengerAuthenticationEmulatorIntegrationTest {
             assertEquals("es-ES", body["locale"].asString)
         }
 
-        val authentication = repository.login("maria.munoz@rmm.local", "ClaveSegura123")
-        assertTrue(authentication is AuthenticationResult.Authenticated)
-        val session = (authentication as AuthenticationResult.Authenticated).session
+        val session = (registration as PassengerRegistrationResult.Authenticated).session
         assertEquals("María", session.user.firstName)
         assertNotNull(PassengerSessionStorage.get(context).load())
 
