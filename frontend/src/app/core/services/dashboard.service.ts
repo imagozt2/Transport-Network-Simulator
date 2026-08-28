@@ -24,7 +24,7 @@ export class DashboardService {
       devices: this.deviceOperationsService.getOperations()
     }).pipe(
       map(({ lines, stations, trains, depots, devices }) => ({
-        lineCount: lines.activeLineCount,
+        lineCount: lines.lines.length,
         stationCount: stations.stationCount,
         totalFleet: trains.summary.activeFleet,
         trainsInService: trains.summary.trainsInService,

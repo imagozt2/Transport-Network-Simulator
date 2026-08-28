@@ -16,7 +16,7 @@ describe('DashboardService', () => {
           provide: LineOperationsService,
           useValue: {
             getOperations: () => of({
-              activeLineCount: 6,
+              activeLineCount: 0,
               lines: [{
                 id: 1,
                 code: 'L1',
@@ -91,7 +91,7 @@ describe('DashboardService', () => {
 
     service.getSummary().subscribe((summary) => {
       expect(summary).toEqual({
-        lineCount: 6,
+        lineCount: 1,
         stationCount: 50,
         totalFleet: 242,
         trainsInService: 84,
