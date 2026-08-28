@@ -21,6 +21,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.rmm.app.R
 import com.rmm.app.core.session.PassengerSession
+import com.rmm.app.core.preferences.DisplayPreferences
 import com.rmm.app.ui.component.RMMTopAppBar
 import com.rmm.app.ui.screen.account.AccountScreen
 import com.rmm.app.ui.screen.home.HomeScreen
@@ -31,6 +32,8 @@ import com.rmm.app.ui.screen.tickets.TicketsScreen
 fun RMMNavigation(
     session: PassengerSession,
     onLoggedOut: () -> Unit,
+    displayPreferences: DisplayPreferences,
+    onDisplayPreferencesChanged: (DisplayPreferences) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val navController = rememberNavController()
@@ -86,6 +89,8 @@ fun RMMNavigation(
             navController = navController,
             session = session,
             onLoggedOut = onLoggedOut,
+            displayPreferences = displayPreferences,
+            onDisplayPreferencesChanged = onDisplayPreferencesChanged,
             modifier = Modifier.padding(contentPadding),
         )
     }
@@ -96,6 +101,8 @@ private fun RMMNavHost(
     navController: NavHostController,
     session: PassengerSession,
     onLoggedOut: () -> Unit,
+    displayPreferences: DisplayPreferences,
+    onDisplayPreferencesChanged: (DisplayPreferences) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     NavHost(
@@ -116,6 +123,8 @@ private fun RMMNavHost(
             AccountScreen(
                 session = session,
                 onLoggedOut = onLoggedOut,
+                displayPreferences = displayPreferences,
+                onDisplayPreferencesChanged = onDisplayPreferencesChanged,
             )
         }
     }

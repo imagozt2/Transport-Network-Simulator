@@ -178,6 +178,7 @@ private fun LoginForm(
     feedbackIsError: Boolean,
     onSubmit: (String, String) -> Unit,
 ) {
+    val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val emailFocus = remember { FocusRequester() }
     val passwordFocus = remember { FocusRequester() }
@@ -188,7 +189,7 @@ private fun LoginForm(
     Text(stringResource(R.string.auth_login_title), style = MaterialTheme.typography.titleLarge)
     Spacer(Modifier.height(16.dp))
     val submit = {
-        validation = validateLogin(email, password)
+        validation = validateLogin(context, email, password)
         if (validation == null) {
             focusManager.clearFocus()
             onSubmit(email, password)
@@ -225,6 +226,7 @@ private fun RegistrationForm(
     feedbackIsError: Boolean,
     onSubmit: (String, String, String, String) -> Unit,
 ) {
+    val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val firstNameFocus = remember { FocusRequester() }
     val lastNameFocus = remember { FocusRequester() }
@@ -241,6 +243,7 @@ private fun RegistrationForm(
 
     val submit = {
         validation = validateRegistration(
+            context,
             firstName, lastName, email, password, confirmation, termsAccepted,
         )
         if (validation == null) {
@@ -442,13 +445,14 @@ private fun SubmitButton(loading: Boolean, label: Int, onClick: () -> Unit) {
     }
 }
 
-private fun validateLogin(email: String, password: String): String? = when {
-    !Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches() -> "Introduce un correo valido"
-    password.isBlank() -> "Introduce tu contrasena"
+private fun validateLogin(context: android.content.Context, email: String, password: String): String? = when {
+    !Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches() -> context.getString(R.string.auth_validation_email)
+    password.isBlank() -> context.getString(R.string.auth_validation_password_required)
     else -> null
 }
 
 private fun validateRegistration(
+    context: android.content.Context,
     firstName: String,
     lastName: String,
     email: String,
@@ -456,13 +460,13 @@ private fun validateRegistration(
     confirmation: String,
     termsAccepted: Boolean,
 ): String? = when {
-    firstName.isBlank() || lastName.isBlank() -> "Introduce tu nombre y apellidos"
-    !Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches() -> "Introduce un correo valido"
-    password.length !in 12..72 -> "La contrasena debe tener entre 12 y 72 caracteres"
+    firstName.isBlank() || lastName.isBlank() -> context.getString(R.string.auth_validation_name)
+    !Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches() -> context.getString(R.string.auth_validation_email)
+    password.length !in 12..72 -> context.getString(R.string.auth_validation_password_length)
     !password.any(Char::isLowerCase) || !password.any(Char::isUpperCase) || !password.any(Char::isDigit) ->
-        "La contrasena debe incluir mayusculas, minusculas y numeros"
-    password != confirmation -> "Las contrasenas no coinciden"
-    !termsAccepted -> "Debes aceptar los terminos y condiciones"
+        context.getString(R.string.auth_validation_password_complexity)
+    password != confirmation -> context.getString(R.string.auth_validation_password_mismatch)
+    !termsAccepted -> context.getString(R.string.auth_validation_terms)
     else -> null
 }
 
