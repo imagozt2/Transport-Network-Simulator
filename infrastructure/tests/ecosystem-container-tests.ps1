@@ -15,6 +15,10 @@ $backendUsername = "rmm-backend"
 $backendPassword = "backend-container-test-password"
 $machineUsername = "RMM-TM-ST046-01"
 $machinePassword = "machine-container-test-password"
+$entryValidatorUsername = "RMM-EN-ST046-01"
+$entryValidatorPassword = "entry-validator-test-password"
+$exitValidatorUsername = "RMM-EX-ST020-01"
+$exitValidatorPassword = "exit-validator-test-password"
 
 function Get-FreeTcpPort {
     $listener = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, 0)
@@ -65,10 +69,12 @@ function Wait-ForBackendMqttConnection {
 function Start-MqttCapture {
     param(
         [Parameter(Mandatory)][string]$Topic,
-        [Parameter(Mandatory)][string]$ContainerPath
+        [Parameter(Mandatory)][string]$ContainerPath,
+        [string]$Username = $machineUsername,
+        [string]$Password = $machinePassword
     )
     & docker exec --detach $env:MOSQUITTO_CONTAINER_NAME sh -c `
-        "mosquitto_sub -h 127.0.0.1 -p 1883 -u '$machineUsername' -P '$machinePassword' -t '$Topic' -q 1 -C 1 -W 20 > '$ContainerPath' 2>'$ContainerPath.err'"
+        "mosquitto_sub -h 127.0.0.1 -p 1883 -u '$Username' -P '$Password' -t '$Topic' -q 1 -C 1 -W 20 > '$ContainerPath' 2>'$ContainerPath.err'"
     if ($LASTEXITCODE -ne 0) { throw "No se pudo iniciar el suscriptor MQTT de prueba" }
     Start-Sleep -Milliseconds 750
 }
@@ -322,6 +328,102 @@ function Test-TicketMachineRechargeFlow {
     }
 }
 
+function Invoke-ValidatorRequest {
+    param(
+        [Parameter(Mandatory)][string]$Username,
+        [Parameter(Mandatory)][string]$Password,
+        [Parameter(Mandatory)][string]$Direction,
+        [Parameter(Mandatory)][string]$StationCode,
+        [Parameter(Mandatory)][string]$QrValue,
+        [Parameter(Mandatory)][string]$ExpectedDecision,
+        [string]$ExpectedReason
+    )
+
+    $messageId = [Guid]::NewGuid().ToString()
+    $validationReference = [Guid]::NewGuid().ToString()
+    $occurredAt = [DateTimeOffset]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+    $requestFileName = "validator-$validationReference.json"
+    $requestFile = Join-Path $runtimeDirectory $requestFileName
+    $responseContainerPath = "/tmp/validator-response-$validationReference.json"
+    $request = @{
+        schemaVersion = 1
+        messageId = $messageId
+        correlationId = $null
+        type = "ticket.validation-requested"
+        deviceCode = $Username
+        occurredAt = $occurredAt
+        sentAt = $occurredAt
+        payload = @{
+            validationReference = $validationReference
+            direction = $Direction
+            stationCode = $StationCode
+            qrValue = $QrValue
+        }
+    } | ConvertTo-Json -Depth 5 -Compress
+    [IO.File]::WriteAllText($requestFile, $request, [Text.UTF8Encoding]::new($false))
+
+    Start-MqttCapture -Topic "rmm/v1/devices/$Username/responses" `
+        -ContainerPath $responseContainerPath -Username $Username -Password $Password
+    & docker exec $env:MOSQUITTO_CONTAINER_NAME mosquitto_pub `
+        -h 127.0.0.1 -p 1883 -u $Username -P $Password `
+        -t "rmm/v1/devices/$Username/requests/validations" `
+        -q 1 -f "/mosquitto/security/$requestFileName"
+    if ($LASTEXITCODE -ne 0) {
+        throw "La validadora $Username no pudo publicar su solicitud"
+    }
+
+    $response = Wait-MqttCapture -ContainerPath $responseContainerPath | ConvertFrom-Json
+    if ($response.type -ne "ticket.validation-decided" `
+            -or $response.correlationId -ne $messageId `
+            -or $response.payload.validationReference -ne $validationReference `
+            -or $response.payload.decision -ne $ExpectedDecision) {
+        throw "La decisión de $Direction no corresponde a la solicitud enviada"
+    }
+    if ($ExpectedReason -and $response.payload.reasonCode -ne $ExpectedReason) {
+        throw "Se esperaba $ExpectedReason y se recibió $($response.payload.reasonCode)"
+    }
+    return $response
+}
+
+function Test-TicketValidationJourneyFlow {
+    param([Parameter(Mandatory = $true)] $IssuedTicketCommand)
+
+    $ticket = $IssuedTicketCommand.payload.ticket
+    $entry = Invoke-ValidatorRequest `
+        -Username $entryValidatorUsername -Password $entryValidatorPassword `
+        -Direction "ENTRY" -StationCode "ST046" -QrValue $ticket.qrValue `
+        -ExpectedDecision "ACCEPTED" -ExpectedReason "VALID"
+    if ($entry.payload.ticketCode -ne $ticket.ticketCode) {
+        throw "La entrada aceptada no corresponde al billete emitido"
+    }
+
+    Invoke-ValidatorRequest `
+        -Username $entryValidatorUsername -Password $entryValidatorPassword `
+        -Direction "ENTRY" -StationCode "ST046" -QrValue $ticket.qrValue `
+        -ExpectedDecision "REJECTED" -ExpectedReason "ENTRY_ALREADY_OPEN" | Out-Null
+
+    $exit = Invoke-ValidatorRequest `
+        -Username $exitValidatorUsername -Password $exitValidatorPassword `
+        -Direction "EXIT" -StationCode "ST020" -QrValue $ticket.qrValue `
+        -ExpectedDecision "ACCEPTED" -ExpectedReason "VALID"
+    if ($exit.payload.ticketCode -ne $ticket.ticketCode) {
+        throw "La salida aceptada no corresponde al billete emitido"
+    }
+
+    $escapedTicketCode = $ticket.ticketCode.Replace("'", "''")
+    $result = & docker exec $env:MYSQL_CONTAINER_NAME `
+        mysql -N -u root "-p$($env:MYSQL_ROOT_PASSWORD)" transport_simulator_db `
+        -e "SELECT (SELECT COUNT(*) FROM ticket_validations v WHERE v.ticket_id = t.id), (SELECT COUNT(*) FROM ticket_journeys j WHERE j.ticket_id = t.id AND j.status = 'CLOSED'), (SELECT COUNT(*) FROM operational_logs l JOIN devices d ON d.id = l.device_id WHERE d.code IN ('$entryValidatorUsername', '$exitValidatorUsername') AND l.log_origin = 'MQTT' AND l.event_source = 'REAL' AND l.event_type = 'VALIDATION_REQUESTED'), t.remaining_trips FROM tickets t WHERE t.code = '$escapedTicketCode';"
+    if ($LASTEXITCODE -ne 0) { throw "No se pudo comprobar el trayecto validado" }
+    $counts = (($result -join "`n").Trim() -split "\s+")
+    if ($counts.Count -ne 4 -or $counts[0] -ne "2" -or $counts[1] -ne "1" `
+            -or [int]$counts[2] -lt 3 -or $counts[3] -ne "4") {
+        throw "Las validaciones, el trayecto, los logs y el saldo no son coherentes " +
+            "(validaciones=$($counts[0]); trayectos=$($counts[1]); " +
+            "logs=$($counts[2]); viajes_restantes=$($counts[3]))"
+    }
+}
+
 function Test-OperatorWebAccess {
     $frontendDirectory = Join-Path $repositoryRoot "frontend"
     $npmCommand = Get-Command npm -All -ErrorAction SilentlyContinue |
@@ -377,6 +479,8 @@ try {
     @(
         "$backendUsername=$backendPassword"
         "$machineUsername=$machinePassword"
+        "$entryValidatorUsername=$entryValidatorPassword"
+        "$exitValidatorUsername=$exitValidatorPassword"
     ) | Set-Content -LiteralPath $usersFile -Encoding utf8
     & (Join-Path $repositoryRoot "infrastructure\mosquitto\scripts\initialize-security.ps1") `
             -UsersFile $usersFile -RuntimeDirectory $runtimeDirectory
@@ -431,6 +535,9 @@ try {
     Test-TicketMachineRechargeFlow `
         -IssuedTicketCommand $issuedTicketCommand -BackendPort $backendPort
 
+    Write-Host "Comprobando entrada, rechazo duplicado, salida y trayecto completo..."
+    Test-TicketValidationJourneyFlow -IssuedTicketCommand $issuedTicketCommand
+
     Write-Host "Comprobando autenticación y consultas funcionales del ecosistema..."
     Test-OperatorApiFlow -Port $backendPort
 
@@ -439,7 +546,7 @@ try {
         Test-OperatorWebAccess
     }
 
-    Write-Host "Ecosistema validado: infraestructura, autenticación y consultas operativas funcionan."
+    Write-Host "Ecosistema validado: compra, recarga, validaciones, trayecto, logs y acceso funcionan."
 } finally {
     try { Invoke-Compose -Arguments @("down", "--volumes", "--remove-orphans") }
     catch { Write-Warning "No se pudieron retirar todos los contenedores de prueba: $_" }
