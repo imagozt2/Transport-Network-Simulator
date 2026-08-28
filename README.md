@@ -1,12 +1,12 @@
 # Transport Network Simulator
 
-Simulador del centro de control de la red de metro de **Macegocia**, una ciudad ficticia. El proyecto
-permite consultar el estado operativo de la infraestructura y explorar visualmente sus líneas y
-estaciones desde una aplicación web.
+Ecosistema de simulación de la red de metro de **Macegocia**, una ciudad ficticia. Reúne un centro
+de control web, una aplicación Android para pasajeros, dos máquinas Qt, una API central, MySQL y
+mensajería MQTT autenticada.
 
-El repositorio reconstruye de forma progresiva un prototipo anterior, aplicando una arquitectura más
-controlada, pruebas automatizadas, ramas de trabajo, pull requests y un pipeline de integración
-continua.
+El repositorio reconstruye y amplía un prototipo anterior mediante una arquitectura controlada,
+contratos versionados, pruebas automatizadas, ramas de trabajo, pull requests y un pipeline de
+integración continua.
 
 ## Estado actual
 
@@ -23,24 +23,25 @@ La aplicación incluye actualmente:
   situación operativa en tiempo real;
 - una sección de cocheras con ocupación, distribución de flota, navegación contextual a sus trenes
   y ventanas de doce horas para movimientos de entrada y salida;
-- una sección de máquinas con indicadores por estado y tipo, tarjetas compactas, filtros y acceso
-  contextual a sus logs;
-- una pantalla global de logs con filtros combinables —incluido el tipo de máquina— y navegación
-  directa entre páginas;
+- una sección de máquinas con indicadores por estado, tipo y conectividad MQTT, tarjetas compactas,
+  filtros y acceso contextual a sus logs;
+- una pantalla global de logs con filtros combinables, trazabilidad de eventos reales, simulados y
+  administrativos, referencias de billetes, navegación directa entre páginas y creación contextual
+  de incidencias;
 - una sección de títulos de transporte con el catálogo tarifario, sus reglas de uso y filtros por
   producto y estado;
-- emisión compensatoria gratuita de billetes desde máquinas de venta, vinculada al operador y
-  registrada en los logs operativos;
+- emisión administrativa gratuita hacia carteras digitales o máquinas de venta, vinculada al
+  operador y registrada en los logs operativos;
 - autenticación de operadores mediante sesiones protegidas, rutas privadas y bloqueo temporal ante
   intentos fallidos;
 - pantallas personales de cuenta y configuración accesibles desde la cabecera;
-- una sección administrativa para consultar, filtrar y gestionar las cuentas de pasajeros de la
-  futura RMM App;
+- una sección administrativa para consultar, filtrar y gestionar las cuentas de pasajeros de
+  RMM App;
 - un ciclo administrativo para crear, bloquear, reactivar y eliminar cuentas de pasajeros;
 - una sección de incidencias con filtros, detalle, comentarios, cambios de estado y trazabilidad del
   operador responsable;
-- interfaz disponible en español e inglés, con preferencias locales persistentes de idioma,
-  reducción de movimiento y densidad visual;
+- interfaz disponible en español e inglés, con preferencias persistentes de zona horaria y tema por
+  operador, además de idioma y reducción de movimiento locales;
 - recorridos ordenados y correspondencias entre líneas;
 - calendarios, franjas horarias, frecuencias y tiempos de recorrido configurables;
 - flota regular, de reserva e histórica diferenciada;
@@ -51,10 +52,27 @@ La aplicación incluye actualmente:
 - pruebas unitarias del backend y del frontend;
 - escenarios integrados de operación, administración, sesión y navegación contextual;
 - controles de accesibilidad, diseño adaptable y suspensión de consultas en pestañas ocultas;
-- compilación automática de ambas aplicaciones mediante GitHub Actions.
+- compilación automática del backend, el frontend, RMM App y las aplicaciones Qt mediante GitHub
+  Actions.
 
-El proyecto continúa en desarrollo. En fases posteriores se incorporarán nuevas funciones al centro
-de control y simuladores externos para validación y compra de billetes.
+El ecosistema funcional incluye la compra desde RMM App y la máquina de venta Qt, la cartera de
+billetes, la vinculación de soportes físicos, la validación de entrada y salida mediante MQTT y el
+historial de desplazamientos. Los pagos y los dispositivos son simulados y no representan sistemas
+de producción.
+
+La aceptación final automatizada recorre una compra y una recarga, una entrada válida, el rechazo de
+una segunda entrada sobre el mismo billete y la salida que cierra el desplazamiento. También contrasta
+el saldo, los logs MQTT y los registros persistidos. Las pruebas de interfaz cubren los temas claro y
+oscuro, las preferencias de idioma, los errores administrativos recuperables y el restablecimiento
+de las máquinas Qt después de cada resultado.
+
+La [guía final de ejecución y validación](docs/guia-ecosistema-rmm.md) reúne la preparación, el
+arranque de todos los componentes, las comprobaciones funcionales y automatizadas, la parada segura
+y el diagnóstico del ecosistema.
+
+El [estado final y las limitaciones](docs/estado-final-y-limitaciones.md) delimitan qué funciones
+están implementadas, qué partes son simuladas y qué integraciones quedan fuera del alcance del
+proyecto.
 
 ## Tecnologías
 
@@ -63,7 +81,9 @@ de control y simuladores externos para validación y compra de billetes.
 | Frontend | Angular 21, TypeScript, RxJS, Zone.js y SVG |
 | Backend | Java 21, Spring Boot 4, Spring Web MVC y Spring Data JPA |
 | Base de datos | MySQL 8 y scripts SQL versionados |
-| Pruebas | JUnit, Mockito, MockMvc y Vitest |
+| Aplicación Android | Kotlin, Jetpack Compose y Gradle |
+| Máquinas simuladas | C++20, Qt 6, Qt Widgets, Qt MQTT y CMake |
+| Pruebas | JUnit, Mockito, MockMvc, Vitest y Qt Test |
 | Integración continua | GitHub Actions |
 
 ## Estructura del repositorio
@@ -71,11 +91,18 @@ de control y simuladores externos para validación y compra de billetes.
 ```text
 Transport-Network-Simulator/
 ├── .github/workflows/   # Pipeline de integración continua
+├── android/             # Aplicación para pasajeros desarrollada con Kotlin y Compose
 ├── backend/             # API REST desarrollada con Spring Boot
+├── config/              # Direcciones compartidas de los servicios locales
 ├── database/            # Esquema, datos iniciales y verificaciones de MySQL
 ├── docs/                # Documentación funcional y contratos de API
-└── frontend/            # Aplicación web desarrollada con Angular
+├── frontend/            # Aplicación web desarrollada con Angular
+├── infrastructure/      # Broker MQTT y recursos de infraestructura local
+└── qt/                  # Máquinas simuladas desarrolladas con Qt y C++
 ```
+
+La [configuración local de servicios](config/README.md) centraliza las direcciones utilizadas por
+RMM App y las aplicaciones Qt sin almacenar credenciales.
 
 ## Requisitos
 
@@ -85,7 +112,8 @@ Para ejecutar el proyecto localmente se necesita:
 - Node.js 20 o posterior;
 - npm;
 - MySQL 8;
-- cliente de MySQL disponible desde la terminal para cargar los scripts.
+- cliente de MySQL disponible desde la terminal para cargar los scripts;
+- Docker Desktop con Docker Compose para ejecutar la infraestructura local coordinada.
 
 ## Inicialización de la base de datos
 
@@ -184,6 +212,42 @@ npm start
 La aplicación estará disponible en `http://localhost:4200`. Las rutas operativas requieren iniciar
 sesión y una autenticación correcta abre siempre el Panel General.
 
+### Aplicaciones cliente
+
+RMM App y las máquinas Qt disponen de una guía específica con la configuración compartida, la
+ejecución desde los IDE, los comandos de compilación y la ubicación de los artefactos:
+
+- [Ejecución de las aplicaciones cliente](docs/ejecucion-aplicaciones-cliente.md)
+- [Arquitectura de RMM App](docs/arquitectura-rmm-app.md)
+- [Cartera de billetes de RMM App](docs/cartera-rmm-app.md)
+
+### Entorno Docker
+
+MySQL, Mosquitto y el backend pueden ejecutarse como un entorno coordinado. Antes del primer inicio,
+crea la configuración local y sustituye todos sus marcadores:
+
+```powershell
+Copy-Item .env.example .env
+Copy-Item infrastructure/mosquitto/mqtt-users.example `
+  infrastructure/mosquitto/mqtt-users.local
+.\infrastructure\mosquitto\scripts\initialize-security.ps1
+docker compose up -d --build
+docker compose ps
+```
+
+El backend queda disponible en `127.0.0.1:8080`, Mosquitto en `127.0.0.1:1883` y MySQL en
+`127.0.0.1:3307`, evitando interferir con una instalación local de MySQL en el puerto `3306`.
+
+Los scripts de `database/` se ejecutan automáticamente solo cuando el volumen de MySQL está vacío.
+La configuración y prueba manual del broker se describen en la
+[guía de Mosquitto](infrastructure/mosquitto/README.md).
+
+Cuando exista material criptográfico aprovisionado, el archivo `.env.tls.example` permite sustituir
+el listener local por MQTT sobre TLS con certificados de cliente obligatorios.
+
+La preparación completa, la topología, las comprobaciones de salud, el ciclo de vida de los datos y
+el diagnóstico se recogen en la [guía de infraestructura local](docs/infraestructura-local.md).
+
 ## Endpoints disponibles
 
 | Método | Ruta | Descripción |
@@ -193,6 +257,17 @@ sesión y una autenticación correcta abre siempre el Panel General.
 | `POST` | `/api/auth/login` | Autentica al operador y crea su sesión. |
 | `GET` | `/api/auth/me` | Devuelve la cuenta asociada a la sesión actual. |
 | `POST` | `/api/auth/logout` | Invalida la sesión del operador. |
+| `POST` | `/api/rmm-app/v1/auth/register` | Registra una cuenta de pasajero pendiente de verificación. |
+| `POST` | `/api/rmm-app/v1/auth/sessions` | Autentica al pasajero y registra su dispositivo móvil. |
+| `POST` | `/api/rmm-app/v1/auth/session-refreshes` | Rota los tokens de una sesión móvil. |
+| `GET` | `/api/rmm-app/v1/me` | Devuelve la cuenta del pasajero autenticado. |
+| `GET` | `/api/rmm-app/v1/me/sessions` | Lista las sesiones móviles activas de la cuenta. |
+| `GET` | `/api/rmm-app/v1/me/devices` | Lista los dispositivos Android registrados. |
+| `GET` | `/api/rmm-app/v1/tickets` | Lista y filtra los billetes del pasajero autenticado. |
+| `GET` | `/api/rmm-app/v1/tickets/{ticketCode}/qr` | Entrega bajo demanda el QR digital sin permitir caché. |
+| `GET` | `/api/rmm-app/v1/tickets/{ticketCode}/history` | Devuelve el historial paginado de un billete propio. |
+| `GET` | `/api/rmm-app/v1/journeys/history` | Devuelve los desplazamientos paginados del pasajero autenticado. |
+| `POST` | `/api/rmm-app/v1/ticket-links` | Vincula un soporte físico mediante QR y código privado. |
 | `GET` | `/api/dashboard/summary` | Devuelve el resumen persistido legado; el Panel General utiliza las consultas operativas. |
 | `GET` | `/api/network-map` | Devuelve las líneas activas y sus estaciones ordenadas. |
 | `GET` | `/api/network-map/journeys` | Calcula un trayecto entre dos estaciones y devuelve sus tramos ordenados. |
@@ -235,11 +310,41 @@ npm test -- --watch=false
 npm run build -- --configuration production
 ```
 
-El workflow de GitHub Actions compila el backend y el frontend en cada pull request dirigida a `main`
-y en cada actualización de esa rama.
+El workflow de GitHub Actions compila el backend, el frontend, RMM App y las aplicaciones Qt en cada
+pull request dirigida a `main` o `develop/ecosystem` y en cada actualización de esas ramas. También
+ejecuta las pruebas de Android, Qt y MQTT, conserva temporalmente sus artefactos y valida en
+contenedores aislados la integración del backend con MySQL y Mosquitto.
+
+La validación integral de contenedores puede reproducirse localmente con Docker Desktop iniciado:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\infrastructure\tests\ecosystem-container-tests.ps1
+```
 
 ## Documentación
 
+- [Estado final y limitaciones del proyecto](docs/estado-final-y-limitaciones.md)
+- [Guía final de ejecución y validación del ecosistema RMM](docs/guia-ecosistema-rmm.md)
+- [Arquitectura, componentes y responsabilidades del ecosistema RMM](docs/arquitectura-ecosistema.md)
+- [Infraestructura local del ecosistema RMM](docs/infraestructura-local.md)
+- [Ejecución de RMM App y las aplicaciones Qt](docs/ejecucion-aplicaciones-cliente.md)
+- [Máquina de venta de billetes Qt](docs/maquina-venta.md)
+- [Máquina validadora de billetes Qt](docs/maquina-validadora.md)
+- [Ciclo de vida de los billetes RMM](docs/ciclo-vida-billetes.md)
+- [Dominio de billetes y reglas de los productos](docs/dominio-billetes.md)
+- [Emisión administrativa de billetes](docs/emision-administrativa-billetes.md)
+- [Seguridad, contrato y firma de los códigos QR](docs/contrato-codigos-qr.md)
+- [Contratos REST para RMM App](docs/contratos-rest-rmm-app.md)
+- [Autenticación, sesiones y dispositivos de RMM App](docs/autenticacion-rmm-app.md)
+- [Cartera, QR e historial de billetes en RMM App](docs/cartera-rmm-app.md)
+- [Compra de billetes desde RMM App](docs/compra-billetes-rmm-app.md)
+- [Consulta de la red desde RMM App](docs/consulta-red-rmm-app.md)
+- [Historial de desplazamientos en RMM App](docs/historial-desplazamientos-rmm-app.md)
+- [Topics y mensajes MQTT del ecosistema RMM](docs/contrato-mqtt.md)
+- [Integración MQTT del backend](docs/integracion-mqtt-backend.md)
+- [Identidad y autenticación de las máquinas RMM](docs/identidad-maquinas.md)
+- [Flujos online y sin conexión del ecosistema RMM](docs/flujos-conectividad.md)
 - [Integración final de la aplicación web](docs/integracion-aplicacion-web.md)
 - [Acceso y cuentas de operador](docs/acceso-operadores.md)
 - [Administración de usuarios de RMM App](docs/usuarios-rmm-app.md)

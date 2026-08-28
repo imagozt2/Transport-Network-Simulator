@@ -61,12 +61,6 @@ export class I18nService {
     return new Intl.NumberFormat(this.locale(), options).format(value);
   }
 
-  formatDate(value: Date | string, options?: Intl.DateTimeFormatOptions): string {
-    const date = value instanceof Date ? value : new Date(value);
-    if (Number.isNaN(date.getTime())) return '';
-    return new Intl.DateTimeFormat(this.locale(), options).format(date);
-  }
-
   private readInitialLanguage(): AppLanguage {
     if (!isPlatformBrowser(this.platformId)) return DEFAULT_LANGUAGE;
     const storedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);

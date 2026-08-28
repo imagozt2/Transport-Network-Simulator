@@ -4,12 +4,15 @@ Las secciones de Máquinas y Logs permiten supervisar los dispositivos instalado
 consultar los eventos que generan automáticamente. Ambas pantallas están relacionadas, pero tienen
 responsabilidades distintas:
 
-- **Máquinas** muestra el inventario y el estado operativo actual de cada dispositivo.
-- **Logs** conserva el historial paginado de eventos y permite investigarlo mediante filtros.
+- **Máquinas** muestra el inventario, el estado operativo y la conectividad MQTT actual de cada
+  dispositivo.
+- **Logs** conserva el historial paginado de eventos simulados, reales y administrativos, y permite
+  investigarlo mediante filtros.
 
 La pantalla de Máquinas no genera eventos manualmente ni muestra paneles de logs incrustados. Los
-eventos proceden exclusivamente del ciclo automático descrito en
-[Ciclo de eventos de las máquinas](eventos-maquinas.md) y, en el futuro, de la integración MQTT.
+eventos proceden del ciclo automático descrito en
+[Ciclo de eventos de las máquinas](eventos-maquinas.md), de las máquinas reales conectadas mediante
+MQTT y de operaciones administrativas trazables, como las emisiones compensatorias.
 
 ## Tipos de máquinas
 
@@ -33,6 +36,16 @@ Los estados operativos son:
 | `MAINTENANCE` | El dispositivo se encuentra en mantenimiento. |
 | `ERROR` | Se ha registrado un fallo que requiere atención. |
 
+El estado operativo no debe confundirse con la conectividad MQTT. Una máquina puede estar
+operativamente `ONLINE` sin estar gestionada por MQTT, o conservar su último estado conocido después
+de una desconexión. La conectividad se expresa por separado:
+
+| Conectividad | Significado |
+| --- | --- |
+| `CONNECTED` | La máquina gestionada por MQTT mantiene presencia activa. |
+| `DISCONNECTED` | La máquina está gestionada por MQTT, pero no tiene presencia activa. |
+| `NOT_MONITORED` | La máquina no está configurada para supervisión MQTT real. |
+
 ## Pantalla de Máquinas
 
 La ruta del frontend es:
@@ -48,17 +61,20 @@ Los indicadores generales muestran únicamente títulos y valores numéricos:
 
 - total de máquinas;
 - máquinas `ONLINE`, `OFFLINE`, en mantenimiento y con error;
-- máquinas de billetes, validadores de entrada y validadores de salida.
+- máquinas de billetes, validadores de entrada y validadores de salida;
+- máquinas conectadas por MQTT.
 
 Las tarjetas forman una lista compacta y desplegable. Su cabecera presenta nombre, código, tipo,
-estado y estación. Al desplegar una máquina aparecen su ubicación, la última conexión y la acción
-**Ver logs**. El tipo y el estado no se repiten dentro del detalle.
+estado operativo, conectividad y estación. Al desplegar una máquina aparecen su ubicación, la última
+conexión operativa, la última comunicación MQTT, la versión de software disponible, el origen y la
+fecha del último evento, además de la acción **Ver logs**.
 
 Los filtros se aplican localmente sobre la instantánea recibida y pueden combinarse:
 
 - búsqueda por código, nombre o estación;
 - tipo de dispositivo;
 - estado operativo;
+- conectividad MQTT;
 - estación.
 
 La sección de Estaciones puede abrir esta pantalla mediante
@@ -110,12 +126,23 @@ La respuesta contiene:
 | `summary.filteredDevices` | Número de máquinas incluidas tras aplicar filtros del backend. |
 | `summary.byType` | Recuento completo agrupado por tipo. |
 | `summary.byStatus` | Recuento completo agrupado por estado. |
+| `summary.byConnectivity` | Recuento completo agrupado por conectividad MQTT real. |
 | `devices` | Máquinas que cumplen los filtros. |
 
 Cada elemento de `devices` incluye su identificador, código, nombre, tipo, estado,
-`lastConnectionAt` y la estación asociada. El backend puede incluir además el último evento para
-otros consumidores, pero la pantalla de Máquinas no lo representa: la consulta histórica se
-centraliza en Logs.
+`lastConnectionAt`, la estación asociada, el último evento y el bloque `connectivity`. Este bloque
+distingue presencia MQTT y estado operativo, e incluye cuando están disponibles
+`lastCommunicationAt`, `lastPresenceAt`, `lastStatusAt`, `serviceMode`, `softwareVersion` y
+`uptimeSeconds`.
+
+El indicador **Conectadas por MQTT** utiliza `summary.byConnectivity.CONNECTED` entregado por el
+backend. No se deduce en el navegador a partir del estado operativo ni se sustituye por un valor
+fijo. Una máquina solo figura conectada después de que el backend haya procesado su presencia o
+estado MQTT autenticados.
+
+Los mensajes MQTT retrasados se guardan en el historial, pero no pueden sustituir el estado ni la
+última comunicación más recientes. De este modo, la vista actual y la trazabilidad histórica se
+mantienen coherentes aunque el broker entregue mensajes fuera de orden.
 
 ## Pantalla global de Logs
 
@@ -134,8 +161,10 @@ proyecto original. Cada fila presenta:
 - mensaje;
 - código y nombre de la máquina;
 - estación;
-- origen;
-- referencia externa, cuando existe.
+- procedencia funcional y canal de entrada;
+- datos del billete o de la emisión, cuando existen;
+- referencia externa, cuando existe;
+- acceso contextual para crear una incidencia.
 
 Los indicadores superiores resumen la página actual y el total devuelto por el backend. Los
 recuentos de avisos y errores corresponden a los elementos visibles, mientras que el total procede
@@ -148,7 +177,7 @@ Se pueden combinar los siguientes criterios:
 | Filtro | Parámetro de API y URL | Descripción |
 | --- | --- | --- |
 | Severidad | `severity` | `DEBUG`, `INFO`, `WARNING`, `ERROR` o `CRITICAL`. |
-| Origen | `origin` | `DEVICE_SIMULATION` o `MQTT`. |
+| Canal | `origin` | `DEVICE_SIMULATION`, `MQTT` o `ADMINISTRATION`. |
 | Evento | `eventType` | Tipo concreto de evento de la máquina. |
 | Tipo de máquina | `deviceType` | `TICKET_MACHINE`, `ENTRY_VALIDATOR` o `EXIT_VALIDATOR`. |
 | Máquina | `deviceCode` | Código estable del dispositivo. |
@@ -158,6 +187,30 @@ Se pueden combinar los siguientes criterios:
 
 La pantalla lee estos parámetros al abrirse. Los valores enumerados desconocidos y las fechas con
 formato incorrecto se ignoran, evitando que un enlace mal formado rompa la consulta.
+
+### Procedencia y operaciones de billetes
+
+La tabla diferencia dos conceptos que no deben confundirse:
+
+- **Procedencia** usa `REAL`, `SIMULATED` o `ADMINISTRATIVE` para indicar si el evento pertenece a
+  un dispositivo real, a la simulación o a una operación de un operador.
+- **Canal** conserva el origen técnico persistido: `MQTT`, `DEVICE_SIMULATION` o
+  `ADMINISTRATION`.
+
+Los eventos de venta, emisión y validación se identifican visualmente y pueden incluir, cuando están
+disponibles, el tipo y el código del billete, el código de una emisión compensatoria o una referencia
+externa. Esto permite seguir una operación desde la máquina física o simulada hasta el registro
+almacenado por el centro de control.
+
+### Creación contextual de incidencias
+
+Cada fila ofrece la acción **Crear incidencia**. La navegación abre `/incidents` con el formulario
+de alta preparado a partir del evento: conserva la máquina afectada y utiliza el tipo de evento, el
+billete, la emisión compensatoria y la referencia externa para completar el título y la descripción.
+
+La relación estructurada de la incidencia se establece actualmente con la máquina. Las referencias
+de billete y emisión se conservan como contexto textual hasta que el modelo de incidencias disponga
+de relaciones específicas para esos recursos.
 
 Ejemplo de enlace filtrado:
 
@@ -227,17 +280,21 @@ La respuesta paginada tiene esta estructura:
   "logs": [
     {
       "id": 150,
-      "origin": "DEVICE_SIMULATION",
-      "eventType": "DEVICE_STATUS_CHANGED",
-      "severity": "WARNING",
-      "message": "La máquina ha cambiado de estado",
+      "origin": "MQTT",
+      "source": "REAL",
+      "eventType": "VALIDATION_ACCEPTED",
+      "severity": "INFO",
+      "message": "Entrada validada correctamente",
       "deviceId": 10,
       "deviceCode": "RMM-MB-ST001-001",
       "deviceName": "Máquina de billetes 1",
       "stationId": 1,
       "stationCode": "ST001",
       "stationName": "Los Molinos",
-      "externalReference": null,
+      "ticketCode": "RMM-TKT-000150",
+      "ticketType": null,
+      "compensatoryIssuanceCode": null,
+      "externalReference": "evt-machine-150",
       "occurredAt": "2026-07-23T11:59:55",
       "receivedAt": "2026-07-23T11:59:55"
     }
@@ -258,21 +315,21 @@ de máquina y estación se comparan sin distinguir mayúsculas y minúsculas.
 ## Flujo de datos
 
 ```text
-Simulador automático / futuro cliente MQTT
-                    │
-                    ▼
+Simulador automático / máquinas MQTT / operaciones administrativas
+                              │
+                              ▼
        registro y persistencia del evento
                     │
           ┌─────────┴─────────┐
           ▼                   ▼
- estado actual de máquina   operational_logs
+ estado y conectividad      operational_logs
           │                   │
           ▼                   ▼
 /api/devices/operations    /api/logs
           │                   │
           ▼                   ▼
-      Máquinas ──────────► Logs filtrados
-              Ver logs
+      Máquinas ──────────► Logs filtrados ──────────► Incidencias
+              Ver logs                    Crear incidencia
 ```
 
 La separación permite consultar el estado actual sin cargar todo el historial y paginar los eventos
@@ -309,6 +366,11 @@ La cobertura incluye:
 - navegación directa mediante páginas cercanas;
 - rechazo de intervalos temporales invertidos antes de consultar el repositorio;
 - representación de resultados en la pantalla de Logs.
+- separación visual entre estado operativo y conectividad MQTT;
+- conservación de la última comunicación ante mensajes reales retrasados;
+- distinción entre eventos reales, simulados y administrativos;
+- representación de ventas, emisiones, validaciones y referencias de billete;
+- navegación contextual desde un log hasta el alta de una incidencia.
 
 Las pruebas de la generación, registro y persistencia de eventos se describen en
 [Ciclo de eventos de las máquinas](eventos-maquinas.md).

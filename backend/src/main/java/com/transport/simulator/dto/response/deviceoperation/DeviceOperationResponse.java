@@ -11,6 +11,7 @@ public record DeviceOperationResponse(
         DeviceType type,
         DeviceStatus status,
         LocalDateTime lastConnectionAt,
+        DeviceConnectivityResponse connectivity,
         DeviceOperationStationResponse station,
         DeviceOperationLastEventResponse lastEvent
 ) {

@@ -2,6 +2,7 @@ package com.transport.simulator.config;
 
 import com.transport.simulator.security.RestAccessDeniedHandler;
 import com.transport.simulator.security.RestAuthenticationEntryPoint;
+import com.transport.simulator.security.PassengerBearerAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -11,6 +12,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 public class SecurityConfig {
@@ -24,7 +26,8 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             RestAuthenticationEntryPoint authenticationEntryPoint,
-            RestAccessDeniedHandler accessDeniedHandler
+            RestAccessDeniedHandler accessDeniedHandler,
+            PassengerBearerAuthenticationFilter passengerBearerAuthenticationFilter
     ) throws Exception {
         CookieCsrfTokenRepository csrfRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
         csrfRepository.setCookiePath("/");
@@ -33,15 +36,31 @@ public class SecurityConfig {
                 .cors(cors -> {
                 })
                 .csrf(csrf -> csrf
+                        .ignoringRequestMatchers(
+                                "/api/rmm-app/v1/**",
+                                "/api/public/v1/ticket-recharges/**"
+                        )
                         .csrfTokenRepository(csrfRepository))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(
                                 "/api/health",
+                                "/api/public/v1/ticket-products",
+                                "/api/public/v1/stations",
+                                "/api/public/v1/journeys",
+                                "/api/public/v1/ticket-recharges/**",
                                 "/api/auth/csrf",
-                                "/api/auth/login"
+                                "/api/auth/login",
+                                "/api/rmm-app/v1/auth/register"
                         ).permitAll()
-                        .requestMatchers("/api/auth/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/rmm-app/v1/auth/sessions").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/rmm-app/v1/auth/session-refreshes").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/rmm-app/v1/auth/email-verification-requests").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/rmm-app/v1/auth/email-verifications").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/rmm-app/v1/auth/password-recovery-requests").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/rmm-app/v1/auth/password-resets").permitAll()
+                        .requestMatchers("/api/rmm-app/v1/**").hasRole("PASSENGER")
+                        .requestMatchers("/api/auth/**").hasAnyRole("OPERATOR", "ADMINISTRATOR")
                         .requestMatchers(
                                 HttpMethod.PATCH,
                                 "/api/admin/passenger-users/**"
@@ -54,7 +73,7 @@ public class SecurityConfig {
                                 HttpMethod.DELETE,
                                 "/api/admin/passenger-users/**"
                         ).hasRole("ADMINISTRATOR")
-                        .requestMatchers("/api/**").authenticated()
+                        .requestMatchers("/api/**").hasAnyRole("OPERATOR", "ADMINISTRATOR")
                         .anyRequest().permitAll())
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(authenticationEntryPoint)
@@ -65,6 +84,10 @@ public class SecurityConfig {
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
                 .logout(logout -> logout.disable())
+                .addFilterBefore(
+                        passengerBearerAuthenticationFilter,
+                        UsernamePasswordAuthenticationFilter.class
+                )
                 .build();
     }
 }

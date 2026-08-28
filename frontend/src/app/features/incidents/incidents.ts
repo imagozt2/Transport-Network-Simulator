@@ -1,4 +1,7 @@
 import { Component, HostListener, inject, OnInit } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, ParamMap } from '@angular/router';
 
 import {
   Incident,
@@ -12,7 +15,7 @@ import {
 } from '../../core/models/incident.model';
 import { IncidentsService } from '../../core/services/incidents.service';
 import { OperatorAuthService } from '../../core/services/operator-auth.service';
-import { formatDateTime } from '../../core/utils/temporal-formatters';
+import { TemporalFormatService } from '../../core/services/temporal-format.service';
 
 type OptionalStatus = IncidentStatus | 'ALL';
 type OptionalPriority = IncidentPriority | 'ALL';
@@ -20,12 +23,15 @@ type OptionalCategory = IncidentCategory | 'ALL';
 
 @Component({
   selector: 'app-incidents',
+  imports: [FormsModule],
   templateUrl: './incidents.html',
   styleUrls: ['./incidents.css', './incidents-detail.css']
 })
 export class Incidents implements OnInit {
   private readonly incidentsService = inject(IncidentsService);
+  private readonly temporalFormat = inject(TemporalFormatService);
   private readonly operatorAuthService = inject(OperatorAuthService);
+  private readonly route = inject(ActivatedRoute, { optional: true });
 
   incidents: Incident[] = [];
   summary: IncidentSummary = {
@@ -55,6 +61,10 @@ export class Incidents implements OnInit {
   createAssignToMe = true;
   createSubmitting = false;
   createError = '';
+  createValidationVisible = false;
+  createAffectedDeviceId: number | null = null;
+  createAffectedDeviceCode: string | null = null;
+  createContextTicketCode: string | null = null;
   editing = false;
   editTitle = '';
   editDescription = '';
@@ -62,6 +72,7 @@ export class Incidents implements OnInit {
   editPriority: IncidentPriority = 'MEDIUM';
   editSubmitting = false;
   editError = '';
+  editValidationVisible = false;
   workflowSubmitting = false;
   workflowError = '';
   statusNote = '';
@@ -91,6 +102,9 @@ export class Incidents implements OnInit {
 
   ngOnInit(): void {
     this.loadIncidents(0);
+    if (this.route?.snapshot.queryParamMap.get('create') === 'true') {
+      this.openCreateDialogFromContext(this.route.snapshot.queryParamMap);
+    }
   }
 
   loadIncidents(page = this.currentPage): void {
@@ -164,6 +178,10 @@ export class Incidents implements OnInit {
     this.createPriority = 'MEDIUM';
     this.createAssignToMe = true;
     this.createError = '';
+    this.createValidationVisible = false;
+    this.createAffectedDeviceId = null;
+    this.createAffectedDeviceCode = null;
+    this.createContextTicketCode = null;
     this.createDialogOpen = true;
   }
 
@@ -178,7 +196,12 @@ export class Incidents implements OnInit {
   }
 
   createIncident(): void {
-    if (!this.canCreate()) return;
+    this.createValidationVisible = true;
+    this.createError = '';
+    if (!this.canCreate()) {
+      this.createError = 'Introduce un título y una descripción antes de crear la incidencia.';
+      return;
+    }
     this.createSubmitting = true;
     this.createError = '';
     this.incidentsService.createIncident({
@@ -190,7 +213,7 @@ export class Incidents implements OnInit {
       affectedLineId: null,
       affectedStationId: null,
       affectedTrainId: null,
-      affectedDeviceId: null,
+      affectedDeviceId: this.createAffectedDeviceId,
       affectedDepotId: null
     }).subscribe({
       next: (incident) => {
@@ -199,9 +222,9 @@ export class Incidents implements OnInit {
         this.loadIncidents(0);
         this.openDetail(incident);
       },
-      error: () => {
+      error: (error: HttpErrorResponse) => {
         this.createSubmitting = false;
-        this.createError = 'No se ha podido registrar la incidencia.';
+        this.createError = this.mutationError(error, 'registrar la incidencia');
       }
     });
   }
@@ -238,6 +261,7 @@ export class Incidents implements OnInit {
     this.editCategory = this.selectedIncident.category;
     this.editPriority = this.selectedIncident.priority;
     this.editError = '';
+    this.editValidationVisible = false;
     this.editing = true;
   }
 
@@ -245,12 +269,18 @@ export class Incidents implements OnInit {
     if (!this.editSubmitting) {
       this.editing = false;
       this.editError = '';
+      this.editValidationVisible = false;
     }
   }
 
   saveEdit(assignment: 'KEEP' | 'ME' | 'NONE' = 'KEEP'): void {
     const incident = this.selectedIncident;
-    if (!incident || this.editTitle.trim() === '' || this.editDescription.trim() === '') return;
+    this.editValidationVisible = true;
+    this.editError = '';
+    if (!incident || this.editTitle.trim() === '' || this.editDescription.trim() === '') {
+      this.editError = 'El título y la descripción son obligatorios.';
+      return;
+    }
     const assignedOperatorId = assignment === 'ME'
       ? this.operator()?.id ?? null
       : assignment === 'NONE' ? null : incident.assignedTo?.id ?? null;
@@ -274,9 +304,9 @@ export class Incidents implements OnInit {
         this.refreshSelectedIncident();
         this.loadIncidents(this.currentPage);
       },
-      error: () => {
+      error: (error: HttpErrorResponse) => {
         this.editSubmitting = false;
-        this.editError = 'No se han podido guardar los cambios.';
+        this.editError = this.mutationError(error, 'guardar los cambios');
       }
     });
   }
@@ -340,9 +370,9 @@ export class Incidents implements OnInit {
         this.refreshSelectedIncident();
         this.loadIncidents(this.currentPage);
       },
-      error: () => {
+      error: (error: HttpErrorResponse) => {
         this.workflowSubmitting = false;
-        this.workflowError = 'No se ha podido actualizar el estado.';
+        this.workflowError = this.mutationError(error, 'actualizar el estado');
       }
     });
   }
@@ -357,9 +387,9 @@ export class Incidents implements OnInit {
         this.commentSubmitting = false;
         this.refreshSelectedIncident();
       },
-      error: () => {
+      error: (error: HttpErrorResponse) => {
         this.commentSubmitting = false;
-        this.commentError = 'No se ha podido añadir el comentario.';
+        this.commentError = this.mutationError(error, 'añadir el comentario');
       }
     });
   }
@@ -417,7 +447,7 @@ export class Incidents implements OnInit {
   }
 
   formatDate(value: string): string {
-    return formatDateTime(value, 'Sin fecha');
+    return this.temporalFormat.formatDateTime(value, 'Sin fecha');
   }
 
   private refreshSelectedIncident(): void {
@@ -433,5 +463,49 @@ export class Incidents implements OnInit {
         this.detailLoading = false;
       }
     });
+  }
+
+  private openCreateDialogFromContext(queryParams: ParamMap): void {
+    const deviceId = this.positiveNumber(queryParams.get('deviceId'));
+    const deviceCode = queryParams.get('deviceCode')?.trim() || null;
+    const ticketCode = queryParams.get('ticketCode')?.trim() || null;
+    const issuanceCode = queryParams.get('issuanceCode')?.trim() || null;
+    const externalReference = queryParams.get('externalReference')?.trim() || null;
+    const eventType = queryParams.get('eventType')?.trim() || null;
+
+    this.openCreateDialog();
+    this.createAffectedDeviceId = deviceId;
+    this.createAffectedDeviceCode = deviceCode;
+    this.createContextTicketCode = ticketCode;
+    this.createCategory = ticketCode || issuanceCode ? 'TICKETING' : 'DEVICE';
+    this.createTitle = ticketCode
+      ? `Incidencia del billete ${ticketCode}`
+      : `Incidencia de la máquina ${deviceCode ?? 'seleccionada'}`;
+    this.createDescription = [
+      deviceCode ? `Máquina afectada: ${deviceCode}` : null,
+      ticketCode ? `Billete afectado: ${ticketCode}` : null,
+      issuanceCode ? `Emisión relacionada: ${issuanceCode}` : null,
+      externalReference ? `Referencia de operación: ${externalReference}` : null,
+      eventType ? `Evento relacionado: ${eventType}` : null
+    ].filter((value): value is string => value !== null).join('\n');
+  }
+
+  private positiveNumber(value: string | null): number | null {
+    if (!value || !/^\d+$/.test(value)) return null;
+    const parsed = Number(value);
+    return parsed > 0 && Number.isSafeInteger(parsed) ? parsed : null;
+  }
+
+  private mutationError(error: HttpErrorResponse, action: string): string {
+    if (error.status === 403) {
+      return 'Tu cuenta de operador no tiene permisos para realizar esta acción.';
+    }
+    if (error.status === 409) {
+      return 'La incidencia ha cambiado desde la última consulta. Recarga el detalle e inténtalo de nuevo.';
+    }
+    if (error.status === 0) {
+      return 'No se ha podido contactar con el backend. Comprueba que el servicio está iniciado.';
+    }
+    return `No se ha podido ${action}.`;
   }
 }

@@ -1,0 +1,173 @@
+# Ejecución de las aplicaciones cliente
+
+Esta guía describe cómo preparar, compilar y ejecutar RMM App y las dos máquinas Qt en el entorno
+local. RMM App, la máquina de venta y la máquina validadora incorporan sus flujos funcionales.
+Todas comparten configuración y compilación automatizada.
+
+## Servicios compartidos
+
+Las aplicaciones cliente consumen las direcciones definidas en
+[`config/local-services.properties.example`](../config/local-services.properties.example). Para
+personalizar el entorno sin modificar archivos versionados, crea una copia local desde la raíz del
+repositorio:
+
+```powershell
+Copy-Item config/local-services.properties.example config/local-services.properties
+```
+
+El archivo `config/local-services.properties` está ignorado por Git. Después de cambiarlo es
+necesario volver a sincronizar y compilar RMM App y volver a configurar el proyecto CMake de Qt.
+
+Antes de probar conexiones reales deberán estar disponibles los servicios que necesite cada flujo:
+
+- el backend en `http://localhost:8080`;
+- el broker MQTT en `127.0.0.1:1883`;
+- MySQL, cuando el backend requiera persistencia.
+
+El emulador Android utiliza `10.0.2.2` para acceder al `localhost` del equipo anfitrión. No debe
+sustituirse esa dirección por `localhost` dentro de RMM App.
+
+## RMM App para Android
+
+### Requisitos
+
+- Android Studio y un emulador configurado;
+- JDK 17 o posterior;
+- Android SDK Platform 36 y Build Tools 36.0.0.
+
+### Ejecución desde Android Studio
+
+1. Abre la carpeta `android` como proyecto.
+2. Espera a que termine la sincronización de Gradle.
+3. Selecciona el módulo `app` y el emulador Android.
+4. Ejecuta la configuración `app`.
+
+Android Studio compilará, instalará y abrirá RMM App en el dispositivo seleccionado.
+
+### Acceso local a RMM App
+
+Con el ecosistema de Docker iniciado, el procedimiento desde el emulador es:
+
+1. Comprueba en `config/local-services.properties` o en su archivo de ejemplo que
+   `RMM_API_ANDROID_BASE_URL` sea `http://10.0.2.2:8080/api/rmm-app/v1`.
+2. Sincroniza el proyecto Android después de cualquier cambio de esa dirección.
+3. Abre RMM App y selecciona **Crear cuenta**.
+4. Introduce nombre, apellidos, un correo no registrado y una contraseña de 12 a 72 caracteres con
+   mayúsculas, minúsculas y números.
+5. Acepta los términos y crea la cuenta. El entorno local de Docker la activa automáticamente porque
+   no dispone de entrega de correo.
+6. Regresa a **Iniciar sesión** y utiliza el correo y la contraseña recién registrados.
+7. Para finalizar, abre **Cuenta**, pulsa **Cerrar sesión** y confirma la operación.
+
+No existen credenciales predeterminadas para pasajeros. Las credenciales `admin` pertenecen al
+centro de control web y no permiten acceder a RMM App.
+
+`RMM_APP_AUTO_VERIFY_REGISTRATION=true` se limita al entorno local. Los entornos con correo deben
+mantenerlo en `false` y completar la verificación mediante el enlace entregado al pasajero.
+
+### Compilación y pruebas desde PowerShell
+
+Desde la raíz del repositorio:
+
+```powershell
+Set-Location android
+.\gradlew.bat testDebugUnitTest assembleDebug
+```
+
+Con un emulador iniciado también pueden compilarse e instalarse las pruebas instrumentadas:
+
+```powershell
+.\gradlew.bat connectedDebugAndroidTest
+```
+
+Estas pruebas cubren la edición de los formularios y el ciclo de registro, inicio de sesión,
+persistencia segura y cierre de sesión mediante un servidor HTTP controlado.
+
+El APK generado queda en `android/app/build/outputs/apk/debug/app-debug.apk`. Para instalarlo desde
+la terminal con un emulador o dispositivo ya conectado:
+
+```powershell
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+## Aplicaciones Qt
+
+### Requisitos
+
+- Qt 6.9 o posterior para escritorio;
+- Qt MQTT de la misma versión que Qt;
+- CMake, Ninja y un compilador compatible con el kit seleccionado.
+
+El entorno local de referencia utiliza Qt 6.11.1, MinGW 13.1 de 64 bits, CMake y Ninja instalados
+mediante Qt Maintenance Tool.
+
+### Ejecución desde Qt Creator
+
+1. Abre `qt/CMakeLists.txt`.
+2. Selecciona el kit `Qt 6.11.1 MinGW 64-bit`.
+3. Configura el proyecto con `BUILD_TESTING` activado.
+4. Elige uno de los objetivos y pulsa **Ejecutar**:
+   - `rmm-ticket-vending-machine` para la máquina de venta;
+   - `rmm-ticket-validator` para la máquina validadora.
+
+Cada aplicación puede ejecutarse de manera independiente. También pueden mantenerse ambas abiertas
+para comprobar el entorno integrado de máquinas simuladas.
+
+Antes de ejecutar la máquina de venta, configura su identidad y contraseña MQTT siguiendo su
+[documentación específica](maquina-venta.md). Esa guía también describe el flujo de compra, las
+emisiones compensatorias y el comportamiento ante desconexiones.
+
+Antes de ejecutar la máquina validadora, configura su modo, estación, identidad y contraseña MQTT
+siguiendo su [documentación específica](maquina-validadora.md). Para probar entrada y salida al mismo
+tiempo deben iniciarse dos procesos con identidades distintas.
+
+### Compilación y pruebas desde PowerShell
+
+Las rutas exactas dependen de la instalación local de Qt. Desde la raíz del repositorio, un ejemplo
+para el entorno de referencia es:
+
+```powershell
+& D:\Qt\Tools\CMake_64\bin\cmake.exe `
+  -S qt `
+  -B qt/build `
+  -G Ninja `
+  -DCMAKE_PREFIX_PATH=D:\Qt\6.11.1\mingw_64 `
+  -DCMAKE_CXX_COMPILER=D:\Qt\Tools\mingw1310_64\bin\g++.exe `
+  -DBUILD_TESTING=ON
+
+& D:\Qt\Tools\CMake_64\bin\cmake.exe --build qt/build
+& D:\Qt\Tools\CMake_64\bin\ctest.exe --test-dir qt/build --output-on-failure
+```
+
+Los ejecutables se generan como `RMMTicketVendingMachine.exe` y `RMMTicketValidator.exe` dentro de
+`qt/build`. Cuando se lanzan fuera de Qt Creator, las bibliotecas dinámicas de Qt deben estar
+disponibles en `PATH` o desplegadas junto al ejecutable.
+
+## Artefactos de integración continua
+
+El pipeline ejecuta las pruebas y construye las tres aplicaciones cliente en cada pull request
+dirigida a `main` o `develop/ecosystem`:
+
+- `rmm-app-debug` contiene el APK de depuración de RMM App;
+- `rmm-app-unit-test-report` contiene el informe de sus pruebas unitarias;
+- `rmm-qt-applications` contiene los ejecutables de las dos máquinas Qt.
+
+Los artefactos sirven para revisar el resultado de una compilación. Los ejecutables Qt todavía no
+constituyen un paquete redistribuible autónomo con todas sus bibliotecas.
+
+## Problemas habituales
+
+- Si Gradle no encuentra el SDK, configura `ANDROID_HOME`, `ANDROID_SDK_ROOT` o
+  `android/local.properties`.
+- Si RMM App no alcanza el backend desde el emulador, comprueba que utiliza `10.0.2.2` y que el
+  backend escucha en el puerto configurado. `localhost` dentro del emulador no representa Windows.
+- Si el servidor no puede alcanzarse, RMM App diferencia entre timeout, ausencia de red y backend
+  detenido. Comprueba `http://localhost:8080/api/health` desde Windows antes de reinstalar la app.
+- Si una cuenta local recién creada aparece pendiente, confirma que el backend de Docker recibió
+  `RMM_APP_AUTO_VERIFY_REGISTRATION=true` y reconstruye el contenedor tras cambiarlo.
+- Si CMake no encuentra `Qt6Mqtt`, instala Qt MQTT para el mismo kit y versión de Qt.
+- Si Qt Creator muestra un kit inválido, vuelve a seleccionar CMake, Ninja y el compilador que
+  pertenecen a la instalación activa de Qt.
+- Si se modifica la configuración compartida, regenera las aplicaciones para incorporar los nuevos
+  valores.
+

@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - main
+      - develop/ecosystem
   pull_request:
     branches:
       - main
+      - develop/ecosystem
 
 permissions:
   contents: read
@@ -16,6 +18,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  database:
+    name: Database encoding tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate SQL source encoding
+        shell: pwsh
+        run: ./database/tests/database-source-encoding-tests.ps1
+
   backend:
     name: Backend build
     runs-on: ubuntu-latest
@@ -39,7 +53,7 @@ jobs:
         run: chmod +x mvnw
 
       - name: Build backend
-        run: ./mvnw --batch-mode --no-transfer-progress clean package -DskipTests
+        run: ./mvnw --batch-mode --no-transfer-progress clean package
 
   frontend:
     name: Frontend build
@@ -62,5 +76,196 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Test frontend
+        run: npm test -- --watch=false
+
       - name: Build frontend
         run: npm run build -- --configuration production
+
+      - name: Install Chromium for web access tests
+        run: npx playwright install --with-deps chromium
+
+      - name: Test web access with isolated API responses
+        run: npm run test:e2e
+
+  android:
+    name: RMM App build and tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
+
+      - name: Make Gradle Wrapper executable
+        run: chmod +x gradlew
+
+      - name: Test and build RMM App
+        run: ./gradlew --no-daemon --stacktrace testDebugUnitTest assembleDebug
+
+      - name: Enable KVM for Android emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Test RMM App functional flows in emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          working-directory: android
+          script: ./gradlew --no-daemon --stacktrace connectedDebugAndroidTest
+
+      - name: Upload RMM App debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: rmm-app-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload RMM App unit test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rmm-app-unit-test-report
+          path: android/app/build/reports/tests/testDebugUnitTest
+          if-no-files-found: warn
+          retention-days: 7
+
+  qt:
+    name: Qt applications build and tests
+    runs-on: windows-2022
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Qt 6.9.2
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: "6.9.2"
+          host: windows
+          target: desktop
+          arch: win64_msvc2022_64
+          modules: qtmultimedia
+          cache: true
+          cache-key-prefix: qt-6.9.2-msvc2022
+
+      - name: Check out Qt MQTT 6.9.2
+        uses: actions/checkout@v4
+        with:
+          repository: qt/qtmqtt
+          ref: v6.9.2
+          path: qt-mqtt-source
+
+      - name: Set up MSVC 2022
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Build and install Qt MQTT
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          cmake -S qt-mqtt-source -B qt-mqtt-build `
+            -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_PREFIX_PATH="$env:QT_ROOT_DIR" `
+            -DCMAKE_INSTALL_PREFIX="$env:QT_ROOT_DIR" `
+            -DQT_BUILD_EXAMPLES=OFF `
+            -DQT_BUILD_TESTS=OFF
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          cmake --build qt-mqtt-build --parallel
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          cmake --install qt-mqtt-build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Configure Qt applications
+        shell: pwsh
+        run: >-
+          cmake -S qt -B qt/build-ci
+          -G "Visual Studio 17 2022" -A x64
+          -DCMAKE_PREFIX_PATH="$env:QT_ROOT_DIR"
+          -DBUILD_TESTING=ON
+
+      - name: Build Qt applications
+        run: cmake --build qt/build-ci --config Release --parallel
+
+      - name: Test Qt applications
+        run: ctest --test-dir qt/build-ci -C Release --output-on-failure
+
+      - name: Upload Qt executables
+        uses: actions/upload-artifact@v4
+        with:
+          name: rmm-qt-applications
+          path: |
+            qt/build-ci/Release/RMMTicketVendingMachine.exe
+            qt/build-ci/Release/RMMTicketValidator.exe
+          if-no-files-found: error
+          retention-days: 7
+
+  mqtt:
+    name: MQTT integration tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Test MQTT publication, subscription and reconnection
+        shell: pwsh
+        run: ./infrastructure/mosquitto/tests/mqtt-integration-tests.ps1
+
+  ecosystem:
+    name: Containerized ecosystem integration test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Chromium for integrated web access test
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Build and validate backend, MySQL and MQTT containers
+        shell: pwsh
+        run: ./infrastructure/tests/ecosystem-container-tests.ps1 -RunWebAccessTest

@@ -1,0 +1,274 @@
+package com.transport.simulator.service;
+
+import com.transport.simulator.entity.Device;
+import com.transport.simulator.entity.PassengerAccount;
+import com.transport.simulator.entity.Purchase;
+import com.transport.simulator.entity.Ticket;
+import com.transport.simulator.enums.PaymentMethod;
+import com.transport.simulator.enums.PurchaseOrigin;
+import com.transport.simulator.enums.PurchaseType;
+import com.transport.simulator.enums.DeviceStatus;
+import com.transport.simulator.enums.DeviceType;
+import com.transport.simulator.enums.PassengerAccountStatus;
+import com.transport.simulator.repository.PurchaseRepository;
+import com.transport.simulator.repository.TicketRepository;
+import com.transport.simulator.service.model.TicketRechargeParameters;
+import com.transport.simulator.service.model.TicketRechargeQuote;
+import com.transport.simulator.service.model.TicketSnapshot;
+import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.UUID;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class TicketRechargeService {
+
+    private final TicketRepository ticketRepository;
+    private final PurchaseRepository purchaseRepository;
+    private final SingleTripTicketService singleTripService;
+    private final MultiTripTicketService multiTripService;
+    private final TimePassTicketService timePassService;
+    private final SmartBalanceTicketService smartBalanceService;
+    private final TicketOperationRegistrationService operationRegistrationService;
+    private final TicketRechargePricingService pricingService;
+    private final Clock clock;
+
+    public TicketRechargeService(
+            TicketRepository ticketRepository,
+            PurchaseRepository purchaseRepository,
+            SingleTripTicketService singleTripService,
+            MultiTripTicketService multiTripService,
+            TimePassTicketService timePassService,
+            SmartBalanceTicketService smartBalanceService,
+            TicketOperationRegistrationService operationRegistrationService,
+            TicketRechargePricingService pricingService,
+            Clock clock
+    ) {
+        this.ticketRepository = ticketRepository;
+        this.purchaseRepository = purchaseRepository;
+        this.singleTripService = singleTripService;
+        this.multiTripService = multiTripService;
+        this.timePassService = timePassService;
+        this.smartBalanceService = smartBalanceService;
+        this.operationRegistrationService = operationRegistrationService;
+        this.pricingService = pricingService;
+        this.clock = clock;
+    }
+
+    @Transactional
+    public Purchase recharge(
+            String ticketCode,
+            TicketRechargeParameters parameters,
+            PurchaseOrigin origin,
+            PaymentMethod paymentMethod,
+            String externalReference,
+            Device device,
+            PassengerAccount passenger
+    ) {
+        String normalizedTicketCode = normalize(ticketCode);
+        String reference = requireText(externalReference, "externalReference");
+        if (reference.length() > 150) {
+            throw new IllegalArgumentException("externalReference cannot exceed 150 characters");
+        }
+        Ticket current = ticketRepository.findByCodeForUpdate(normalizedTicketCode)
+                .orElseThrow(() -> new IllegalArgumentException("Ticket not found"));
+        Purchase previous = purchaseRepository.findByExternalReference(reference).orElse(null);
+        if (previous != null) {
+            requireMatchingReplay(
+                    previous, normalizedTicketCode, parameters, origin, paymentMethod, device, passenger
+            );
+            return previous;
+        }
+
+        if (!current.getProduct().isRechargeable()) {
+            throw new IllegalStateException("The ticket product is not rechargeable");
+        }
+        Objects.requireNonNull(parameters, "parameters are required");
+        validateContext(origin, device, passenger, current);
+        TicketSnapshot before = TicketSnapshot.from(current);
+        TicketRechargeQuote quote = pricingService.quote(current, parameters);
+
+        Ticket updated = switch (current.getProductType()) {
+            case SINGLE_TRIP -> rechargeSingleTrip(current, parameters);
+            case MULTI_TRIP -> rechargeMultiTrip(current, parameters);
+            case TIME_PASS -> rechargeTimePass(current, parameters);
+            case SMART_BALANCE -> rechargeSmartBalance(current, parameters);
+        };
+
+        BigDecimal total = quote.totalAmount();
+        Purchase purchase = Purchase.completedRecharge(
+                uniqueCode("RMM-RCH"), updated, origin, paymentMethod, reference,
+                device, passenger, total, LocalDateTime.now(clock)
+        );
+        configurePurchase(purchase, updated, parameters);
+        Purchase persisted = purchaseRepository.save(purchase);
+        operationRegistrationService.recordRecharge(persisted, before, device, passenger);
+        return persisted;
+    }
+
+    private Ticket rechargeSingleTrip(Ticket ticket, TicketRechargeParameters parameters) {
+        requireOnly(parameters, true, false, false, false);
+        return singleTripService.recharge(
+                ticket.getCode(), parameters.originStationCode(), parameters.destinationStationCode()
+        );
+    }
+
+    private Ticket rechargeMultiTrip(Ticket ticket, TicketRechargeParameters parameters) {
+        requireOnly(parameters, false, true, false, false);
+        return multiTripService.recharge(ticket.getCode(), requirePositive(parameters.trips(), "trips"));
+    }
+
+    private Ticket rechargeTimePass(Ticket ticket, TicketRechargeParameters parameters) {
+        requireOnly(parameters, false, false, true, false);
+        return timePassService.renew(ticket.getCode(), requirePositive(parameters.days(), "days"));
+    }
+
+    private Ticket rechargeSmartBalance(Ticket ticket, TicketRechargeParameters parameters) {
+        requireOnly(parameters, false, false, false, true);
+        return smartBalanceService.recharge(
+                ticket.getCode(), Objects.requireNonNull(parameters.balanceAmount(), "balanceAmount is required")
+        );
+    }
+
+    private void configurePurchase(
+            Purchase purchase,
+            Ticket ticket,
+            TicketRechargeParameters parameters
+    ) {
+        switch (ticket.getProductType()) {
+            case SINGLE_TRIP -> purchase.configureSingleTrip(
+                    ticket.getOriginStation(), ticket.getDestinationStation(), ticket.getStationCount()
+            );
+            case MULTI_TRIP -> purchase.configureTrips(parameters.trips());
+            case TIME_PASS -> purchase.configureDays(parameters.days());
+            case SMART_BALANCE -> purchase.configureMoney(parameters.balanceAmount());
+        }
+    }
+
+    private void validateContext(
+            PurchaseOrigin origin,
+            Device device,
+            PassengerAccount passenger,
+            Ticket ticket
+    ) {
+        Objects.requireNonNull(origin, "origin is required");
+        if (origin == PurchaseOrigin.TICKET_MACHINE
+                && (device == null || !device.isActive() || device.getType() != DeviceType.TICKET_MACHINE
+                || device.getStatus() != DeviceStatus.ONLINE)) {
+            throw new IllegalArgumentException("A ticket-machine recharge requires an active online device");
+        }
+        if (origin == PurchaseOrigin.RMM_APP
+                && (passenger == null || passenger.getStatus() != PassengerAccountStatus.ACTIVE
+                || ticket.getPassengerAccount() == null
+                || !ticket.getPassengerAccount().getPublicId().equals(passenger.getPublicId()))) {
+            throw new IllegalArgumentException("RMM App can only recharge a ticket owned by its active passenger");
+        }
+    }
+
+    private void requireMatchingReplay(
+            Purchase previous,
+            String ticketCode,
+            TicketRechargeParameters parameters,
+            PurchaseOrigin origin,
+            PaymentMethod paymentMethod,
+            Device device,
+            PassengerAccount passenger
+    ) {
+        Objects.requireNonNull(parameters, "parameters are required");
+        boolean sameDevice = sameId(previous.getDevice(), device);
+        boolean samePassenger = sameId(previous.getPassengerAccount(), passenger);
+        boolean sameConfiguration = switch (previous.getProduct().getProductType()) {
+            case SINGLE_TRIP -> sameCode(previous.getOriginStation(), parameters.originStationCode())
+                    && sameCode(previous.getDestinationStation(), parameters.destinationStationCode())
+                    && parameters.trips() == null && parameters.days() == null
+                    && parameters.balanceAmount() == null;
+            case MULTI_TRIP -> Objects.equals(previous.getSelectedTrips(), parameters.trips())
+                    && emptyRoute(parameters) && parameters.days() == null
+                    && parameters.balanceAmount() == null;
+            case TIME_PASS -> Objects.equals(previous.getSelectedDays(), parameters.days())
+                    && emptyRoute(parameters) && parameters.trips() == null
+                    && parameters.balanceAmount() == null;
+            case SMART_BALANCE -> sameMoney(previous.getRechargeAmount(), parameters.balanceAmount())
+                    && emptyRoute(parameters) && parameters.trips() == null && parameters.days() == null;
+        };
+        if (previous.getType() != PurchaseType.RECHARGE
+                || !previous.getTicket().getCode().equals(ticketCode)
+                || previous.getOrigin() != origin
+                || previous.getPaymentMethod() != paymentMethod
+                || !sameDevice || !samePassenger || !sameConfiguration) {
+            throw new IllegalArgumentException("The external reference is already used by another operation");
+        }
+    }
+
+    private boolean sameId(Device left, Device right) {
+        return left == null ? right == null
+                : right != null && Objects.equals(left.getId(), right.getId());
+    }
+
+    private boolean sameId(PassengerAccount left, PassengerAccount right) {
+        return left == null ? right == null
+                : right != null && Objects.equals(left.getId(), right.getId());
+    }
+
+    private boolean sameCode(com.transport.simulator.entity.Station station, String code) {
+        return station != null && hasText(code)
+                && station.getCode().equalsIgnoreCase(code.trim());
+    }
+
+    private boolean sameMoney(BigDecimal left, BigDecimal right) {
+        return left != null && right != null && left.compareTo(right) == 0;
+    }
+
+    private boolean emptyRoute(TicketRechargeParameters parameters) {
+        return !hasText(parameters.originStationCode()) && !hasText(parameters.destinationStationCode());
+    }
+
+    private void requireOnly(
+            TicketRechargeParameters value,
+            boolean route,
+            boolean trips,
+            boolean days,
+            boolean balance
+    ) {
+        boolean hasOrigin = hasText(value.originStationCode());
+        boolean hasDestination = hasText(value.destinationStationCode());
+        boolean validRoute = route ? hasOrigin && hasDestination : !hasOrigin && !hasDestination;
+        boolean valid = validRoute
+                && (trips == (value.trips() != null))
+                && (days == (value.days() != null))
+                && (balance == (value.balanceAmount() != null));
+        if (!valid) {
+            throw new IllegalArgumentException("The recharge parameters do not match the ticket product");
+        }
+    }
+
+    private int requirePositive(Integer value, String field) {
+        if (value == null || value <= 0) {
+            throw new IllegalArgumentException(field + " must be positive");
+        }
+        return value;
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private String normalize(String value) {
+        return requireText(value, "ticketCode").toUpperCase(Locale.ROOT);
+    }
+
+    private String requireText(String value, String field) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(field + " is required");
+        }
+        return value.trim();
+    }
+
+    private String uniqueCode(String prefix) {
+        return prefix + "-" + UUID.randomUUID().toString().toUpperCase(Locale.ROOT);
+    }
+}

@@ -41,7 +41,7 @@ sesión se abre siempre `/dashboard`.
 | `/devices` | Inventario y estado operativo de las máquinas. |
 | `/logs` | Consulta filtrada y paginada de eventos de máquinas. |
 | `/account` | Datos de la cuenta del operador autenticado. |
-| `/settings` | Idioma y preferencias locales de presentación y accesibilidad. |
+| `/settings` | Idioma, zona horaria, tema y preferencias de accesibilidad. |
 
 El mapa incluye un planificador de trayectos. El itinerario calculado por el backend se presenta por
 tramos, muestra el sentido de cada línea y se representa sobre la red sin añadir transbordos
@@ -57,11 +57,16 @@ Algunas pantallas enlazan con otras conservando el contexto mediante parámetros
 /devices  -> /logs?deviceCode=RMM-MB-ST001-001
 /depots   -> /trains?depotCode=DEP-AIR-A
 /lines    -> /trains?lineCode=L1
-/stations -> /trains?stationCode=ST001
+/stations -> /trains?lineCode=L1&status=IN_SERVICE
 ```
 
 Las pantallas receptoras normalizan los códigos, inicializan el control visible y aplican el mismo
 valor a los resultados o a la petición del backend. Un parámetro vacío equivale a no filtrar.
+
+Las rutas base proceden de `APPLICATION_ROUTES`, compartido por el sidebar y los accesos
+contextuales. `ActiveSectionService` determina la sección mediante la ruta primaria e ignora los
+parámetros y fragmentos, por lo que el menú conserva correctamente la opción de destino activa. El
+enlace seleccionado expone también `aria-current="page"`.
 
 ## Actualización y renderizado
 
@@ -84,7 +89,11 @@ Líneas, Estaciones, Trenes y Cocheras utilizan `SummaryCard`.
 - Los iconos decorativos se ocultan a las tecnologías de asistencia.
 - Las tablas identifican semánticamente sus cabeceras de columna.
 - La preferencia «Reducir animaciones» se guarda únicamente en el navegador.
-- El idioma y la densidad visual también se conservan localmente y no alteran la cuenta del operador.
+- El idioma también se conserva localmente y no altera la cuenta del operador.
+- La zona horaria y el tema claro u oscuro se guardan en la cuenta y se restauran al cargar la
+  aplicación autenticada.
+- Las fechas y horas utilizan un formateador centralizado; el tema oscuro mantiene los colores
+  operativos de las líneas.
 - El sidebar pasa a modo superpuesto hasta 900 píxeles y las cuadrículas reducen progresivamente sus
   columnas en pantallas estrechas.
 
@@ -96,8 +105,10 @@ npm run build -- --configuration production
 ```
 
 La cobertura incluye servicios HTTP, sesión y guards, rutas, navegación contextual, filtros
-inicializados desde la URL, refresco periódico, presentación operativa, accesibilidad y layout
-adaptable.
+inicializados desde la URL, refresco periódico, zona horaria, persistencia del tema, presentación
+operativa, accesibilidad y layout adaptable. También comprueba que los formularios de pasajeros e
+incidencias conservan una interacción utilizable después de errores del backend y que las superficies
+principales mantienen contraste suficiente con el tema oscuro.
 
 ## Organización principal
 

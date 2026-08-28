@@ -10,7 +10,7 @@ generan logs simulados.
 ## Flujo general
 
 ```text
-generador automático                   futuro consumidor MQTT
+generador automático                   consumidor MQTT real
          │                                      │
          └──────────────┬───────────────────────┘
                         ▼
@@ -31,7 +31,7 @@ La generación y el registro son responsabilidades separadas:
 - `DeviceEventRegistrationService` localiza la máquina, aplica la transición y persiste el log;
 - `DeviceEventSimulationService` selecciona las máquinas de cada ciclo;
 - `DeviceEventSimulationScheduler` ejecuta automáticamente esos ciclos;
-- `DeviceEventIngress` es el puerto que utilizará la futura integración MQTT.
+- `DeviceEventIngress` es el puerto compartido por la simulación y la integración MQTT.
 
 No existe ningún endpoint HTTP para generar logs manualmente.
 
@@ -89,7 +89,7 @@ Antes de generar actividad ordinaria se sincronizan todas las máquinas con el h
 
 El simulador automático no genera `DEVICE_ERROR`, `TICKET_PURCHASE_FAILED`,
 `VALIDATION_FAILED` ni transiciones de mantenimiento. Estos valores permanecen en el contrato para
-eventos reales que puedan recibirse en el futuro mediante MQTT.
+los eventos reales recibidos mediante MQTT.
 
 ## Transiciones de estado
 
@@ -126,11 +126,11 @@ El modelo `DeviceEventLog` usa la tabla `operational_logs`. Para los eventos sim
 
 La estación solo representa la ubicación. No se considera emisora del evento.
 
-## Contrato preparado para MQTT
+## Integración con MQTT
 
-Todavía no se ha añadido un cliente MQTT ni una conexión con un broker. El backend sí dispone del
-puerto `DeviceEventIngress`, al que podrá llamar el futuro consumidor sin duplicar la lógica de
-registro.
+El backend dispone de un cliente MQTT conectado a Mosquitto. Los mensajes autenticados de venta y
+validación se convierten en `DeviceEventMessage` y atraviesan el mismo puerto `DeviceEventIngress`
+que protege la validación, la transición de estado y el registro de logs.
 
 El contrato actual usa la versión `1.0`:
 
@@ -173,18 +173,11 @@ de origen y `eventId`:
 El índice único `uk_operational_logs_origin_external_reference` refuerza esta regla en MySQL. Los
 eventos simulados pueden conservar `external_reference` como `NULL`.
 
-## Límites actuales
+La conexión, autenticación, recepción idempotente, publicación de órdenes y recuperación después de
+una desconexión se describen en [Integración MQTT del backend](integracion-mqtt-backend.md). La
+estructura de los payloads y los topics se mantiene en el [contrato MQTT](contrato-mqtt.md).
 
-Esta fase no incluye:
-
-- conexión o autenticación con un broker MQTT;
-- definición de topics;
-- consumidor de mensajes;
-- publicación de respuestas MQTT;
-- endpoints HTTP para crear eventos;
-
-Esas capas se construirán sobre `DeviceEventIngress`, manteniendo un único ciclo de validación,
-transición y persistencia.
+No existen endpoints HTTP para crear eventos operativos manualmente.
 
 La consulta del estado actual y del historial ya está disponible mediante las secciones web de
 Máquinas y Logs. Su funcionamiento y los endpoints de lectura se documentan en

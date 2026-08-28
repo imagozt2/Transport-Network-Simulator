@@ -1,6 +1,7 @@
 package com.transport.simulator.entity;
 
 import com.transport.simulator.enums.DeviceEventType;
+import com.transport.simulator.enums.DeviceEventSource;
 import com.transport.simulator.enums.LogOrigin;
 import com.transport.simulator.enums.LogSeverity;
 import jakarta.persistence.Column;
@@ -30,6 +31,10 @@ public class DeviceEventLog {
     private LogOrigin origin;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "event_source", nullable = false, length = 30)
+    private DeviceEventSource source;
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "event_type", nullable = false, length = 80)
     private DeviceEventType eventType;
 
@@ -40,12 +45,12 @@ public class DeviceEventLog {
     @Column(nullable = false, length = 500)
     private String message;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "device_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "device_id")
     private Device device;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "station_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "station_id")
     private Station station;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -77,6 +82,7 @@ public class DeviceEventLog {
 
     public DeviceEventLog(
             LogOrigin origin,
+            DeviceEventSource source,
             DeviceEventType eventType,
             LogSeverity severity,
             String message,
@@ -86,11 +92,12 @@ public class DeviceEventLog {
             String payloadJson
     ) {
         this.origin = origin;
+        this.source = source;
         this.eventType = eventType;
         this.severity = severity;
         this.message = message;
         this.device = device;
-        this.station = device.getStation();
+        this.station = device == null ? null : device.getStation();
         this.occurredAt = occurredAt;
         this.externalReference = externalReference;
         this.payloadJson = payloadJson;
@@ -119,6 +126,10 @@ public class DeviceEventLog {
 
     public LogOrigin getOrigin() {
         return origin;
+    }
+
+    public DeviceEventSource getSource() {
+        return source;
     }
 
     public DeviceEventType getEventType() {

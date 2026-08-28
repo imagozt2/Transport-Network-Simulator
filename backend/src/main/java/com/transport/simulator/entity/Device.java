@@ -2,6 +2,8 @@ package com.transport.simulator.entity;
 
 import com.transport.simulator.enums.DeviceStatus;
 import com.transport.simulator.enums.DeviceType;
+import com.transport.simulator.enums.DeviceMqttPresence;
+import com.transport.simulator.enums.DeviceOperationalState;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -45,6 +47,32 @@ public class Device extends AuditableEntity {
     @Column(name = "last_connection_at")
     private LocalDateTime lastConnectionAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "mqtt_presence", length = 20)
+    private DeviceMqttPresence mqttPresence;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "operational_state", length = 30)
+    private DeviceOperationalState operationalState;
+
+    @Column(name = "service_mode", length = 30)
+    private String serviceMode;
+
+    @Column(name = "software_version", length = 50)
+    private String softwareVersion;
+
+    @Column(name = "uptime_seconds")
+    private Long uptimeSeconds;
+
+    @Column(name = "last_presence_at")
+    private LocalDateTime lastPresenceAt;
+
+    @Column(name = "last_status_at")
+    private LocalDateTime lastStatusAt;
+
+    @Column(name = "last_communication_at")
+    private LocalDateTime lastCommunicationAt;
+
     @Column(nullable = false)
     private boolean active = true;
 
@@ -58,6 +86,78 @@ public class Device extends AuditableEntity {
         if (lastConnectionAt == null || connectionAt.isAfter(lastConnectionAt)) {
             lastConnectionAt = connectionAt;
         }
+    }
+
+    public boolean recordMqttPresence(DeviceMqttPresence presence, LocalDateTime changedAt) {
+        Objects.requireNonNull(presence);
+        Objects.requireNonNull(changedAt);
+        if (lastPresenceAt != null && changedAt.isBefore(lastPresenceAt)) return false;
+        if (!recordCommunicationTime(changedAt)) return false;
+        mqttPresence = presence;
+        lastPresenceAt = changedAt;
+        if (presence == DeviceMqttPresence.OFFLINE) {
+            status = DeviceStatus.OFFLINE;
+        } else {
+            status = aggregateOperationalStatus();
+            recordConnection(changedAt);
+        }
+        return true;
+    }
+
+    public boolean recordMqttStatus(DeviceOperationalState state, String serviceMode,
+            String softwareVersion, long uptimeSeconds, LocalDateTime occurredAt) {
+        Objects.requireNonNull(state);
+        Objects.requireNonNull(occurredAt);
+        if (uptimeSeconds < 0) throw new IllegalArgumentException("uptimeSeconds cannot be negative");
+        if (lastStatusAt != null && occurredAt.isBefore(lastStatusAt)) return false;
+        if (!recordCommunicationTime(occurredAt)) return false;
+        operationalState = state;
+        this.serviceMode = normalize(serviceMode);
+        this.softwareVersion = normalize(softwareVersion);
+        this.uptimeSeconds = uptimeSeconds;
+        lastStatusAt = occurredAt;
+        mqttPresence = DeviceMqttPresence.ONLINE;
+        status = aggregateOperationalStatus();
+        recordConnection(occurredAt);
+        return true;
+    }
+
+    public boolean markDisconnectedWhenStale(LocalDateTime staleBefore) {
+        Objects.requireNonNull(staleBefore);
+        if (mqttPresence != DeviceMqttPresence.ONLINE) return false;
+        if (lastCommunicationAt == null || !lastCommunicationAt.isBefore(staleBefore)) return false;
+        mqttPresence = DeviceMqttPresence.OFFLINE;
+        status = DeviceStatus.OFFLINE;
+        return true;
+    }
+
+    public boolean recordMqttCommunication(LocalDateTime occurredAt) {
+        Objects.requireNonNull(occurredAt, "occurredAt is required");
+        if (!recordCommunicationTime(occurredAt)) return false;
+        mqttPresence = DeviceMqttPresence.ONLINE;
+        status = aggregateOperationalStatus();
+        recordConnection(occurredAt);
+        return true;
+    }
+
+    private boolean recordCommunicationTime(LocalDateTime occurredAt) {
+        if (lastCommunicationAt != null && occurredAt.isBefore(lastCommunicationAt)) return false;
+        lastCommunicationAt = occurredAt;
+        return true;
+    }
+
+    private DeviceStatus aggregateOperationalStatus() {
+        if (operationalState == DeviceOperationalState.MAINTENANCE) return DeviceStatus.MAINTENANCE;
+        if (operationalState == DeviceOperationalState.OUT_OF_SERVICE) return DeviceStatus.ERROR;
+        return DeviceStatus.ONLINE;
+    }
+
+    private void recordConnection(LocalDateTime at) {
+        if (lastConnectionAt == null || at.isAfter(lastConnectionAt)) lastConnectionAt = at;
+    }
+
+    private String normalize(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 
     public Long getId() {
@@ -91,4 +191,16 @@ public class Device extends AuditableEntity {
     public boolean isActive() {
         return active;
     }
+
+    public boolean isMqttManaged() {
+        return lastCommunicationAt != null || lastPresenceAt != null || lastStatusAt != null;
+    }
+    public DeviceMqttPresence getMqttPresence() { return mqttPresence; }
+    public DeviceOperationalState getOperationalState() { return operationalState; }
+    public String getServiceMode() { return serviceMode; }
+    public String getSoftwareVersion() { return softwareVersion; }
+    public Long getUptimeSeconds() { return uptimeSeconds; }
+    public LocalDateTime getLastPresenceAt() { return lastPresenceAt; }
+    public LocalDateTime getLastStatusAt() { return lastStatusAt; }
+    public LocalDateTime getLastCommunicationAt() { return lastCommunicationAt; }
 }

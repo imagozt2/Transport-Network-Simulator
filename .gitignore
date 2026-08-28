@@ -1,0 +1,12 @@
+# Configuración local compartida
+/config/local-services.properties
+
+# Variables locales de Docker Compose
+/.env
+/.env.*
+!/.env.example
+!/.env.tls.example
+
+# Credenciales MQTT locales antes de generar el password file
+/infrastructure/mosquitto/mqtt-users.local
+

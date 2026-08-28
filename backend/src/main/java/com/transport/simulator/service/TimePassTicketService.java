@@ -1,0 +1,144 @@
+package com.transport.simulator.service;
+
+import com.transport.simulator.entity.Station;
+import com.transport.simulator.entity.Ticket;
+import com.transport.simulator.entity.TicketJourney;
+import com.transport.simulator.enums.TicketJourneyStatus;
+import com.transport.simulator.enums.TicketOperationType;
+import com.transport.simulator.enums.TicketProductType;
+import com.transport.simulator.enums.TicketStatus;
+import com.transport.simulator.repository.StationRepository;
+import com.transport.simulator.repository.TicketJourneyRepository;
+import com.transport.simulator.repository.TicketRepository;
+import com.transport.simulator.service.model.TicketSnapshot;
+import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.util.Locale;
+import java.util.Optional;
+import java.util.UUID;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class TimePassTicketService {
+
+    private final TicketRepository ticketRepository;
+    private final TicketJourneyRepository journeyRepository;
+    private final StationRepository stationRepository;
+    private final TicketJourneySettlementService settlementService;
+    private final TicketOperationRegistrationService operationRegistrationService;
+    private final Clock clock;
+
+    public TimePassTicketService(
+            TicketRepository ticketRepository,
+            TicketJourneyRepository journeyRepository,
+            StationRepository stationRepository,
+            TicketJourneySettlementService settlementService,
+            TicketOperationRegistrationService operationRegistrationService,
+            Clock clock
+    ) {
+        this.ticketRepository = ticketRepository;
+        this.journeyRepository = journeyRepository;
+        this.stationRepository = stationRepository;
+        this.settlementService = settlementService;
+        this.operationRegistrationService = operationRegistrationService;
+        this.clock = clock;
+    }
+
+    @Transactional
+    public TicketJourney enter(String ticketCode, String stationCode) {
+        Ticket ticket = requiredTicketForUpdate(ticketCode);
+        Station station = requiredStation(stationCode);
+        requireTimePass(ticket);
+        TicketSnapshot before = TicketSnapshot.from(ticket);
+        LocalDateTime now = LocalDateTime.now(clock);
+        ticket.refreshTimePassStatus(now);
+        if (!ticket.isValidAt(now)) {
+            throw new IllegalStateException("The time pass is outside its validity period");
+        }
+        if (openJourney(ticket).isPresent()) {
+            throw new IllegalStateException("The ticket already has an open journey");
+        }
+
+        ticket.recordUse(now);
+        TicketJourney journey = journeyRepository.save(new TicketJourney(
+                uniqueCode("RMM-JRN"), ticket, station, now
+        ));
+        operationRegistrationService.recordJourney(
+                TicketOperationType.ENTRY_ACCEPTED, ticket, journey, station, before, BigDecimal.ZERO
+        );
+        return journey;
+    }
+
+    @Transactional
+    public TicketJourney exit(String ticketCode, String stationCode) {
+        Ticket ticket = requiredTicketForUpdate(ticketCode);
+        Station station = requiredStation(stationCode);
+        requireTimePass(ticket);
+        if (!ticket.isActive() || ticket.getStatus() == TicketStatus.BLOCKED
+                || ticket.getStatus() == TicketStatus.CANCELLED) {
+            throw new IllegalStateException("The ticket cannot complete its open journey");
+        }
+
+        TicketSnapshot before = TicketSnapshot.from(ticket);
+        TicketJourney journey = openJourney(ticket)
+                .orElseThrow(() -> new IllegalStateException("The ticket has no open journey"));
+        LocalDateTime now = LocalDateTime.now(clock);
+        ticket.refreshTimePassStatus(now);
+        var settlement = settlementService.calculate(ticket, journey.getEntryStation(), station);
+        journey.close(station, settlement.stationCount(), settlement.fareAmount(), now);
+        ticket.recordUse(now);
+        TicketJourney persisted = journeyRepository.save(journey);
+        operationRegistrationService.recordJourney(
+                TicketOperationType.EXIT_ACCEPTED, ticket, persisted, station, before, BigDecimal.ZERO
+        );
+        return persisted;
+    }
+
+    @Transactional
+    public Ticket renew(String ticketCode, int days) {
+        Ticket ticket = requiredTicketForUpdate(ticketCode);
+        requireTimePass(ticket);
+        if (openJourney(ticket).isPresent()) {
+            throw new IllegalStateException("A ticket with an open journey cannot be renewed");
+        }
+        LocalDateTime now = LocalDateTime.now(clock);
+        ticket.refreshTimePassStatus(now);
+        ticket.renewValidity(days, now);
+        return ticket;
+    }
+
+    private Ticket requiredTicketForUpdate(String code) {
+        return ticketRepository.findByCodeForUpdate(normalize(code))
+                .orElseThrow(() -> new IllegalArgumentException("Ticket not found"));
+    }
+
+    private Station requiredStation(String code) {
+        return stationRepository.findByCodeAndActiveTrue(normalize(code))
+                .orElseThrow(() -> new IllegalArgumentException("Active station not found"));
+    }
+
+    private Optional<TicketJourney> openJourney(Ticket ticket) {
+        return journeyRepository.findFirstByTicketAndStatusOrderByOpenedAtDesc(
+                ticket, TicketJourneyStatus.OPEN
+        );
+    }
+
+    private void requireTimePass(Ticket ticket) {
+        if (ticket.getProductType() != TicketProductType.TIME_PASS) {
+            throw new IllegalArgumentException("The operation requires a time pass");
+        }
+    }
+
+    private String normalize(String value) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException("A code is required");
+        }
+        return value.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private String uniqueCode(String prefix) {
+        return prefix + "-" + UUID.randomUUID().toString().toUpperCase(Locale.ROOT);
+    }
+}

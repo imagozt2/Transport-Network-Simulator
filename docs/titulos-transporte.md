@@ -145,19 +145,26 @@ necesita saber tanto cuánto cuesta el producto como qué datos requiere para ut
 
 ## Alcance actual
 
-La sección implementada es de consulta. Todavía no modifica productos ni emite billetes.
+La sección web mantiene el catálogo como una consulta de solo lectura. El backend incorpora además
+el dominio transaccional de emisión, uso y recarga descrito en
+[Dominio de billetes](dominio-billetes.md); estas operaciones no se ejecutan desde la consulta del
+catálogo.
 
-La emisión administrativa gratuita prevista para incidencias deberá implementarse como una
-operación transaccional independiente. Tendrá que validar:
+La emisión administrativa gratuita para incidencias es una operación transaccional independiente.
+Puede entregar el billete a la cartera de un pasajero, enviarlo a una máquina conectada mediante
+MQTT o simular su entrega en una máquina online no monitorizada. Valida:
 
 - que el producto esté activo;
-- que la máquina seleccionada sea una máquina de venta activa;
+- que el pasajero esté activo o que la máquina seleccionada sea una máquina de venta online;
 - los datos específicos requeridos por cada tipo de producto;
 - la creación coherente del billete, su QR y el registro de compra con importe cero;
 - la trazabilidad del motivo de la reemisión.
 
-Separar esta operación evita que una consulta del catálogo pueda producir efectos sobre billetes o
-compras.
+Esta separación evita que una consulta del catálogo pueda producir efectos sobre billetes o
+compras y conserva la trazabilidad del operador que solicita la compensación.
+
+El flujo, sus estados, canales, respuestas y eventos se detallan en
+[Emisión administrativa de billetes](emision-administrativa-billetes.md).
 
 ## Pruebas
 
@@ -169,3 +176,4 @@ La cobertura automatizada comprueba:
 - URL y método utilizados por el servicio Angular;
 - indicadores, tarifas, límites y estados representados;
 - filtros de la pantalla y recuperación ante errores de red.
+- emisiones físicas, digitales, simuladas, pendientes y fallidas.

@@ -1,4 +1,5 @@
 USE transport_simulator_db;
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 INSERT INTO ticket_products (
     code, name, description, product_type,

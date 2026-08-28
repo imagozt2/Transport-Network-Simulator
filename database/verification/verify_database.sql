@@ -1,16 +1,50 @@
 USE transport_simulator_db;
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 SELECT COUNT(*) AS operator_account_count
 FROM operator_accounts;
 
+SELECT COUNT(*) AS operator_display_preference_count
+FROM operator_display_preferences;
+
 SELECT COUNT(*) AS passenger_account_count
 FROM passenger_accounts;
+
+SELECT COUNT(*) AS passenger_session_count
+FROM passenger_sessions;
+
+SELECT COUNT(*) AS passenger_mobile_device_count
+FROM passenger_mobile_devices;
+
+SELECT COUNT(*) AS device_mqtt_identity_count
+FROM device_mqtt_identities;
+
+SELECT COUNT(*) AS device_mqtt_command_count
+FROM device_mqtt_commands;
+
+SELECT COUNT(*) AS mqtt_inbound_message_count
+FROM mqtt_inbound_messages;
+
+SELECT COUNT(*) AS passenger_account_token_count
+FROM passenger_account_tokens;
 
 SELECT COUNT(*) AS passenger_account_status_change_count
 FROM passenger_account_status_changes;
 
 SELECT COUNT(*) AS compensatory_ticket_issuance_count
 FROM compensatory_ticket_issuances;
+
+SELECT COUNT(*) AS ticket_count
+FROM tickets;
+
+SELECT COUNT(*) AS ticket_support_count
+FROM ticket_supports;
+
+SELECT COUNT(*) AS ticket_qr_credential_count
+FROM ticket_qr_credentials;
+
+SELECT COUNT(*) AS ticket_operation_count
+FROM ticket_operations;
 
 SELECT COUNT(*) AS incident_count
 FROM incidents;
@@ -26,6 +60,7 @@ UNION ALL SELECT 'transport_lines', COUNT(*), 6 FROM transport_lines
 UNION ALL SELECT 'line_stations', COUNT(*), 88 FROM line_stations
 UNION ALL SELECT 'station_connections', COUNT(*), 82 FROM station_connections
 UNION ALL SELECT 'devices', COUNT(*), 622 FROM devices
+UNION ALL SELECT 'device_mqtt_identities', COUNT(*), 622 FROM device_mqtt_identities
 UNION ALL SELECT 'train_models', COUNT(*), 4 FROM train_models
 UNION ALL SELECT 'depots', COUNT(*), 12 FROM depots
 UNION ALL SELECT 'trains', COUNT(*), 242 FROM trains
@@ -38,6 +73,17 @@ UNION ALL SELECT 'line_service_levels', COUNT(*), 90 FROM line_service_levels
 UNION ALL SELECT 'line_depots', COUNT(*), 12 FROM line_depots
 UNION ALL SELECT 'ticket_products', COUNT(*), 4 FROM ticket_products;
 
+SELECT id, code, status, mqtt_presence, operational_state
+FROM devices
+WHERE (mqtt_presence IS NOT NULL AND mqtt_presence NOT IN ('ONLINE', 'OFFLINE'))
+   OR (operational_state IS NOT NULL AND operational_state NOT IN (
+       'AVAILABLE', 'BUSY', 'DEGRADED', 'OUT_OF_SERVICE', 'MAINTENANCE'
+   ))
+   OR uptime_seconds < 0
+   OR (mqtt_presence = 'OFFLINE' AND status <> 'OFFLINE')
+   OR (operational_state = 'MAINTENANCE' AND mqtt_presence = 'ONLINE'
+       AND status <> 'MAINTENANCE');
+
 SELECT id, username, email, operator_role, account_status
 FROM operator_accounts
 WHERE CHAR_LENGTH(TRIM(username)) < 3
@@ -47,6 +93,13 @@ WHERE CHAR_LENGTH(TRIM(username)) < 3
    OR account_status NOT IN ('ACTIVE', 'DISABLED', 'LOCKED')
    OR failed_login_attempts < 0;
 
+SELECT preferences.operator_account_id, preferences.time_zone, preferences.theme
+FROM operator_display_preferences preferences
+LEFT JOIN operator_accounts operators ON operators.id = preferences.operator_account_id
+WHERE operators.id IS NULL
+   OR CHAR_LENGTH(TRIM(preferences.time_zone)) = 0
+   OR preferences.theme NOT IN ('LIGHT', 'DARK');
+
 SELECT id, public_id, email, account_status
 FROM passenger_accounts
 WHERE public_id NOT REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
@@ -54,8 +107,74 @@ WHERE public_id NOT REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[
    OR CHAR_LENGTH(password_hash) < 20
    OR CHAR_LENGTH(TRIM(first_name)) = 0
    OR CHAR_LENGTH(TRIM(last_name)) = 0
-   OR account_status NOT IN ('ACTIVE', 'BLOCKED', 'DISABLED')
+   OR account_status NOT IN ('PENDING_VERIFICATION', 'ACTIVE', 'BLOCKED', 'DISABLED')
    OR failed_login_attempts < 0;
+
+SELECT identities.id, identities.instance_id, identities.mqtt_client_id,
+       identities.authentication_mode, identities.identity_status
+FROM device_mqtt_identities identities
+LEFT JOIN devices ON devices.id = identities.device_id
+WHERE devices.id IS NULL
+   OR devices.active = FALSE
+   OR identities.mqtt_client_id <> devices.code
+   OR identities.instance_id NOT REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+   OR identities.authentication_mode NOT IN ('PASSWORD', 'MTLS')
+   OR identities.identity_status NOT IN ('ACTIVE', 'REVOKED', 'EXPIRED')
+   OR (identities.authentication_mode = 'PASSWORD' AND identities.certificate_serial IS NOT NULL)
+   OR (identities.authentication_mode = 'MTLS' AND identities.certificate_serial IS NULL)
+   OR (identities.identity_status = 'REVOKED' AND identities.revoked_at IS NULL)
+   OR (identities.identity_status <> 'REVOKED' AND identities.revoked_at IS NOT NULL)
+   OR (identities.valid_until IS NOT NULL AND identities.valid_until <= identities.valid_from);
+
+SELECT commands.id, commands.command_id, commands.command_type, commands.command_status
+FROM device_mqtt_commands commands
+LEFT JOIN devices ON devices.id = commands.device_id
+WHERE devices.id IS NULL
+   OR commands.message_id NOT REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+   OR commands.command_type NOT IN ('TICKET_ISSUE', 'CONFIGURATION_REFRESH', 'STATUS_REQUEST', 'RESTART')
+   OR commands.command_status NOT IN ('PENDING', 'PUBLISHED', 'PUBLISH_FAILED', 'RECEIVED',
+       'PROCESSING', 'COMPLETED', 'FAILED', 'REJECTED', 'EXPIRED')
+   OR commands.expires_at <= commands.requested_at
+   OR commands.publication_attempts < 0
+   OR (commands.command_status = 'PENDING' AND commands.published_at IS NOT NULL);
+
+SELECT messages.id, messages.message_id, messages.processing_status
+FROM mqtt_inbound_messages messages
+LEFT JOIN devices ON devices.id = messages.device_id
+WHERE devices.id IS NULL
+   OR messages.message_id NOT REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+   OR messages.payload_fingerprint NOT REGEXP '^[0-9a-fA-F]{64}$'
+   OR messages.processing_status NOT IN ('PROCESSING', 'PROCESSED', 'REJECTED', 'FAILED')
+   OR messages.processing_attempts <= 0
+   OR messages.duplicate_count < 0
+   OR (messages.processing_status = 'PROCESSED' AND messages.processed_at IS NULL);
+
+SELECT devices.id, devices.installation_id, devices.platform, devices.device_status
+FROM passenger_mobile_devices devices
+LEFT JOIN passenger_accounts passengers ON passengers.id = devices.passenger_account_id
+WHERE passengers.id IS NULL
+   OR devices.public_id NOT REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+   OR devices.platform <> 'ANDROID'
+   OR devices.device_status NOT IN ('ACTIVE', 'REVOKED')
+   OR (devices.device_status = 'ACTIVE' AND devices.revoked_at IS NOT NULL)
+   OR (devices.device_status = 'REVOKED' AND devices.revoked_at IS NULL);
+
+SELECT sessions.id, devices.installation_id, devices.platform
+FROM passenger_sessions sessions
+LEFT JOIN passenger_mobile_devices devices ON devices.id = sessions.mobile_device_id
+WHERE devices.id IS NULL
+   OR sessions.public_id NOT REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+   OR sessions.access_token_expires_at > sessions.refresh_token_expires_at
+   OR (sessions.revoked_at IS NULL AND sessions.revocation_reason IS NOT NULL)
+   OR (sessions.revoked_at IS NOT NULL
+       AND (sessions.revocation_reason IS NULL OR CHAR_LENGTH(TRIM(sessions.revocation_reason)) = 0));
+
+SELECT tokens.id, tokens.token_type, tokens.expires_at, tokens.used_at
+FROM passenger_account_tokens tokens
+LEFT JOIN passenger_accounts passengers ON passengers.id = tokens.passenger_account_id
+WHERE passengers.id IS NULL
+   OR tokens.token_type NOT IN ('EMAIL_VERIFICATION', 'PASSWORD_RESET')
+   OR tokens.used_at > tokens.expires_at;
 
 SELECT status_changes.id
 FROM passenger_account_status_changes status_changes
@@ -66,19 +185,26 @@ LEFT JOIN operator_accounts operators
 WHERE passengers.id IS NULL
    OR operators.id IS NULL
    OR status_changes.previous_status = status_changes.new_status
-   OR status_changes.previous_status NOT IN ('ACTIVE', 'BLOCKED', 'DISABLED')
-   OR status_changes.new_status NOT IN ('ACTIVE', 'BLOCKED', 'DISABLED');
+   OR status_changes.previous_status NOT IN ('PENDING_VERIFICATION', 'ACTIVE', 'BLOCKED', 'DISABLED')
+   OR status_changes.new_status NOT IN ('PENDING_VERIFICATION', 'ACTIVE', 'BLOCKED', 'DISABLED');
 
-SELECT issuances.id, issuances.code, products.product_type, devices.code AS device_code,
-       devices.device_type, issuances.issuance_status
+SELECT issuances.id, issuances.code, products.product_type, issuances.delivery_method,
+       devices.code AS device_code, devices.device_type,
+       passengers.public_id AS passenger_public_id, issuances.issuance_status
 FROM compensatory_ticket_issuances issuances
 LEFT JOIN ticket_products products ON products.id = issuances.product_id
 LEFT JOIN devices ON devices.id = issuances.target_device_id
+LEFT JOIN passenger_accounts passengers ON passengers.id = issuances.recipient_passenger_account_id
 LEFT JOIN operator_accounts operators ON operators.id = issuances.requested_by_operator_id
 LEFT JOIN tickets ON tickets.id = issuances.issued_ticket_id
 WHERE products.id IS NULL
-   OR devices.id IS NULL
-   OR devices.device_type <> 'TICKET_MACHINE'
+   OR (issuances.delivery_method = 'PHYSICAL_DEVICE'
+       AND (devices.id IS NULL OR devices.device_type <> 'TICKET_MACHINE'
+            OR issuances.recipient_passenger_account_id IS NOT NULL))
+   OR (issuances.delivery_method = 'DIGITAL_WALLET'
+       AND (passengers.id IS NULL OR issuances.target_device_id IS NOT NULL))
+   OR (issuances.target_device_id IS NOT NULL AND devices.id IS NULL)
+   OR (issuances.recipient_passenger_account_id IS NOT NULL AND passengers.id IS NULL)
    OR operators.id IS NULL
    OR (issuances.issued_ticket_id IS NOT NULL AND tickets.id IS NULL)
    OR issuances.charged_amount <> 0
@@ -93,18 +219,119 @@ WHERE products.id IS NULL
    OR (products.product_type = 'TIME_PASS' AND issuances.selected_days IS NULL)
    OR (products.product_type = 'SMART_BALANCE' AND issuances.recharge_amount IS NULL);
 
+SELECT tickets.id, tickets.code, tickets.product_type, tickets.status
+FROM tickets
+LEFT JOIN ticket_products products ON products.id = tickets.product_id
+LEFT JOIN passenger_accounts passengers ON passengers.id = tickets.passenger_user_id
+WHERE products.id IS NULL
+   OR tickets.product_type <> products.product_type
+   OR tickets.status NOT IN ('ACTIVE', 'EXHAUSTED', 'EXPIRED', 'BLOCKED', 'CANCELLED')
+   OR tickets.balance_amount < 0
+   OR tickets.lock_version < 0
+   OR (tickets.passenger_user_id IS NOT NULL AND passengers.id IS NULL);
+
+SELECT supports.id, supports.code, supports.support_type, supports.support_status
+FROM ticket_supports supports
+LEFT JOIN tickets ON tickets.id = supports.ticket_id
+LEFT JOIN devices ON devices.id = supports.issued_by_device_id
+LEFT JOIN passenger_accounts passengers ON passengers.id = supports.passenger_account_id
+LEFT JOIN ticket_supports replacements ON replacements.id = supports.replaced_by_support_id
+WHERE tickets.id IS NULL
+   OR supports.support_type NOT IN ('PHYSICAL', 'DIGITAL')
+   OR supports.support_status NOT IN ('ACTIVE', 'BLOCKED', 'REVOKED', 'SUPERSEDED')
+   OR (supports.issued_by_device_id IS NOT NULL AND devices.id IS NULL)
+   OR (supports.passenger_account_id IS NOT NULL AND passengers.id IS NULL)
+   OR (supports.replaced_by_support_id IS NOT NULL AND replacements.id IS NULL)
+   OR (supports.support_status = 'SUPERSEDED' AND replacements.id IS NULL)
+   OR (supports.support_status <> 'SUPERSEDED' AND replacements.id IS NOT NULL)
+   OR (supports.support_type = 'DIGITAL' AND supports.passenger_account_id IS NULL)
+   OR (supports.support_type = 'PHYSICAL' AND supports.serial_number IS NULL)
+   OR (supports.passenger_account_id IS NOT NULL
+       AND tickets.passenger_user_id IS NOT NULL
+       AND supports.passenger_account_id <> tickets.passenger_user_id);
+
+SELECT credentials.id, credentials.credential_id, credentials.credential_status
+FROM ticket_qr_credentials credentials
+LEFT JOIN tickets ON tickets.id = credentials.ticket_id
+LEFT JOIN ticket_supports supports ON supports.id = credentials.support_id
+LEFT JOIN ticket_qr_credentials replacements
+    ON replacements.id = credentials.superseded_by_credential_id
+WHERE tickets.id IS NULL
+   OR supports.id IS NULL
+   OR supports.ticket_id <> credentials.ticket_id
+   OR credentials.credential_status NOT IN ('ACTIVE', 'REVOKED', 'SUPERSEDED', 'EXPIRED')
+   OR (credentials.superseded_by_credential_id IS NOT NULL AND replacements.id IS NULL)
+   OR (credentials.credential_status = 'SUPERSEDED' AND replacements.id IS NULL)
+   OR (credentials.credential_status <> 'SUPERSEDED' AND replacements.id IS NOT NULL)
+   OR (credentials.credential_status = 'REVOKED' AND credentials.revoked_at IS NULL)
+   OR (credentials.credential_status <> 'REVOKED' AND credentials.revoked_at IS NOT NULL);
+
+SELECT claims.id, claims.validation_reference, claims.claim_status
+FROM ticket_qr_use_claims claims
+LEFT JOIN ticket_qr_credentials credentials ON credentials.id = claims.credential_id
+WHERE credentials.id IS NULL
+   OR claims.validation_type NOT IN ('ENTRY', 'EXIT')
+   OR claims.claim_status NOT IN ('RECEIVED', 'COMPLETED')
+   OR (claims.claim_status = 'RECEIVED' AND claims.completed_at IS NOT NULL)
+   OR (claims.claim_status = 'COMPLETED' AND claims.completed_at IS NULL)
+   OR claims.completed_at < claims.received_at;
+
+SELECT journeys.id, journeys.code, journeys.status
+FROM ticket_journeys journeys
+LEFT JOIN tickets ON tickets.id = journeys.ticket_id
+LEFT JOIN passenger_accounts passengers ON passengers.id = journeys.passenger_account_id
+LEFT JOIN stations entry_stations ON entry_stations.id = journeys.entry_station_id
+LEFT JOIN stations exit_stations ON exit_stations.id = journeys.exit_station_id
+LEFT JOIN ticket_validations entry_validations
+    ON entry_validations.id = journeys.entry_validation_id
+LEFT JOIN ticket_validations exit_validations
+    ON exit_validations.id = journeys.exit_validation_id
+WHERE tickets.id IS NULL
+   OR entry_stations.id IS NULL
+   OR (journeys.passenger_account_id IS NOT NULL AND passengers.id IS NULL)
+   OR (tickets.passenger_user_id IS NOT NULL AND journeys.passenger_account_id IS NULL)
+   OR (journeys.passenger_account_id IS NOT NULL
+       AND tickets.passenger_user_id IS NOT NULL
+       AND journeys.passenger_account_id <> tickets.passenger_user_id)
+   OR (journeys.exit_station_id IS NOT NULL AND exit_stations.id IS NULL)
+   OR (journeys.entry_validation_id IS NOT NULL AND entry_validations.id IS NULL)
+   OR (journeys.exit_validation_id IS NOT NULL AND exit_validations.id IS NULL)
+   OR journeys.status NOT IN ('OPEN', 'CLOSED', 'FORCED_CLOSED', 'CANCELLED')
+   OR (journeys.status = 'OPEN' AND (journeys.exit_station_id IS NOT NULL
+       OR journeys.closed_at IS NOT NULL OR journeys.duration_seconds IS NOT NULL))
+   OR (journeys.status = 'CLOSED' AND (journeys.exit_station_id IS NULL
+       OR journeys.closed_at IS NULL OR journeys.duration_seconds IS NULL));
+
+SELECT operations.id, operations.code, operations.operation_type
+FROM ticket_operations operations
+LEFT JOIN tickets ON tickets.id = operations.ticket_id
+LEFT JOIN ticket_supports supports ON supports.id = operations.support_id
+LEFT JOIN purchases ON purchases.id = operations.purchase_id
+LEFT JOIN ticket_journeys journeys ON journeys.id = operations.journey_id
+WHERE tickets.id IS NULL
+   OR (operations.support_id IS NOT NULL AND supports.id IS NULL)
+   OR (operations.purchase_id IS NOT NULL AND purchases.id IS NULL)
+   OR (operations.journey_id IS NOT NULL AND journeys.id IS NULL)
+   OR (supports.id IS NOT NULL AND supports.ticket_id <> operations.ticket_id)
+   OR (purchases.id IS NOT NULL AND purchases.ticket_id <> operations.ticket_id)
+   OR (journeys.id IS NOT NULL AND journeys.ticket_id <> operations.ticket_id)
+   OR operations.operation_type NOT IN (
+       'ISSUED', 'RECHARGED', 'ENTRY_ACCEPTED', 'EXIT_ACCEPTED',
+       'BLOCKED', 'UNBLOCKED', 'CANCELLED', 'SUPPORT_LINKED', 'QR_REVOKED'
+   );
+
 SELECT incidents.id, incidents.code, incidents.incident_status, incidents.priority
 FROM incidents
 LEFT JOIN operator_accounts creators ON creators.id = incidents.created_by_operator_id
 LEFT JOIN operator_accounts assignees ON assignees.id = incidents.assigned_to_operator_id
-LEFT JOIN transport_lines lines ON lines.id = incidents.affected_line_id
+LEFT JOIN transport_lines affected_line ON affected_line.id = incidents.affected_line_id
 LEFT JOIN stations ON stations.id = incidents.affected_station_id
 LEFT JOIN trains ON trains.id = incidents.affected_train_id
 LEFT JOIN devices ON devices.id = incidents.affected_device_id
 LEFT JOIN depots ON depots.id = incidents.affected_depot_id
 WHERE creators.id IS NULL
    OR (incidents.assigned_to_operator_id IS NOT NULL AND assignees.id IS NULL)
-   OR (incidents.affected_line_id IS NOT NULL AND lines.id IS NULL)
+   OR (incidents.affected_line_id IS NOT NULL AND affected_line.id IS NULL)
    OR (incidents.affected_station_id IS NOT NULL AND stations.id IS NULL)
    OR (incidents.affected_train_id IS NOT NULL AND trains.id IS NULL)
    OR (incidents.affected_device_id IS NOT NULL AND devices.id IS NULL)
@@ -213,3 +440,18 @@ LEFT JOIN line_depots ON line_depots.line_id = transport_line.id
 WHERE transport_line.active = TRUE
 GROUP BY transport_line.id, transport_line.code
 HAVING COUNT(line_depots.id) = 0;
+
+SELECT logs.id, logs.log_origin, logs.event_source
+FROM operational_logs logs
+WHERE logs.event_source NOT IN ('SIMULATED', 'REAL', 'ADMINISTRATIVE')
+   OR (logs.log_origin = 'DEVICE_SIMULATION' AND logs.event_source <> 'SIMULATED')
+   OR (logs.log_origin = 'MQTT' AND logs.event_source <> 'REAL')
+   OR (logs.log_origin = 'ADMINISTRATION' AND logs.event_source <> 'ADMINISTRATIVE');
+
+SELECT devices.id, devices.code, devices.mqtt_presence, devices.last_communication_at
+FROM devices
+WHERE (devices.mqtt_presence IS NOT NULL AND devices.last_communication_at IS NULL)
+   OR (devices.last_presence_at IS NOT NULL
+       AND devices.last_presence_at > devices.last_communication_at)
+   OR (devices.last_status_at IS NOT NULL
+       AND devices.last_status_at > devices.last_communication_at);

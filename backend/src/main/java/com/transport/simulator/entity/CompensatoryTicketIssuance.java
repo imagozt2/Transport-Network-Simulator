@@ -1,6 +1,7 @@
 package com.transport.simulator.entity;
 
 import com.transport.simulator.enums.CompensatoryIssuanceStatus;
+import com.transport.simulator.enums.CompensatoryDeliveryMethod;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -32,9 +33,17 @@ public class CompensatoryTicketIssuance extends AuditableEntity {
     @JoinColumn(name = "product_id", nullable = false)
     private TicketProduct product;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "target_device_id", nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "delivery_method", nullable = false, length = 30)
+    private CompensatoryDeliveryMethod deliveryMethod;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "target_device_id")
     private Device targetDevice;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recipient_passenger_account_id")
+    private PassengerAccount recipientPassenger;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "requested_by_operator_id", nullable = false)
@@ -80,6 +89,12 @@ public class CompensatoryTicketIssuance extends AuditableEntity {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
+    @Column(name = "failed_at")
+    private LocalDateTime failedAt;
+
+    @Column(name = "failure_reason", length = 500)
+    private String failureReason;
+
     protected CompensatoryTicketIssuance() {
     }
 
@@ -89,7 +104,22 @@ public class CompensatoryTicketIssuance extends AuditableEntity {
     ) {
         this.code = Objects.requireNonNull(code);
         this.product = Objects.requireNonNull(product);
+        this.deliveryMethod = CompensatoryDeliveryMethod.PHYSICAL_DEVICE;
         this.targetDevice = Objects.requireNonNull(targetDevice);
+        this.requestedBy = Objects.requireNonNull(requestedBy);
+        this.reason = Objects.requireNonNull(reason);
+        this.requestedAt = Objects.requireNonNull(requestedAt);
+        this.status = CompensatoryIssuanceStatus.REQUESTED;
+    }
+
+    public CompensatoryTicketIssuance(
+            String code, TicketProduct product, PassengerAccount recipientPassenger,
+            OperatorAccount requestedBy, String reason, LocalDateTime requestedAt
+    ) {
+        this.code = Objects.requireNonNull(code);
+        this.product = Objects.requireNonNull(product);
+        this.deliveryMethod = CompensatoryDeliveryMethod.DIGITAL_WALLET;
+        this.recipientPassenger = Objects.requireNonNull(recipientPassenger);
         this.requestedBy = Objects.requireNonNull(requestedBy);
         this.reason = Objects.requireNonNull(reason);
         this.requestedAt = Objects.requireNonNull(requestedAt);
@@ -106,16 +136,44 @@ public class CompensatoryTicketIssuance extends AuditableEntity {
     public void configureValidity(Integer days) { selectedDays = days; }
     public void configureMoneyBalance(BigDecimal amount) { rechargeAmount = amount; }
 
-    public void complete(Ticket ticket, LocalDateTime at) {
+    public void beginProcessing(Ticket ticket) {
         issuedTicket = Objects.requireNonNull(ticket);
+        status = CompensatoryIssuanceStatus.PROCESSING;
+    }
+
+    public void complete(LocalDateTime at) {
+        if (status != CompensatoryIssuanceStatus.PROCESSING || issuedTicket == null) {
+            throw new IllegalStateException("Only a processing issuance can be completed");
+        }
         completedAt = Objects.requireNonNull(at);
         status = CompensatoryIssuanceStatus.COMPLETED;
+    }
+
+    public void completeSimulated(LocalDateTime at) {
+        if (deliveryMethod != CompensatoryDeliveryMethod.PHYSICAL_DEVICE
+                || status != CompensatoryIssuanceStatus.REQUESTED || issuedTicket != null) {
+            throw new IllegalStateException(
+                    "Only a requested physical issuance without a ticket can be simulated");
+        }
+        completedAt = Objects.requireNonNull(at);
+        status = CompensatoryIssuanceStatus.COMPLETED;
+    }
+
+    public void fail(String reason, LocalDateTime at) {
+        if (status == CompensatoryIssuanceStatus.COMPLETED) {
+            throw new IllegalStateException("A completed issuance cannot fail");
+        }
+        failureReason = Objects.requireNonNull(reason);
+        failedAt = Objects.requireNonNull(at);
+        status = CompensatoryIssuanceStatus.FAILED;
     }
 
     public Long getId() { return id; }
     public String getCode() { return code; }
     public TicketProduct getProduct() { return product; }
+    public CompensatoryDeliveryMethod getDeliveryMethod() { return deliveryMethod; }
     public Device getTargetDevice() { return targetDevice; }
+    public PassengerAccount getRecipientPassenger() { return recipientPassenger; }
     public OperatorAccount getRequestedBy() { return requestedBy; }
     public Ticket getIssuedTicket() { return issuedTicket; }
     public CompensatoryIssuanceStatus getStatus() { return status; }

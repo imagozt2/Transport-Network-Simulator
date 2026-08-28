@@ -3,9 +3,11 @@ package com.transport.simulator.repository;
 import com.transport.simulator.entity.PassengerAccount;
 import com.transport.simulator.enums.PassengerAccountStatus;
 import java.util.Optional;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -14,6 +16,10 @@ public interface PassengerAccountRepository extends JpaRepository<PassengerAccou
     Optional<PassengerAccount> findByPublicId(String publicId);
 
     boolean existsByEmailIgnoreCase(String email);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select passenger from PassengerAccount passenger where lower(passenger.email) = lower(:email)")
+    Optional<PassengerAccount> findByEmailIgnoreCaseForUpdate(@Param("email") String email);
 
     long countByStatus(PassengerAccountStatus status);
 

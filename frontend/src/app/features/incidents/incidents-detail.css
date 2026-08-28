@@ -20,6 +20,8 @@
 .edit-section, .status-confirmation { display: flex; flex-direction: column; gap: 11px; }
 .edit-section label, .status-confirmation label, .comment-field, .create-incident-dialog label { display: flex; flex-direction: column; gap: 5px; color: #475569; font-size: 10px; font-weight: 800; }
 .edit-section input, .edit-section textarea, .edit-section select, .status-confirmation textarea, .comment-field textarea, .create-incident-dialog input, .create-incident-dialog textarea, .create-incident-dialog select { border: 1px solid #cbd5e1; border-radius: 10px; padding: 10px; color: #111827; background: #f8fafc; font: inherit; resize: vertical; }
+.edit-section [aria-invalid="true"], .create-incident-dialog [aria-invalid="true"] { border-color: #dc2626; }
+.create-incident-dialog .field-error { color: #b91c1c; font-size: 9px; font-weight: 750; }
 .edit-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .dialog-actions button, .comment-button { border: 0; border-radius: 10px; padding: 9px 13px; cursor: pointer; color: #334155; background: #e2e8f0; font-size: 10px; font-weight: 850; }
@@ -45,9 +47,13 @@
 .form-error { margin: 0; color: #b91c1c; font-size: 10px; font-weight: 750; }
 
 .create-incident-backdrop { align-items: center; justify-content: center; padding: 20px; }
-.create-incident-dialog { width: min(650px, 100%); max-height: calc(100vh - 40px); overflow-y: auto; border-radius: 20px; padding: 20px; background: #fff; box-shadow: 0 24px 60px rgba(15, 23, 42, .25); }
+.create-incident-dialog { position: relative; isolation: isolate; pointer-events: auto; width: min(650px, 100%); max-height: calc(100vh - 40px); overflow-y: auto; border-radius: 20px; padding: 20px; background: #fff; box-shadow: 0 24px 60px rgba(15, 23, 42, .25); }
 .create-incident-dialog form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
 .create-incident-dialog .wide-field { grid-column: 1 / -1; }
+.incident-context { border: 1px solid #bfdbfe; border-radius: 12px; padding: 12px; color: #1e3a8a; background: #eff6ff; }
+.incident-context strong { display: block; font-size: 11px; }
+.incident-context div { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 8px; }
+.incident-context span { border-radius: 999px; padding: 5px 8px; color: #1e3a8a; background: #dbeafe; font-size: 10px; font-weight: 900; }
 .assignment-check { align-items: center; flex-direction: row !important; }
 .assignment-check input { width: 16px; height: 16px; }
 

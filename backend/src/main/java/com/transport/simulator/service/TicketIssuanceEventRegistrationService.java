@@ -4,6 +4,7 @@ import com.transport.simulator.entity.CompensatoryTicketIssuance;
 import com.transport.simulator.entity.DeviceEventLog;
 import com.transport.simulator.entity.Ticket;
 import com.transport.simulator.enums.DeviceEventType;
+import com.transport.simulator.enums.DeviceEventSource;
 import com.transport.simulator.enums.LogOrigin;
 import com.transport.simulator.enums.LogSeverity;
 import com.transport.simulator.repository.DeviceEventLogRepository;
@@ -47,13 +48,28 @@ public class TicketIssuanceEventRegistrationService {
             CompensatoryTicketIssuance issuance,
             LocalDateTime occurredAt
     ) {
+        boolean simulated = issuance.getIssuedTicket() == null;
         return register(
                 issuance,
                 issuance.getIssuedTicket(),
                 DeviceEventType.COMPENSATORY_TICKET_ISSUED,
                 "Billete compensatorio " + issuance.getProduct().getProductType()
-                        + " emitido correctamente",
+                        + (simulated ? " emitido en simulación" : " emitido correctamente"),
                 "ISSUED",
+                occurredAt
+        );
+    }
+
+    public DeviceEventLog registerFailed(
+            CompensatoryTicketIssuance issuance,
+            LocalDateTime occurredAt
+    ) {
+        return register(
+                issuance,
+                issuance.getIssuedTicket(),
+                DeviceEventType.TICKET_PURCHASE_FAILED,
+                "No se pudo presentar el billete compensatorio " + issuance.getCode(),
+                "FAILED",
                 occurredAt
         );
     }
@@ -68,6 +84,7 @@ public class TicketIssuanceEventRegistrationService {
     ) {
         DeviceEventLog log = new DeviceEventLog(
                 LogOrigin.ADMINISTRATION,
+                DeviceEventSource.ADMINISTRATIVE,
                 eventType,
                 LogSeverity.INFO,
                 message,
@@ -77,7 +94,9 @@ public class TicketIssuanceEventRegistrationService {
                 payload(issuance, ticket, eventStage)
         );
         log.linkCompensatoryIssuance(issuance, ticket, issuance.getRequestedBy());
-        return logRepository.save(log);
+        DeviceEventLog registered = logRepository.save(log);
+        logRepository.flush();
+        return registered;
     }
 
     private String payload(
@@ -90,7 +109,14 @@ public class TicketIssuanceEventRegistrationService {
         payload.put("eventStage", eventStage);
         payload.put("ticketType", issuance.getProduct().getProductType());
         payload.put("productCode", issuance.getProduct().getCode());
-        payload.put("deviceCode", issuance.getTargetDevice().getCode());
+        payload.put("deliveryMethod", issuance.getDeliveryMethod());
+        payload.put("simulated", "ISSUED".equals(eventStage) && ticket == null);
+        if (issuance.getTargetDevice() != null) {
+            payload.put("deviceCode", issuance.getTargetDevice().getCode());
+        }
+        if (issuance.getRecipientPassenger() != null) {
+            payload.put("passengerPublicId", issuance.getRecipientPassenger().getPublicId());
+        }
         payload.put("operatorUsername", issuance.getRequestedBy().getUsername());
         if (ticket != null) {
             payload.put("ticketCode", ticket.getCode());

@@ -1,0 +1,133 @@
+name: rmm-local
+
+services:
+  mysql:
+    image: mysql:8.4.10-oraclelinux9
+    container_name: ${MYSQL_CONTAINER_NAME:-rmm-mysql}
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Define MYSQL_ROOT_PASSWORD in .env}
+      MYSQL_DATABASE: transport_simulator_db
+      MYSQL_USER: ${DB_USERNAME:?Define DB_USERNAME in .env}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD in .env}
+      TZ: Europe/Madrid
+    ports:
+      - "127.0.0.1:${MYSQL_HOST_PORT:-3307}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./database/schema/01_create_database.sql:/docker-entrypoint-initdb.d/01_create_database.sql:ro
+      - ./database/schema/02_create_tables.sql:/docker-entrypoint-initdb.d/02_create_tables.sql:ro
+      - ./database/data/01_transport_network.sql:/docker-entrypoint-initdb.d/11_transport_network.sql:ro
+      - ./database/data/02_operations.sql:/docker-entrypoint-initdb.d/12_operations.sql:ro
+      - ./database/data/03_ticket_products.sql:/docker-entrypoint-initdb.d/13_ticket_products.sql:ro
+      - ./database/data/04_service_configuration.sql:/docker-entrypoint-initdb.d/14_service_configuration.sql:ro
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - MYSQL_PWD="$$MYSQL_ROOT_PASSWORD" mysqladmin ping -h 127.0.0.1 -u root --silent
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 180s
+    networks:
+      - rmm-internal
+
+  mosquitto:
+    image: eclipse-mosquitto:2.0.22-openssl
+    container_name: ${MOSQUITTO_CONTAINER_NAME:-rmm-mosquitto}
+    command:
+      - mosquitto
+      - -c
+      - ${MOSQUITTO_CONFIG_FILE:-/mosquitto/config/mosquitto.conf}
+    restart: unless-stopped
+    stop_grace_period: 30s
+    environment:
+      MQTT_HEALTH_USERNAME: ${MQTT_BACKEND_USERNAME:-rmm-backend}
+      MQTT_HEALTH_PASSWORD: ${MQTT_BACKEND_PASSWORD:-}
+    ports:
+      - "127.0.0.1:${RMM_MQTT_HOST_PORT:-1883}:${RMM_MQTT_PORT:-1883}"
+    volumes:
+      - ./infrastructure/mosquitto/config:/mosquitto/config:ro
+      - ${MOSQUITTO_RUNTIME_DIRECTORY:-./infrastructure/mosquitto/runtime}:/mosquitto/security:ro
+      - mosquitto-data:/mosquitto/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          mosquitto_pub -h 127.0.0.1 -p 1883
+          -u "$$MQTT_HEALTH_USERNAME" -P "$$MQTT_HEALTH_PASSWORD"
+          -t rmm/v1/devices/healthcheck/commands -n -q 1
+      interval: 10s
+      timeout: 6s
+      retries: 5
+      start_period: 10s
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - rmm-internal
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ${BACKEND_CONTAINER_NAME:-rmm-backend}
+    restart: unless-stopped
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/transport_simulator_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      DB_USERNAME: ${DB_USERNAME:?Define DB_USERNAME in .env}
+      DB_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD in .env}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:4200}
+      OPERATOR_USERNAME: ${OPERATOR_USERNAME:-}
+      OPERATOR_EMAIL: ${OPERATOR_EMAIL:-}
+      OPERATOR_PASSWORD: ${OPERATOR_PASSWORD:-}
+      OPERATOR_FIRST_NAME: ${OPERATOR_FIRST_NAME:-}
+      OPERATOR_LAST_NAME: ${OPERATOR_LAST_NAME:-}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+      OPERATOR_SESSION_TIMEOUT: ${OPERATOR_SESSION_TIMEOUT:-30m}
+      SERVICE_TIME_ZONE: ${SERVICE_TIME_ZONE:-Europe/Madrid}
+      DEVICE_EVENT_SIMULATION_ENABLED: ${DEVICE_EVENT_SIMULATION_ENABLED:-true}
+      DEVICE_EVENT_SIMULATION_INITIAL_DELAY_MS: ${DEVICE_EVENT_SIMULATION_INITIAL_DELAY_MS:-1000}
+      DEVICE_EVENT_SIMULATION_INTERVAL_MS: ${DEVICE_EVENT_SIMULATION_INTERVAL_MS:-1000}
+      RMM_MQTT_HOST: mosquitto
+      RMM_MQTT_ENABLED: "true"
+      RMM_MQTT_PORT: ${RMM_MQTT_PORT:-1883}
+      RMM_MQTT_TLS: ${RMM_MQTT_TLS:-false}
+      RMM_MQTT_USERNAME: ${MQTT_BACKEND_USERNAME:-rmm-backend}
+      RMM_MQTT_PASSWORD: ${MQTT_BACKEND_PASSWORD:-}
+      RMM_MQTT_CA_CERTIFICATE: /app/mqtt-certificates/ca.crt
+      RMM_MQTT_CLIENT_CERTIFICATE: /app/mqtt-certificates/clients/rmm-backend.crt
+      RMM_MQTT_CLIENT_PRIVATE_KEY: /app/mqtt-certificates/clients/rmm-backend.key
+      TICKET_QR_LOCAL_KEY_DIRECTORY: /app/ticket-qr-keys
+      RMM_APP_AUTO_VERIFY_REGISTRATION: ${RMM_APP_AUTO_VERIFY_REGISTRATION:-true}
+    volumes:
+      - ./infrastructure/mosquitto/runtime/certificates:/app/mqtt-certificates:ro
+      - ticket-qr-keys:/app/ticket-qr-keys
+    ports:
+      - "${BACKEND_BIND_ADDRESS:-0.0.0.0}:${BACKEND_HOST_PORT:-8080}:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      mosquitto:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget -q -O - http://127.0.0.1:8080/api/health >/dev/null 2>&1
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - rmm-internal
+
+volumes:
+  mysql-data:
+  mosquitto-data:
+  ticket-qr-keys:
+
+networks:
+  rmm-internal:
+    name: ${RMM_NETWORK_NAME:-rmm-internal}

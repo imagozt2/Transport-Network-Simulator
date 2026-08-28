@@ -63,6 +63,7 @@ forman parte del código del frontend.
 | Estaciones | Máquinas | `stationCode` |
 | Estaciones | Logs | `stationCode` |
 | Máquinas | Logs | `deviceCode` |
+| Logs | Incidencias | `affectedDeviceId`, categoría y contexto del evento |
 | Cocheras | Trenes | `depotCode` |
 | Panel General | Líneas | `lineCode` |
 | Panel General | Estaciones | `stationCode` |
@@ -85,9 +86,14 @@ El cierre de sesión elimina el estado local incluso cuando falla la petición r
 usuario a `/login`. Cuenta y Configuración se abren desde la cabecera y no duplican entradas en el
 menú operativo.
 
-Las preferencias de idioma, densidad visual y reducción de movimiento son locales al navegador y
-no forman parte de la sesión. La interfaz pública, operativa y administrativa está disponible en
+El idioma y la reducción de movimiento son locales al navegador. La zona horaria y el tema claro u
+oscuro se persisten en la cuenta mediante `/api/operators/me/display-preferences` y se aplican al
+cargar el layout autenticado. La interfaz pública, operativa y administrativa está disponible en
 español e inglés; cambiar el idioma actualiza la vista sin volver a autenticar al operador.
+
+La zona horaria solo transforma la presentación de fechas y horas; los instantes recibidos de la API
+mantienen su significado. El tema oscuro utiliza una paleta común para superficies, formularios y
+tablas sin sustituir los colores semánticos de las líneas ferroviarias.
 
 ## Actualización, rendimiento y consistencia visual
 
@@ -139,6 +145,7 @@ configurada. Las pruebas unitarias e integradas que usan dobles de repositorio n
 
 ## Límites actuales
 
-La aplicación web y sus contratos HTTP están integrados, pero todavía quedan fuera del repositorio
-los simuladores externos de compra y validación en C++, la comunicación MQTT efectiva, la aplicación
-Android de pasajeros y las pruebas end-to-end con navegador y backend reales.
+La aplicación web, RMM App, las máquinas Qt y la comunicación MQTT están integradas en el
+repositorio. Permanecen fuera del alcance de las pruebas automáticas actuales los escenarios
+end-to-end que levanten conjuntamente navegador, dispositivos cliente, broker, backend y base de
+datos reales.

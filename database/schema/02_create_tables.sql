@@ -1,4 +1,5 @@
 USE transport_simulator_db;
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE operator_accounts (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -34,6 +35,22 @@ CREATE INDEX idx_operator_accounts_role_status
 CREATE INDEX idx_operator_accounts_locked_until
     ON operator_accounts (locked_until);
 
+CREATE TABLE operator_display_preferences (
+    operator_account_id BIGINT PRIMARY KEY,
+    time_zone VARCHAR(64) NOT NULL DEFAULT 'Europe/Madrid',
+    theme VARCHAR(20) NOT NULL DEFAULT 'LIGHT',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_operator_display_preferences_account FOREIGN KEY (operator_account_id)
+        REFERENCES operator_accounts (id) ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT chk_operator_display_preferences_time_zone CHECK (
+        CHAR_LENGTH(TRIM(time_zone)) > 0
+    ),
+    CONSTRAINT chk_operator_display_preferences_theme CHECK (
+        theme IN ('LIGHT', 'DARK')
+    )
+);
+
 CREATE TABLE passenger_accounts (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     public_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
@@ -41,7 +58,10 @@ CREATE TABLE passenger_accounts (
     password_hash VARCHAR(255) NOT NULL,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(150) NOT NULL,
-    account_status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE',
+    account_status VARCHAR(30) NOT NULL DEFAULT 'PENDING_VERIFICATION',
+    preferred_locale VARCHAR(10) NOT NULL DEFAULT 'es-ES',
+    accepted_terms_version VARCHAR(30) NULL,
+    accepted_terms_at DATETIME NULL,
     email_verified_at DATETIME NULL,
     failed_login_attempts INT NOT NULL DEFAULT 0,
     locked_until DATETIME NULL,
@@ -63,7 +83,14 @@ CREATE TABLE passenger_accounts (
         CHAR_LENGTH(TRIM(last_name)) > 0
     ),
     CONSTRAINT chk_passenger_accounts_status CHECK (
-        account_status IN ('ACTIVE', 'BLOCKED', 'DISABLED')
+        account_status IN ('PENDING_VERIFICATION', 'ACTIVE', 'BLOCKED', 'DISABLED')
+    ),
+    CONSTRAINT chk_passenger_accounts_locale CHECK (
+        preferred_locale REGEXP '^[a-z]{2}-[A-Z]{2}$'
+    ),
+    CONSTRAINT chk_passenger_accounts_terms CHECK (
+        (accepted_terms_version IS NULL AND accepted_terms_at IS NULL)
+        OR (CHAR_LENGTH(TRIM(accepted_terms_version)) > 0 AND accepted_terms_at IS NOT NULL)
     ),
     CONSTRAINT chk_passenger_accounts_failed_attempts CHECK (failed_login_attempts >= 0)
 );
@@ -76,6 +103,97 @@ CREATE INDEX idx_passenger_accounts_locked_until
     ON passenger_accounts (locked_until);
 CREATE INDEX idx_passenger_accounts_name
     ON passenger_accounts (last_name, first_name);
+
+CREATE TABLE passenger_mobile_devices (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    public_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    passenger_account_id BIGINT NOT NULL,
+    installation_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    device_name VARCHAR(100) NOT NULL,
+    platform VARCHAR(20) NOT NULL,
+    device_status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+    registered_at DATETIME NOT NULL,
+    last_seen_at DATETIME NOT NULL,
+    revoked_at DATETIME NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_passenger_mobile_devices_public_id UNIQUE (public_id),
+    CONSTRAINT uk_passenger_mobile_devices_installation UNIQUE (installation_id),
+    CONSTRAINT fk_passenger_mobile_devices_account FOREIGN KEY (passenger_account_id)
+        REFERENCES passenger_accounts (id) ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT chk_passenger_mobile_devices_platform CHECK (platform = 'ANDROID'),
+    CONSTRAINT chk_passenger_mobile_devices_status CHECK (device_status IN ('ACTIVE', 'REVOKED')),
+    CONSTRAINT chk_passenger_mobile_devices_public_id CHECK (
+        public_id REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+    ),
+    CONSTRAINT chk_passenger_mobile_devices_lifecycle CHECK (
+        (device_status = 'ACTIVE' AND revoked_at IS NULL)
+        OR (device_status = 'REVOKED' AND revoked_at IS NOT NULL)
+    )
+);
+
+CREATE INDEX idx_passenger_mobile_devices_account_status
+    ON passenger_mobile_devices (passenger_account_id, device_status, last_seen_at);
+
+CREATE TABLE passenger_sessions (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    public_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    mobile_device_id BIGINT NOT NULL,
+    access_token_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    refresh_token_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    access_token_expires_at DATETIME NOT NULL,
+    refresh_token_expires_at DATETIME NOT NULL,
+    last_used_at DATETIME NOT NULL,
+    revoked_at DATETIME NULL,
+    revocation_reason VARCHAR(100) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_passenger_sessions_access_token UNIQUE (access_token_hash),
+    CONSTRAINT uk_passenger_sessions_refresh_token UNIQUE (refresh_token_hash),
+    CONSTRAINT uk_passenger_sessions_public_id UNIQUE (public_id),
+    CONSTRAINT fk_passenger_sessions_device FOREIGN KEY (mobile_device_id)
+        REFERENCES passenger_mobile_devices (id) ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT chk_passenger_sessions_public_id CHECK (
+        public_id REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+    ),
+    CONSTRAINT chk_passenger_sessions_access_expiry CHECK (
+        access_token_expires_at <= refresh_token_expires_at
+    ),
+    CONSTRAINT chk_passenger_sessions_hashes CHECK (
+        access_token_hash REGEXP '^[0-9a-fA-F]{64}$'
+        AND refresh_token_hash REGEXP '^[0-9a-fA-F]{64}$'
+    ),
+    CONSTRAINT chk_passenger_sessions_revocation CHECK (
+        (revoked_at IS NULL AND revocation_reason IS NULL)
+        OR (revoked_at IS NOT NULL AND CHAR_LENGTH(TRIM(revocation_reason)) > 0)
+    )
+);
+
+CREATE INDEX idx_passenger_sessions_device_active
+    ON passenger_sessions (mobile_device_id, revoked_at, refresh_token_expires_at);
+
+CREATE TABLE passenger_account_tokens (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    passenger_account_id BIGINT NOT NULL,
+    token_type VARCHAR(30) NOT NULL,
+    token_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    expires_at DATETIME NOT NULL,
+    used_at DATETIME NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_passenger_account_tokens_hash UNIQUE (token_hash),
+    CONSTRAINT fk_passenger_account_tokens_account FOREIGN KEY (passenger_account_id)
+        REFERENCES passenger_accounts (id) ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT chk_passenger_account_tokens_type CHECK (
+        token_type IN ('EMAIL_VERIFICATION', 'PASSWORD_RESET')
+    ),
+    CONSTRAINT chk_passenger_account_tokens_usage CHECK (
+        used_at IS NULL OR used_at <= expires_at
+    )
+);
+
+CREATE INDEX idx_passenger_account_tokens_account_type
+    ON passenger_account_tokens (passenger_account_id, token_type, used_at, expires_at);
 
 CREATE TABLE passenger_account_status_changes (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -92,10 +210,10 @@ CREATE TABLE passenger_account_status_changes (
         REFERENCES operator_accounts (id)
         ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT chk_passenger_status_changes_previous CHECK (
-        previous_status IN ('ACTIVE', 'BLOCKED', 'DISABLED')
+        previous_status IN ('PENDING_VERIFICATION', 'ACTIVE', 'BLOCKED', 'DISABLED')
     ),
     CONSTRAINT chk_passenger_status_changes_new CHECK (
-        new_status IN ('ACTIVE', 'BLOCKED', 'DISABLED')
+        new_status IN ('PENDING_VERIFICATION', 'ACTIVE', 'BLOCKED', 'DISABLED')
     ),
     CONSTRAINT chk_passenger_status_changes_distinct CHECK (
         previous_status <> new_status
@@ -193,17 +311,164 @@ CREATE TABLE devices (
     station_id BIGINT NOT NULL,
     status VARCHAR(30) NOT NULL DEFAULT 'OFFLINE',
     last_connection_at DATETIME NULL,
+    mqtt_presence VARCHAR(20) NULL,
+    operational_state VARCHAR(30) NULL,
+    service_mode VARCHAR(30) NULL,
+    software_version VARCHAR(50) NULL,
+    uptime_seconds BIGINT NULL,
+    last_presence_at DATETIME NULL,
+    last_status_at DATETIME NULL,
+    last_communication_at DATETIME NULL,
     active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT uk_devices_code UNIQUE (code),
     CONSTRAINT fk_devices_station FOREIGN KEY (station_id) REFERENCES stations (id)
-        ON UPDATE CASCADE ON DELETE RESTRICT
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT chk_devices_mqtt_presence CHECK (
+        mqtt_presence IS NULL OR mqtt_presence IN ('ONLINE', 'OFFLINE')
+    ),
+    CONSTRAINT chk_devices_operational_state CHECK (
+        operational_state IS NULL OR operational_state IN (
+            'AVAILABLE', 'BUSY', 'DEGRADED', 'OUT_OF_SERVICE', 'MAINTENANCE'
+        )
+    ),
+    CONSTRAINT chk_devices_uptime CHECK (uptime_seconds IS NULL OR uptime_seconds >= 0)
 );
 
 CREATE INDEX idx_devices_station ON devices (station_id);
 CREATE INDEX idx_devices_type_status ON devices (device_type, status);
 CREATE INDEX idx_devices_active ON devices (active);
+CREATE INDEX idx_devices_mqtt_communication
+    ON devices (mqtt_presence, last_communication_at);
+
+CREATE TABLE device_mqtt_identities (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    device_id BIGINT NOT NULL,
+    instance_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    mqtt_client_id VARCHAR(100) NOT NULL,
+    authentication_mode VARCHAR(20) NOT NULL,
+    identity_status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+    certificate_serial VARCHAR(128) NULL,
+    valid_from DATETIME NOT NULL,
+    valid_until DATETIME NULL,
+    last_authenticated_at DATETIME NULL,
+    revoked_at DATETIME NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_device_mqtt_identities_device UNIQUE (device_id),
+    CONSTRAINT uk_device_mqtt_identities_instance UNIQUE (instance_id),
+    CONSTRAINT uk_device_mqtt_identities_client UNIQUE (mqtt_client_id),
+    CONSTRAINT uk_device_mqtt_identities_certificate UNIQUE (certificate_serial),
+    CONSTRAINT fk_device_mqtt_identities_device FOREIGN KEY (device_id) REFERENCES devices (id)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT chk_device_mqtt_identities_instance CHECK (
+        instance_id REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+    ),
+    CONSTRAINT chk_device_mqtt_identities_authentication CHECK (
+        authentication_mode IN ('PASSWORD', 'MTLS')
+    ),
+    CONSTRAINT chk_device_mqtt_identities_status CHECK (
+        identity_status IN ('ACTIVE', 'REVOKED', 'EXPIRED')
+    ),
+    CONSTRAINT chk_device_mqtt_identities_validity CHECK (
+        valid_until IS NULL OR valid_until > valid_from
+    ),
+    CONSTRAINT chk_device_mqtt_identities_revocation CHECK (
+        (identity_status = 'REVOKED' AND revoked_at IS NOT NULL)
+        OR (identity_status <> 'REVOKED' AND revoked_at IS NULL)
+    ),
+    CONSTRAINT chk_device_mqtt_identities_certificate CHECK (
+        (authentication_mode = 'PASSWORD' AND certificate_serial IS NULL)
+        OR (authentication_mode = 'MTLS' AND CHAR_LENGTH(TRIM(certificate_serial)) > 0)
+    )
+);
+
+CREATE INDEX idx_device_mqtt_identities_status_validity
+    ON device_mqtt_identities (identity_status, valid_until);
+
+CREATE TABLE device_mqtt_commands (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    command_id VARCHAR(80) NOT NULL,
+    message_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    device_id BIGINT NOT NULL,
+    command_type VARCHAR(50) NOT NULL,
+    command_status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+    payload_json JSON NOT NULL,
+    requested_at DATETIME NOT NULL,
+    expires_at DATETIME NOT NULL,
+    published_at DATETIME NULL,
+    publication_attempts INT NOT NULL DEFAULT 0,
+    last_publication_error VARCHAR(500) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_device_mqtt_commands_command UNIQUE (command_id),
+    CONSTRAINT uk_device_mqtt_commands_message UNIQUE (message_id),
+    CONSTRAINT fk_device_mqtt_commands_device FOREIGN KEY (device_id) REFERENCES devices (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT chk_device_mqtt_commands_message CHECK (
+        message_id REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+    ),
+    CONSTRAINT chk_device_mqtt_commands_type CHECK (
+        command_type IN ('TICKET_ISSUE', 'CONFIGURATION_REFRESH', 'STATUS_REQUEST', 'RESTART')
+    ),
+    CONSTRAINT chk_device_mqtt_commands_status CHECK (
+        command_status IN ('PENDING', 'PUBLISHED', 'PUBLISH_FAILED', 'RECEIVED', 'PROCESSING',
+            'COMPLETED', 'FAILED', 'REJECTED', 'EXPIRED')
+    ),
+    CONSTRAINT chk_device_mqtt_commands_expiry CHECK (expires_at > requested_at),
+    CONSTRAINT chk_device_mqtt_commands_attempts CHECK (publication_attempts >= 0),
+    CONSTRAINT chk_device_mqtt_commands_publication CHECK (
+        (command_status = 'PENDING' AND published_at IS NULL)
+        OR command_status <> 'PENDING'
+    )
+);
+
+CREATE INDEX idx_device_mqtt_commands_device_requested
+    ON device_mqtt_commands (device_id, requested_at);
+CREATE INDEX idx_device_mqtt_commands_status_expiry
+    ON device_mqtt_commands (command_status, expires_at);
+
+CREATE TABLE mqtt_inbound_messages (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    message_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    device_id BIGINT NOT NULL,
+    topic VARCHAR(255) NOT NULL,
+    payload_fingerprint CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    processing_status VARCHAR(20) NOT NULL DEFAULT 'PROCESSING',
+    processing_attempts INT NOT NULL DEFAULT 1,
+    duplicate_count INT NOT NULL DEFAULT 0,
+    received_at DATETIME NOT NULL,
+    processed_at DATETIME NULL,
+    last_duplicate_at DATETIME NULL,
+    last_error VARCHAR(500) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_mqtt_inbound_messages_message UNIQUE (message_id),
+    CONSTRAINT fk_mqtt_inbound_messages_device FOREIGN KEY (device_id) REFERENCES devices (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT chk_mqtt_inbound_messages_id CHECK (
+        message_id REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+    ),
+    CONSTRAINT chk_mqtt_inbound_messages_fingerprint CHECK (
+        payload_fingerprint REGEXP '^[0-9a-fA-F]{64}$'
+    ),
+    CONSTRAINT chk_mqtt_inbound_messages_status CHECK (
+        processing_status IN ('PROCESSING', 'PROCESSED', 'REJECTED', 'FAILED')
+    ),
+    CONSTRAINT chk_mqtt_inbound_messages_counts CHECK (
+        processing_attempts > 0 AND duplicate_count >= 0
+    ),
+    CONSTRAINT chk_mqtt_inbound_messages_processed CHECK (
+        (processing_status = 'PROCESSED' AND processed_at IS NOT NULL)
+        OR processing_status <> 'PROCESSED'
+    )
+);
+
+CREATE INDEX idx_mqtt_inbound_messages_device_received
+    ON mqtt_inbound_messages (device_id, received_at);
+CREATE INDEX idx_mqtt_inbound_messages_status_received
+    ON mqtt_inbound_messages (processing_status, received_at);
 
 CREATE TABLE train_models (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -465,13 +730,21 @@ CREATE TABLE tickets (
     valid_from DATETIME NULL,
     valid_until DATETIME NULL,
     balance_amount DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    currency CHAR(3) NOT NULL DEFAULT 'EUR',
     passenger_user_id BIGINT NULL,
-    imported_to_android BOOLEAN NOT NULL DEFAULT FALSE,
-    android_imported_at DATETIME NULL,
     active BOOLEAN NOT NULL DEFAULT TRUE,
     issued_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     last_recharged_at DATETIME NULL,
     last_used_at DATETIME NULL,
+    status_changed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    status_before_block VARCHAR(40) NULL,
+    blocked_at DATETIME NULL,
+    blocked_reason VARCHAR(500) NULL,
+    exhausted_at DATETIME NULL,
+    expired_at DATETIME NULL,
+    cancelled_at DATETIME NULL,
+    cancellation_reason VARCHAR(500) NULL,
+    lock_version BIGINT NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT uk_tickets_code UNIQUE (code),
@@ -482,6 +755,18 @@ CREATE TABLE tickets (
         ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT fk_tickets_destination FOREIGN KEY (destination_station_id) REFERENCES stations (id)
         ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_tickets_passenger FOREIGN KEY (passenger_user_id) REFERENCES passenger_accounts (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT chk_tickets_product_type CHECK (
+        product_type IN ('SINGLE_TRIP', 'MULTI_TRIP', 'TIME_PASS', 'SMART_BALANCE')
+    ),
+    CONSTRAINT chk_tickets_status CHECK (
+        status IN ('ACTIVE', 'EXHAUSTED', 'EXPIRED', 'BLOCKED', 'CANCELLED')
+    ),
+    CONSTRAINT chk_tickets_status_before_block CHECK (
+        status_before_block IS NULL
+        OR status_before_block IN ('ACTIVE', 'EXHAUSTED', 'EXPIRED')
+    ),
     CONSTRAINT chk_tickets_station_count CHECK (station_count IS NULL OR station_count > 0),
     CONSTRAINT chk_tickets_route_price CHECK (route_price_amount IS NULL OR route_price_amount >= 0),
     CONSTRAINT chk_tickets_trip_balances CHECK (
@@ -491,7 +776,15 @@ CREATE TABLE tickets (
     ),
     CONSTRAINT chk_tickets_days CHECK (purchased_days IS NULL OR purchased_days > 0),
     CONSTRAINT chk_tickets_balance CHECK (balance_amount >= 0),
-    CONSTRAINT chk_tickets_validity CHECK (valid_until IS NULL OR valid_from IS NULL OR valid_until >= valid_from)
+    CONSTRAINT chk_tickets_validity CHECK (valid_until IS NULL OR valid_from IS NULL OR valid_until >= valid_from),
+    CONSTRAINT chk_tickets_currency CHECK (currency REGEXP '^[A-Z]{3}$'),
+    CONSTRAINT chk_tickets_lock_version CHECK (lock_version >= 0),
+    CONSTRAINT chk_tickets_block_reason CHECK (
+        blocked_reason IS NULL OR CHAR_LENGTH(TRIM(blocked_reason)) > 0
+    ),
+    CONSTRAINT chk_tickets_cancellation_reason CHECK (
+        cancellation_reason IS NULL OR CHAR_LENGTH(TRIM(cancellation_reason)) > 0
+    )
 );
 
 CREATE INDEX idx_tickets_product ON tickets (product_id);
@@ -500,6 +793,147 @@ CREATE INDEX idx_tickets_origin ON tickets (origin_station_id);
 CREATE INDEX idx_tickets_destination ON tickets (destination_station_id);
 CREATE INDEX idx_tickets_passenger ON tickets (passenger_user_id);
 CREATE INDEX idx_tickets_issued_at ON tickets (issued_at);
+CREATE INDEX idx_tickets_status_changed_at ON tickets (status, status_changed_at);
+
+CREATE TABLE ticket_supports (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    code VARCHAR(80) NOT NULL,
+    ticket_id BIGINT NOT NULL,
+    support_type VARCHAR(20) NOT NULL,
+    support_status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE',
+    serial_number VARCHAR(120) NULL,
+    issued_by_device_id BIGINT NULL,
+    passenger_account_id BIGINT NULL,
+    linking_code_hash VARCHAR(255) NULL,
+    linking_code_expires_at DATETIME NULL,
+    linked_at DATETIME NULL,
+    activated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deactivated_at DATETIME NULL,
+    deactivation_reason VARCHAR(500) NULL,
+    replaced_by_support_id BIGINT NULL,
+    issued_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_ticket_supports_code UNIQUE (code),
+    CONSTRAINT uk_ticket_supports_serial UNIQUE (serial_number),
+    CONSTRAINT fk_ticket_supports_ticket FOREIGN KEY (ticket_id) REFERENCES tickets (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_ticket_supports_device FOREIGN KEY (issued_by_device_id) REFERENCES devices (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_ticket_supports_passenger FOREIGN KEY (passenger_account_id) REFERENCES passenger_accounts (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_ticket_supports_replacement FOREIGN KEY (replaced_by_support_id) REFERENCES ticket_supports (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT chk_ticket_supports_type CHECK (support_type IN ('PHYSICAL', 'DIGITAL')),
+    CONSTRAINT chk_ticket_supports_status CHECK (
+        support_status IN ('ACTIVE', 'BLOCKED', 'REVOKED', 'SUPERSEDED')
+    ),
+    CONSTRAINT chk_ticket_supports_linking_hash CHECK (
+        linking_code_hash IS NULL OR CHAR_LENGTH(linking_code_hash) >= 20
+    ),
+    CONSTRAINT chk_ticket_supports_linking_expiry CHECK (
+        linking_code_expires_at IS NULL OR linking_code_expires_at >= issued_at
+    ),
+    CONSTRAINT chk_ticket_supports_deactivated_at CHECK (
+        deactivated_at IS NULL OR deactivated_at >= activated_at
+    ),
+    CONSTRAINT chk_ticket_supports_deactivation_reason CHECK (
+        deactivation_reason IS NULL OR CHAR_LENGTH(TRIM(deactivation_reason)) > 0
+    )
+);
+
+CREATE INDEX idx_ticket_supports_ticket_status
+    ON ticket_supports (ticket_id, support_status);
+CREATE INDEX idx_ticket_supports_passenger_status
+    ON ticket_supports (passenger_account_id, support_status);
+CREATE INDEX idx_ticket_supports_device_issued
+    ON ticket_supports (issued_by_device_id, issued_at);
+CREATE INDEX idx_ticket_supports_linking_expiry
+    ON ticket_supports (linking_code_expires_at);
+
+CREATE TABLE ticket_qr_credentials (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    credential_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    ticket_id BIGINT NOT NULL,
+    support_id BIGINT NOT NULL,
+    credential_status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE',
+    wrapper_version INT NOT NULL DEFAULT 1,
+    signing_key_id VARCHAR(100) NOT NULL,
+    token_fingerprint CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    qr_value VARCHAR(4096) NOT NULL,
+    issued_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME NULL,
+    revoked_at DATETIME NULL,
+    revocation_reason VARCHAR(500) NULL,
+    superseded_by_credential_id BIGINT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_ticket_qr_credentials_public_id UNIQUE (credential_id),
+    CONSTRAINT uk_ticket_qr_credentials_fingerprint UNIQUE (token_fingerprint),
+    CONSTRAINT fk_ticket_qr_credentials_ticket FOREIGN KEY (ticket_id) REFERENCES tickets (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_ticket_qr_credentials_support FOREIGN KEY (support_id) REFERENCES ticket_supports (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_ticket_qr_credentials_superseded_by FOREIGN KEY (superseded_by_credential_id)
+        REFERENCES ticket_qr_credentials (id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT chk_ticket_qr_credentials_public_id CHECK (
+        credential_id REGEXP '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+    ),
+    CONSTRAINT chk_ticket_qr_credentials_status CHECK (
+        credential_status IN ('ACTIVE', 'REVOKED', 'SUPERSEDED', 'EXPIRED')
+    ),
+    CONSTRAINT chk_ticket_qr_credentials_wrapper_version CHECK (wrapper_version > 0),
+    CONSTRAINT chk_ticket_qr_credentials_fingerprint CHECK (
+        token_fingerprint REGEXP '^[0-9a-fA-F]{64}$'
+    ),
+    CONSTRAINT chk_ticket_qr_credentials_expiry CHECK (
+        expires_at IS NULL OR expires_at >= issued_at
+    ),
+    CONSTRAINT chk_ticket_qr_credentials_revocation_reason CHECK (
+        revocation_reason IS NULL OR CHAR_LENGTH(TRIM(revocation_reason)) > 0
+    )
+);
+
+CREATE INDEX idx_ticket_qr_credentials_ticket_status
+    ON ticket_qr_credentials (ticket_id, credential_status);
+CREATE INDEX idx_ticket_qr_credentials_support_status
+    ON ticket_qr_credentials (support_id, credential_status);
+CREATE INDEX idx_ticket_qr_credentials_key_status
+    ON ticket_qr_credentials (signing_key_id, credential_status);
+CREATE INDEX idx_ticket_qr_credentials_expires_at
+    ON ticket_qr_credentials (expires_at);
+
+CREATE TABLE ticket_qr_use_claims (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    validation_reference VARCHAR(150) NOT NULL,
+    credential_id BIGINT NOT NULL,
+    validation_type VARCHAR(20) NOT NULL,
+    device_code VARCHAR(50) NOT NULL,
+    station_code VARCHAR(20) NOT NULL,
+    request_fingerprint CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    claim_status VARCHAR(20) NOT NULL DEFAULT 'RECEIVED',
+    received_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at DATETIME NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_ticket_qr_use_claims_reference UNIQUE (validation_reference),
+    CONSTRAINT fk_ticket_qr_use_claims_credential FOREIGN KEY (credential_id)
+        REFERENCES ticket_qr_credentials (id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT chk_ticket_qr_use_claims_type CHECK (validation_type IN ('ENTRY', 'EXIT')),
+    CONSTRAINT chk_ticket_qr_use_claims_status CHECK (claim_status IN ('RECEIVED', 'COMPLETED')),
+    CONSTRAINT chk_ticket_qr_use_claims_fingerprint CHECK (
+        request_fingerprint REGEXP '^[0-9a-fA-F]{64}$'
+    ),
+    CONSTRAINT chk_ticket_qr_use_claims_completed CHECK (
+        (claim_status = 'RECEIVED' AND completed_at IS NULL)
+        OR (claim_status = 'COMPLETED' AND completed_at IS NOT NULL)
+    )
+);
+
+CREATE INDEX idx_ticket_qr_use_claims_credential_received
+    ON ticket_qr_use_claims (credential_id, received_at);
+CREATE INDEX idx_ticket_qr_use_claims_status_received
+    ON ticket_qr_use_claims (claim_status, received_at);
 
 CREATE TABLE purchases (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -559,13 +993,15 @@ CREATE INDEX idx_purchases_status_requested ON purchases (purchase_status, reque
 CREATE INDEX idx_purchases_device ON purchases (device_id);
 CREATE INDEX idx_purchases_station ON purchases (station_id);
 CREATE INDEX idx_purchases_passenger ON purchases (passenger_user_id);
-CREATE INDEX idx_purchases_external_reference ON purchases (external_reference);
+CREATE UNIQUE INDEX uk_purchases_external_reference ON purchases (external_reference);
 
 CREATE TABLE compensatory_ticket_issuances (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     code VARCHAR(80) NOT NULL,
     product_id BIGINT NOT NULL,
-    target_device_id BIGINT NOT NULL,
+    delivery_method VARCHAR(30) NOT NULL DEFAULT 'PHYSICAL_DEVICE',
+    target_device_id BIGINT NULL,
+    recipient_passenger_account_id BIGINT NULL,
     requested_by_operator_id BIGINT NOT NULL,
     issued_ticket_id BIGINT NULL,
     issuance_status VARCHAR(30) NOT NULL DEFAULT 'REQUESTED',
@@ -589,6 +1025,8 @@ CREATE TABLE compensatory_ticket_issuances (
         ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT fk_compensatory_issuances_device FOREIGN KEY (target_device_id) REFERENCES devices (id)
         ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_compensatory_issuances_passenger FOREIGN KEY (recipient_passenger_account_id)
+        REFERENCES passenger_accounts (id) ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT fk_compensatory_issuances_operator FOREIGN KEY (requested_by_operator_id)
         REFERENCES operator_accounts (id) ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT fk_compensatory_issuances_ticket FOREIGN KEY (issued_ticket_id) REFERENCES tickets (id)
@@ -599,6 +1037,9 @@ CREATE TABLE compensatory_ticket_issuances (
         ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT chk_compensatory_issuances_status CHECK (
         issuance_status IN ('REQUESTED', 'PROCESSING', 'COMPLETED', 'FAILED', 'CANCELLED')
+    ),
+    CONSTRAINT chk_compensatory_issuances_delivery CHECK (
+        delivery_method IN ('PHYSICAL_DEVICE', 'DIGITAL_WALLET')
     ),
     CONSTRAINT chk_compensatory_issuances_reason CHECK (CHAR_LENGTH(TRIM(reason)) > 0),
     CONSTRAINT chk_compensatory_issuances_station_count CHECK (
@@ -616,14 +1057,19 @@ CREATE TABLE compensatory_ticket_issuances (
 
 CREATE INDEX idx_compensatory_issuances_status_requested
     ON compensatory_ticket_issuances (issuance_status, requested_at);
+CREATE INDEX idx_compensatory_issuances_delivery_status
+    ON compensatory_ticket_issuances (delivery_method, issuance_status, requested_at);
 CREATE INDEX idx_compensatory_issuances_product ON compensatory_ticket_issuances (product_id);
 CREATE INDEX idx_compensatory_issuances_device ON compensatory_ticket_issuances (target_device_id);
+CREATE INDEX idx_compensatory_issuances_passenger
+    ON compensatory_ticket_issuances (recipient_passenger_account_id);
 CREATE INDEX idx_compensatory_issuances_operator ON compensatory_ticket_issuances (requested_by_operator_id);
 
 CREATE TABLE ticket_journeys (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     code VARCHAR(80) NOT NULL,
     ticket_id BIGINT NOT NULL,
+    passenger_account_id BIGINT NULL,
     entry_validation_id BIGINT NULL,
     exit_validation_id BIGINT NULL,
     entry_station_id BIGINT NOT NULL,
@@ -636,21 +1082,52 @@ CREATE TABLE ticket_journeys (
     closed_at DATETIME NULL,
     forced_closed_at DATETIME NULL,
     cancelled_at DATETIME NULL,
+    duration_seconds INT GENERATED ALWAYS AS (
+        CASE
+            WHEN closed_at IS NOT NULL THEN TIMESTAMPDIFF(SECOND, opened_at, closed_at)
+            WHEN forced_closed_at IS NOT NULL THEN TIMESTAMPDIFF(SECOND, opened_at, forced_closed_at)
+            ELSE NULL
+        END
+    ) STORED,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT uk_ticket_journeys_code UNIQUE (code),
     CONSTRAINT fk_ticket_journeys_ticket FOREIGN KEY (ticket_id) REFERENCES tickets (id)
         ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_ticket_journeys_passenger FOREIGN KEY (passenger_account_id)
+        REFERENCES passenger_accounts (id) ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT fk_ticket_journeys_entry_station FOREIGN KEY (entry_station_id) REFERENCES stations (id)
         ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT fk_ticket_journeys_exit_station FOREIGN KEY (exit_station_id) REFERENCES stations (id)
         ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT chk_ticket_journeys_station_count CHECK (station_count IS NULL OR station_count > 0),
     CONSTRAINT chk_ticket_journeys_fare CHECK (fare_amount IS NULL OR fare_amount >= 0),
-    CONSTRAINT chk_ticket_journeys_closed_at CHECK (closed_at IS NULL OR closed_at >= opened_at)
+    CONSTRAINT chk_ticket_journeys_status CHECK (
+        status IN ('OPEN', 'CLOSED', 'FORCED_CLOSED', 'CANCELLED')
+    ),
+    CONSTRAINT chk_ticket_journeys_lifecycle CHECK (
+        (status = 'OPEN' AND station_count IS NULL AND fare_amount IS NULL AND closed_at IS NULL
+            AND forced_closed_at IS NULL AND cancelled_at IS NULL)
+        OR (status = 'CLOSED' AND station_count IS NOT NULL AND fare_amount IS NOT NULL
+            AND closed_at IS NOT NULL
+            AND forced_closed_at IS NULL AND cancelled_at IS NULL)
+        OR (status = 'FORCED_CLOSED' AND forced_closed_at IS NOT NULL
+            AND closed_at IS NULL AND cancelled_at IS NULL)
+        OR (status = 'CANCELLED' AND cancelled_at IS NOT NULL AND closed_at IS NULL
+            AND forced_closed_at IS NULL AND station_count IS NULL AND fare_amount IS NULL)
+    ),
+    CONSTRAINT chk_ticket_journeys_closed_at CHECK (closed_at IS NULL OR closed_at >= opened_at),
+    CONSTRAINT chk_ticket_journeys_forced_closed_at CHECK (
+        forced_closed_at IS NULL OR forced_closed_at >= opened_at
+    ),
+    CONSTRAINT chk_ticket_journeys_cancelled_at CHECK (
+        cancelled_at IS NULL OR cancelled_at >= opened_at
+    )
 );
 
 CREATE INDEX idx_ticket_journeys_ticket ON ticket_journeys (ticket_id);
+CREATE INDEX idx_ticket_journeys_passenger_closed
+    ON ticket_journeys (passenger_account_id, closed_at);
 CREATE INDEX idx_ticket_journeys_entry_station ON ticket_journeys (entry_station_id);
 CREATE INDEX idx_ticket_journeys_exit_station ON ticket_journeys (exit_station_id);
 CREATE INDEX idx_ticket_journeys_status_opened ON ticket_journeys (status, opened_at);
@@ -715,6 +1192,85 @@ CREATE INDEX idx_ticket_validations_station ON ticket_validations (station_id);
 CREATE INDEX idx_ticket_validations_device ON ticket_validations (device_id);
 CREATE INDEX idx_ticket_validations_qr_token ON ticket_validations (qr_token);
 CREATE INDEX idx_ticket_validations_external_reference ON ticket_validations (external_reference);
+
+CREATE TABLE ticket_operations (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    code VARCHAR(80) NOT NULL,
+    ticket_id BIGINT NOT NULL,
+    operation_type VARCHAR(40) NOT NULL,
+    operation_source VARCHAR(40) NOT NULL,
+    support_id BIGINT NULL,
+    purchase_id BIGINT NULL,
+    journey_id BIGINT NULL,
+    station_id BIGINT NULL,
+    device_id BIGINT NULL,
+    passenger_account_id BIGINT NULL,
+    external_reference VARCHAR(150) NULL,
+    previous_status VARCHAR(40) NULL,
+    resulting_status VARCHAR(40) NOT NULL,
+    balance_before DECIMAL(10, 2) NULL,
+    balance_after DECIMAL(10, 2) NULL,
+    remaining_trips_before INT NULL,
+    remaining_trips_after INT NULL,
+    valid_from_before DATETIME NULL,
+    valid_until_before DATETIME NULL,
+    valid_from_after DATETIME NULL,
+    valid_until_after DATETIME NULL,
+    operation_amount DECIMAL(10, 2) NULL,
+    currency CHAR(3) NOT NULL DEFAULT 'EUR',
+    occurred_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    details_json JSON NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_ticket_operations_code UNIQUE (code),
+    CONSTRAINT fk_ticket_operations_ticket FOREIGN KEY (ticket_id) REFERENCES tickets (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_ticket_operations_support FOREIGN KEY (support_id) REFERENCES ticket_supports (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_ticket_operations_purchase FOREIGN KEY (purchase_id) REFERENCES purchases (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_ticket_operations_journey FOREIGN KEY (journey_id) REFERENCES ticket_journeys (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_ticket_operations_station FOREIGN KEY (station_id) REFERENCES stations (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_ticket_operations_device FOREIGN KEY (device_id) REFERENCES devices (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_ticket_operations_passenger FOREIGN KEY (passenger_account_id) REFERENCES passenger_accounts (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT chk_ticket_operations_type CHECK (
+        operation_type IN ('ISSUED', 'RECHARGED', 'ENTRY_ACCEPTED', 'EXIT_ACCEPTED',
+            'BLOCKED', 'UNBLOCKED', 'CANCELLED', 'SUPPORT_LINKED', 'QR_REVOKED')
+    ),
+    CONSTRAINT chk_ticket_operations_source CHECK (
+        operation_source IN ('SYSTEM', 'RMM_APP', 'TICKET_MACHINE', 'VALIDATOR', 'CONTROL_CENTER')
+    ),
+    CONSTRAINT chk_ticket_operations_status CHECK (
+        resulting_status IN ('ACTIVE', 'EXHAUSTED', 'EXPIRED', 'BLOCKED', 'CANCELLED')
+        AND (previous_status IS NULL
+            OR previous_status IN ('ACTIVE', 'EXHAUSTED', 'EXPIRED', 'BLOCKED', 'CANCELLED'))
+    ),
+    CONSTRAINT chk_ticket_operations_balances CHECK (
+        (balance_before IS NULL OR balance_before >= 0)
+        AND (balance_after IS NULL OR balance_after >= 0)
+    ),
+    CONSTRAINT chk_ticket_operations_trips CHECK (
+        (remaining_trips_before IS NULL OR remaining_trips_before >= 0)
+        AND (remaining_trips_after IS NULL OR remaining_trips_after >= 0)
+    ),
+    CONSTRAINT chk_ticket_operations_amount CHECK (
+        operation_amount IS NULL OR operation_amount >= 0
+    ),
+    CONSTRAINT chk_ticket_operations_currency CHECK (currency REGEXP '^[A-Z]{3}$')
+);
+
+CREATE INDEX idx_ticket_operations_ticket_occurred
+    ON ticket_operations (ticket_id, occurred_at);
+CREATE INDEX idx_ticket_operations_type_occurred
+    ON ticket_operations (operation_type, occurred_at);
+CREATE INDEX idx_ticket_operations_purchase ON ticket_operations (purchase_id);
+CREATE INDEX idx_ticket_operations_journey ON ticket_operations (journey_id);
+CREATE INDEX idx_ticket_operations_external_reference
+    ON ticket_operations (external_reference);
 
 CREATE TABLE incidents (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -841,6 +1397,7 @@ CREATE INDEX idx_incident_comments_author_created
 CREATE TABLE operational_logs (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     log_origin VARCHAR(50) NOT NULL,
+    event_source VARCHAR(30) NOT NULL,
     event_type VARCHAR(80) NOT NULL,
     severity VARCHAR(30) NOT NULL,
     message VARCHAR(500) NOT NULL,
@@ -859,6 +1416,14 @@ CREATE TABLE operational_logs (
     payload_json JSON NULL,
     created_at DATETIME NOT NULL,
     received_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_operational_logs_event_source CHECK (
+        event_source IN ('SIMULATED', 'REAL', 'ADMINISTRATIVE')
+    ),
+    CONSTRAINT chk_operational_logs_source_origin CHECK (
+        (log_origin = 'DEVICE_SIMULATION' AND event_source = 'SIMULATED')
+        OR (log_origin = 'MQTT' AND event_source = 'REAL')
+        OR (log_origin = 'ADMINISTRATION' AND event_source = 'ADMINISTRATIVE')
+    ),
     CONSTRAINT fk_operational_logs_device FOREIGN KEY (device_id) REFERENCES devices (id)
         ON UPDATE CASCADE ON DELETE SET NULL,
     CONSTRAINT fk_operational_logs_station FOREIGN KEY (station_id) REFERENCES stations (id)
@@ -882,6 +1447,7 @@ CREATE TABLE operational_logs (
 );
 
 CREATE INDEX idx_operational_logs_origin_event ON operational_logs (log_origin, event_type);
+CREATE INDEX idx_operational_logs_source_created ON operational_logs (event_source, created_at);
 CREATE INDEX idx_operational_logs_severity_created ON operational_logs (severity, created_at);
 CREATE INDEX idx_operational_logs_device ON operational_logs (device_id);
 CREATE INDEX idx_operational_logs_station ON operational_logs (station_id);

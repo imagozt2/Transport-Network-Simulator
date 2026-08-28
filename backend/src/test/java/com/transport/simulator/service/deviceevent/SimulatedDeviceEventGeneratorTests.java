@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 import com.transport.simulator.entity.Device;
 import com.transport.simulator.entity.Station;
 import com.transport.simulator.enums.DeviceEventType;
+import com.transport.simulator.enums.DeviceEventSource;
 import com.transport.simulator.enums.DeviceStatus;
 import com.transport.simulator.enums.DeviceType;
 import com.transport.simulator.enums.LogOrigin;
@@ -35,6 +36,7 @@ class SimulatedDeviceEventGeneratorTests {
 
         assertThat(event.type()).isEqualTo(DeviceEventType.DEVICE_ONLINE);
         assertThat(event.origin()).isEqualTo(LogOrigin.DEVICE_SIMULATION);
+        assertThat(event.source()).isEqualTo(DeviceEventSource.SIMULATED);
         assertThat(event.occurredAt())
                 .isEqualTo(LocalDateTime.ofInstant(NOW, SERVICE_ZONE));
         assertThat(event.payloadJson()).contains(

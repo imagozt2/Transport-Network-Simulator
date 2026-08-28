@@ -1,6 +1,7 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { convertToParamMap } from '@angular/router';
+import { of, throwError } from 'rxjs';
 
 import { Incident, IncidentsPage } from '../../core/models/incident.model';
 import { OperatorAccount } from '../../core/models/operator-auth.model';
@@ -75,6 +76,50 @@ describe('Incidents', () => {
     expect(component.selectedIncident?.code).toBe('INC-TEST');
   });
 
+  it('should create an incident through the rendered dialog controls', async () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    compiled.querySelector<HTMLButtonElement>('.create-incident-button')!.click();
+    fixture.detectChanges();
+    const submitButton = compiled.querySelector<HTMLButtonElement>(
+      '.create-incident-dialog button[type="submit"]'
+    )!;
+    expect(fixture.componentInstance.canCreate()).toBe(false);
+
+    setInput(compiled, '#create-incident-name', 'Avería en validadora');
+    setInput(compiled, '#create-incident-description', 'El lector no reconoce códigos QR');
+    setSelect(compiled, '#create-incident-category', 'DEVICE');
+    setSelect(compiled, '#create-incident-priority', 'HIGH');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.createTitle).toBe('Avería en validadora');
+    expect(fixture.componentInstance.createPriority).toBe('HIGH');
+    expect(fixture.componentInstance.canCreate()).toBe(true);
+    submitButton.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(incidentsService.createIncident).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Avería en validadora',
+      description: 'El lector no reconoce códigos QR',
+      category: 'DEVICE',
+      priority: 'HIGH',
+      assignedOperatorId: 7
+    }));
+    expect(fixture.componentInstance.createDialogOpen).toBe(false);
+    expect(fixture.componentInstance.selectedIncident?.code).toBe('INC-TEST');
+  });
+
+  it('should explain why an incomplete incident cannot be created', () => {
+    const component = fixture.componentInstance;
+    component.openCreateDialog();
+    component.createIncident();
+
+    expect(component.createValidationVisible).toBe(true);
+    expect(component.createError).toContain('título y una descripción');
+    expect(incidentsService.createIncident).not.toHaveBeenCalled();
+  });
+
   it('should load details, add comments and advance the workflow', () => {
     const component = fixture.componentInstance;
     component.openDetail(incident);
@@ -113,6 +158,48 @@ describe('Incidents', () => {
         affectedStationId: 12
       })
     );
+  });
+
+  it('should preserve machine and ticket context when creating an incident from a real event', () => {
+    const component = fixture.componentInstance;
+    component['openCreateDialogFromContext'](convertToParamMap({
+      deviceId: '91',
+      deviceCode: 'RMM-VE-ST012-001',
+      ticketCode: 'TCK-2026-0001',
+      eventType: 'VALIDATION_REJECTED',
+      externalReference: 'validation-123'
+    }));
+
+    expect(component.createDialogOpen).toBe(true);
+    expect(component.createCategory).toBe('TICKETING');
+    expect(component.createDescription).toContain('Billete afectado: TCK-2026-0001');
+    component.createIncident();
+    expect(incidentsService.createIncident).toHaveBeenCalledWith(
+      expect.objectContaining({
+        affectedDeviceId: 91,
+        category: 'TICKETING',
+        description: expect.stringContaining('Referencia de operación: validation-123')
+      })
+    );
+  });
+
+  it('should recover the incident list after a temporary API failure', () => {
+    incidentsService.getIncidents.mockReturnValueOnce(
+      throwError(() => new Error('temporary failure'))
+    );
+    fixture.componentInstance.loadIncidents(0);
+    fixture.detectChanges(false);
+
+    expect(fixture.componentInstance.errorMessage)
+      .toContain('No se han podido cargar las incidencias');
+    expect(fixture.componentInstance.incidents).toEqual([]);
+
+    incidentsService.getIncidents.mockReturnValueOnce(of(page));
+    fixture.componentInstance.loadIncidents(0);
+    fixture.detectChanges(false);
+
+    expect(fixture.componentInstance.errorMessage).toBe('');
+    expect(fixture.nativeElement.querySelector('tbody')?.textContent).toContain('INC-TEST');
   });
 
   it('should retain responsive list, detail and workflow layouts', () => {
@@ -191,4 +278,16 @@ function loadedComponentStyles(): string {
   return Array.from(document.head.querySelectorAll('style'))
     .map((style) => style.textContent ?? '')
     .join('\n');
+}
+
+function setInput(container: HTMLElement, selector: string, value: string): void {
+  const control = container.querySelector<HTMLInputElement | HTMLTextAreaElement>(selector)!;
+  control.value = value;
+  control.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function setSelect(container: HTMLElement, selector: string, value: string): void {
+  const control = container.querySelector<HTMLSelectElement>(selector)!;
+  control.value = value;
+  control.dispatchEvent(new Event('change', { bubbles: true }));
 }

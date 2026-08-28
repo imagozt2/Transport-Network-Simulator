@@ -1,0 +1,14 @@
+#pragma once
+
+#include <cstdint>
+#include <string_view>
+
+namespace rmm::config {
+
+inline constexpr std::string_view apiBaseUrl{"@RMM_API_DESKTOP_BASE_URL@"};
+inline constexpr std::string_view mqttHost{"@RMM_MQTT_HOST@"};
+inline constexpr std::uint16_t mqttPort = @RMM_MQTT_PORT@;
+inline constexpr bool mqttTlsEnabled = @RMM_MQTT_TLS_CPP@;
+
+} // namespace rmm::config
+

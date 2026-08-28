@@ -1,6 +1,7 @@
 package com.transport.simulator.service;
 
 import com.transport.simulator.dto.response.deviceoperation.DeviceOperationLastEventResponse;
+import com.transport.simulator.dto.response.deviceoperation.DeviceConnectivityResponse;
 import com.transport.simulator.dto.response.deviceoperation.DeviceOperationResponse;
 import com.transport.simulator.dto.response.deviceoperation.DeviceOperationStationResponse;
 import com.transport.simulator.dto.response.deviceoperation.DeviceOperationSummaryResponse;
@@ -9,6 +10,8 @@ import com.transport.simulator.entity.Device;
 import com.transport.simulator.entity.DeviceEventLog;
 import com.transport.simulator.entity.Station;
 import com.transport.simulator.enums.DeviceStatus;
+import com.transport.simulator.enums.DeviceConnectivityState;
+import com.transport.simulator.enums.DeviceMqttPresence;
 import com.transport.simulator.enums.DeviceType;
 import com.transport.simulator.repository.DeviceEventLogRepository;
 import com.transport.simulator.repository.DeviceRepository;
@@ -89,8 +92,23 @@ public class DeviceOperationsQueryService {
                 device.getType(),
                 device.getStatus(),
                 device.getLastConnectionAt(),
+                toConnectivityResponse(device),
                 toStationResponse(device.getStation()),
                 latestEvent == null ? null : toEventResponse(latestEvent)
+        );
+    }
+
+    private DeviceConnectivityResponse toConnectivityResponse(Device device) {
+        return new DeviceConnectivityResponse(
+                connectivityState(device),
+                device.getMqttPresence(),
+                device.getOperationalState(),
+                device.getLastCommunicationAt(),
+                device.getLastPresenceAt(),
+                device.getLastStatusAt(),
+                device.getServiceMode(),
+                device.getSoftwareVersion(),
+                device.getUptimeSeconds()
         );
     }
 
@@ -109,6 +127,7 @@ public class DeviceOperationsQueryService {
                 event.getSeverity(),
                 event.getMessage(),
                 event.getOrigin(),
+                event.getSource(),
                 event.getOccurredAt()
         );
     }
@@ -119,18 +138,29 @@ public class DeviceOperationsQueryService {
     ) {
         Map<DeviceType, Long> byType = initializeCounts(DeviceType.class);
         Map<DeviceStatus, Long> byStatus = initializeCounts(DeviceStatus.class);
+        Map<DeviceConnectivityState, Long> byConnectivity = initializeCounts(
+                DeviceConnectivityState.class);
 
         devices.forEach(device -> {
             byType.compute(device.getType(), (ignored, count) -> count + 1);
             byStatus.compute(device.getStatus(), (ignored, count) -> count + 1);
+            byConnectivity.compute(connectivityState(device), (ignored, count) -> count + 1);
         });
 
         return new DeviceOperationSummaryResponse(
                 devices.size(),
                 filteredDeviceCount,
                 byType,
-                byStatus
+                byStatus,
+                byConnectivity
         );
+    }
+
+    private DeviceConnectivityState connectivityState(Device device) {
+        if (!device.isMqttManaged()) return DeviceConnectivityState.NOT_MONITORED;
+        return device.getMqttPresence() == DeviceMqttPresence.ONLINE
+                ? DeviceConnectivityState.CONNECTED
+                : DeviceConnectivityState.DISCONNECTED;
     }
 
     private boolean matchesSearch(Device device, String normalizedSearch) {

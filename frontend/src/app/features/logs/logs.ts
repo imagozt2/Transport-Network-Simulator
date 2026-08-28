@@ -1,20 +1,24 @@
 import { Component, inject, OnInit } from '@angular/core';
-import { ActivatedRoute, ParamMap } from '@angular/router';
+import { ActivatedRoute, ParamMap, RouterLink } from '@angular/router';
 
+import { APPLICATION_ROUTES } from '../../core/navigation/application-routes';
 import { DeviceOperation, DeviceType } from '../../core/models/device-operation.model';
 import { OperationalLog } from '../../core/models/operational-log.model';
 import {
   DeviceEventType,
+  DeviceEventSource,
   LogOrigin,
-  LogSeverity
+  LogSeverity,
+  TicketProductType
 } from '../../core/models/operational-log.types';
 import { DeviceOperationsService } from '../../core/services/device-operations.service';
 import {
   OperationalLogFilters,
   OperationalLogsService
 } from '../../core/services/operational-logs.service';
-import { formatDateTime } from '../../core/utils/temporal-formatters';
+import { TemporalFormatService } from '../../core/services/temporal-format.service';
 import { deviceTypeLabel } from '../../core/utils/operation-labels';
+import { deviceEventSourceLabel } from '../../core/utils/operation-labels';
 
 type OptionalSeverity = LogSeverity | 'ALL';
 type OptionalOrigin = LogOrigin | 'ALL';
@@ -27,11 +31,14 @@ type PaginationItem =
 
 @Component({
   selector: 'app-logs',
+  imports: [RouterLink],
   templateUrl: './logs.html',
   styleUrls: ['./logs.css', './logs-list.css']
 })
 export class Logs implements OnInit {
+  protected readonly sectionRoutes = APPLICATION_ROUTES;
   private readonly logsService = inject(OperationalLogsService);
+  private readonly temporalFormat = inject(TemporalFormatService);
   private readonly devicesService = inject(DeviceOperationsService);
   private readonly route = inject(ActivatedRoute);
 
@@ -59,7 +66,7 @@ export class Logs implements OnInit {
 
   readonly pageSizes = [25, 50, 100];
   readonly severities: readonly LogSeverity[] = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'];
-  readonly origins: readonly LogOrigin[] = ['DEVICE_SIMULATION', 'MQTT'];
+  readonly origins: readonly LogOrigin[] = ['ADMINISTRATION', 'DEVICE_SIMULATION', 'MQTT'];
   readonly deviceTypes: readonly DeviceType[] = [
     'TICKET_MACHINE',
     'ENTRY_VALIDATOR',
@@ -75,6 +82,8 @@ export class Logs implements OnInit {
     'TICKET_PURCHASE_REQUESTED',
     'TICKET_PURCHASE_COMPLETED',
     'TICKET_PURCHASE_FAILED',
+    'COMPENSATORY_TICKET_ISSUANCE_REQUESTED',
+    'COMPENSATORY_TICKET_ISSUED',
     'QR_TICKET_GENERATED',
     'QR_TICKET_SCANNED',
     'VALIDATION_REQUESTED',
@@ -289,7 +298,15 @@ export class Logs implements OnInit {
   }
 
   originLabel(origin: LogOrigin): string {
-    return origin === 'MQTT' ? 'MQTT' : 'Simulación';
+    return {
+      ADMINISTRATION: 'Administración',
+      DEVICE_SIMULATION: 'Simulación',
+      MQTT: 'MQTT'
+    }[origin];
+  }
+
+  sourceLabel(source: DeviceEventSource): string {
+    return deviceEventSourceLabel(source);
   }
 
   eventTypeLabel(type: DeviceEventType): string {
@@ -303,6 +320,8 @@ export class Logs implements OnInit {
       TICKET_PURCHASE_REQUESTED: 'Compra solicitada',
       TICKET_PURCHASE_COMPLETED: 'Compra completada',
       TICKET_PURCHASE_FAILED: 'Compra fallida',
+      COMPENSATORY_TICKET_ISSUANCE_REQUESTED: 'Emisión compensatoria solicitada',
+      COMPENSATORY_TICKET_ISSUED: 'Billete compensatorio emitido',
       QR_TICKET_GENERATED: 'QR generado',
       QR_TICKET_SCANNED: 'QR escaneado',
       VALIDATION_REQUESTED: 'Validación solicitada',
@@ -313,12 +332,54 @@ export class Logs implements OnInit {
     return labels[type];
   }
 
+  operationCategory(type: DeviceEventType): 'sale' | 'issuance' | 'validation' | null {
+    if (type.startsWith('TICKET_PURCHASE_')) return 'sale';
+    if (type.startsWith('COMPENSATORY_TICKET_ISSUANCE_')
+        || type === 'COMPENSATORY_TICKET_ISSUED'
+        || type === 'QR_TICKET_GENERATED') return 'issuance';
+    if (type.startsWith('VALIDATION_') || type === 'QR_TICKET_SCANNED') return 'validation';
+    return null;
+  }
+
+  operationCategoryLabel(type: DeviceEventType): string | null {
+    const category = this.operationCategory(type);
+    return category ? { sale: 'Venta', issuance: 'Emisión', validation: 'Validación' }[category] : null;
+  }
+
+  ticketTypeLabel(type: TicketProductType): string {
+    return {
+      SINGLE_TRIP: 'Billete sencillo',
+      MULTI_TRIP: 'Bono multiviaje',
+      TIME_PASS: 'Abono temporal',
+      SMART_BALANCE: 'Saldo inteligente'
+    }[type];
+  }
+
+  operationReference(log: OperationalLog): string | null {
+    return log.ticketCode ?? log.compensatoryIssuanceCode ?? log.externalReference;
+  }
+
+  incidentContext(log: OperationalLog): Record<string, string | number> {
+    const params: Record<string, string | number> = {
+      create: 'true',
+      deviceId: log.deviceId,
+      deviceCode: log.deviceCode,
+      eventType: log.eventType
+    };
+    if (log.ticketCode) params['ticketCode'] = log.ticketCode;
+    if (log.compensatoryIssuanceCode) {
+      params['issuanceCode'] = log.compensatoryIssuanceCode;
+    }
+    if (log.externalReference) params['externalReference'] = log.externalReference;
+    return params;
+  }
+
   deviceTypeLabel(type: DeviceType): string {
     return deviceTypeLabel(type);
   }
 
   formatDateTime(value: string): string {
-    return formatDateTime(value);
+    return this.temporalFormat.formatDateTime(value);
   }
 
   private buildFilters(): OperationalLogFilters {

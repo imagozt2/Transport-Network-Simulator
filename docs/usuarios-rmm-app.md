@@ -3,12 +3,9 @@
 ## Objetivo
 
 La sección **Usuarios** permite al personal del Centro de Control consultar y gestionar las cuentas
-de pasajeros que, en el futuro, se registrarán mediante la aplicación Android RMM App.
-
-Esta fase construye exclusivamente la administración desde la aplicación web. Todavía no implementa
-el registro, inicio de sesión, recuperación de contraseña ni perfil personal de la aplicación
-Android. Por ese motivo, una instalación nueva muestra el listado vacío y los scripts no crean
-pasajeros ficticios.
+de pasajeros registradas mediante RMM App. El registro, la autenticación, la recuperación de cuenta
+y el perfil personal se resuelven desde Android, mientras que esta pantalla concentra las funciones
+administrativas. Los scripts no crean pasajeros ficticios.
 
 ## Separación entre identidades
 
@@ -17,7 +14,7 @@ El proyecto mantiene dos conceptos independientes:
 | Cuenta | Tabla | Finalidad |
 | --- | --- | --- |
 | Operador | `operator_accounts` | Acceder y trabajar en el Centro de Control Operativo. |
-| Pasajero | `passenger_accounts` | Utilizar los futuros servicios de RMM App. |
+| Pasajero | `passenger_accounts` | Utilizar los servicios de RMM App. |
 
 Una cuenta de pasajero nunca concede acceso al centro de control. Un operador tampoco se convierte
 automáticamente en usuario viajero.
@@ -165,5 +162,6 @@ página actual para conservar la coherencia con los filtros.
 - Las mutaciones requieren sesión administrativa y token CSRF.
 - Todo cambio de estado conserva trazabilidad.
 
-Antes de conectar RMM App será necesario definir sus contratos públicos de registro, verificación,
-autenticación, consentimiento, eliminación de cuenta y recuperación de credenciales.
+El registro, la verificación, las sesiones, la recuperación y el aislamiento respecto al centro de
+control se describen en [Autenticación de RMM App](autenticacion-rmm-app.md). La administración de
+esta pantalla no comparte credenciales ni sesiones con esos flujos móviles.
