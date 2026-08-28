@@ -36,6 +36,11 @@ debe interpretarse como una función ya disponible.
 - recuperación de sesiones Android y operaciones Qt pendientes frente a interrupciones o reinicios;
 - cálculo de trayectos sobre la red y simulación horaria de trenes, estaciones y cocheras.
 
+La aceptación final automatizada verifica de forma conjunta compra, recarga, entrada, rechazo de una
+entrada duplicada, salida, cierre del desplazamiento, consumo del título y trazabilidad MQTT. Las
+suites de interfaz verifican además temas, preferencias, errores recuperables y restablecimiento de
+los clientes, sin presentar esas comprobaciones como integración con hardware real.
+
 ## Naturaleza de la simulación
 
 - La ciudad, la red, sus horarios, la flota y las máquinas son ficticios.
@@ -105,6 +110,10 @@ El proyecto se considera funcionalmente terminado cuando:
 3. las siete comprobaciones del workflow finalizan correctamente;
 4. el repositorio no contiene credenciales ni configuración privada;
 5. código, esquema, contratos y documentación describen el mismo comportamiento.
+
+Los criterios funcionales anteriores están respaldados por el escenario integrado en contenedores y
+por las suites específicas de backend, frontend, Android y Qt. Las limitaciones deliberadas de este
+documento no se consideran fallos pendientes.
 
 Las mejoras posteriores deben corregir defectos o inconsistencias dentro de este alcance. Una
 integración con pagos reales, hardware ferroviario, validación offline, infraestructura distribuida

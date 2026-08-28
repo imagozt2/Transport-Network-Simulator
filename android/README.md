@@ -59,3 +59,7 @@ Retrofit y OkHttp, añade únicamente cabeceras públicas y no registra cuerpos 
 llamadas devuelven resultados tipados que distinguen respuestas HTTP, problemas de conectividad,
 errores de serialización y respuestas inválidas sin mostrar directamente excepciones técnicas en la
 interfaz.
+
+Las pruebas unitarias cubren navegación y sesión, contratos de red, compras, cartera, trayectos y las
+preferencias persistentes de idioma y tema. Las pruebas instrumentadas complementan esa cobertura en
+el emulador para los formularios de autenticación y la interacción con el teclado virtual.

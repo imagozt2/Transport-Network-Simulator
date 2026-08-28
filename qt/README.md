@@ -57,3 +57,7 @@ las compras, recargas, emisiones, eventos y órdenes compensatorias se completan
 validadora funciona como kiosco de una sola pantalla: lee el QR mediante cámara, publica entradas y
 salidas, representa estados visuales y acústicos, mantiene cinco segundos el acceso aceptado y
 restablece automáticamente la lectura después de cada resultado o reconexión.
+
+Qt Test cubre los protocolos de compra, recarga y validación, la conservación de operaciones
+pendientes y la recuperación visual de la validadora. El patrón acústico se emite una sola vez por
+decisión: un tono prolongado para una aceptación y tres tonos consecutivos para un rechazo.
