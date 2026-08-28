@@ -12,7 +12,15 @@ import { OperatorSettingsPage } from './operator-settings';
   selector: 'app-dark-theme-surfaces-host',
   template: `
     <article class="line-card"></article>
+    <article class="station-card"></article>
     <article class="train-card"></article>
+    <article class="depot-card"></article>
+    <article class="device-card"></article>
+    <article class="ticket-card"></article>
+    <article class="incident-card"></article>
+    <article class="title-card"></article>
+    <article class="profile-card"></article>
+    <article class="logs-results"></article>
     <article class="issuance-dialog"></article>
     <article class="create-user-dialog"></article>
     <article class="create-incident-dialog"></article>

@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { convertToParamMap } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 import { Incident, IncidentsPage } from '../../core/models/incident.model';
 import { OperatorAccount } from '../../core/models/operator-auth.model';
@@ -181,6 +181,25 @@ describe('Incidents', () => {
         description: expect.stringContaining('Referencia de operación: validation-123')
       })
     );
+  });
+
+  it('should recover the incident list after a temporary API failure', () => {
+    incidentsService.getIncidents.mockReturnValueOnce(
+      throwError(() => new Error('temporary failure'))
+    );
+    fixture.componentInstance.loadIncidents(0);
+    fixture.detectChanges(false);
+
+    expect(fixture.componentInstance.errorMessage)
+      .toContain('No se han podido cargar las incidencias');
+    expect(fixture.componentInstance.incidents).toEqual([]);
+
+    incidentsService.getIncidents.mockReturnValueOnce(of(page));
+    fixture.componentInstance.loadIncidents(0);
+    fixture.detectChanges(false);
+
+    expect(fixture.componentInstance.errorMessage).toBe('');
+    expect(fixture.nativeElement.querySelector('tbody')?.textContent).toContain('INC-TEST');
   });
 
   it('should retain responsive list, detail and workflow layouts', () => {

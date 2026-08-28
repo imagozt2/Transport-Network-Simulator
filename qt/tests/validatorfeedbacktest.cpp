@@ -11,6 +11,7 @@ private slots:
     void representsEveryValidationState();
     void usesDistinctAcousticPatterns();
     void keepsAcceptedAndRejectedResultsForTheirConfiguredDuration();
+    void returnsToAReusableWaitingStateAfterEveryResult();
 };
 
 void ValidatorFeedbackTest::activatesCameraOnlyWhileWaiting()
@@ -54,6 +55,22 @@ void ValidatorFeedbackTest::keepsAcceptedAndRejectedResultsForTheirConfiguredDur
                  .resetDelayMilliseconds, 5000);
     QCOMPARE(validatorFeedbackPolicy(ValidatorFeedbackState::Rejected)
                  .resetDelayMilliseconds, 3000);
+}
+
+void ValidatorFeedbackTest::returnsToAReusableWaitingStateAfterEveryResult()
+{
+    for (const auto result : {ValidatorFeedbackState::Accepted,
+                              ValidatorFeedbackState::Rejected}) {
+        const auto completed = validatorFeedbackPolicy(result);
+        QVERIFY(completed.resetDelayMilliseconds > 0);
+        QVERIFY(!completed.cameraActive);
+
+        const auto recovered = validatorFeedbackPolicy(ValidatorFeedbackState::Waiting);
+        QVERIFY(recovered.cameraActive);
+        QVERIFY(!recovered.gateOpen);
+        QCOMPARE(recovered.beepCount, 0);
+        QCOMPARE(recovered.resetDelayMilliseconds, 0);
+    }
 }
 
 QTEST_MAIN(ValidatorFeedbackTest)
