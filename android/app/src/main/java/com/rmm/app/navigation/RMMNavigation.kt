@@ -21,9 +21,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.rmm.app.R
 import com.rmm.app.core.session.PassengerSession
-import com.rmm.app.ui.screen.NavigationDestinationScreen
 import com.rmm.app.ui.component.RMMTopAppBar
 import com.rmm.app.ui.screen.account.AccountScreen
+import com.rmm.app.ui.screen.home.HomeScreen
 import com.rmm.app.ui.screen.journeys.JourneysScreen
 import com.rmm.app.ui.screen.tickets.TicketsScreen
 
@@ -104,10 +104,7 @@ private fun RMMNavHost(
         modifier = modifier,
     ) {
         composable(RMMTopLevelDestination.HOME.route) {
-            NavigationDestinationScreen(
-                titleResource = R.string.home_title,
-                descriptionResource = R.string.home_description,
-            )
+            HomeScreen(session = session)
         }
         composable(RMMTopLevelDestination.TICKETS.route) {
             TicketsScreen(session = session)

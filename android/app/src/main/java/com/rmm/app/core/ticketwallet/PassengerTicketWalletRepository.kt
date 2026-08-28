@@ -1,6 +1,7 @@
 package com.rmm.app.core.ticketwallet
 
 import com.rmm.app.core.network.ApiResult
+import com.rmm.app.core.network.ApiResponseMetadata
 import com.rmm.app.core.network.RMMApiCallExecutor
 import com.rmm.app.core.network.RMMApiClient
 import com.rmm.app.core.session.PassengerSession
@@ -10,6 +11,33 @@ class PassengerTicketWalletRepository(
     private val api: PassengerTicketWalletApi = RMMApiClient.create(PassengerTicketWalletApi::class.java),
     private val calls: RMMApiCallExecutor = RMMApiClient.calls(),
 ) {
+    suspend fun openDigitalJourneys(
+        session: PassengerSession,
+    ): ApiResult<List<PassengerTicketSummary>> {
+        val pages = mutableListOf<PassengerTicketSummary>()
+        val visitedCursors = mutableSetOf<String>()
+        var cursor: String? = null
+        var metadata: ApiResponseMetadata? = null
+
+        do {
+            when (val result = tickets(session = session, limit = 100, cursor = cursor)) {
+                is ApiResult.Failure -> return result
+                is ApiResult.Success -> {
+                    metadata = metadata ?: result.metadata
+                    pages += result.value.items
+                    cursor = result.value.nextCursor
+                }
+            }
+        } while (cursor != null && visitedCursors.add(cursor))
+
+        return ApiResult.Success(
+            value = pages.filter { ticket ->
+                ticket.medium == "DIGITAL" && ticket.openJourney
+            }.distinctBy(PassengerTicketSummary::code),
+            metadata = metadata ?: ApiResponseMetadata(statusCode = 200, requestId = null),
+        )
+    }
+
     suspend fun tickets(
         session: PassengerSession,
         status: String? = null,

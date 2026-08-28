@@ -20,6 +20,28 @@ import retrofit2.Response
 class PassengerTicketWalletRepositoryTest {
 
     @Test
+    fun homeKeepsOnlyDigitalTicketsWithAnOpenJourney() = runBlocking {
+        val openDigital = ticket().copy(openJourney = true)
+        val closedDigital = ticket().copy(code = "RMM-TKT-002")
+        val openPhysical = ticket().copy(
+            code = "RMM-TKT-003",
+            medium = "PHYSICAL",
+            openJourney = true,
+        )
+        val api = RecordingWalletApi().apply {
+            ticketsResponse = Response.success(
+                PassengerTicketsResponse(listOf(openDigital, closedDigital, openPhysical))
+            )
+        }
+
+        val result = repository(api).openDigitalJourneys(session())
+
+        assertTrue(result is ApiResult.Success)
+        assertEquals(listOf("RMM-TKT-001"), (result as ApiResult.Success).value.map { it.code })
+        assertEquals(100, api.limit)
+    }
+
+    @Test
     fun walletForwardsFiltersAndCursorWithPassengerAuthentication() = runBlocking {
         val api = RecordingWalletApi().apply {
             ticketsResponse = Response.success(PassengerTicketsResponse(
@@ -111,6 +133,7 @@ class PassengerTicketWalletRepositoryTest {
         var status: String? = null
         var productType: String? = null
         var cursor: String? = null
+        var limit: Int? = null
         var idempotencyKey: String? = null
         var linkRequest: PassengerTicketLinkRequest? = null
         var ticketCode: String? = null
@@ -121,6 +144,7 @@ class PassengerTicketWalletRepositoryTest {
             this.status = status
             this.productType = productType
             this.cursor = cursor
+            this.limit = limit
             return ticketsResponse
         }
 
