@@ -4,6 +4,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,6 +26,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
@@ -52,6 +55,7 @@ internal fun NetworkMapView(
     val stationFill = MaterialTheme.colorScheme.surface
     val labelColor = MaterialTheme.colorScheme.onSurface
     val fallbackLineColor = MaterialTheme.colorScheme.primary
+    val mapShape = MaterialTheme.shapes.large
     val description = stringResource(R.string.journeys_map_content_description)
     val stationByCode = remember(catalog.stations) { catalog.stations.associateBy { it.code } }
     val lineByCode = remember(catalog.lines) { catalog.lines.associateBy { it.code } }
@@ -59,7 +63,11 @@ internal fun NetworkMapView(
     Box(
         modifier = modifier
             .fillMaxSize()
+            .padding(start = 12.dp, end = 12.dp, bottom = 12.dp)
+            .clip(mapShape)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, mapShape)
             .background(surfaceColor)
+            .clipToBounds()
             .semantics { contentDescription = description }
             .pointerInput(Unit) {
                 detectTransformGestures { _, pan, gestureZoom, _ ->
@@ -114,7 +122,7 @@ internal fun NetworkMapView(
                 }
                 drawPath(
                     path = path,
-                    color = apiLine.color.toMapColorOr(fallbackLineColor),
+                    color = resolvedLineColor(apiLine.code, apiLine.color, fallbackLineColor),
                     style = Stroke(
                         width = 5.dp.toPx() / zoom,
                         cap = StrokeCap.Round,
@@ -149,7 +157,7 @@ internal fun NetworkMapView(
 
             NetworkMapGeometry.lines.forEach { lineGeometry ->
                 val apiLine = lineByCode[lineGeometry.code] ?: return@forEach
-                val lineColor = apiLine.color.toMapColorOr(fallbackLineColor)
+                val lineColor = resolvedLineColor(apiLine.code, apiLine.color, fallbackLineColor)
                 listOf(lineGeometry.startLabel, lineGeometry.endLabel).forEach { label ->
                     val center = Offset(
                         origin.x + label.x * mapScale,

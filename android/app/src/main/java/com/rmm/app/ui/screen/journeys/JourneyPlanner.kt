@@ -122,7 +122,7 @@ internal fun JourneyPlanner(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        if (history.favorites.isNotEmpty() || history.recent.isNotEmpty()) {
+        if (history.favorites.isNotEmpty()) {
             item {
                 SavedJourneys(
                     history = history,
@@ -347,14 +347,6 @@ private fun SavedJourneys(
                 }
             }
         }
-        if (history.recent.isNotEmpty()) {
-            Text(stringResource(R.string.journeys_recent), style = MaterialTheme.typography.titleMedium)
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                items(history.recent, key = SavedPassengerJourney::routeKey) { journey ->
-                    SavedJourneyRow(journey, favorite = false, onClick = { onJourneySelected(journey) })
-                }
-            }
-        }
     }
 }
 
@@ -390,7 +382,11 @@ private fun SavedJourneyRow(
 
 @Composable
 private fun JourneySegmentCard(segment: PassengerNetworkJourneySegment) {
-    val lineColor = segment.lineColor.asComposeColor(MaterialTheme.colorScheme.primary)
+    val lineColor = resolvedLineColor(
+        segment.lineCode,
+        segment.lineColor,
+        MaterialTheme.colorScheme.primary,
+    )
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(

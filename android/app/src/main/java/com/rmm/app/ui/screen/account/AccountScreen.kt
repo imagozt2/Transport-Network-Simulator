@@ -39,12 +39,17 @@ import com.rmm.app.R
 import com.rmm.app.core.auth.LogoutResult
 import com.rmm.app.core.auth.PassengerAuthenticationRepository
 import com.rmm.app.core.session.PassengerSession
+import com.rmm.app.core.preferences.AppLanguage
+import com.rmm.app.core.preferences.AppTheme
+import com.rmm.app.core.preferences.DisplayPreferences
 import kotlinx.coroutines.launch
 
 @Composable
 fun AccountScreen(
     session: PassengerSession,
     onLoggedOut: () -> Unit,
+    displayPreferences: DisplayPreferences,
+    onDisplayPreferencesChanged: (DisplayPreferences) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -104,9 +109,45 @@ fun AccountScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Text(stringResource(R.string.account_information), style = MaterialTheme.typography.titleMedium)
-                AccountField(stringResource(R.string.account_status), user.status.localizedStatus())
-                AccountField(stringResource(R.string.account_language), user.locale.localizedLocale())
+                AccountField(stringResource(R.string.account_status), localizedStatus(user.status))
                 AccountField(stringResource(R.string.account_identifier), user.publicId)
+            }
+        }
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(18.dp),
+            ) {
+                Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    stringResource(R.string.settings_description),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                PreferenceSelector(
+                    label = stringResource(R.string.settings_language),
+                    firstLabel = stringResource(R.string.settings_language_spanish),
+                    secondLabel = stringResource(R.string.settings_language_english),
+                    firstSelected = displayPreferences.language == AppLanguage.SPANISH,
+                    onFirstSelected = {
+                        onDisplayPreferencesChanged(displayPreferences.copy(language = AppLanguage.SPANISH))
+                    },
+                    onSecondSelected = {
+                        onDisplayPreferencesChanged(displayPreferences.copy(language = AppLanguage.ENGLISH))
+                    },
+                )
+                PreferenceSelector(
+                    label = stringResource(R.string.settings_theme),
+                    firstLabel = stringResource(R.string.settings_theme_light),
+                    secondLabel = stringResource(R.string.settings_theme_dark),
+                    firstSelected = displayPreferences.theme == AppTheme.LIGHT,
+                    onFirstSelected = {
+                        onDisplayPreferencesChanged(displayPreferences.copy(theme = AppTheme.LIGHT))
+                    },
+                    onSecondSelected = {
+                        onDisplayPreferencesChanged(displayPreferences.copy(theme = AppTheme.DARK))
+                    },
+                )
             }
         }
 
@@ -184,16 +225,37 @@ private fun com.rmm.app.core.session.PassengerSessionUser.initials(): String =
         .take(2)
         .ifBlank { "M" }
 
-private fun String.localizedStatus(): String = when (this) {
-    "ACTIVE" -> "Activa"
-    "PENDING_VERIFICATION" -> "Pendiente de verificacion"
-    "DISABLED" -> "Deshabilitada"
-    "BLOCKED" -> "Bloqueada"
-    else -> this
+@Composable
+private fun localizedStatus(status: String): String = when (status) {
+    "ACTIVE" -> stringResource(R.string.account_status_active)
+    "PENDING_VERIFICATION" -> stringResource(R.string.account_status_pending)
+    "DISABLED" -> stringResource(R.string.account_status_disabled)
+    "BLOCKED" -> stringResource(R.string.account_status_blocked)
+    else -> status
 }
 
-private fun String.localizedLocale(): String = when (this) {
-    "es-ES" -> "Espanol"
-    "en-GB", "en-US" -> "Ingles"
-    else -> this
+@Composable
+private fun PreferenceSelector(
+    label: String,
+    firstLabel: String,
+    secondLabel: String,
+    firstSelected: Boolean,
+    onFirstSelected: () -> Unit,
+    onSecondSelected: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(label, style = MaterialTheme.typography.labelLarge)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            if (firstSelected) {
+                Button(onClick = onFirstSelected, modifier = Modifier.weight(1f)) { Text(firstLabel) }
+                OutlinedButton(onClick = onSecondSelected, modifier = Modifier.weight(1f)) { Text(secondLabel) }
+            } else {
+                OutlinedButton(onClick = onFirstSelected, modifier = Modifier.weight(1f)) { Text(firstLabel) }
+                Button(onClick = onSecondSelected, modifier = Modifier.weight(1f)) { Text(secondLabel) }
+            }
+        }
+    }
 }

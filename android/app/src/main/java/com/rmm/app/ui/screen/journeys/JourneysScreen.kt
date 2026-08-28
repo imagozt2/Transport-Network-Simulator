@@ -1,7 +1,7 @@
 package com.rmm.app.ui.screen.journeys
 
-import android.graphics.Color.parseColor
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -32,6 +33,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -44,7 +47,7 @@ import com.rmm.app.core.networkcatalog.PassengerNetworkLine
 import com.rmm.app.core.networkcatalog.PassengerNetworkRepository
 import com.rmm.app.core.session.PassengerSession
 
-private enum class CatalogTab { ROUTE, MAP, LINES, STATIONS, HISTORY }
+private enum class CatalogTab { ROUTE, MAP, LINES, HISTORY }
 
 private sealed interface CatalogUiState {
     data object Loading : CatalogUiState
@@ -60,7 +63,6 @@ fun JourneysScreen(
     val repository = remember { PassengerNetworkRepository() }
     var reloadKey by rememberSaveable { mutableIntStateOf(0) }
     var selectedTab by rememberSaveable { mutableStateOf(CatalogTab.MAP) }
-    var selectedStationCode by rememberSaveable { mutableStateOf<String?>(null) }
     var state by remember { mutableStateOf<CatalogUiState>(CatalogUiState.Loading) }
 
     LaunchedEffect(session.accessToken, reloadKey) {
@@ -96,11 +98,6 @@ fun JourneysScreen(
                     text = { Text(stringResource(R.string.journeys_lines_tab)) },
                 )
                 Tab(
-                    selected = selectedTab == CatalogTab.STATIONS,
-                    onClick = { selectedTab = CatalogTab.STATIONS },
-                    text = { Text(stringResource(R.string.journeys_stations_tab)) },
-                )
-                Tab(
                     selected = selectedTab == CatalogTab.HISTORY,
                     onClick = { selectedTab = CatalogTab.HISTORY },
                     text = { Text(stringResource(R.string.journey_history_tab)) },
@@ -121,13 +118,6 @@ fun JourneysScreen(
                     repository = repository,
                 )
                 CatalogTab.LINES -> LinesList(current.catalog)
-                CatalogTab.STATIONS -> StationSearch(
-                    catalog = current.catalog,
-                    selectedStationCode = selectedStationCode,
-                    onStationSelected = { station ->
-                        selectedStationCode = station.code
-                    },
-                )
                 CatalogTab.HISTORY -> Unit
             }
         }
@@ -173,19 +163,30 @@ private fun LinesList(catalog: NetworkCatalog) {
         return
     }
     val stationsByCode = remember(catalog.stations) { catalog.stations.associateBy { it.code } }
+    val linesByCode = remember(catalog.lines) { catalog.lines.associateBy { it.code } }
+    var expandedLineCode by rememberSaveable { mutableStateOf<String?>(null) }
     LazyColumn(
         contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         items(catalog.lines, key = PassengerNetworkLine::code) { line ->
-            Card(modifier = Modifier.fillMaxWidth()) {
+            val expanded = expandedLineCode == line.code
+            val orderedStationCodes = NetworkMapGeometry.lines
+                .firstOrNull { it.code == line.code }
+                ?.stationCodes
+                .orEmpty()
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { expandedLineCode = if (expanded) null else line.code },
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier.padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     LineBadge(line.code, line.color)
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(line.name, style = MaterialTheme.typography.titleMedium)
                         val terminalNames = line.terminals.map { code ->
                             stationsByCode[code]?.name ?: code
@@ -197,12 +198,34 @@ private fun LinesList(catalog: NetworkCatalog) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodyMedium,
                         )
-                        val stationCount = catalog.stations.count { line.code in it.lineCodes }
                         Text(
-                            stringResource(R.string.journeys_station_count, stationCount),
+                            stringResource(R.string.journeys_station_count, orderedStationCodes.size),
                             style = MaterialTheme.typography.labelMedium,
                         )
                     }
+                    Text(
+                        text = if (expanded) "−" else "+",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = resolvedLineColor(line.code, line.color, MaterialTheme.colorScheme.primary),
+                    )
+                }
+                if (expanded) {
+                    Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
+                        orderedStationCodes.forEachIndexed { index, stationCode ->
+                            val station = stationsByCode[stationCode] ?: return@forEachIndexed
+                            LineStationRow(
+                                stationName = station.name,
+                                stationCode = station.code,
+                                lineColor = resolvedLineColor(line.code, line.color, MaterialTheme.colorScheme.primary),
+                                correspondenceLines = station.lineCodes
+                                    .filterNot { it == line.code }
+                                    .mapNotNull(linesByCode::get),
+                                first = index == 0,
+                                last = index == orderedStationCodes.lastIndex,
+                            )
+                        }
+                    }
+                }
                 }
             }
         }
@@ -211,7 +234,7 @@ private fun LinesList(catalog: NetworkCatalog) {
 
 @Composable
 internal fun LineBadge(code: String, color: String?) {
-    val background = color.toColorOr(MaterialTheme.colorScheme.primary)
+    val background = resolvedLineColor(code, color, MaterialTheme.colorScheme.primary)
     Box(
         modifier = Modifier
             .clip(MaterialTheme.shapes.small)
@@ -229,6 +252,56 @@ internal fun LineBadge(code: String, color: String?) {
 }
 
 @Composable
+private fun LineStationRow(
+    stationName: String,
+    stationCode: String,
+    lineColor: Color,
+    correspondenceLines: List<PassengerNetworkLine>,
+    first: Boolean,
+    last: Boolean,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .drawBehind {
+                val railX = 12.dp.toPx()
+                val centerY = size.height / 2f
+                drawLine(
+                    color = lineColor,
+                    start = Offset(railX, if (first) centerY else 0f),
+                    end = Offset(railX, if (last) centerY else size.height),
+                    strokeWidth = 3.dp.toPx(),
+                )
+            }
+            .padding(vertical = 7.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(modifier = Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier
+                    .size(if (correspondenceLines.isEmpty()) 14.dp else 20.dp)
+                    .background(MaterialTheme.colorScheme.surface, CircleShape)
+                    .border(3.dp, lineColor, CircleShape),
+            )
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(stationName, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+            Text(
+                stationCode,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            correspondenceLines.forEach { correspondence ->
+                LineBadge(correspondence.code, correspondence.color)
+            }
+        }
+    }
+}
+
+@Composable
 internal fun EmptyState(message: Int) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(
@@ -238,8 +311,3 @@ internal fun EmptyState(message: Int) {
     }
 }
 
-private fun String?.toColorOr(fallback: Color): Color = try {
-    if (isNullOrBlank()) fallback else Color(parseColor(this))
-} catch (_: IllegalArgumentException) {
-    fallback
-}

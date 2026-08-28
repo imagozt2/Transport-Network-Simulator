@@ -1,10 +1,12 @@
 package com.rmm.app.ui.screen.authentication
 
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -27,10 +29,12 @@ class AuthenticationFormInteractionTest {
         showAuthenticationScreen()
 
         val email = compose.onNodeWithText(context.getString(R.string.auth_email)).assertIsEnabled()
+        email.performClick().assertIsFocused()
         email.performTextInput("pasajero@rmm.local")
         email.assertTextContains("pasajero@rmm.local")
 
         val password = compose.onNodeWithText(context.getString(R.string.auth_password)).assertIsEnabled()
+        password.performClick().assertIsFocused()
         password.performTextInput("ClaveSegura123")
         password.assertTextContains("ClaveSegura123")
     }
@@ -57,6 +61,7 @@ class AuthenticationFormInteractionTest {
 
     private fun input(label: Int, value: String) {
         val field = compose.onNodeWithText(context.getString(label)).assertIsEnabled()
+        field.performScrollTo().performClick().assertIsFocused()
         field.performTextInput(value)
         field.assertTextContains(value)
     }

@@ -106,7 +106,7 @@ services:
       - ./infrastructure/mosquitto/runtime/certificates:/app/mqtt-certificates:ro
       - ticket-qr-keys:/app/ticket-qr-keys
     ports:
-      - "127.0.0.1:${BACKEND_HOST_PORT:-8080}:8080"
+      - "${BACKEND_BIND_ADDRESS:-0.0.0.0}:${BACKEND_HOST_PORT:-8080}:8080"
     depends_on:
       mysql:
         condition: service_healthy

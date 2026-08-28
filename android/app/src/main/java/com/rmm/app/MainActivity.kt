@@ -12,12 +12,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import com.rmm.app.core.auth.PassengerAuthenticationRepository
 import com.rmm.app.core.auth.SessionRenewalResult
 import com.rmm.app.core.session.PassengerSessionStorage
+import com.rmm.app.core.preferences.AppTheme
+import com.rmm.app.core.preferences.DisplayPreferences
+import com.rmm.app.core.preferences.DisplayPreferencesStore
 import com.rmm.app.navigation.RMMNavigation
 import com.rmm.app.navigation.RMMRootDestination
 import com.rmm.app.navigation.resolveRootDestination
@@ -26,15 +31,39 @@ import com.rmm.app.ui.theme.RMMAppTheme
 import java.time.Duration
 import java.time.Instant
 import kotlinx.coroutines.delay
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            RMMAppTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    RMMApp()
+            val baseContext = LocalContext.current
+            val store = remember(baseContext) { DisplayPreferencesStore.get(baseContext) }
+            var displayPreferences by remember { mutableStateOf(store.load()) }
+            val configuration = remember(displayPreferences.language) {
+                android.content.res.Configuration(baseContext.resources.configuration).apply {
+                    setLocale(Locale.forLanguageTag(displayPreferences.language.languageTag))
+                }
+            }
+            val localizedContext = remember(configuration) {
+                baseContext.createConfigurationContext(configuration)
+            }
+
+            CompositionLocalProvider(
+                LocalContext provides localizedContext,
+                LocalConfiguration provides configuration,
+            ) {
+                RMMAppTheme(darkTheme = displayPreferences.theme == AppTheme.DARK) {
+                    Surface(modifier = Modifier.fillMaxSize()) {
+                        RMMApp(
+                            displayPreferences = displayPreferences,
+                            onDisplayPreferencesChanged = { updated ->
+                                store.save(updated)
+                                displayPreferences = updated
+                            },
+                        )
+                    }
                 }
             }
         }
@@ -42,7 +71,11 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun RMMApp(modifier: Modifier = Modifier) {
+fun RMMApp(
+    displayPreferences: DisplayPreferences = DisplayPreferences(),
+    onDisplayPreferencesChanged: (DisplayPreferences) -> Unit = {},
+    modifier: Modifier = Modifier,
+) {
     val context = LocalContext.current
     val sessionStore = remember(context) { PassengerSessionStorage.get(context) }
     val authenticationRepository = remember(context) { PassengerAuthenticationRepository(context) }
@@ -91,6 +124,8 @@ fun RMMApp(modifier: Modifier = Modifier) {
             RMMNavigation(
                 session = checkNotNull(session),
                 onLoggedOut = { session = null },
+                displayPreferences = displayPreferences,
+                onDisplayPreferencesChanged = onDisplayPreferencesChanged,
                 modifier = modifier.fillMaxSize(),
             )
         }
