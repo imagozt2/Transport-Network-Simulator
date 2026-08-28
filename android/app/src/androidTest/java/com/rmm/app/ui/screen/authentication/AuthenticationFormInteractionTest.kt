@@ -6,6 +6,7 @@ import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -60,7 +61,7 @@ class AuthenticationFormInteractionTest {
 
     private fun input(label: Int, value: String) {
         val field = compose.onNodeWithText(context.getString(label)).assertIsEnabled()
-        field.performClick().assertIsFocused()
+        field.performScrollTo().performClick().assertIsFocused()
         field.performTextInput(value)
         field.assertTextContains(value)
     }
