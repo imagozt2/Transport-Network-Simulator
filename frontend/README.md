@@ -106,7 +106,9 @@ npm run build -- --configuration production
 
 La cobertura incluye servicios HTTP, sesión y guards, rutas, navegación contextual, filtros
 inicializados desde la URL, refresco periódico, zona horaria, persistencia del tema, presentación
-operativa, accesibilidad y layout adaptable.
+operativa, accesibilidad y layout adaptable. También comprueba que los formularios de pasajeros e
+incidencias conservan una interacción utilizable después de errores del backend y que las superficies
+principales mantienen contraste suficiente con el tema oscuro.
 
 ## Organización principal
 

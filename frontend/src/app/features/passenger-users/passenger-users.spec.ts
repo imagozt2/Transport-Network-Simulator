@@ -1,6 +1,6 @@
 import { signal, WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 import {
   PassengerAccount,
@@ -188,6 +188,25 @@ describe('PassengerUsers', () => {
     expect(fixture.nativeElement.querySelector('.create-user-button')).toBeNull();
     fixture.componentInstance.openCreateDialog();
     expect(fixture.componentInstance.createDialogOpen).toBe(false);
+  });
+
+  it('should expose a recoverable error and reload the passenger list', () => {
+    accountsService.getAccounts.mockReturnValueOnce(
+      throwError(() => new Error('backend unavailable'))
+    );
+    fixture.componentInstance.loadUsers(0);
+    fixture.detectChanges(false);
+
+    expect(fixture.componentInstance.errorMessage)
+      .toContain('No se han podido cargar los usuarios');
+    expect(fixture.componentInstance.users).toEqual([]);
+
+    accountsService.getAccounts.mockReturnValueOnce(of(page));
+    fixture.componentInstance.loadUsers(0);
+    fixture.detectChanges(false);
+
+    expect(fixture.componentInstance.errorMessage).toBe('');
+    expect(fixture.nativeElement.querySelector('tbody')?.textContent).toContain('ana@example.local');
   });
 
   it('should retain responsive table, detail and form layouts', () => {

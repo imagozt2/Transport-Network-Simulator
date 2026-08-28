@@ -162,7 +162,8 @@ Realiza las comprobaciones en este orden para conservar trazabilidad entre clien
 2. **RMM App:** registra un pasajero, inicia sesión, consulta la red y calcula un trayecto.
 3. **Compra móvil:** compra un título y comprueba que aparece en la cartera con su QR.
 4. **Máquina de venta:** completa una compra física y una recarga mediante QR.
-5. **Validación:** usa el mismo billete para una entrada y una salida compatibles.
+5. **Validación:** registra una entrada, comprueba que una segunda entrada consecutiva sea rechazada
+   y completa después una salida compatible.
 6. **Historial:** confirma en RMM App que el desplazamiento contiene estaciones, duración e importe.
 7. **Trazabilidad:** comprueba en la web los eventos MQTT, la emisión, las validaciones y el trayecto.
 8. **Emisión administrativa digital:** entrega un billete a la cartera de un pasajero.
@@ -260,10 +261,24 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
   -File .\infrastructure\tests\ecosystem-container-tests.ps1
 ```
 
-La prueba construye un entorno temporal, valida el esquema y la codificación de MySQL, comprueba la
-conexión MQTT del backend, autentica un operador real y consulta los recursos operativos protegidos.
-Sus nombres, puertos, credenciales y volúmenes son independientes del entorno habitual y se eliminan
-al terminar.
+La prueba construye un entorno temporal y comprueba:
+
+- el esquema y la codificación de MySQL;
+- la conexión MQTT del backend y el acceso autenticado del operador;
+- una compra y una recarga efectuadas por una máquina de venta;
+- una entrada aceptada, el rechazo de la entrada duplicada y una salida aceptada;
+- el cierre del desplazamiento y la coherencia del saldo restante;
+- la persistencia de validaciones y logs con origen MQTT real.
+
+Los nombres, puertos, credenciales y volúmenes del entorno son independientes de la ejecución
+habitual y se eliminan al terminar.
+
+### Interfaces, temas y recuperación
+
+Las suites de cada cliente complementan la prueba en contenedores. Angular verifica la persistencia
+del tema y la recuperación de formularios administrativos tras un error; Android valida las
+preferencias de idioma y tema; Qt comprueba que la validadora reproduce un único patrón acústico por
+resultado y vuelve al estado disponible. Estas pruebas no necesitan cámaras ni dispositivos físicos.
 
 ## Integración continua
 

@@ -60,6 +60,12 @@ billetes, la vinculación de soportes físicos, la validación de entrada y sali
 historial de desplazamientos. Los pagos y los dispositivos son simulados y no representan sistemas
 de producción.
 
+La aceptación final automatizada recorre una compra y una recarga, una entrada válida, el rechazo de
+una segunda entrada sobre el mismo billete y la salida que cierra el desplazamiento. También contrasta
+el saldo, los logs MQTT y los registros persistidos. Las pruebas de interfaz cubren los temas claro y
+oscuro, las preferencias de idioma, los errores administrativos recuperables y el restablecimiento
+de las máquinas Qt después de cada resultado.
+
 La [guía final de ejecución y validación](docs/guia-ecosistema-rmm.md) reúne la preparación, el
 arranque de todos los componentes, las comprobaciones funcionales y automatizadas, la parada segura
 y el diagnóstico del ecosistema.
