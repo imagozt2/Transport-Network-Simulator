@@ -363,8 +363,76 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 - [Ciclo de eventos de las máquinas](docs/eventos-maquinas.md)
 - [Inicialización y estructura de la base de datos](database/README.md)
 
-## Desarrollo por ramas
+## Galería de imágenes
 
-El desarrollo se realiza en ramas temáticas y se integra en `main` mediante pull requests. Los cambios
-deben agruparse en commits pequeños y coherentes, y superar la compilación automática antes de ser
-integrados.
+<p align="center">
+  <img src="https://i.postimg.cc/63bxqSs9/Captura-de-pantalla-2026-08-31-122238.png" alt="Inicio de sesión" width="100%">
+</p>
+
+<p align="center">
+  <img src="https://i.postimg.cc/06BT46Gr/Captura-de-pantalla-2026-08-31-111748.png" alt="Panel general" width="100%">
+</p>
+
+<p align="center">
+  <img src="https://i.postimg.cc/jWFp1W6J/Captura-de-pantalla-2026-08-31-113204.png" alt="Mapa de red" width="100%">
+</p>
+
+<p align="center">
+  <img src="https://i.postimg.cc/9Rw6HW1m/Captura-de-pantalla-2026-08-31-113311.png" alt="Panel de líneas" width="100%">
+</p>
+
+<p align="center">
+  <img src="https://i.postimg.cc/gwTC7wyX/Captura-de-pantalla-2026-08-31-113334.png" alt="Panel de estaciones" width="100%">
+</p>
+
+<p align="center">
+  <img src="https://i.postimg.cc/KKH6WK73/Captura-de-pantalla-2026-08-31-113412.png" alt="Panel de trenes" width="100%">
+</p>
+
+<p align="center">
+  <img src="https://i.postimg.cc/FdkMX9GR/Captura-de-pantalla-2026-08-31-113442.png" alt="Panel de cocheras" width="100%">
+</p>
+
+<p align="center">
+  <img src="https://i.postimg.cc/ZBvGzTj9/Captura-de-pantalla-2026-08-31-113510.png" alt="Panel de máquinas" width="100%">
+</p>
+
+<p align="center">
+  <img src="https://i.postimg.cc/bDS7fzLZ/Captura-de-pantalla-2026-08-31-113535.png" alt="Panel de títulos de transporte" width="100%">
+</p>
+
+<p align="center">
+  <img src="https://i.postimg.cc/WFqBc2Sq/Captura-de-pantalla-2026-08-31-113552.png" alt="Panel de usuarios" width="100%">
+</p>
+
+<p align="center">
+  <img src="https://i.postimg.cc/bDS7fzLn/Captura-de-pantalla-2026-08-31-113617.png" alt="Panel de incidencias" width="100%">
+</p>
+
+<p align="center">
+  <img src="https://i.postimg.cc/cgtpGsTR/Captura-de-pantalla-2026-08-31-113644.png" alt="Panel de logs" width="100%">
+</p>
+
+<p align="center">
+  <img src="https://i.postimg.cc/ph5wM2kQ/Captura-de-pantalla-2026-08-31-113921.png" alt="Pantalla de inicio de máquina de billetes" width="100%">
+</p>
+
+<p align="center">
+  <img src="https://i.postimg.cc/XGBR6Vxk/Captura-de-pantalla-2026-08-31-113946.png" alt="Menú de títulos en la máquina de billetes" width="100%">
+</p>
+
+<p align="center">
+  <img src="https://i.postimg.cc/mz1vWbVw/Captura-de-pantalla-2026-08-31-114236.png" alt="Máquina validadora en estado de espera" width="100%">
+</p>
+
+<p align="center">
+  <img src="https://i.postimg.cc/CBn3pFJJ/Captura-de-pantalla-2026-08-31-114537.png" alt="Máquina validadora en estado de validación" width="100%">
+</p>
+
+<p align="center">
+  <img src="https://i.postimg.cc/mz1vWbVm/Captura-de-pantalla-2026-08-31-121118.png" alt="Capturas de la app Android 1" width="100%">
+</p>
+
+<p align="center">
+  <img src="https://i.postimg.cc/dkZbcqnW/Captura-de-pantalla-2026-08-31-121208.png" alt="Capturas de la app Android 2" width="100%">
+</p>
