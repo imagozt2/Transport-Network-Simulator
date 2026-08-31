@@ -370,69 +370,69 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 </p>
 
 <p align="center">
-  <img src="https://i.postimg.cc/06BT46Gr/Captura-de-pantalla-2026-08-31-111748.png" alt="Panel general" width="100%">
+  <img src="https://i.postimg.cc/rmVqKxKG/Captura-de-pantalla-2026-08-31-111748.png" alt="Panel general" width="100%">
 </p>
 
 <p align="center">
-  <img src="https://i.postimg.cc/jWFp1W6J/Captura-de-pantalla-2026-08-31-113204.png" alt="Mapa de red" width="100%">
+  <img src="https://i.postimg.cc/bJyqsksL/Captura-de-pantalla-2026-08-31-113204.png" alt="Mapa de red" width="100%">
 </p>
 
 <p align="center">
-  <img src="https://i.postimg.cc/9Rw6HW1m/Captura-de-pantalla-2026-08-31-113311.png" alt="Panel de líneas" width="100%">
+  <img src="https://i.postimg.cc/Hx6d5nyy/Captura-de-pantalla-2026-08-31-113311.png" alt="Panel de líneas" width="100%">
 </p>
 
 <p align="center">
-  <img src="https://i.postimg.cc/gwTC7wyX/Captura-de-pantalla-2026-08-31-113334.png" alt="Panel de estaciones" width="100%">
+  <img src="https://i.postimg.cc/pTWPpzpZ/Captura-de-pantalla-2026-08-31-113334.png" alt="Panel de estaciones" width="100%">
 </p>
 
 <p align="center">
-  <img src="https://i.postimg.cc/KKH6WK73/Captura-de-pantalla-2026-08-31-113412.png" alt="Panel de trenes" width="100%">
+  <img src="https://i.postimg.cc/zBzqVKV7/Captura-de-pantalla-2026-08-31-113412.png" alt="Panel de trenes" width="100%">
 </p>
 
 <p align="center">
-  <img src="https://i.postimg.cc/FdkMX9GR/Captura-de-pantalla-2026-08-31-113442.png" alt="Panel de cocheras" width="100%">
+  <img src="https://i.postimg.cc/50sbvyCw/Captura-de-pantalla-2026-08-31-113442.png" alt="Panel de cocheras" width="100%">
 </p>
 
 <p align="center">
-  <img src="https://i.postimg.cc/ZBvGzTj9/Captura-de-pantalla-2026-08-31-113510.png" alt="Panel de máquinas" width="100%">
+  <img src="https://i.postimg.cc/NMdBTFHx/Captura-de-pantalla-2026-08-31-113510.png" alt="Panel de máquinas" width="100%">
 </p>
 
 <p align="center">
-  <img src="https://i.postimg.cc/bDS7fzLZ/Captura-de-pantalla-2026-08-31-113535.png" alt="Panel de títulos de transporte" width="100%">
+  <img src="https://i.postimg.cc/d15wd3yj/Captura-de-pantalla-2026-08-31-113535.png" alt="Panel de títulos de transporte" width="100%">
 </p>
 
 <p align="center">
-  <img src="https://i.postimg.cc/WFqBc2Sq/Captura-de-pantalla-2026-08-31-113552.png" alt="Panel de usuarios" width="100%">
+  <img src="https://i.postimg.cc/j5MtN27c/Captura-de-pantalla-2026-08-31-113552.png" alt="Panel de usuarios" width="100%">
 </p>
 
 <p align="center">
-  <img src="https://i.postimg.cc/bDS7fzLn/Captura-de-pantalla-2026-08-31-113617.png" alt="Panel de incidencias" width="100%">
+  <img src="https://i.postimg.cc/3RtYpNvt/Captura-de-pantalla-2026-08-31-113617.png" alt="Panel de incidencias" width="100%">
 </p>
 
 <p align="center">
-  <img src="https://i.postimg.cc/cgtpGsTR/Captura-de-pantalla-2026-08-31-113644.png" alt="Panel de logs" width="100%">
+  <img src="https://i.postimg.cc/V6KmMvCV/Captura-de-pantalla-2026-08-31-113644.png" alt="Panel de logs" width="100%">
 </p>
 
 <p align="center">
-  <img src="https://i.postimg.cc/ph5wM2kQ/Captura-de-pantalla-2026-08-31-113921.png" alt="Pantalla de inicio de máquina de billetes" width="100%">
+  <img src="https://i.postimg.cc/ZRw43ndQ/Captura-de-pantalla-2026-08-31-113921.png" alt="Pantalla de inicio de máquina de billetes" width="100%">
 </p>
 
 <p align="center">
-  <img src="https://i.postimg.cc/XGBR6Vxk/Captura-de-pantalla-2026-08-31-113946.png" alt="Menú de títulos en la máquina de billetes" width="100%">
+  <img src="https://i.postimg.cc/ydLs9xZt/Captura-de-pantalla-2026-08-31-113946.png" alt="Menú de títulos en la máquina de billetes" width="100%">
 </p>
 
 <p align="center">
-  <img src="https://i.postimg.cc/mz1vWbVw/Captura-de-pantalla-2026-08-31-114236.png" alt="Máquina validadora en estado de espera" width="100%">
+  <img src="https://i.postimg.cc/pTsR8rFg/Captura-de-pantalla-2026-08-31-114236.png" alt="Máquina validadora en estado de espera" width="100%">
 </p>
 
 <p align="center">
-  <img src="https://i.postimg.cc/CBn3pFJJ/Captura-de-pantalla-2026-08-31-114537.png" alt="Máquina validadora en estado de validación" width="100%">
+  <img src="https://i.postimg.cc/d15wd3CM/Captura-de-pantalla-2026-08-31-114537.png" alt="Máquina validadora en estado de validación" width="100%">
 </p>
 
 <p align="center">
-  <img src="https://i.postimg.cc/mz1vWbVm/Captura-de-pantalla-2026-08-31-121118.png" alt="Capturas de la app Android 1" width="100%">
+  <img src="https://i.postimg.cc/d15wd3Cc/Captura-de-pantalla-2026-08-31-121118.png" alt="Capturas de la app Android 1" width="100%">
 </p>
 
 <p align="center">
-  <img src="https://i.postimg.cc/dkZbcqnW/Captura-de-pantalla-2026-08-31-121208.png" alt="Capturas de la app Android 2" width="100%">
+  <img src="https://i.postimg.cc/B6m4DbFG/Captura-de-pantalla-2026-08-31-121208.png" alt="Capturas de la app Android 2" width="100%">
 </p>
