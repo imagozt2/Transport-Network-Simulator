@@ -365,6 +365,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 
 ## Galería de imágenes
 
+### Aplicación Web
+
 <p align="center">
   <img src="https://i.postimg.cc/63bxqSs9/Captura-de-pantalla-2026-08-31-122238.png" alt="Inicio de sesión" width="100%">
 </p>
@@ -413,6 +415,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
   <img src="https://i.postimg.cc/V6KmMvCV/Captura-de-pantalla-2026-08-31-113644.png" alt="Panel de logs" width="100%">
 </p>
 
+### Máquinas de billetes y validación
+
 <p align="center">
   <img src="https://i.postimg.cc/ZRw43ndQ/Captura-de-pantalla-2026-08-31-113921.png" alt="Pantalla de inicio de máquina de billetes" width="100%">
 </p>
@@ -429,10 +433,13 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
   <img src="https://i.postimg.cc/d15wd3CM/Captura-de-pantalla-2026-08-31-114537.png" alt="Máquina validadora en estado de validación" width="100%">
 </p>
 
+### Aplicación Android
+
 <p align="center">
-  <img src="https://i.postimg.cc/d15wd3Cc/Captura-de-pantalla-2026-08-31-121118.png" alt="Capturas de la app Android 1" width="100%">
+  <img src="https://i.postimg.cc/B6m4DbFG/Captura-de-pantalla-2026-08-31-121208.png" alt="Capturas de la app Android 1" width="100%">
 </p>
 
 <p align="center">
-  <img src="https://i.postimg.cc/B6m4DbFG/Captura-de-pantalla-2026-08-31-121208.png" alt="Capturas de la app Android 2" width="100%">
+  <img src="https://i.postimg.cc/d15wd3Cc/Captura-de-pantalla-2026-08-31-121118.png" alt="Capturas de la app Android 2" width="100%">
 </p>
+
